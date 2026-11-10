@@ -187,9 +187,12 @@ GRASS = {
         ("shared", "wild_grass", 14.0, 2000, 3000, (1.4, 2.4)),
         ("shared", "tall_grass", 2.0, 4000, 6000),
         ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "leafy_dandelions", 2.5, 1500, 2500),
-        # Big rounded boulders, as in the style shots.
-        ("mountain", "tundra_boulder", 0.02, 12000, 15000),
+        ("shared", "leafy_dandelions", 4.0, 1500, 2500),
+        # v25: QA read the floor as tufts on bare soil: a low, dense kikuyu carpet near the road,
+        # culled at 15-20 m so it costs about a third of grass_clumps' instances.
+        ("shared", "kikuyu_grass", 16.0, 1500, 2000, (1.2, 1.8)),
+        # Big rounded boulders, as in the style shots (v25: twice as many, QA wanted more).
+        ("mountain", "tundra_boulder", 0.04, 12000, 15000),
         # The floor's debris: the woods in the reference photos are never bare between trunks.
         ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
         ("forest", "mossy_rocks", 0.1, 9000, 12000),
@@ -208,7 +211,7 @@ GRASS = {
         # patches: with their material filled (v21) they read as flat pink slabs on the banks.
         ("forest", "nordic_forest_ground_patch_root", 1.5, 6000, 8000),
         ("forest", "nordic_forest_rock_small", 3.0, 5000, 7000),
-        ("forest", "mossy_rocks", 0.3, 8000, 11000),
+        ("forest", "mossy_rocks", 0.6, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
         ("shared", "grass_clumps", 60.0, 3000, 4500, (1.4, 2.4)),
@@ -1028,6 +1031,9 @@ POST_KEYS = {
     "clouds": "volumetric clouds: Cloud_GlobalCoverage on MI_ClimbClouds",
     "cloud_density": "volumetric clouds: Cloud_GlobalDensity on MI_ClimbClouds",
     "sky_lum": "sky atmosphere: sky luminance factor, 1 neutral; lower is a deeper, moodier sky",
+    "aerial": "sky atmosphere: aerial perspective distance scale, 1 neutral; lower is less haze",
+    "cloud_bottom": "volumetric clouds: layer bottom altitude in km",
+    "fog_inscatter": "height fog: directional inscattering (sun glow) intensity scale, 0 off",
 }
 CLOUDS = f"{FOLDER}/MI_ClimbClouds"
 POST_LABEL = "OC Post"
@@ -1113,6 +1119,18 @@ def _post(post):
                 comp.set_editor_property("contact_shadow_length", float(post["contact"]))
     # The template's sky was clear and pale white (QA, v17): clouds and a deeper sky. The clouds'
     # material is the engine's; ours is an instance of it, made once.
+    if "cloud_bottom" in post:
+        for cloud in _level_actors(unreal.VolumetricCloud):
+            comp = cloud.get_component_by_class(unreal.VolumetricCloudComponent)
+            log(f"cloud layer bottom was {comp.get_editor_property('layer_bottom_altitude')} km")
+            comp.set_editor_property("layer_bottom_altitude", float(post["cloud_bottom"]))
+    if "fog_inscatter" in post:
+        for fog in _level_actors(unreal.ExponentialHeightFog):
+            comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
+            v = float(post["fog_inscatter"])
+            comp.set_editor_property(
+                "directional_inscattering_luminance", unreal.LinearColor(v, v, v, 1.0)
+            )
     if "clouds" in post or "cloud_density" in post:
         for cloud in _level_actors(unreal.VolumetricCloud):
             comp = cloud.get_component_by_class(unreal.VolumetricCloudComponent)
@@ -1141,6 +1159,14 @@ def _post(post):
             comp = atmo.get_component_by_class(unreal.SkyAtmosphereComponent)
             v = float(post["sky_lum"])
             comp.set_editor_property("sky_luminance_factor", unreal.LinearColor(v, v, v, 1.0))
+    if "aerial" in post:
+        for atmo in _level_actors(unreal.SkyAtmosphere):
+            comp = atmo.get_component_by_class(unreal.SkyAtmosphereComponent)
+            was = comp.get_editor_property("aerial_perspective_view_distance_scale")
+            log(f"aerial perspective scale was {was}")
+            comp.set_editor_property(
+                "aerial_perspective_view_distance_scale", float(post["aerial"])
+            )
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     log(f"post {post}")
 

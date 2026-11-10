@@ -376,9 +376,9 @@ ROAD_DARKEN = 0.3  # the island's asphalt read washed-out grey on the climb (0.4
 # The scan's bright aggregate read as a regular white speckle (QA, v12): clamped before darkening.
 ROAD_SPECK_CLAMP = 0.3
 # The edge's soil_mud, darkened and browned to the ground's damp litter.
-ROAD_EDGE_SOIL = (0.45, 0.38, 0.32)
+ROAD_EDGE_SOIL = (0.36, 0.3, 0.24)  # v25: its pebbles read as pale orange ovals
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
-ROAD_WARM = (1.15, 1.0, 0.72)  # v23: QA read the tarmac lilac-grey under the sky
+ROAD_WARM = (1.05, 1.0, 0.76)  # v25: (1.15, 1, 0.72) still read pink-grey (r/g 1.13 in v24)
 
 
 def road_material():
@@ -421,6 +421,17 @@ def road_material():
     # v21: wider, as QA read the tarmac as uniform grey: lighter worn and darker damp stretches.
     colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.12, 3))
     colour = g.mul(colour, g.world_noise(0.0003, 0.9, 1.08, 2))
+    # v25: riders wear the middle of a bike path smooth and a shade darker, in a band that wanders
+    # a little; QA read the tarmac as one flat grey.
+    wander = g.world_noise(0.003, -0.12, 0.12, 2)
+    centre = g.link(
+        g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "r"),
+        g.node(unreal.MaterialExpressionAbs),
+    )
+    worn = g.saturate(g.mul(g.add(g.add(centre, wander), -0.45), -3.0))
+    worn = g.mul(worn, g.world_noise(0.002, 0.5, 1.0, 2))
+    colour = g.lerp(colour, g.mul(colour, 0.82), worn)
+    rough = g.lerp(rough, g.const(0.55), worn)
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     colour = g.mul(colour, g.param("warm", ROAD_WARM))
     across = g.link(
@@ -437,7 +448,7 @@ def road_material():
     soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
     colour = g.lerp(colour, soil, g.mul(edge, 0.85))
     leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.8), 7.0))
-    leaves = g.mul(leaves, g.lerp(g.const(0.12), g.const(1.0), edge))
+    leaves = g.mul(leaves, g.lerp(g.const(0.2), g.const(1.0), edge))
     # Once the road went dark, leaves at 0.11 read as pale ovals (v14): a shade off the tarmac, and
     # fewer of them (threshold 0.8, was 0.72).
     leaf_colour = g.mul(g.const((0.06, 0.04, 0.025)), g.world_noise(0.03, 0.6, 1.4, 2))
