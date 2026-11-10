@@ -85,7 +85,9 @@ MIXES = {
     # Moss in patches through the litter: QA found the floor between the ferns bare soil.
     # v19: grass patches, not moss: mossy_forest_floor is a dull olive (0.19 sRGB) that read as
     # grey-teal felt under the sky, never as the style shots' green carpet.
-    "Forest": ("shared", "uncut_grass", "patches", 10.0),
+    # v30: a fifth item, the noise's (low, high) before it is clamped to 0..1: here about a
+    # third of the floor is litter, a third grass, and the rest the fade between.
+    "Forest": ("shared", "uncut_grass", "patches", 12.0, (-1.2, 2.4)),
     "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
     # Litter and small plants over the banks' soil (alpine_needles was padding: see "Forest").
     "Sand": ("forest", "forest_floor", "patches", 4.0),
@@ -168,42 +170,39 @@ GRASS = {
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
+    # The woods' floor is two tables (v30). "Forest" grows only on the layer's grass patches (its
+    # MIXES surface), "Forest floor" on the litter between them: see Ground.build. Until v29 one
+    # table covered both evenly, so blades stood on brown litter, nothing was bare, and ferns
+    # were everywhere. Densities are per mesh variant, and the patches are under half the floor,
+    # so this draws fewer instances than v29 did. Scans near their own size (clumps are 60 cm
+    # across and 25 cm tall; v19-v29 drew them up to 2.8 times that, as sparse reeds).
     "Forest": (
-        # Grass and dry tussocks first, ferns only here and there: the spruce photos show grassy
-        # floors, and the user found v12's ferns too many (v13's 40 per 100 m^2 also crashed the GPU
-        # on its first look; this stays near 31). leather_fern, the glossiest, is out. v16: fewer
-        # yellow dry tussocks, more green clumps, and clover and dandelions for small yellow flowers
-        # (the style shots' flowering carpet). v18: the floor read as moss felt with sparse tufts;
-        # twice the grass and more flowers near the road, culled sooner. Instances go as density
-        # times cull squared, so the layer draws a little fewer than v17's (about 670 vs 700).
-        # v19: the ferns (1.5 to 2 m across, six to nine variants each) covered twice the floor
-        # all the grass did, whose clumps are 20 to 60 cm: fewer ferns, and grass drawn 1.4 to
-        # 2.4 times its size, so it reads as a carpet with the same instance count.
-        ("shared", "fern", 1.2, 4000, 6000),
-        ("shared", "lady_fern", 0.8, 4000, 6000),
-        ("shared", "common_fern", 0.8, 4000, 6000),
-        ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
-        ("desert", "dry_grass", 1.5, 3000, 4500),
-        ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        ("shared", "grass_clumps", 20.0, 2000, 3000, (1.4, 2.4)),
-        ("shared", "wild_grass", 14.0, 2000, 3000, (1.4, 2.4)),
+        ("shared", "grass_clumps", 30.0, 2000, 3000, (1.0, 1.8)),
+        ("shared", "wild_grass", 20.0, 2000, 3000, (1.2, 2.0)),
+        ("shared", "kikuyu_grass", 40.0, 1500, 2000, (0.9, 1.6)),
         ("shared", "tall_grass", 2.0, 4000, 6000),
-        ("shared", "clovers", 5.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "leafy_dandelions", 4.0, 1500, 2500),
-        # v25: QA read the floor as tufts on bare soil: a low, dense kikuyu carpet near the road,
-        # culled at 15-20 m so it costs about a third of grass_clumps' instances.
-        # v26: still clumps on soil (QA): denser and bigger.
-        # v27: one height read as mown (QA): a wider range of sizes.
-        ("shared", "kikuyu_grass", 28.0, 1500, 2000, (1.1, 2.6)),
-        # Big rounded boulders, as in the style shots (v25: twice as many, QA wanted more).
-        ("mountain", "tundra_boulder", 0.04, 12000, 15000),
-        # The floor's debris: the woods in the reference photos are never bare between trunks.
-        ("forest", "nordic_forest_ground_patch_root", 0.12, 9000, 12000),
-        ("forest", "mossy_rocks", 0.1, 9000, 12000),
-        ("forest", "nordic_forest_rock_small", 0.3, 6000, 8000),
-        ("forest", "mossy_wood_stump", 0.05, 9000, 12000),
-        ("forest", "fallen_log", 0.03, 12000, 15000),
-        ("forest", "fallen_pine_tree", 0.015, 12000, 15000),
+        ("shared", "clovers", 8.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "clover_varieties", 4.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "leafy_dandelions", 6.0, 1500, 2500),
+        ("mountain", "tundra_boulder", 0.03, 12000, 15000),
+    ),
+    "Forest floor": (
+        ("shared", "fern", 1.6, 4000, 6000),
+        ("shared", "lady_fern", 1.0, 4000, 6000),
+        ("shared", "common_fern", 1.0, 4000, 6000),
+        ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
+        ("desert", "dry_grass", 1.0, 3000, 4500),
+        ("desert", "dead_shrubs", 0.3, 4000, 6000),
+        # A few tufts through the litter, so the patches' edges aren't a hard line.
+        ("shared", "grass_clumps", 5.0, 2000, 3000, (1.0, 1.6)),
+        # Big rounded boulders, as in the style shots, and the floor's debris.
+        ("mountain", "tundra_boulder", 0.05, 12000, 15000),
+        ("forest", "nordic_forest_ground_patch_root", 0.2, 9000, 12000),
+        ("forest", "mossy_rocks", 0.15, 9000, 12000),
+        ("forest", "nordic_forest_rock_small", 0.5, 6000, 8000),
+        ("forest", "mossy_wood_stump", 0.08, 9000, 12000),
+        ("forest", "fallen_log", 0.05, 12000, 15000),
+        ("forest", "fallen_pine_tree", 0.025, 12000, 15000),
     ),
     # The soil of the cut banks: roots, stones, ferns and tufts, so a bank is never bare plaster.
     "Sand": (
@@ -285,6 +284,9 @@ class Ground:
         self.far = g.saturate(g.mul(g.add(distance, -1500.0), 1 / 4500))
         self.height = g.mask(world, "b")
         self.macro = g.world_noise(0.0004, 0.82, 1.12, 4)
+        # Each layer's "patches" mix, 0 to 1, before the surfaces' heights break up its edge:
+        # the layer's grass grows by it too (see build), so blades stand on the grass surface.
+        self.patch = {}
         # Steep ground is sampled from the side as well, on whichever of the XZ and YZ planes it
         # faces more, or a top-down sample streaks down a cut bank. 0 up to 32 degrees, 1 past 50.
         up = g.node(unreal.MaterialExpressionVertexNormalWS)
@@ -347,10 +349,12 @@ class Ground:
         biome, slug, tint = SURFACES[name]
         base = self.surface(biome, slug, tint, name)
         if name in MIXES:
-            biome2, slug2, how, size = MIXES[name]
+            biome2, slug2, how, size, *span = MIXES[name]
             other = self.surface(biome2, slug2, (1.0, 1.0, 1.0), f"{name} mix")
             if how == "patches":
-                alpha = g.world_noise(1.0 / (size * 100), -1.5, 2.0, 3)
+                low, high = span[0] if span else (-1.5, 2.0)
+                alpha = g.world_noise(1.0 / (size * 100), low, high, 3)
+                self.patch[name] = g.saturate(alpha)
             else:  # wet below a height
                 alpha = g.mul(g.add(g.mul(self.height, -1.0), size), 1 / 60)
             # The mix follows the surfaces' own heights at its edge, not a soft fade.
@@ -402,14 +406,21 @@ class Ground:
             inputs.append(gi)
         out.set_editor_property("grass_types", inputs)
         for name in grass_types:
-            g.link(
-                g.node(unreal.MaterialExpressionLandscapeLayerSample, parameter_name=name),
-                out,
-                name,
-            )
+            # "<layer> floor" grows where the layer's patches mix is absent, and then "<layer>"
+            # itself only on the mix. v29 and before spread one table evenly over both, so
+            # green blades stood on brown litter and nothing was ever bare.
+            layer = name.removesuffix(" floor")
+            weight = g.node(unreal.MaterialExpressionLandscapeLayerSample, parameter_name=layer)
+            if name != layer:
+                gap = g.link(self.patch[layer], g.node(unreal.MaterialExpressionOneMinus))
+                weight = g.mul(weight, gap)
+            elif f"{layer} floor" in grass_types:
+                weight = g.mul(weight, self.patch[layer])
+            g.link(weight, out, name)
         return g.finish()
 
 
+LUMA = (0.3, 0.59, 0.11)
 PLANT_MASTER = f"{MS}/Materials/M_MS_Plant"
 PROP_MASTER = f"{MS}/Materials/M_MS_Prop"
 # Set on every plant MI by each ground build (try values with `look --plant-param`). The scans'
@@ -422,6 +433,9 @@ PLANT_LOOK = {
     # again, as the blade tips still glowed in the shade.
     "TranslucencyTint": (0.06, 0.08, 0.05),
     "Grey": 0.12,
+    # v30: less per-plant brightness and fewer dry plants (0.7 and 0.3 made the carpet blotchy).
+    "Variation": 0.3,
+    "Dry share": 0.1,
     "Specular": 0.15,
     "Rough floor": 0.6,
 }
@@ -432,10 +446,11 @@ PLANT_LOOK = {
 PLANT_SLUG_LOOK = {
     # v21: less red and blue: at R/G 0.8 the tufts read yellow-olive against the style shots' green.
     # v27: darker and bluer: v26's carpet read lime and self-lit in the shade (QA).
-    "grass_clumps": {"Tint": (1.5, 2.8, 1.1)},
-    "wild_grass": {"Tint": (1.0, 1.8, 0.75)},
+    # v30: "Flat" takes most of each grass's colour from one green, the ground's (_plant_master).
+    "grass_clumps": {"Tint": (1.5, 2.8, 1.1), "Flat": 0.7},
+    "wild_grass": {"Tint": (1.0, 1.8, 0.75), "Flat": 0.7},
     # v26: untinted it read as a pale grey-green wash on the shaded floor (QA, v25).
-    "kikuyu_grass": {"Tint": (1.0, 1.8, 0.75)},
+    "kikuyu_grass": {"Tint": (1.0, 1.8, 0.75), "Flat": 0.7},
 }
 PROP_LOOK = {
     "tundra_boulder": {"Tint": (0.3, 0.29, 0.26), "Moss amount": 1.0},
@@ -503,7 +518,6 @@ def _plant_master():
     folder, name = PLANT_MASTER.rsplit("/", 1)
     g = _graph(name, folder)
     d = _master_texture(g, "D", "colour", "/Engine/EngineResources/DefaultTexture")
-    n = _master_texture(g, "N", "normal", "/Engine/EngineMaterials/DefaultNormal")
     # A real masks texture as the default: the engine's white square is sRGB, which a Masks
     # sampler refuses at compile.
     m = _master_texture(g, "M", "masks", f"{MS}/shared/fern/T_fern_M")
@@ -517,19 +531,38 @@ def _plant_master():
     second = g.link(g.mul(rnd, 7.13), g.node(unreal.MaterialExpressionFrac))
     dry = g.saturate(g.mul(g.add(second, g.add(g.param("Dry share", 0.3), -1.0)), 20.0))
     colour = g.lerp(colour, g.mul(colour, g.param("Dry tint", (1.5, 1.1, 0.55))), dry)
+    # "Flat" pulls a plant toward one colour, the ground's own grass, keeping the scan's light
+    # and dark: tinted scans alone never matched the ground they stood on (v29).
+    scan_luma = g.op(unreal.MaterialExpressionDotProduct, g.mask(d, "rgb"), g.const(LUMA))
+    shade = g.saturate(g.mul(scan_luma, g.param("Flat gain", 4.0)))
+    flat = g.mul(g.mul(g.mask(g.param("Flat colour", (0.09, 0.16, 0.03)), "rgb"), shade), bright)
+    colour = g.lerp(colour, flat, g.param("Flat", 0.0))
+    # Darker toward the root, by height above the plant's own base (cm before its scale): the
+    # blades' feet sink into shadow as real turf does, and hide where they meet the ground.
+    local = g.mask(g.node(unreal.MaterialExpressionLocalPosition), "b")
+    rise = g.saturate(g.op(unreal.MaterialExpressionDivide, local, g.param("Root height", 14.0)))
+    root = g.lerp(g.param("Root shade", 0.35), g.const(1.0), rise)
+    colour = g.mul(colour, root)
     rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
     rough = g.op(unreal.MaterialExpressionMax, rough, g.param("Rough floor", 0.6))
     sss = g.mul(g.mask(t, "rgb"), g.mask(g.param("TranslucencyTint", (0.5, 0.6, 0.4)), "rgb"))
+    # Lit mostly by the ground's normal (straight up), not each card's own: per-card normals
+    # made the carpet sparkle, lime where a blade faced the sun and black where it faced away
+    # (the ferns went fully black). In world space, so a two-sided card's back is lit the same.
+    face = g.node(unreal.MaterialExpressionVertexNormalWS)
+    bent = g.lerp(g.mask(face, "rgb"), g.const((0.0, 0.0, 1.0)), g.param("Up normal", 0.85))
+    normal = g.link(bent, g.node(unreal.MaterialExpressionNormalize))
     g.output(
         colour,
-        g.mask(n, "rgb"),
+        normal,
         rough,
         specular=g.param("Specular", 0.15),
         opacity_mask=g.mask(d, "a"),
-        subsurface=sss,
-        ao=g.mask(m, "r"),
+        subsurface=g.mul(sss, root),
+        ao=g.mul(g.mask(m, "r"), root),
     )
     material = g.material
+    material.set_editor_property("tangent_space_normal", False)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     material.set_editor_property("two_sided", True)
@@ -602,9 +635,13 @@ def _fill_empty_slots(biome, slug, meshes):
             log(f"{mesh.get_name()}: MI_{slug} in {len(empty)} empty slot(s)")
 
 
+def _gt_name(layer):
+    return "GT_" + layer.replace(" ", "_")
+
+
 def _grass_type(layer):
     gt = lib.fresh(
-        f"GT_{layer}",
+        _gt_name(layer),
         f"{FOLDER}/Grass",
         unreal.LandscapeGrassType,
         unreal.LandscapeGrassTypeFactory(),
@@ -914,7 +951,7 @@ def op_rebuild_ground(rebuild_grass=False):
     yield from _warm_grass_meshes()
     grass = {}
     for layer in GRASS:
-        saved = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
+        saved = unreal.load_asset(f"{FOLDER}/Grass/{_gt_name(layer)}")
         grass[layer] = saved if saved and not rebuild_grass else _grass_type(layer)
         yield 10
     # The instance goes first: while it refers to the material, the material can't be deleted,
@@ -981,9 +1018,9 @@ def _grass(density, cull):
             rows.setdefault(layer, []).append((f"/{slug}/", base, start, end))
     changed = 0
     for layer, table in rows.items():
-        gt = unreal.load_asset(f"{FOLDER}/Grass/GT_{layer}")
+        gt = unreal.load_asset(f"{FOLDER}/Grass/{_gt_name(layer)}")
         if gt is None:
-            raise RuntimeError(f"no GT_{layer}: run `oc.py rebuild-ground --rebuild-grass`")
+            raise RuntimeError(f"no {_gt_name(layer)}: run `oc.py rebuild-ground --rebuild-grass`")
         varieties = list(gt.get_editor_property("grass_varieties"))
         for v in varieties:
             path = v.get_editor_property("grass_mesh").get_path_name()
