@@ -193,6 +193,32 @@ def carve(h, line):
     return dist_all
 
 
+def clear_road(h, line, below=0.1, rounds=8):
+    """Lowers the ground wherever it would show through the road: carve() sets each sample to
+    its nearest road point's height, but on bends the bilinear ground between 14 m samples rose
+    up to 0.8 m over the tarmac (11 Nov, 5% of the ring). Samples the road's centre and edges
+    every metre and drops each offending cell's corners until the ground is `below` m under."""
+    xy, z = line[:, :2], line[:, 2]
+    d = np.roll(xy, -1, axis=0) - np.roll(xy, 1, axis=0)
+    side = np.stack([-d[:, 1], d[:, 0]], axis=-1) / np.maximum(np.hypot(*d.T), 1e-9)[:, None]
+    offsets = (-mi.ROAD_HALF - 0.5, -mi.ROAD_HALF / 2, 0.0, mi.ROAD_HALF / 2, mi.ROAD_HALF + 0.5)
+    p = np.concatenate([xy + side * o for o in offsets])
+    top = np.tile(z, len(offsets)) - below
+    c, r = p[:, 0] / SPACING + HALF, p[:, 1] / SPACING + HALF
+    r0, c0 = np.floor(r).astype(int), np.floor(c).astype(int)
+    for _ in range(rounds):
+        over = ndimage.map_coordinates(h, [r, c], order=1) - top
+        k = np.flatnonzero(over > 0.005)
+        if not len(k):
+            break
+        for dr in (0, 1):
+            for dc in (0, 1):
+                rr, cc = r0[k] + dr, c0[k] + dc
+                np.minimum.at(h, (rr, cc), h[rr, cc] - over[k] - 0.01)
+    over = ndimage.map_coordinates(h, [r, c], order=1) - top - below
+    print(f"road cleared: ground at most {over.max():.2f} m over the tarmac", flush=True)
+
+
 def paint_band(x, y, h, slope, d, w, inland):
     """Each layer's weight, 0..1, for one band."""
     n = lambda s, seed, octaves=3: mi.fbm(x, y, s, octaves, SEED + seed)  # noqa: E731
@@ -386,6 +412,7 @@ def main():
     print(f"ground {h.min():.0f}..{h.max():.0f} m", flush=True)
     line = ring(plan, h)
     dist = carve(h, line)
+    clear_road(h, line)
     print(f"ring {len(line) / 1000:.1f} km, carved", flush=True)
     stems, small = paint_and_trees(plan, h, dist)
     del dist
