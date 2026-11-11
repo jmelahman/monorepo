@@ -188,6 +188,9 @@ PRESETS["world"] = {
         "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
         "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
         "Dirt": ("shared", "uncut_grass", (0.55, 0.58, 0.42)),
+        # Verge is the bare sand beside the road in the desert and on the beaches
+        # (make_world_level.py): Desert's sand with no mix and no GRASS row, so nothing grows.
+        "Verge": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
     },
     "MIXES": {
         "Desert": ("desert", "dry_mud_ground", "patches", 30.0),
@@ -199,12 +202,14 @@ PRESETS["world"] = {
         "Dirt mix": (0.14, 0.22, 0.04),
         "Desert": (0.2, 0.15, 0.09),
         "Desert mix": (0.14, 0.1, 0.06),
+        "Verge": (0.2, 0.15, 0.09),
         "Sand": (0.28, 0.24, 0.17),
         "Sand mix": (0.2, 0.18, 0.16),
     },
     "LOOK_GREYS": {
         "Desert": 0.4,
         "Desert mix": 0.4,
+        "Verge": 0.4,
         "Sand": 0.3,
         "Sand mix": 0.3,
         "Dirt": 0.0,

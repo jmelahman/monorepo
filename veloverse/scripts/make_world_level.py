@@ -43,6 +43,10 @@ SPACING = mw.EXTENT / (RES - 1)  # 14.0 m at 4065
 # and the Grass layer's blades grew through it (11 Nov). Both take at least a sample's width.
 FLAT = max(mi.SHOULDER, SPACING * 1.1)
 VERGE = max(0.9, SPACING)
+# The island's layers and Verge, the bare sand beside the road in the desert and on the beaches:
+# a layer of its own because Desert and Sand grow plants (paint_band).
+LAYERS = {**mi.LAYERS, "Verge": (215, 180, 130)}
+REACH = math.ceil(SPACING * 1.5)  # road points either side of a cell's one, for carve()
 HALF = (RES - 1) / 2
 BAND = 512  # rows per band
 SEED = 41
@@ -146,7 +150,7 @@ def carve(h, line):
     (m) to the ring for each sample, capped at 1000."""
     xy, z = line[:, :2], line[:, 2]
     n = len(xy)
-    before, after = np.roll(np.arange(n), 1), np.roll(np.arange(n), -1)
+    after = np.roll(np.arange(n), -1)
     col = np.round(xy[:, 0] / SPACING + HALF).astype(int)
     row = np.round(xy[:, 1] / SPACING + HALF).astype(int)
     dist_all = np.full((RES, RES), 1000.0, dtype=np.float32)
@@ -175,10 +179,18 @@ def carve(h, line):
                 off = p - (xy[a] + d * t[..., None])
                 return (off * off).sum(-1), z[a] + (z[b] - z[a]) * t
 
-            gap_back, z_back = along(before[nearest], nearest)
-            gap_on, z_on = along(nearest, after[nearest])
-            bed = (np.where(gap_back < gap_on, z_back, z_on) - 0.15).astype(np.float32)
-            dist = np.sqrt(np.minimum(gap_back, gap_on)).astype(np.float32)
+            # The road's nearest grid cell holds one of the ~14 metre points through it, often
+            # not the one nearest the sample: checking only that point's two segments measured
+            # samples 10 m out as 20 (11 Nov), so the verge stopped short and grass grew through
+            # the tarmac. Every segment within a cell and a half of it is checked.
+            gap, bed = np.full(nearest.shape, np.inf), np.zeros(nearest.shape)
+            for k in range(-REACH, REACH):
+                a = (nearest + k) % n
+                g, zz = along(a, after[a])
+                closer = g < gap
+                gap, bed = np.where(closer, g, gap), np.where(closer, zz, bed)
+            bed = (bed - 0.15).astype(np.float32)
+            dist = np.sqrt(gap).astype(np.float32)
             sub = h[ra:rb, ca:cb]
             out = np.maximum(dist - mi.ROAD_HALF - FLAT, 0) * mi.BANK_SLOPE
             capped = np.maximum(np.minimum(sub, bed + out), bed - out)
@@ -233,12 +245,14 @@ def paint_band(x, y, h, slope, d, w, inland):
     beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(900, 500, inland)
     beach = np.maximum(beach, h < 0.5)
     desert = w["desert"]
-    # In the green stretches the verge is Dirt (turf with no blades: biomes "world") out to a
-    # whole sample past the road, as any sample nearer feeds the road's grass (11 Nov: at 85%
-    # Dirt the Grass layer's last 15% still grew tufts through the tarmac). The desert and the
-    # beaches keep the narrow verge.
-    verge = mi.smoothstep(mi.ROAD_HALF + VERGE * 1.6, mi.ROAD_HALF + VERGE, d)
-    shoulder = np.maximum(shoulder, verge * (1 - beach) * (1 - desert))
+    # The verge reaches a whole sample past the road, as any sample nearer feeds the road's grass
+    # (11 Nov: at 85% Dirt the Grass layer's last 15% still grew tufts through the tarmac). In
+    # the green stretches it is Dirt, turf with no blades (biomes "world"); in the desert and on
+    # the beaches it is Verge, bare sand: Desert and Sand grow shrubs, cacti, boulders and marram,
+    # and with the narrow verge they kept, those stood on the tarmac.
+    verge = np.maximum(shoulder, mi.smoothstep(mi.ROAD_HALF + VERGE * 1.6, mi.ROAD_HALF + VERGE, d))
+    dry = np.clip(beach + desert, 0, 1)
+    shoulder = verge
     # Woods: the forest's and the mountain's below the treeline, copses in the meadows, with
     # clearings; open grass in the meadows, the town, the heath and above the trees.
     alpine = mi.smoothstep(TREELINE - 30, TREELINE + 15, h + 40 * (n(90, 3) - 0.5))
@@ -257,8 +271,9 @@ def paint_band(x, y, h, slope, d, w, inland):
     out["Grass"] = green * (1 - wooded)
     out["Rock"] = rock * (1 - shoulder)
     out["Snow"] = snow * (1 - shoulder)
-    out["Dirt"] = shoulder
-    return {k: out[k].astype(np.float32) for k in mi.LAYERS}
+    out["Dirt"] = shoulder * (1 - dry)
+    out["Verge"] = shoulder * dry
+    return {k: out[k].astype(np.float32) for k in LAYERS}
 
 
 def trees_band(rng, x, y, h, slope, d, forest, desert):
@@ -314,10 +329,10 @@ def trees_band(rng, x, y, h, slope, d, forest, desert):
 def paint_and_trees(plan, h, dist):
     """Writes each layer's .r8 band by band; returns the trees and the preview's colours."""
     rng = np.random.default_rng(SEED + 100)
-    for k in mi.LAYERS:
+    for k in LAYERS:
         open(f"{OUT}/{k}.r8", "wb").close()
-    names = list(mi.LAYERS)
-    colours = np.array([mi.LAYERS[k] for k in names], dtype=np.uint8)
+    names = list(LAYERS)
+    colours = np.array([LAYERS[k] for k in names], dtype=np.uint8)
     small = []
     stems = []
     cols = np.arange(RES)
@@ -425,7 +440,7 @@ def main():
         "size": RES,
         "spacing": SPACING * 100,
         "z_scale": mi.Z_SCALE,
-        "layers": list(mi.LAYERS),
+        "layers": list(LAYERS),
         "biome": "world",
         "window": None,
         "sea_cm": 0.0,
