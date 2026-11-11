@@ -104,8 +104,9 @@ To add a biome: a `SHAPES` row, a `PRESETS` row, one chain, then tune with `oc.p
 
 All four use the same flank and path. Stills: the storybook, or re-run the chain.
 
-- **alpine** (the hero climb): the reference build; see `docs/climb-plan.md`. L_Hero is
-  left as alpine at the end of 10 Nov if the last chain finished (check `info.json`).
+- **alpine** (the hero climb): the reference build; see `docs/climb-plan.md`. Every
+  overnight chain ends by rebuilding it, so L_Hero should hold the alpine flank (check
+  `world_gen/climb/info.json`: `"biome": "alpine"`, `"window": null`).
 - **desert** (built; storybook img29): reads as desert at `ev=-0.4`. Pale sand with mud
   pans, straw tufts, red sandstone, a few cacti. Wrong: the far slopes show one blotchy
   patch pattern (the 18 m mud patches tile visibly from far off: fade the mix with distance
@@ -117,7 +118,13 @@ All four use the same flank and path. Stills: the storybook, or re-run the chain
   because it mirrors the sky; the grass is lush lawn (the kept "Grass" layer and its blade
   rows: use drier, sparser rows); the trees are beech (palms are only GRASS rows, so they
   have no far LOD and cull at about 100 m); the hillside behind is bare sand-and-rock.
-- **meadow**: MEADOW_STATUS
+- **meadow** (built; storybook img31): reads as a meadow at the standard look. A green
+  grass carpet to the path's edge, beech groves, the bench under a lone tree. Wrong: the
+  steep flank above (the "Rock" and bank layers) is bare, pale grey-pink and washes out to
+  white in the sun, so the valley looks like scree, not pasture: paint grass up the steep
+  ground in this preset, or darken those layers; the grass is a little lime in full sun;
+  no flowers (the user's flower scans are still to fetch); the alpine fence and snowy
+  peaks are the flank's.
 
 **Lessons from the first builds**
 
