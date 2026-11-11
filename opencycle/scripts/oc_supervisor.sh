@@ -24,6 +24,14 @@ while [ ! -e "$DIR/stop" ]; do
 		sleep 10
 	done
 	echo "$(date +%T) starting the editor"
+	# The level to work on (OC_SRC, OC_LEVEL, OC_STILLS), written by oc.py at each restart.
+	unset OC_SRC OC_LEVEL OC_STILLS
+	if [ -e "$DIR/level.env" ]; then
+		set -a
+		# shellcheck disable=SC1091
+		. "$DIR/level.env"
+		set +a
+	fi
 	# fd 9 (the lock) is closed for the editor, or a hung editor would hold the lock.
 	OC_EDITOR=1 OC_START_MAP=/Engine/Maps/Templates/OpenWorld OC_TAIL=0 \
 		bash scripts/ue_run.sh oc_server.py "$LOG" 9>&-
