@@ -177,6 +177,43 @@ PRESETS = {
     },
 }
 # "POST" is not laid over a table: `scripts/oc_biome.sh` adds it to the look's `--post` keys.
+# The whole world as one level (make_world_level.py, L_World): the alpine climb's layers for the
+# green ground, with the desert's sand on the Desert layer and the beaches on Sand. The look is
+# the alpine daylight (ev -2.6), so the sand is tinted darker than in the desert's own preset
+# (ev -0.4). Grass keeps the alpine rows bar the heath's and the cut banks'.
+PRESETS["world"] = {
+    "SURFACES": {
+        "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
+        "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
+    },
+    "MIXES": {
+        "Desert": ("desert", "dry_mud_ground", "patches", 30.0),
+        "Sand": ("coast", "beach_pebbles", "patches", 5.0),
+    },
+    "LOOK_TINTS": {
+        "Desert": (0.2, 0.15, 0.09),
+        "Desert mix": (0.14, 0.1, 0.06),
+        "Sand": (0.28, 0.24, 0.17),
+        "Sand mix": (0.2, 0.18, 0.16),
+    },
+    "LOOK_GREYS": {"Desert": 0.4, "Desert mix": 0.4, "Sand": 0.3, "Sand mix": 0.3},
+    "STEEP": {"Desert": (0.85, 0.7, 0.55), "Sand": (0.9, 0.85, 0.75)},
+    "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
+    "GRASS": {
+        "Desert": (
+            ("desert", "dry_grass", 2.0, 4000, 6000, (0.8, 1.5)),
+            ("desert", "dead_shrubs", 0.4, 6000, 9000, (0.8, 1.6)),
+            ("desert", "desert_american_plant_cactus_medium_11", 0.08, 9000, 12000, (1.0, 2.2)),
+            ("desert", "canyon_sandstone_boulder", 0.1, 9000, 12000, (0.8, 2.5)),
+            ("desert", "rock_sandstone", 0.4, 6000, 8000, (0.8, 2.0)),
+        ),
+        "Sand": (
+            ("coast", "marram_grass", 3.0, 3000, 5000, (1.0, 1.8)),
+            ("coast", "nordic_beach_rocks", 0.05, 12000, 15000),
+            ("coast", "eroded_pine_log", 0.02, 9000, 12000),
+        ),
+    },
+}
 LAID_OVER = ("SURFACES", "MIXES", "LOOK_TINTS", "LOOK_GREYS", "STEEP", "BLADE_LOOK", "PROP_LOOK")
 
 

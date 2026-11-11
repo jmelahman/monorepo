@@ -58,7 +58,9 @@ STAGE = os.environ.get("OC_STAGE") or "all"
 STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 FOLDER = "/Game/Climb"
-LEVEL = f"{FOLDER}/L_Hero"
+LEVEL = os.environ.get("OC_LEVEL") or f"{FOLDER}/L_Hero"  # e.g. /Game/World/L_World
+# The ride track's folder: RidePawn loads <the level's folder>/Ride/DA_RideTrack.
+RIDE = f"{LEVEL.rsplit('/', 1)[0]}/Ride"
 QUADS = 127
 GRID = 4  # components a side per streaming proxy
 PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
@@ -319,10 +321,14 @@ def sea(material):
     level = sea_level()
     if level is None:
         return
+    with open(f"{SRC}/info.json") as f:
+        info = json.load(f)
+    # The engine plane is 1 m: 4 km of water, or the map and a margin round it.
+    metres = max(4000.0, info["size"] * info["spacing"] / 100 * 1.3)
     actor = lib.mesh_actor(
         unreal.load_asset("/Engine/BasicShapes/Plane"),
         (0, 0, level),
-        scale=(4000, 4000, 1),  # the engine plane is 1 m: 4 km of water
+        scale=(metres, metres, 1),
         label="Sea",
         folder="Sea",
     )
@@ -688,13 +694,17 @@ def props(timber, logs):
 
 
 def track():
-    """The ride as the level's DA_RideTrack: up the stretch and back down."""
+    """The ride as the level's DA_RideTrack: up the stretch and back down, or, for the world's
+    ride (info.json's "ride"), once round its loop by stretches, with no weather rows so the
+    level's own light stays."""
     with open(f"{SRC}/routes.json") as f:
         centre = json.load(f)["island"]
+    with open(f"{SRC}/info.json") as f:
+        ride = json.load(f).get("ride")
     cls = unreal.load_class(None, "/Script/OpenCycleUE.RideTrack")
     factory = unreal.DataAssetFactory()
     factory.set_editor_property("data_asset_class", cls)
-    t = lib.fresh("DA_RideTrack", f"{FOLDER}/Ride", cls, factory)
+    t = lib.fresh("DA_RideTrack", RIDE, cls, factory)
     # The rider's line 6 cm under the tarmac, as on the island.
     t.set_editor_property(
         "centre", [unreal.Vector(x * 100, y * 100, z * 100 - 6) for x, y, z in centre]
@@ -714,8 +724,20 @@ def track():
     stretch = unreal.RideStretch()
     stretch.set_editor_property("name", "Hero stretch")
     t.set_editor_property("stretches", [stretch])
+    if ride:
+        t.set_editor_property("closed", ride["closed"])
+        t.set_editor_property("title", ride["title"])
+        t.set_editor_property("blurb", ride["blurb"])
+        t.set_editor_property("weather", [])
+        runs = []
+        for name, metres in ride["stretches"]:
+            run = unreal.RideStretch()
+            run.set_editor_property("name", name)
+            run.set_editor_property("metres", float(metres))
+            runs.append(run)
+        t.set_editor_property("stretches", runs)
     assets.save_loaded_asset(t, False)
-    log(f"track: {len(centre)} m, out and back")
+    log(f"track: {len(centre)} m, {ride['title'] + ' loop' if ride else 'out and back'} in {RIDE}")
 
 
 DRESSING = ("Road", "Rail", "Trees", "Props", "Sea")  # outliner folders the dress stage owns
@@ -804,9 +826,25 @@ def main():
     yield from stills(world)
 
 
+def _views():
+    """info.json's views ([name, eye, target] in m), if the generator chose them: the world's
+    ride has one per stretch."""
+    try:
+        with open(f"{SRC}/info.json") as f:
+            views = json.load(f).get("views")
+    except OSError:
+        return None
+    if not views:
+        return None
+    return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in views]
+
+
 def cameras():
     """(name, position, look-at) in cm: a rider's eye along the road, looking 30 m up it, and
-    one from above the hairpin back down the lower traverse."""
+    one from above the hairpin back down the lower traverse; or info.json's views."""
+    views = _views()
+    if views:
+        return views
     with open(f"{SRC}/routes.json") as f:
         ride = json.load(f)["island"]
     up = ride[: len(ride) // 2 + 1]
