@@ -196,7 +196,7 @@ def carve(h, line):
 def paint_band(x, y, h, slope, d, w, inland):
     """Each layer's weight, 0..1, for one band."""
     n = lambda s, seed, octaves=3: mi.fbm(x, y, s, octaves, SEED + seed)  # noqa: E731
-    shoulder = mi.smoothstep(mi.ROAD_HALF + VERGE, mi.ROAD_HALF + 0.2, d)
+    shoulder = mi.smoothstep(mi.ROAD_HALF + 0.9, mi.ROAD_HALF + 0.2, d)
     rock = mi.smoothstep(0.75, 1.05, slope) * mi.smoothstep(10.0, 25.0, d)
     high = w["mountain"] + w["heath"]
     rock = np.maximum(rock, high * mi.smoothstep(0.45, 0.7, slope) * mi.smoothstep(15, 30, d))
@@ -207,6 +207,12 @@ def paint_band(x, y, h, slope, d, w, inland):
     beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(900, 500, inland)
     beach = np.maximum(beach, h < 0.5)
     desert = w["desert"]
+    # In the green stretches the verge is Dirt (turf with no blades: biomes "world") out to a
+    # whole sample past the road, as any sample nearer feeds the road's grass (11 Nov: at 85%
+    # Dirt the Grass layer's last 15% still grew tufts through the tarmac). The desert and the
+    # beaches keep the narrow verge.
+    verge = mi.smoothstep(mi.ROAD_HALF + VERGE * 1.6, mi.ROAD_HALF + VERGE, d)
+    shoulder = np.maximum(shoulder, verge * (1 - beach) * (1 - desert))
     # Woods: the forest's and the mountain's below the treeline, copses in the meadows, with
     # clearings; open grass in the meadows, the town, the heath and above the trees.
     alpine = mi.smoothstep(TREELINE - 30, TREELINE + 15, h + 40 * (n(90, 3) - 0.5))

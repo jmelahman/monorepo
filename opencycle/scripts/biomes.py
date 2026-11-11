@@ -182,21 +182,34 @@ PRESETS = {
 # the alpine daylight (ev -2.6), so the sand is tinted darker than in the desert's own preset
 # (ev -0.4). Grass keeps the alpine rows bar the heath's and the cut banks'.
 PRESETS["world"] = {
+    # Dirt is the verge, a sample (14 m) wide beside the road: short turf with no blades
+    # (Dirt has no GRASS row), the Grass layer's look, rather than a 35 m strip of mud.
     "SURFACES": {
         "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
         "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
+        "Dirt": ("shared", "uncut_grass", (0.55, 0.58, 0.42)),
     },
     "MIXES": {
         "Desert": ("desert", "dry_mud_ground", "patches", 30.0),
         "Sand": ("coast", "beach_pebbles", "patches", 5.0),
+        "Dirt": ("shared", "lawn_grass", "patches", 30.0),
     },
     "LOOK_TINTS": {
+        "Dirt": (0.14, 0.23, 0.04),
+        "Dirt mix": (0.14, 0.22, 0.04),
         "Desert": (0.2, 0.15, 0.09),
         "Desert mix": (0.14, 0.1, 0.06),
         "Sand": (0.28, 0.24, 0.17),
         "Sand mix": (0.2, 0.18, 0.16),
     },
-    "LOOK_GREYS": {"Desert": 0.4, "Desert mix": 0.4, "Sand": 0.3, "Sand mix": 0.3},
+    "LOOK_GREYS": {
+        "Desert": 0.4,
+        "Desert mix": 0.4,
+        "Sand": 0.3,
+        "Sand mix": 0.3,
+        "Dirt": 0.0,
+        "Dirt mix": 0.0,
+    },
     "STEEP": {"Desert": (0.85, 0.7, 0.55), "Sand": (0.9, 0.85, 0.75)},
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
