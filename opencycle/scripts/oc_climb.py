@@ -20,14 +20,16 @@ import time
 
 import unreal
 
-SRC = "/workspace/ue/world_gen/climb"
+# OC_SRC and OC_LEVEL point the tools at another build: the world's ride is
+# OC_SRC=/workspace/ue/world_gen/ride OC_LEVEL=/Game/World/L_World (make_world_level.py).
+SRC = os.environ.get("OC_SRC") or "/workspace/ue/world_gen/climb"
 PREP = "/workspace/ue/fab_prep"
 MS = "/Game/Megascans"
 FOLDER = "/Game/Climb"
-LEVEL = f"{FOLDER}/L_Hero"
+LEVEL = os.environ.get("OC_LEVEL") or f"{FOLDER}/L_Hero"
 MATERIAL = "M_ClimbGround"
 INSTANCE = "MI_ClimbGround"
-STILLS = "/workspace/ue/out/climb_stills"
+STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 STILL_SIZE = (1920, 1080)
 # Frames to wait at each view: grass builds around the camera within a time budget, and at 120
@@ -1524,9 +1526,25 @@ def _tune(tints, greys=None):
     log(f"tuned {tints} grey {greys}")
 
 
+def _views():
+    """info.json's views ([name, eye, target] in m), if the generator chose them: the world's
+    ride has one per stretch."""
+    try:
+        with open(f"{SRC}/info.json") as f:
+            views = json.load(f).get("views")
+    except OSError:
+        return None
+    if not views:
+        return None
+    return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in views]
+
+
 def cameras(only=None):
     """(name, position, look-at) in cm: a rider's eye along the road, looking 30 m up it, and one
-    from above the hairpin back down the lower traverse."""
+    from above the hairpin back down the lower traverse; or info.json's views."""
+    views = _views()
+    if views:
+        return [v for v in views if not only or v[0] in only]
     with open(f"{SRC}/routes.json") as f:
         ride = json.load(f)["island"]
     up = ride[: len(ride) // 2 + 1]
