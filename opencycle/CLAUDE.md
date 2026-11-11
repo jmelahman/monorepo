@@ -1,7 +1,9 @@
 # OpenCycle: working notes for Claude
 
 Read `docs/climb-plan.md` first. It is the plan of record, and its "Where things stand" section
-says what was done last. Update both files before a session ends or when a rule changes.
+says what was done last, what is open and what comes next. This file holds the rules and how
+things work, not a version log: put each version's changes and status in the plan, and
+update this file only when a rule or a mechanism changes.
 
 ## The goal (the user's decisions)
 
@@ -77,41 +79,34 @@ the grass is built. Work on the structure below, in this order, before touching 
   bare ground between? Is anything neon?
 - A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
 
-**Where v34 stands** (stills in the storybook's img26; details in `docs/climb-plan.md`)
+**How the vegetation is built**
 
-- **Grass is geometry now.** `scripts/make_grass.py` writes nine clumps of bent, tapered blades
-  to `world_gen/grass` (blade_short about 22 cm, blade_mid 45 cm, blade_tall 75 cm with seed
-  stalks). `rebuild-ground --rebuild-grass` imports them as Nanite meshes under
-  `/Game/Climb/Blades/<slug>/<file>/StaticMeshes` with one material, M_Blade / MI_Blade.
-  GRASS rows use them with the biome "climb". The scans left in the grass tables are clover,
-  dandelions and a few grass_clumps and wheat_grass.
-- **M_Blade** colours a blade from its UVs alone (u: a random number per blade, 1.0 for a seed
-  head; v: 0 at the root, 1 at the tip): "Root colour" to "Tip colour", a slow "Drift tint"
-  across the slope, per-blade and per-clump brightness, a "Dry share" of straw tips. Its values
-  are `oc_climb.BLADE_LOOK`; try them with `look --blade-param NAME=F|R,G,B`.
-- **Daylight.** The sun is at pitch -50 (was -16.3) with ev=-2.6, sky=1.5, temp=6500 and
-  sky_warm=0. In full sun bright tips bleach to white: "Tip colour" (0.08, 0.16, 0.03) and
-  "Translucency" (0.15, 0.25, 0.04) hold their green.
-- v33: blades half as wide and nearly twice as many (v32's read as lily leaves), and twice
-  the blades on the cut banks. Both fixed.
-- v34: mixed greens (a cooler "Drift tint", more dry tips), lighter ferns (PLANT_LOOK), a
-  darker road (ROAD_DARKEN 0.19) and wind: M_Blade bends each blade from its root ("Wind" in
-  cm at the tip, "Wind speed"). Stills can't show motion: check with `--blade-param Wind=40`.
-- Open: the road at the bench still reads pale (it is the road mesh seen against the sun:
-  sheen, not albedo); the peak is pale and the hairpin view hazy; grey scan tufts stand out
-  among the blades; flowers are only seed heads, clover and dandelions.
+- **Grass is geometry.** `scripts/make_grass.py` writes clumps of bent, tapered blades to
+  `world_gen/grass` (blade_short about 22 cm, blade_mid 45 cm, blade_tall 75 cm with seed
+  stalks, plus heath_low and heath_tuft). `rebuild-ground --rebuild-grass` imports them as
+  Nanite meshes under `/Game/Climb/Blades/<slug>/<file>/StaticMeshes`. GRASS rows use them
+  with the biome "climb". The scans left in the grass tables are clover, dandelions and a few
+  grass_clumps and wheat_grass.
+- **M_Blade / MI_Blade** colours a blade from its UVs alone (u: a random number per blade,
+  1.0 for a seed head; v: 0 at the root, 1 at the tip): "Root colour" to "Tip colour", a slow
+  "Drift tint" across the slope, per-blade and per-clump brightness, a "Dry share" of straw
+  tips, and wind ("Wind" in cm at the tip, "Wind speed"; stills can't show motion, so check
+  with `--blade-param Wind=40`). Its values are `oc_climb.BLADE_LOOK`; try them with
+  `look --blade-param NAME=F|R,G,B`. The heath uses MI_Heath: `--blade-param heath:NAME=...`.
+- **Daylight.** The sun is at pitch -50 with ev=-2.6, sky=1.5, temp=6500 and sky_warm=0. In
+  full sun bright albedo bleaches to white: keep blade tips and ground tints dark.
+- **Treeline.** Above `TREELINE` in `make_climb.py` the forest opens into heath with stunted
+  spruce.
 
-**What to do next, in order**
+**Other biomes and the world**
 
-1. Done (v34): mixed greens, the daylight re-match of ferns and road, and wind.
-2. Left over: the road's sheen at the bench (specular and roughness in `road_material`), and
-   the pale peak.
-3. Next (agreed 10 Nov): build the treeline zone and PCG placement together, so the
-   placement rules are written against two biomes, not one.
-4. A treeline zone after the alpine photo: low heath, rock slabs, sparse conifers.
-5. Placement by ecology with PCG (plugins PCG and PCGBiomeCore are present).
-6. Flowers: white, pink and blue need new scans (the user fetches them; never buy on Fab) or
-   small blade-style meshes made in `make_grass.py`. Then the road surface, then perf.
+- `OC_BIOME=desert|coast|meadow|alpine` on `make_climb.py` picks the terrain shape and writes
+  the name into `world_gen/climb/info.json`; `oc_climb.py` reads it at load and lays
+  `scripts/biomes.py`'s `PRESETS[name]` over its tables. L_Hero holds one biome at a time.
+  Each biome's grass types are saved as `GT_<biome>_<layer>`.
+- The world plan is `scripts/make_world.py` (a 57 km map with rides per biome; not a level).
+- Read `docs/world-plan.md` before working on a biome or the world: it has the chain, each
+  biome's status and the next steps.
 
 ## The loop: `scripts/oc.py` (run from /workspace/ue)
 

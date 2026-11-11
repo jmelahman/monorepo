@@ -481,4 +481,19 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     is still pale: false colour showed it is the road mesh, not a landscape layer, seen
     against the sun, so it is sheen (try a lower specular and a rougher floor in
     `road_material`). Storybook v34 (img26).
-  - Next: see "What to do next" in CLAUDE.md.
+  - **v35: a treeline heath zone.** TREELINE 130 m opens the top of the stretch into heath
+    (`make_grass.py` heath_low and heath_tuft, MI_Heath, `look --blade-param heath:NAME=...`)
+    with stunted spruce. Open: the heather bloom is too pale and pink, the peak is pale and
+    the far slopes are bare. Storybook v35 (img27).
+  - **Biomes and the world plan (10 Nov, evening).** `OC_BIOME=<name>` on make_climb.py
+    builds a desert, coast or meadow stretch in L_Hero through the same pipeline
+    (`scripts/biomes.py` presets), and `scripts/make_world.py` writes a 57 km world plan.
+    `docs/world-plan.md` is the hand-off for both: read it before working on either.
+  - **Open on the alpine stretch:** the road at the bench reads pale (sheen on the road mesh
+    against the sun: try specular and roughness in `road_material`); the peak is pale and
+    the hairpin view hazy; grey scan tufts stand out among the blades; flowers are only seed
+    heads, clover and dandelions; the heather bloom is too pale and pink.
+  - **Next, in order:** tune the biome stretches and join them to the world plan (see
+    `docs/world-plan.md`); placement by ecology (the numpy generator now, PCG at scale
+    later); flowers (white, pink and blue need new scans, which the user fetches, or small
+    blade-style meshes from `make_grass.py`); the road surface; then perf.
