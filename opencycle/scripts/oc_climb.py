@@ -222,8 +222,9 @@ GRASS = {
         ("forest", "mossy_rocks", 0.6, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("climb", "blade_short", 120.0, 2500, 4000, (0.8, 1.3)),
-        ("climb", "blade_mid", 60.0, 3000, 4500, (0.7, 1.2)),
+        # v33: nearly twice the blades: v32's banks carried separate tufts with soil between.
+        ("climb", "blade_short", 220.0, 2500, 4000, (0.8, 1.3)),
+        ("climb", "blade_mid", 140.0, 3000, 4500, (0.7, 1.2)),
         ("shared", "grass_clumps", 30.0, 3000, 4500, (1.2, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         # v27: twice the clover, bigger, over the bare soil between the tufts (QA, v26).
@@ -591,13 +592,14 @@ BLADE_LOOK = {
     # rise out of it; move them with LOOK_TINTS' "Forest mix".
     "Root colour": (0.03, 0.07, 0.012),
     # v32: (0.16, 0.3, 0.05) bleached to white in full sun past 10 m.
-    "Tip colour": (0.08, 0.16, 0.03),
+    "Tip colour": (0.085, 0.15, 0.035),
     "Gradient": 0.5,
     # Over tens of metres the field drifts toward this multiplier (yellower, sunnier grass).
     "Drift tint": (1.15, 1.05, 0.7),
-    "Blade variation": 0.5,
-    "Variation": 0.25,
-    "Dry share": 0.08,
+    # v33: more spread between blades and clumps: v32 was one even lime.
+    "Blade variation": 0.8,
+    "Variation": 0.4,
+    "Dry share": 0.15,
     "Dry colour": (0.3, 0.26, 0.1),
     # v32: (0.35, 0.28, 0.14) glowed like cotton.
     "Seed colour": (0.14, 0.11, 0.06),

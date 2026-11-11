@@ -24,12 +24,14 @@ SEED_HEAD = 1.0
 # slug: (variants, blades, clump radius, (height low, high), (width low, high), (lean low, high)
 # as a share of height, segments, seed stalks). Lengths in cm.
 KINDS = {
+    # v33: about half the width and nearly twice the blades of v32, whose blades read as lily
+    # leaves up close.
     # Turf: the carpet's underlayer, and the alpine heath's grass.
-    "blade_short": (3, 110, 26.0, (10.0, 24.0), (0.7, 1.2), (0.15, 0.7), 3, 0),
+    "blade_short": (3, 200, 26.0, (10.0, 24.0), (0.4, 0.7), (0.15, 0.7), 3, 0),
     # Meadow grass, shin high.
-    "blade_mid": (3, 100, 28.0, (24.0, 46.0), (0.8, 1.4), (0.15, 0.6), 4, 0),
+    "blade_mid": (3, 180, 28.0, (24.0, 46.0), (0.45, 0.8), (0.15, 0.6), 4, 0),
     # Knee high, with seed stalks standing above it.
-    "blade_tall": (3, 80, 30.0, (42.0, 75.0), (0.9, 1.6), (0.12, 0.5), 5, 5),
+    "blade_tall": (3, 140, 30.0, (42.0, 75.0), (0.5, 0.9), (0.12, 0.5), 5, 5),
 }
 
 
