@@ -93,13 +93,40 @@ Known gaps in the plan:
 - A biome with a sea gets a water plane (`climb_world.sea`, M_ClimbSea) at `sea_cm` and its
   "Snow" layer painted as wet beach at the waterline.
 - One slot: building a biome replaces the last one in L_Hero. To get the alpine climb back,
-  run the same chain with `OC_BIOME=alpine` (about 12 minutes).
+  run `scripts/oc_biome.sh alpine` (about 12 minutes).
+- **The chain is `scripts/oc_biome.sh <biome>`**: stop, generate, rebuild the ground, build
+  the level, then the standard daylight look with the preset's `"POST"` keys. Run it as one
+  background job.
 
 To add a biome: a `SHAPES` row, a `PRESETS` row, one chain, then tune with `oc.py look`.
 
 ## Where each biome stands
 
-BIOME_STATUS
+All four use the same flank and path. Stills: the storybook, or re-run the chain.
+
+- **alpine** (the hero climb): the reference build; see `docs/climb-plan.md`. L_Hero is
+  left as alpine at the end of 10 Nov if the last chain finished (check `info.json`).
+- **desert** (built; storybook img29): reads as desert at `ev=-0.4`. Pale sand with mud
+  pans, straw tufts, red sandstone, a few cacti. Wrong: the far slopes show one blotchy
+  patch pattern (the 18 m mud patches tile visibly from far off: fade the mix with distance
+  or make it larger); cacti are few and small; the rock is purple-grey, not red; no mesas
+  or canyon walls (the flank is still the alpine one); the fence and bench are alpine props.
+- **coast** (built twice; storybook img30): a turquoise bay below the path, sand with grass
+  patches, marram and palms. Wrong: the sea (`climb_world.sea_material`) is a flat tinted
+  sheet with no waves, foam or depth fade, and reads brighter than its dark constants
+  because it mirrors the sky; the grass is lush lawn (the kept "Grass" layer and its blade
+  rows: use drier, sparser rows); the trees are beech (palms are only GRASS rows, so they
+  have no far LOD and cull at about 100 m); the hillside behind is bare sand-and-rock.
+- **meadow**: MEADOW_STATUS
+
+**Lessons from the first builds**
+
+- **Exposure is per biome.** The standard look is exposed for dark greens; sand blew out to
+  white whatever its tint. A preset's `"POST"` keys are laid over the look by
+  `scripts/oc_biome.sh`. Passing the standard look by hand resets it to alpine's.
+- **False colour first.** The white desert looked like snow; `look --tint` per layer showed
+  it was the sand layer, and the weights (`world_gen/climb/*.r8`) showed no snow at all.
+- **The engine's plane is 1 m.** The first sea was 60 m across.
 
 ## What to do next (suggested order)
 
