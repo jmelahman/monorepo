@@ -185,12 +185,27 @@ The user asked for "some working golden ride across the entire world" (Town skip
 now). It is one level, `/Game/World/L_World`, built by the climb pipeline from another
 source:
 
-- `scripts/make_world_level.py` (about 4 min) writes `world_gen/ride`: the world plan's
-  heights upsampled to one 8129² landscape at 7 m (57 km), with detail noise; "The Ring", a
-  closed 165.5 km road (5 to 419 m, steepest 9% over 100 m) carved through it and cut into
-  166 road pieces; seven layer weights (Desert is desert sand, Sand is the beaches, the heath
-  look is dropped); 138k trees; and in `info.json` a `ride` (title, blurb, 13 stretches by
-  biome) and `views` (one `ride_NN_<biome>` still mid-stretch, plus `above`).
+- `scripts/make_world_level.py` (about 2 min) writes `world_gen/ride`: the world plan's
+  heights upsampled to one 4065² landscape at 14 m (57 km, 32 x 32 components), with detail
+  noise; "The Ring", a closed 165.5 km road (5 to 419 m, steepest 9% over 100 m) carved
+  through it and cut into 166 road pieces; seven layer weights (Desert is desert sand, Sand
+  is the beaches, the heath look is dropped); about 29k trees; and in `info.json` a `ride`
+  (title, blurb, 13 stretches by biome) and `views` (one `ride_NN_<biome>` still
+  mid-stretch, plus `above`).
+- **Why 14 m.** 8129² (7 m, `OC_RES=8129`) lost the GPU on 11 Nov: the editor's
+  ChangeGridSize on 64 x 64 components sat 8 minutes on one frame, then
+  VK_ERROR_DEVICE_LOST. 4065² builds its grid step in about 2 minutes.
+- **The road at 14 m** needed three things the 1 m climb never did (11 Nov):
+  - the flat beside the road (`FLAT`) is at least a sample wide, or the banks rose over it;
+  - in the green stretches the verge is fully Dirt out to a sample past the road (`VERGE`),
+    and the world preset draws Dirt as bladeless turf, or the Grass layer's last 15% grew
+    tufts through the tarmac;
+  - `clear_road()` lowers any cell whose bilinear ground pokes above the road's centre or
+    edges: on bends it rose up to 0.8 m over the tarmac on 5% of the ring.
+    `out/qa/ring_vs_ground.py world_gen/ride` checks it offline.
+- **The dress stage's ensure.** The 74 km sea plane trips a handled "precision loss"
+  ensure (DoubleFloat.cpp). Its CrashReportClient used to make `ue_run.sh` kill a healthy
+  editor; now only exits it doesn't account for count. Tiling the sea would silence it.
 - `OC_SRC`, `OC_LEVEL` and `OC_STILLS` point `oc_climb.py` and `climb_world.py` at it.
   `oc.py` hands its environment to the editor, so set them on every command of the chain;
   a bare `oc.py restart` returns to the hero.
@@ -204,6 +219,15 @@ source:
   stays). Ride it with `OC_MAP=/Game/World/L_World scripts/play.sh`; play.sh widens World
   Partition's runtime loading range to 4 km (`OC_RANGE` in cm) so the landscape isn't cut at
   the default 256 m.
+  Offscreen: `OC_MAP=/Game/World/L_World scripts/ride_test.sh WATTS SHOTS START_M`.
+- **Riding it (11 Nov).** With the engine default `landscape.RenderNanite=1`, the first
+  `-game` frame grew from 1 to 57 GB in 40 s and the RAM killer took it (5 of 5 rides);
+  `grass.Enable=0` or `landscape.RenderNanite=0` each stopped it, though no landscape here is
+  Nanite (probe: `enable_nanite` False on all 65 actors). `DefaultEngine.ini` now turns it
+  off. Rides from 200 m (town), 44.1 km (forest), 108.9 km (mountain) and 165.4 km (across
+  the wrap) all ran in about 2 GB at 7-10 fps (Epic, offscreen, GPU-bound at 100-165 ms).
+  Open: tufts through the tarmac in the town and mountain stretches, and the road's dirt
+  shoulders read wide.
 - `biomes.PRESETS["world"]` holds the world's surfaces and grass rows.
 - **Known couplings:** L_World shares `M_ClimbGround`/`MI_ClimbGround` and the grass types in
   `/Game/Climb` with L_Hero, so a rebuild-ground for any biome changes the other level's

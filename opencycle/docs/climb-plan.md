@@ -454,7 +454,7 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - Fixed an editor crash when a level has no ride track (it broke the `L_Forest` spike).
 - **Only one Unreal at a time, across all sessions.** Two sessions rode at once on 9 Nov, and both
   wrote `/workspace/ue/ride_test.log`. Check `pgrep -a UnrealEditor` before starting one.
-- 2026-11-10, evening (the latest entry):
+- 2026-11-10, evening:
   - **v31:** three times the scan grass, drawn taller and further (grass rows only: `look
     --grass` multiplies props too). A full carpet with no soil showing, but still short cards.
   - **The user's new direction (10 Nov):** two more references (the Folkvangr tundra grass and
@@ -497,3 +497,17 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     `docs/world-plan.md`); placement by ecology (the numpy generator now, PCG at scale
     later); flowers (white, pink and blue need new scans, which the user fetches, or small
     blade-style meshes from `make_grass.py`); the road surface; then perf.
+- 2026-11-11 (the latest entry): **the golden ride works, and FreeSwift.**
+  - `/Game/World/L_World` is the whole island at 4065² (14 m) with The Ring, 165.5 km, and
+    rides end to end offscreen: town, forest, mountain and the wrap past 165.5 km were all
+    ridden. See `docs/world-plan.md`, "The golden ride".
+  - `landscape.RenderNanite=0` is now in `DefaultEngine.ini`: with it on, L_World's first
+    `-game` frame grew to 57 GB and the RAM killer took it. None of our landscapes is Nanite,
+    so the hero's look shouldn't change; check it on the next hero look.
+  - The packaged build now cooks L_World only and starts there.
+  - The source is mirrored to github.com/jmelahman/FreeSwift (`scripts/freeswift_sync.sh`;
+    the old Godot LFS files are dropped from its history). `scripts/release.sh TAG` packs
+    `out/package` as a release (`--upload` needs `gh auth login`); the notes are
+    `docs/release-notes.md`.
+  - **Next:** test the package (`ride_test` against it, Low and Epic), release the preview,
+    then `plans/roadmap.md` section 3 onward.
