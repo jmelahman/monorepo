@@ -77,7 +77,7 @@ the grass is built. Work on the structure below, in this order, before touching 
   bare ground between? Is anything neon?
 - A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
 
-**Where v33 stands** (stills in the storybook's img25; details in `docs/climb-plan.md`)
+**Where v34 stands** (stills in the storybook's img26; details in `docs/climb-plan.md`)
 
 - **Grass is geometry now.** `scripts/make_grass.py` writes nine clumps of bent, tapered blades
   to `world_gen/grass` (blade_short about 22 cm, blade_mid 45 cm, blade_tall 75 cm with seed
@@ -94,16 +94,20 @@ the grass is built. Work on the structure below, in this order, before touching 
   "Translucency" (0.15, 0.25, 0.04) hold their green.
 - v33: blades half as wide and nearly twice as many (v32's read as lily leaves), and twice
   the blades on the cut banks. Both fixed.
-- Open: the grass is one lime green in full sun; grey scan tufts stand out among the blades; ferns are still near black; the tarmac
-  reads pale beige in full sun; no wind; flowers are only seed heads, clover and dandelions.
+- v34: mixed greens (a cooler "Drift tint", more dry tips), lighter ferns (PLANT_LOOK), a
+  darker road (ROAD_DARKEN 0.19) and wind: M_Blade bends each blade from its root ("Wind" in
+  cm at the tip, "Wind speed"). Stills can't show motion: check with `--blade-param Wind=40`.
+- Open: the road at the bench still reads pale (it is the road mesh seen against the sun:
+  sheen, not albedo); the peak is pale and the hairpin view hazy; grey scan tufts stand out
+  among the blades; flowers are only seed heads, clover and dandelions.
 
 **What to do next, in order**
 
-1. Judge v33 from full-size crops beside the Folkvangr shot; vary the greens (a second,
-   duller MI or a wider "Drift tint"), and tune height in `make_grass.py` (then `--rebuild-grass`) and colours with `--blade-param`
-   against `--tint "Forest mix"=r,g,b`.
-2. Re-match everything else to the daylight: tarmac, litter, rock and the ferns' tint.
-3. Wind on the blades (WPO from v; M_Blade has none yet).
+1. Done (v34): mixed greens, the daylight re-match of ferns and road, and wind.
+2. Left over: the road's sheen at the bench (specular and roughness in `road_material`), and
+   the pale peak.
+3. Next (agreed 10 Nov): build the treeline zone and PCG placement together, so the
+   placement rules are written against two biomes, not one.
 4. A treeline zone after the alpine photo: low heath, rock slabs, sparse conifers.
 5. Placement by ecology with PCG (plugins PCG and PCGBiomeCore are present).
 6. Flowers: white, pink and blue need new scans (the user fetches them; never buy on Fab) or
