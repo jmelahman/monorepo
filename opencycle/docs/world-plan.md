@@ -28,38 +28,56 @@ rules, daylight, static trees). Its *layout* is reused; its level is not.
 
 ## The world as planned
 
-`world_gen/world/preview.png` is the map; `world.json` has the numbers below.
+`world_gen/world/preview.png` is the map (red dots are landmarks); `world.json` has the numbers
+below, the landmarks, each road's cut and fill (`roads`) and the windows.
 
 | Ride | km | Climb m | Hours* | Mostly |
 | --- | --- | --- | --- | --- |
-| island (the ring) | 134.6 | 1371 | 4.8 | coast, desert, forest, town, heath, mountain |
-| forest | 61.6 | 812 | 2.3 | forest, west cliffs |
-| coast | 49.3 | 225 | 1.6 | south beaches, town, farmland |
-| desert | 47.7 | 299 | 1.6 | desert, mesas |
-| meadow | 39.2 | 167 | 1.3 | farmland |
-| dunes | 37.5 | 250 | 1.3 | desert, harbour |
-| summit | 26.6 (there and back) | 714 | 1.25 | mountain, to 863 m |
+| island (the ring) | 165.5 | 1752 | 5.8 | coast, desert, forest, heath, town, mountain |
+| forest | 49.6 | 543 | 1.7 | forest, the fjord's south shore, west cliffs |
+| coast | 49.7 | 244 | 1.7 | south beaches, Gull Point, town, farmland |
+| desert | 48.5 | 361 | 1.65 | desert, mesas |
+| dunes | 43.9 | 382 | 1.5 | desert, Beacon Head, harbour |
+| meadow | 39.6 | 171 | 1.3 | farmland |
+| summit | 21.1 up, 42.2 there and back | 891 | 1.75 | mountain, 7 hairpins, to 1031 m of 1076 |
 
-*At 30 km/h on the flat, slower uphill (`hours` in make_world.py).
+*At 30 km/h on the flat, slower uphill (`hours` in make_world.py). No ride is steeper than
+7.8% anywhere, and every ride's widest gap between points is one 10 m step.
 
-Regions (centres in world km, X east, Y south): mountain in the north, heath north-west,
-forest west, meadow in the middle, desert east, town and harbour south-east, beaches along
-the south, cliffs west and north. `REGIONS`, `ROADS` and `ROUTES` are `make_island.py`'s,
-times `K = 7`; make_world adds the heath, mid-scale hills (`RELIEF`) and a wander on every
-road (`WANDER`).
+The broad shape (coast, region blend and heights, mesas, canyon) is still `make_island.py`'s
+times `K = 7`. Everything else is make_world's own, in world km (X east, Y south):
+
+- **Landforms:** `FJORD` (Skarfjord, cut into the west coast between forest and heath; the
+  ring runs in along its south shore, round Fjordhead and out along its north shore),
+  `SPINE` (a spur ridge running south off the mountain between forest and farmland, with
+  two passes in `SPINE_PASSES`: Heath Gap for the ring, Spine Gap for the cross road),
+  `HORN` (a second peak in the north-east, 786 m) and `HEADLANDS` (Beacon Head in the east).
+  The ring also loops round Gull Point, the south-west spit.
+- **Roads** (`ROADS`): drawn control points. An open road's ends snap onto the nearest
+  earlier road and take its height; those shared points are junctions, `<road>.a` / `.b`.
+- **Rides** (`ROUTES`): legs between junctions, so legs share a point.
+- **The summit climb** (`climb`, settings in `CLIMB`): an A* search over 60 m cells and 16
+  headings on the mountain smoothed to 200 m, with a penalty above 6.6%, a corridor around
+  the start–summit line, and hairpins as an explicit move (a fixed cost, at least 6 cells
+  apart). Ends 220 m from the summit.
+- **Landmarks** (`LANDMARKS`): name, position, one line each, in world.json.
+- **Audit:** each run prints, per road, max and mean |road z − ground z| with the worst
+  place, and any point over the sea (none now). Worst: the summit road (67 m fill near the
+  top, mean 9.5 m), the ring (31 m cut on the mountain's foot), the forest road (9 m).
+- **Windows:** one 2 km stretch per biome, at least 3 km inland except the coast's.
+  `scripts/make_window.py <biome>` cuts one from the plan (see its docstring).
 
 Known gaps in the plan:
 
-- The ring is 135 km, a little under the 5 to 6 hours asked for. Raise `K` to 8, or add
-  wander, or route the ring out to the headlands.
-- The summit climb finds only one switchback and tops out at 863 m of a 1076 m mountain. The
-  pathfinder's window and costs (`climb`) were scaled from the island's, not tuned.
-- Rides join their legs with gaps of up to about 100 m (the "widest gap" the generator
-  prints): a leg's end snaps to the nearest road point but the junction isn't shared tarmac.
-- Roads are graded (under 8%) but not carved into the height map, and nothing checks a road
-  against a mesa or the canyon.
-- Regions are still round blobs. For Skyrim-like asymmetry, give each a ridge, valley or
-  river that the road must go round; add landmarks to ride toward.
+- Roads are graded (under 8%) but not carved into the height map; the summit road's top
+  kilometre fills up to 67 m over crags the plan can't resolve at 28 m.
+- Roads cross each other only at junctions by design; no check finds an accidental
+  crossing at different heights.
+- The canyon and mesas are the island's at seven times the size; the canyon reads as three
+  parallel grooves on the map. No river yet.
+- Beacon Head is narrow, and the Horn is a blob of ridged noise; both could use a shaped
+  profile. A faint streak shows on the Spine's north end where it fades in.
+- Heath and town have no ride of their own (the ring covers them).
 
 ## Biome presets: how they work
 
