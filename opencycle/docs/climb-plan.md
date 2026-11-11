@@ -469,4 +469,9 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     pipefail`). The first real blades bleached white in full sun and their seed heads glowed;
     darker tips, less translucency and roughness 0.85 fixed both. glTF v survived the import
     unflipped (roots dark, tips light). Storybook v32 (img24).
+  - **v33:** blades half as wide and nearly twice as many per clump (1,000 to 1,300 tris), more
+    brightness spread and dry tips, and nearly twice the blades on the cut banks ("Sand"). The
+    grass reads as grass up close and the banks are covered. A restart after the mesh rebuild
+    took over 60 s and timed out the chain; the stills step then ran on v32's files, so gate
+    any post-processing with `&&`, never `;`. Storybook v33 (img25).
   - Next: see "What to do next" in CLAUDE.md.

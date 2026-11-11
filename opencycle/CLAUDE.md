@@ -77,7 +77,7 @@ the grass is built. Work on the structure below, in this order, before touching 
   bare ground between? Is anything neon?
 - A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
 
-**Where v32 stands** (stills in the storybook's img24; details in `docs/climb-plan.md`)
+**Where v33 stands** (stills in the storybook's img25; details in `docs/climb-plan.md`)
 
 - **Grass is geometry now.** `scripts/make_grass.py` writes nine clumps of bent, tapered blades
   to `world_gen/grass` (blade_short about 22 cm, blade_mid 45 cm, blade_tall 75 cm with seed
@@ -92,13 +92,15 @@ the grass is built. Work on the structure below, in this order, before touching 
 - **Daylight.** The sun is at pitch -50 (was -16.3) with ev=-2.6, sky=1.5, temp=6500 and
   sky_warm=0. In full sun bright tips bleach to white: "Tip colour" (0.08, 0.16, 0.03) and
   "Translucency" (0.15, 0.25, 0.04) hold their green.
-- Open: grey scan tufts stand out among the blades; ferns are still near black; the tarmac
+- v33: blades half as wide and nearly twice as many (v32's read as lily leaves), and twice
+  the blades on the cut banks. Both fixed.
+- Open: the grass is one lime green in full sun; grey scan tufts stand out among the blades; ferns are still near black; the tarmac
   reads pale beige in full sun; no wind; flowers are only seed heads, clover and dandelions.
 
 **What to do next, in order**
 
-1. Judge v32 from full-size crops beside the Folkvangr shot; tune blade width, count and
-   height in `make_grass.py` (then `--rebuild-grass`) and colours with `--blade-param`
+1. Judge v33 from full-size crops beside the Folkvangr shot; vary the greens (a second,
+   duller MI or a wider "Drift tint"), and tune height in `make_grass.py` (then `--rebuild-grass`) and colours with `--blade-param`
    against `--tint "Forest mix"=r,g,b`.
 2. Re-match everything else to the daylight: tarmac, litter, rock and the ferns' tint.
 3. Wind on the blades (WPO from v; M_Blade has none yet).
@@ -175,7 +177,8 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **One background chain.** Run `restart → make_climb → rebuild-ground → build-level → look` as
   one `&&` command so it finishes with one notification. Don't poll it. Start it with
   `set -o pipefail`: with `| tail -1` after each step, a failed rebuild-ground once let the
-  chain go on and shoot the old grass (10 Nov).
+  chain go on and shoot the old grass (10 Nov). Join any step that reads the stills with `&&`
+  too: after a `;` it ran on the last version's files.
 - **Work while it runs.** Plan the next batch, review the last stills, and update the docs and
   the storybook. Don't edit `oc_climb.py` or `climb_world.py` mid-build.
 - **Review cheaply.** Use the contact sheet and crops rather than reading six full stills. Use
