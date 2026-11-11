@@ -68,6 +68,16 @@ the grass is built. Work on the structure below, in this order, before touching 
   bare ground between? Is anything neon?
 - A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
 
+**Where v30 stands** (stills in the storybook's img23; details in `docs/climb-plan.md`)
+
+- Fixed: neon and sparkling blades, patchy yellow-green, grass over brown litter.
+- Baked: `PLANT_LOOK` "Flat gain" 12, "Flat colour" (0.1, 0.2, 0.03), "Root shade" 0.5; "Flat"
+  0.7 on grass_clumps, wild_grass and kikuyu_grass; "Forest mix" tint (0.2, 0.34, 0.05). "Flat
+  gain" 4 came out grey: the scans' albedo is near black.
+- Open: the carpet is thinner than v29's up close and its blades are paler than the ground
+  (road_30's banks, the bench); ferns are still near black; the litter patches read as grey
+  mud at the bench.
+
 **What to do next, in order**
 
 1. Match blade and ground colour with `look --prop-param grass_clumps:"Flat colour"=r,g,b`

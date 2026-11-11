@@ -222,6 +222,26 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - v29: the shoulder narrowed in make_climb (0.15-0.6 m past the tarmac, was 0.2-1.0), so
     the bank and floor grass reach the path. QA 7.5, 7.5, 7, 7, 7, 5.5, 7.5 (it wobbles about
     0.5 on unchanged frames; trust the stills). The band is gone. Storybook v29 (img22).
+  - **v30, the vegetation reset** (the user: "disappointed with the grass and ferns", worse than
+    Skyrim's). v12-v29 tuned tints and densities; the faults were structural. See "Vegetation:
+    the approach" in CLAUDE.md for the rules. What changed:
+    - `GRASS["Forest"]` grows only on the Forest layer's grass patches and `GRASS["Forest
+      floor"]` (ferns, shrubs, logs, stones) on the litter between (`Ground.patch`; the MIXES
+      row's fifth item is the patch noise's low and high).
+    - M_MS_Plant: world-space normal bent up ("Up normal" 0.85), root darkening ("Root shade"
+      0.5 over "Root height" 14 cm), and "Flat" 0.7 on the three grasses toward "Flat colour"
+      (0.1, 0.2, 0.03) with "Flat gain" 12. The first render at gain 4 was grey and dull.
+    - "Forest mix" tint (0.2, 0.34, 0.05); Forest grass densities x1.67; scales cut to 0.9-2.0.
+    - Result, from full-size crops against v29 (no QA run): the neon, the sparkle and the
+      patchy yellow-green are gone, the colour is even, and yellow dandelions show. Open:
+      1. Cover is thinner than v29 up close (road_30's banks, the bench): soil shows between
+         blades, and the blades are paler than the ground under them. Darken "Flat colour"
+         toward the ground or lift the "Forest mix" tint (look), then add a short
+         close-culled row.
+      2. Ferns show their fronds but still read near black.
+      3. The litter patches read grey-brown mud at the bench; their share may be too high.
+      4. Sand (banks) and Grass (meadow) still use one even table each.
+    - Storybook v30 (img23).
   - Perf in `-game`: PythonScriptPlugin is "UncookedOnly", so it should load in `UnrealEditor
     -game` (uncooked). A game-mode fps script could find the PlayerController with
     `unreal.ObjectIterator`, BugItGo to each view, and time a slate post-tick callback. Not built.
