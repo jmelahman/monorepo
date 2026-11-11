@@ -253,9 +253,46 @@ def road_points():
     return [(x * 100, y * 100) for x, y, _z in half[::5]]
 
 
+def sea_level():
+    """info.json's sea_cm: set for a biome with a sea (make_climb.py's SHAPES), else None."""
+    with open(f"{SRC}/info.json") as f:
+        return json.load(f).get("sea_cm")
+
+
+def sea_material():
+    """Dark, smooth water. Built before the level loads, like the road's material."""
+    if sea_level() is None:
+        return None
+    g = lib.Graph("M_ClimbSea", f"{FOLDER}/Sea")
+    swell = g.world_noise(0.0015, 0.0, 1.0, 3)
+    colour = g.lerp(g.const((0.006, 0.03, 0.04)), g.const((0.012, 0.06, 0.07)), swell)
+    g.output(colour, rough=g.lerp(g.const(0.04), g.const(0.12), swell), specular=0.5)
+    return g.finish()
+
+
+def sea(material):
+    """A plane of water at the sea's level, over the whole map."""
+    level = sea_level()
+    if level is None:
+        return
+    actor = lib.mesh_actor(
+        unreal.load_asset("/Engine/BasicShapes/Plane"),
+        (0, 0, level),
+        scale=(60, 60, 1),
+        label="Sea",
+        folder="Sea",
+    )
+    actor.static_mesh_component.set_material(0, material)
+    actor.set_editor_property("is_spatially_loaded", False)
+    log(f"sea at {level / 100:.0f} m")
+
+
 def trees():
     with open(f"{SRC}/trees.json") as f:
         stems = json.load(f)
+    if not stems:
+        log("trees: none")
+        return
     paths = {kind: tree_mesh(kind) for kind in PVE_TREES}
     meshes = {kind: unreal.load_asset(path) for kind, path in paths.items()}
     for kind, mesh in meshes.items():
@@ -637,7 +674,7 @@ def track():
     log(f"track: {len(centre)} m, out and back")
 
 
-DRESSING = ("Road", "Rail", "Trees", "Props")  # outliner folders the dress stage owns
+DRESSING = ("Road", "Rail", "Trees", "Props", "Sea")  # outliner folders the dress stage owns
 
 
 def fresh_level(ground):
@@ -689,10 +726,12 @@ def main():
     if STAGE == "dress":
         island.FOLDER = FOLDER
         road = road_material()  # before the level loads: no compile with its meshes in view
+        water = sea_material()
         yield
         world = undress()
     else:
         ground, road = materials()
+        water = sea_material()
         yield
         world = fresh_level(ground)
     yield
@@ -705,6 +744,7 @@ def main():
     rails(timber, post_material())
     props(timber, log_material())
     track()
+    sea(water)
     yield
     save(world)
     yield

@@ -37,8 +37,20 @@ FLANK = 0.34  # the mountainside's rise per metre north of it
 # v35: 130 (was 420, far above the path), so the top of the hero stretch rides out of the
 # spruce into open heath, as in ref/climb/alpine_meadow_trail.jpg. The full climb will stretch
 # the zones back out.
-TREELINE = 130.0
-SNOWLINE = 600.0
+# The biome: the same flank and path, painted and planted differently. `biomes.py` says what
+# each layer is made of in it. treeline and snowline in metres; open: the share of the woods
+# opened into fields; wood: the share of the trees kept; sea: the water's height in metres.
+BIOME = os.environ.get("OC_BIOME", "alpine")
+NONE = 1e6
+SHAPES = {
+    "alpine": {"treeline": 130.0, "snowline": 600.0},
+    "meadow": {"treeline": NONE, "snowline": 600.0, "open": 1.0, "spruce": False},
+    "desert": {"treeline": NONE, "snowline": NONE, "wood": 0.0},
+    "coast": {"treeline": NONE, "snowline": NONE, "wood": 0.3, "spruce": False, "sea": 52.0},
+}
+SHAPE = SHAPES[BIOME]
+TREELINE = SHAPE["treeline"]
+SNOWLINE = SHAPE["snowline"]
 # Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
 # Gaussian, at the map's edge: a softer, nearer tail lifted the path 40 m and moved the bench.
 PEAKS = [(990.0, 330.0, 480.0, 200.0), (-990.0, 230.0, 520.0, 200.0)]
@@ -184,6 +196,9 @@ def paint(x, y, h, road_dist):
     # the spruce photos: 1-2 m wide with a wandering edge, gone for a few metres here and there.
     floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
+    # Fields: most of the flank open, with copses and hedged woods left between them.
+    field = mi.smoothstep(0.36, 0.44, mi.fbm(x, y, 220, 3, SEED + 45))
+    clearing = np.maximum(clearing, SHAPE.get("open", 0.0) * field)
     reach = mi.ROAD_HALF + 1.6 + 1.2 * (mi.fbm(x, y, 5, 2, SEED + 58) - 0.5)
     verge = mi.smoothstep(mi.ROAD_HALF + 0.6, mi.ROAD_HALF + 1.0, road_dist)
     verge *= mi.smoothstep(reach + 0.8, reach, road_dist)
@@ -208,6 +223,10 @@ def paint(x, y, h, road_dist):
     # Steep faces shed their snow: dark rock ribs between snowfields, not a flat white cone (QA,
     # v17). slope is rise over run, so 0.7 is 35 degrees.
     snow *= 1 - mi.smoothstep(0.7, 1.1, slope)
+    if "sea" in SHAPE:
+        # The beach: the "Snow" layer is wet sand in a biome with a sea (biomes.py).
+        wet = SHAPE["sea"] + 2 * (mi.fbm(x, y, 30, 2, SEED + 46) - 0.5)
+        snow = np.maximum(snow, mi.smoothstep(wet + 6, wet + 2, h))
     rest = (1 - shoulder - soil) * (1 - snow)
     soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
@@ -257,6 +276,8 @@ def trees(h, road_dist, slope, grass, heath):
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
         # The treeline: stems thin out over 80 m of height, the last of them spruce.
         & (rng.random(d.shape) < mi.smoothstep(TREELINE + 45, TREELINE - 20, h[row, col]))
+        & (rng.random(d.shape) < SHAPE.get("wood", 1.0))
+        & (h[row, col] > SHAPE.get("sea", -NONE) + 4)
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]
     # The lowest ground under the trunk, so it stands in the slope rather than on its high side.
@@ -271,6 +292,7 @@ def trees(h, road_dist, slope, grass, heath):
     # The change from beech to spruce, in metres of height, wandering with noise.
     line = 95 + 30 * (mi.fbm(px, py, 150, 3, SEED + 60) - 0.5)
     spruce = rng.random(z.shape) < mi.smoothstep(line - 25, line + 25, z)
+    spruce &= SHAPE.get("spruce", True)
     # Toward the treeline the spruce are stunted: half size where the woods end.
     stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 30, TREELINE + 20, z)
     out = []
@@ -417,6 +439,13 @@ def main():
     prop_list = props(h, road, road_dist)
     mi.OUT = OUT
     mi.write_maps(h, np.ones_like(h, dtype=bool), layers)
+    with open(f"{OUT}/info.json") as f:
+        info = json.load(f)
+    info["biome"] = BIOME
+    if "sea" in SHAPE:
+        info["sea_cm"] = SHAPE["sea"] * 100
+    with open(f"{OUT}/info.json", "w") as f:
+        json.dump(info, f)
     preview(h, layers, road, tree_list)
     xy, z = road["xy"], road["z"]
     centre = [(a * 100, b * 100, c * 100 + 2) for (a, b), c in zip(xy, z, strict=True)]
@@ -437,8 +466,9 @@ def main():
     grade = np.diff(z) / np.linalg.norm(np.diff(xy, axis=0), axis=1)
     spruce = sum(t[0] == "spruce" for t in tree_list)
     print(
-        f"{OUT}: ground {h.min():.0f}..{h.max():.0f} m; road {length:.0f} m from {z[0]:.0f} to"
-        f" {z[-1]:.0f} m, mean {(z[-1] - z[0]) / length:.1%}, steepest {grade.max():.1%};"
+        f"{OUT} ({BIOME}): ground {h.min():.0f}..{h.max():.0f} m; road {length:.0f} m from"
+        f" {z[0]:.0f} to {z[-1]:.0f} m, mean {(z[-1] - z[0]) / length:.1%},"
+        f" steepest {grade.max():.1%};"
         f" {len(pieces)} road pieces; trees {len(tree_list)} ({spruce} spruce);"
         f" rails {len(rail_runs)} runs, {sum(map(len, rail_runs))} m;"
         f" props {[p[0] for p in prop_list]}"
