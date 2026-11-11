@@ -11,6 +11,15 @@ says what was done last. Update both files before a session ends or when a rule 
   `ref/climb/style_*.jpg`. That means rich green grass carpets with small flowers, warm brown dirt,
   big rounded boulders, red-brown pine trunks, deep shadows and moody skies with a snowy peak. Use
   them for mood and colour only; build nothing from that game.
+- **Two more references (10 Nov):** `ref/climb/alpine_meadow_trail.jpg` (a real treeline trail:
+  low mottled heath, rock slabs, scattered conifers, snow-streaked cliffs, soft daylight) and
+  the Folkvangr tundra grass shot (knee-high, dense, no ground showing, in daylight). The user
+  on our grass: "very patch and thin and this has volume and looks real."
+- **Think big (10 Nov):** "If we need major changes to get the desired environment, I am for
+  it. I am not attached to anything at present." The agreed plan has three parts: daylight
+  (done, v32), grass made of real blades (done, v32), then placement by ecology with PCG.
+- **High end first (10 Nov):** "optimize for the high-end visual cases -- low graphics can
+  degrade the quality for the sake of frames."
 - **The first target:** one realistic mountain climb. Build a 1 km hero stretch first, then the
   full climb, then other biomes.
 - **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low *eventually*. For now the
@@ -68,29 +77,35 @@ the grass is built. Work on the structure below, in this order, before touching 
   bare ground between? Is anything neon?
 - A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
 
-**Where v30 stands** (stills in the storybook's img23; details in `docs/climb-plan.md`)
+**Where v32 stands** (stills in the storybook's img24; details in `docs/climb-plan.md`)
 
-- Fixed: neon and sparkling blades, patchy yellow-green, grass over brown litter.
-- Baked: `PLANT_LOOK` "Flat gain" 12, "Flat colour" (0.1, 0.2, 0.03), "Root shade" 0.5; "Flat"
-  0.7 on grass_clumps, wild_grass and kikuyu_grass; "Forest mix" tint (0.2, 0.34, 0.05). "Flat
-  gain" 4 came out grey: the scans' albedo is near black.
-- Open: the carpet is thinner than v29's up close and its blades are paler than the ground
-  (road_30's banks, the bench); ferns are still near black; the litter patches read as grey
-  mud at the bench.
+- **Grass is geometry now.** `scripts/make_grass.py` writes nine clumps of bent, tapered blades
+  to `world_gen/grass` (blade_short about 22 cm, blade_mid 45 cm, blade_tall 75 cm with seed
+  stalks). `rebuild-ground --rebuild-grass` imports them as Nanite meshes under
+  `/Game/Climb/Blades/<slug>/<file>/StaticMeshes` with one material, M_Blade / MI_Blade.
+  GRASS rows use them with the biome "climb". The scans left in the grass tables are clover,
+  dandelions and a few grass_clumps and wheat_grass.
+- **M_Blade** colours a blade from its UVs alone (u: a random number per blade, 1.0 for a seed
+  head; v: 0 at the root, 1 at the tip): "Root colour" to "Tip colour", a slow "Drift tint"
+  across the slope, per-blade and per-clump brightness, a "Dry share" of straw tips. Its values
+  are `oc_climb.BLADE_LOOK`; try them with `look --blade-param NAME=F|R,G,B`.
+- **Daylight.** The sun is at pitch -50 (was -16.3) with ev=-2.6, sky=1.5, temp=6500 and
+  sky_warm=0. In full sun bright tips bleach to white: "Tip colour" (0.08, 0.16, 0.03) and
+  "Translucency" (0.15, 0.25, 0.04) hold their green.
+- Open: grey scan tufts stand out among the blades; ferns are still near black; the tarmac
+  reads pale beige in full sun; no wind; flowers are only seed heads, clover and dandelions.
 
 **What to do next, in order**
 
-1. Match blade and ground colour with `look --prop-param grass_clumps:"Flat colour"=r,g,b`
-   (and wild_grass, kikuyu_grass) against `--tint "Forest mix"=r,g,b`; bake into
-   `PLANT_SLUG_LOOK` and `LOOK_TINTS`.
-2. Tune patch share and size (`MIXES["Forest"]`), then the two tables' densities.
-3. Ferns: check they are no longer black; group them rather than scatter (a second, smaller
-   noise on "Forest floor" if they still read as evenly sprinkled).
-4. The same split for the cut banks ("Sand") and the meadow ("Grass").
-5. Flowers: only clovers, clover_varieties and leafy_dandelions are in `fab_prep`. White, pink
-   and blue flowers need new plant scans (the user must fetch them; never buy on Fab) or small
-   emissive-free colour cards made here. Ask before spending time on either.
-6. Wind on the grass (it is static now), then the road surface, then perf.
+1. Judge v32 from full-size crops beside the Folkvangr shot; tune blade width, count and
+   height in `make_grass.py` (then `--rebuild-grass`) and colours with `--blade-param`
+   against `--tint "Forest mix"=r,g,b`.
+2. Re-match everything else to the daylight: tarmac, litter, rock and the ferns' tint.
+3. Wind on the blades (WPO from v; M_Blade has none yet).
+4. A treeline zone after the alpine photo: low heath, rock slabs, sparse conifers.
+5. Placement by ecology with PCG (plugins PCG and PCGBiomeCore are present).
+6. Flowers: white, pink and blue need new scans (the user fetches them; never buy on Fab) or
+   small blade-style meshes made in `make_grass.py`. Then the road surface, then perf.
 
 ## The loop: `scripts/oc.py` (run from /workspace/ue)
 
@@ -136,12 +151,14 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     (`--tint`, `--prop-param`) lasts only for that look. `look` takes only `bench` unless you pass `--shots`.
   - More post keys: aerial (SkyAtmosphere aerial scale), cloud_bottom (km), fog_inscatter, bloom,
     flare, sun_pitch, sun_yaw. They persist in the level: put a test value back explicitly
-    (sun_pitch=-16.3 sun_yaw=43.7, bloom=0.675, aerial=1, cloud_bottom=5).
+    (sun_pitch=-50 sun_yaw=43.7, bloom=0.675, aerial=1, cloud_bottom=5).
   - `look --post KEY=F` (repeatable) sets the grade on an "OC Post" volume: exposure, contrast,
     saturation, vignette, fog_start (m), volumetric (0/1), shafts, sky, sun, and ev (locks
     exposure at that EV100; 99 frees it). build-level loses fog and post settings, so re-run look
-    after it. Last used: ev=-4.5 exposure=0.5 sky=1.8 temp=6700 sky_warm=0.35 contrast=1.1 saturation=1.05 vignette=0.3
-    fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage) cloud_wind=0. sky=1.8 (v21) lifts the dark spruce more evenly than exposure did. Keep exposure locked: auto exposure undoes every
+    after it. Last used (v32, daylight): ev=-2.6 exposure=0.5 sky=1.5 temp=6500 sky_warm=0 sun_pitch=-50
+    sun_yaw=43.7 contrast=1.1 saturation=1.05 vignette=0.3
+    fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage) cloud_wind=0.
+    Until v31 the look was a low sun: ev=-4.5 sky=1.8 temp=6700 sky_warm=0.35 sun_pitch=-16.3. sky=1.8 (v21) lifts the dark spruce more evenly than exposure did. Keep exposure locked: auto exposure undoes every
     albedo change (the sun is 6 lux, which is about EV -5).
 - **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
   1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
@@ -156,7 +173,9 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   about 1 min (4 min with `--rebuild-grass`), and `build-level` about 5 min. Try values with
   `look` before baking them into code. Rebuild grass only when GRASS changes.
 - **One background chain.** Run `restart → make_climb → rebuild-ground → build-level → look` as
-  one `&&` command so it finishes with one notification. Don't poll it.
+  one `&&` command so it finishes with one notification. Don't poll it. Start it with
+  `set -o pipefail`: with `| tail -1` after each step, a failed rebuild-ground once let the
+  chain go on and shoot the old grass (10 Nov).
 - **Work while it runs.** Plan the next batch, review the last stills, and update the docs and
   the storybook. Don't edit `oc_climb.py` or `climb_world.py` mid-build.
 - **Review cheaply.** Use the contact sheet and crops rather than reading six full stills. Use
@@ -173,7 +192,7 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   shot shows which landscape layer a surface is (the pale banks were Rock outcrops, not soil).
   The next look restores the baked tints.
 - **Material values without a rebuild:** `look --plant-param NAME=F|R,G,B` (every plant MI) and
-  `--ground-param NAME=...` (MI_ClimbGround), `--prop-param SLUG:NAME=...` (one prop's MI;
+  `--ground-param NAME=...` (MI_ClimbGround), `--blade-param NAME=...` (MI_Blade), `--prop-param SLUG:NAME=...` (one prop's MI;
   false-colour props this way too). Bake the winners into `PLANT_LOOK`, `STEEP`,
   `LOOK_TINTS` or `LOOK_GREYS`.
 - **Restart between looks.** A second `look` on the same editor hit a radv GPUVM fault
