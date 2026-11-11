@@ -1026,7 +1026,9 @@ def _ensure_level():
         ):
             mesh = actor.static_mesh_component
             if mesh.get_material(0) != road:
-                mesh.set_material(0, road)
+                # Through the property, which marks the actor's package dirty: set_material
+                # changed it in memory only, and the save skipped all 166 pieces (11 Nov).
+                mesh.set_editor_property("override_materials", [road])
                 roads += 1
     if changed or roads:
         yield 120
