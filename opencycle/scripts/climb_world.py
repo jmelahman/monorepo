@@ -275,13 +275,15 @@ def far_files():
 
 
 def far_material():
-    """The far horizon's ground: the plan's colours from its vertices, matte. None without a
+    """The far horizon's ground: the plan's colours from its vertices. None without a
     horizon (only a window of the world plan has one)."""
     if not far_files():
         return None
     g = lib.Graph("M_ClimbFar", f"{FOLDER}/Far")
-    colour = g.mask(g.node(unreal.MaterialExpressionVertexColor), "rgb")
-    g.output(colour, rough=0.9, specular=0.3)
+    vertex = g.node(unreal.MaterialExpressionVertexColor)
+    # Alpha is roughness: matte land, a glossy sea that mirrors the sky as the near sea does.
+    rough = g.link(vertex, g.node(unreal.MaterialExpressionMultiply, const_b=1.0), "A", "A")
+    g.output(g.mask(vertex, "rgb"), rough=rough, specular=0.4)
     return g.finish(two_sided=True)
 
 
