@@ -71,7 +71,9 @@ SURFACES = {
     "Forest": ("forest", "forest_floor", (0.5, 0.46, 0.44)),
     "Rock": ("mountain", "granite_rocky_ground", (0.85, 0.85, 0.85)),
     "Snow": ("coast", "thai_wet_sand", (1.0, 1.0, 1.0)),
-    "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
+    # The climb has no desert: its "Desert" layer is the heath above the treeline (v35), a dull
+    # olive moss floor that the heath's cushions (GRASS) grow out of.
+    "Desert": ("forest", "mossy_forest_floor", (1.0, 1.0, 1.0)),
     # The climb has no beach: its "Sand" layer is the cut banks' soil, apart from the path's edge
     # so that the banks' stones and ferns (GRASS) don't grow through the tarmac.
     # v19: stony_soil, not soil_mud: the smooth mud scan made the banks read as smeared putty.
@@ -88,7 +90,8 @@ MIXES = {
     # v30: a fifth item, the noise's (low, high) before it is clamped to 0..1: here about a
     # third of the floor is litter, a third grass, and the rest the fade between.
     "Forest": ("shared", "uncut_grass", "patches", 12.0, (-1.2, 2.4)),
-    "Desert": ("desert", "dry_mud_ground", "patches", 60.0),
+    # Gravel and bare soil show through the heath in patches a few metres across.
+    "Desert": ("shared", "gravel_on_soil", "patches", 5.0, (-2.6, 1.6)),
     # Litter and small plants over the banks' soil (alpine_needles was padding: see "Forest").
     "Sand": ("forest", "forest_floor", "patches", 4.0),
     "Grass": ("shared", "lawn_grass", "patches", 30.0),
@@ -127,6 +130,9 @@ LOOK_TINTS = {
     # v27; tried with look first). Its litter mix too.
     "Sand": (0.17, 0.15, 0.06),
     "Dirt": (0.2, 0.16, 0.07),
+    # v35: the heath's floor, near HEATH_LOOK's root colour, and its gravel.
+    "Desert": (0.26, 0.25, 0.1),
+    "Desert mix": (0.3, 0.27, 0.2),
 }
 LOOK_GREYS = {
     "Grass": 0.0,
@@ -137,6 +143,7 @@ LOOK_GREYS = {
     "Forest": 0.25,
     "Dirt mix": 0.25,
     "Sand mix": 0.25,
+    "Desert": 0.2,
 }
 ROUGHNESS = {"Snow": 0.55}
 # Every other layer is at least this rough: the scans' low roughness made the soil glitter.
@@ -230,6 +237,19 @@ GRASS = {
         # v27: twice the clover, bigger, over the bare soil between the tufts (QA, v26).
         ("shared", "clovers", 10.0, 1500, 2500, (1.2, 2.0)),
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
+    ),
+    # The heath above the treeline (v35), after ref/climb/alpine_meadow_trail.jpg: a low mottled
+    # cushion with wiry tussocks, a little green turf, bearberry, and slabs and boulders.
+    "Desert": (
+        ("climb", "heath_low", 240.0, 3000, 5000, (0.8, 1.4)),
+        ("climb", "heath_tuft", 50.0, 3000, 5000, (0.8, 1.3)),
+        ("climb", "blade_short", 40.0, 2500, 4000, (0.7, 1.1)),
+        ("mountain", "alpine_bearberry", 3.0, 3000, 4500),
+        ("shared", "tundra_grass", 3.0, 3000, 4500),
+        ("mountain", "icelandic_rock_plates", 0.08, 12000, 15000),
+        ("mountain", "tundra_boulder", 0.06, 12000, 15000),
+        ("mountain", "limestone_rocks", 0.15, 9000, 12000),
+        ("forest", "nordic_forest_rock_small", 0.8, 6000, 8000),
     ),
     # No "Dirt" row: the landscape under the road mesh is painted Dirt too, so v28's low verge
     # cover grew straight through the whole tarmac.
@@ -618,6 +638,52 @@ BLADE_LOOK = {
 }
 
 
+# The heath's cushions and tussocks are the same blade meshes under a second instance, MI_Heath:
+# these over BLADE_LOOK. Olive leaves drifting to rust, straw tussocks, and heather-pink spikes.
+HEATH_LOOK = {
+    "Root colour": (0.035, 0.045, 0.015),
+    "Tip colour": (0.11, 0.11, 0.035),
+    "Drift tint": (1.25, 0.75, 0.5),
+    "Blade variation": 1.0,
+    "Variation": 0.6,
+    "Dry share": 0.35,
+    "Dry colour": (0.32, 0.25, 0.11),
+    "Seed colour": (0.3, 0.09, 0.22),
+    "Translucency": (0.1, 0.1, 0.03),
+    "Wind": 1.5,
+}
+# The instance for a blade mesh, by the first word of its slug.
+BLADE_INSTANCES = {"blade": ("MI_Blade", {}), "heath": ("MI_Heath", HEATH_LOOK)}
+
+
+def _blade_instances(material=None, params=None):
+    """MI_Blade and MI_Heath by slug prefix, made if `material` is given, with their looks set.
+    `params` are trial values: for MI_Blade, or for MI_Heath when the name starts "heath:"."""
+    out = {}
+    for prefix, (name, look) in BLADE_INSTANCES.items():
+        path = f"{BLADES}/{name}"
+        mi = unreal.load_asset(path) if assets.does_asset_exist(path) else None
+        if mi is None and material is not None:
+            mi = lib.fresh(
+                name,
+                BLADES,
+                unreal.MaterialInstanceConstant,
+                unreal.MaterialInstanceConstantFactoryNew(),
+            )
+            lib.edit.set_material_instance_parent(mi, material)
+        if mi is None:
+            continue
+        trial = {}
+        for key, value in (params or {}).items():
+            if key.startswith("heath:") and prefix == "heath":
+                trial[key[6:]] = value
+            elif not key.startswith("heath:") and prefix == "blade":
+                trial[key] = value
+        _set_params(mi, {**BLADE_LOOK, **look, **trial})
+        out[prefix] = mi
+    return out
+
+
 def _mesh_folder(biome, slug):
     # glTF imports land in <slug>/<file>/StaticMeshes, so callers list "climb" folders recursively.
     return f"{BLADES}/{slug}" if biome == "climb" else f"{MS}/{biome}/{slug}"
@@ -692,22 +758,11 @@ def _blade_master():
     material.set_editor_property("used_with_instanced_static_meshes", True)
     material.set_editor_property("used_with_nanite", True)
     g.finish()
-    path = f"{BLADES}/MI_Blade"
-    mi = unreal.load_asset(path) if assets.does_asset_exist(path) else None
-    if mi is None:
-        mi = lib.fresh(
-            "MI_Blade",
-            BLADES,
-            unreal.MaterialInstanceConstant,
-            unreal.MaterialInstanceConstantFactoryNew(),
-        )
-        lib.edit.set_material_instance_parent(mi, material)
-    _set_params(mi, BLADE_LOOK)
     log("built M_Blade")
-    return mi
+    return _blade_instances(material)
 
 
-def _blades(mi):
+def _blades(instances):
     """Imports make_grass.py's clumps as Nanite meshes under /Game/Climb/Blades/<slug>."""
     count = 0
     for name in sorted(os.listdir(BLADE_SRC)):
@@ -741,7 +796,7 @@ def _blades(mi):
             except Exception:
                 continue
         mesh.set_editor_property("nanite_settings", nanite)
-        mesh.set_material(0, mi)
+        mesh.set_material(0, instances[name.split("_")[0]])
         assets.save_loaded_asset(mesh, False)
         b = mesh.get_bounds().box_extent
         log(f"blade {name}: ext {b.x:.0f} {b.y:.0f} {b.z:.0f}")
@@ -1124,7 +1179,7 @@ def op_rebuild_ground(rebuild_grass=False):
     _tree_look()
     yield 20
     blade = _blade_master()
-    if rebuild_grass or not assets.does_directory_exist(f"{BLADES}/blade_mid"):
+    if rebuild_grass or not assets.does_directory_exist(f"{BLADES}/heath_low"):
         yield from _blades(blade)
     yield from _warm_grass_meshes()
     grass = {}
@@ -1768,8 +1823,7 @@ def op_look(
     _plant_params(PLANT_LOOK)
     _plant_params(PLANT_SLUG_LOOK)
     _prop_params(PROP_LOOK)
-    if assets.does_asset_exist(f"{BLADES}/MI_Blade"):
-        _set_params(unreal.load_asset(f"{BLADES}/MI_Blade"), {**BLADE_LOOK, **(blade_params or {})})
+    _blade_instances(params=blade_params)
     if prop_params:
         _prop_params(prop_params)
     # The baked tints first, so a false-colour look's tints don't outlive it.

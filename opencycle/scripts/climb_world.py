@@ -458,7 +458,10 @@ def road_material():
     leaf_colour = g.mul(g.const((0.06, 0.04, 0.025)), g.world_noise(0.03, 0.6, 1.4, 2))
     colour = g.lerp(colour, leaf_colour, leaves)
     rough = g.lerp(rough, g.const(0.92), g.saturate(g.add(edge, leaves)))
-    g.output(colour, normal, rough, specular=0.3, ao=g.mask(masks, "r"))
+    # v35: rougher and less specular: seen against the high sun the tarmac shone pale (the
+    # bench, v34).
+    rough = g.op(unreal.MaterialExpressionMax, rough, g.const(0.9))
+    g.output(colour, normal, rough, specular=0.2, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 
