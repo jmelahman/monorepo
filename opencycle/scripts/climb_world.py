@@ -270,6 +270,48 @@ def sea_material():
     return g.finish()
 
 
+def far_files():
+    return sorted(n for n in os.listdir(SRC) if n.startswith("far_") and n.endswith(".gltf"))
+
+
+def far_material():
+    """The far horizon's ground: the plan's colours from its vertices, matte. None without a
+    horizon (only a window of the world plan has one)."""
+    if not far_files():
+        return None
+    g = lib.Graph("M_ClimbFar", f"{FOLDER}/Far")
+    colour = g.mask(g.node(unreal.MaterialExpressionVertexColor), "rgb")
+    g.output(colour, rough=0.9, specular=0.3)
+    return g.finish(two_sided=True)
+
+
+def far(material):
+    """The world plan around the window (make_climb.far_horizon), as Nanite meshes."""
+    count = 0
+    for name in far_files():
+        task = unreal.AssetImportTask()
+        task.filename = f"{SRC}/{name}"
+        task.destination_path = f"{FOLDER}/Far"
+        task.destination_name = f"SM_{name[:-5]}"
+        task.replace_existing = True
+        task.automated = True
+        task.save = False
+        lib.tools.import_asset_tasks([task])
+        mesh = next(
+            a
+            for a in map(unreal.load_asset, task.get_editor_property("imported_object_paths"))
+            if isinstance(a, unreal.StaticMesh)
+        )
+        nanite = mesh.get_editor_property("nanite_settings")
+        nanite.set_editor_property("enabled", True)
+        mesh.set_editor_property("nanite_settings", nanite)
+        assets.save_loaded_asset(mesh, False)
+        actor = lib.mesh_actor(mesh, label=name[:-5], folder="Far", materials={0: material})
+        actor.set_editor_property("is_spatially_loaded", False)
+        count += 1
+    log(f"far horizon: {count} pieces")
+
+
 def sea(material):
     """A plane of water at the sea's level, over the whole map."""
     level = sea_level()
@@ -727,11 +769,13 @@ def main():
         island.FOLDER = FOLDER
         road = road_material()  # before the level loads: no compile with its meshes in view
         water = sea_material()
+        horizon = far_material()
         yield
         world = undress()
     else:
         ground, road = materials()
         water = sea_material()
+        horizon = far_material()
         yield
         world = fresh_level(ground)
     yield
@@ -745,6 +789,8 @@ def main():
     props(timber, log_material())
     track()
     sea(water)
+    if horizon is not None:
+        far(horizon)
     yield
     save(world)
     yield
