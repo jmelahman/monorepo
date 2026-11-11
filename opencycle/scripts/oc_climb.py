@@ -608,6 +608,7 @@ BLADE_LOOK = {
 
 
 def _mesh_folder(biome, slug):
+    # glTF imports land in <slug>/<file>/StaticMeshes, so callers list "climb" folders recursively.
     return f"{BLADES}/{slug}" if biome == "climb" else f"{MS}/{biome}/{slug}"
 
 
@@ -799,11 +800,8 @@ def _grass_type(layer):
         plants = {r["slug"] for r in json.load(f) if r["kind"] == "plant"}
     varieties = []
     for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
-        meshes = [
-            a
-            for a in map(unreal.load_asset, assets.list_assets(_mesh_folder(biome, slug), False))
-            if isinstance(a, unreal.StaticMesh)
-        ]
+        paths = assets.list_assets(_mesh_folder(biome, slug), biome == "climb")
+        meshes = [a for a in map(unreal.load_asset, paths) if isinstance(a, unreal.StaticMesh)]
         if not meshes:
             raise RuntimeError(f"no meshes for {biome}/{slug}: run megascans.py first")
         if biome != "climb":
@@ -1079,7 +1077,7 @@ def _warm_grass_meshes():
             if slug in seen:
                 continue
             seen.add(slug)
-            for path in assets.list_assets(_mesh_folder(biome, slug), False):
+            for path in assets.list_assets(_mesh_folder(biome, slug), biome == "climb"):
                 mesh = unreal.load_asset(path)
                 if isinstance(mesh, unreal.StaticMesh):
                     unreal.EditorStaticMeshLibrary.get_number_verts(mesh, 0)  # waits for it
