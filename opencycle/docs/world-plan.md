@@ -179,6 +179,37 @@ so far: mountain, meadow, desert, forest, coast.
   it was the sand layer, and the weights (`world_gen/climb/*.r8`) showed no snow at all.
 - **The engine's plane is 1 m.** The first sea was 60 m across.
 
+## The golden ride (11 Nov): the whole world as one level
+
+The user asked for "some working golden ride across the entire world" (Town skipped for
+now). It is one level, `/Game/World/L_World`, built by the climb pipeline from another
+source:
+
+- `scripts/make_world_level.py` (about 4 min) writes `world_gen/ride`: the world plan's
+  heights upsampled to one 8129² landscape at 7 m (57 km), with detail noise; "The Ring", a
+  closed 165.5 km road (5 to 419 m, steepest 9% over 100 m) carved through it and cut into
+  166 road pieces; seven layer weights (Desert is desert sand, Sand is the beaches, the heath
+  look is dropped); 138k trees; and in `info.json` a `ride` (title, blurb, 13 stretches by
+  biome) and `views` (one `ride_NN_<biome>` still mid-stretch, plus `above`).
+- `OC_SRC`, `OC_LEVEL` and `OC_STILLS` point `oc_climb.py` and `climb_world.py` at it.
+  `oc.py` hands its environment to the editor, so set them on every command of the chain;
+  a bare `oc.py restart` returns to the hero.
+  ```
+  export OC_SRC=/workspace/ue/world_gen/ride OC_LEVEL=/Game/World/L_World \
+         OC_STILLS=/workspace/ue/out/world_stills
+  oc.py restart && oc.py rebuild-ground --rebuild-grass --timeout 2400 && oc.py restart \
+    && oc.py build-level --timeout 10800 && oc.py restart && oc.py look ... --shots ride_02_forest,...
+  ```
+- The track is `/Game/World/Ride/DA_RideTrack`, closed, with no weather (the level's look
+  stays). Ride it with `OC_MAP=/Game/World/L_World scripts/play.sh`; play.sh widens World
+  Partition's runtime loading range to 4 km (`OC_RANGE` in cm) so the landscape isn't cut at
+  the default 256 m.
+- `biomes.PRESETS["world"]` holds the world's surfaces and grass rows.
+- **Known couplings:** L_World shares `M_ClimbGround`/`MI_ClimbGround` and the grass types in
+  `/Game/Climb` with L_Hero, so a rebuild-ground for any biome changes the other level's
+  look. After a world build, run `OC_BIOME`'s rebuild-ground for the hero again
+  (`oc_biome.sh alpine`). Giving L_World its own material folder is the fix.
+
 ## What to do next (suggested order)
 
 1. Tune each built biome with `look` (tints first, then densities), judging full-size crops
@@ -198,7 +229,7 @@ so far: mountain, meadow, desert, forest, coast.
    exposed. So far the ecology rules (altitude, slope, noise, distance from the road) live in
    the numpy generator, which is fast and can't crash the editor; PCG is the route to
    placing at world scale at runtime, once the rules are settled on two or three biomes.
-6. Streaming the ride: a corridor of landscape along a road, tiles loaded ahead of the
-   rider. Nothing exists for this yet; the island level's World Partition setup in
-   `island_world.py` is the nearest thing.
+6. Streaming the ride: L_World (above) is the first whole-world level. Next: HLODs for the
+   far landscape and trees, its own ground material, per-stretch grass presets instead of
+   one shared table, and the town stretches.
 7. Performance (30 fps at Low on the Radeon 890M) is still deferred by the user.
