@@ -28,7 +28,7 @@ np, Image = mi.np, mi.Image
 
 RES = 2033  # 16 landscape components of 127 quads, plus one
 SPACING = 1.0
-OUT = "/workspace/ue/world_gen/climb"
+OUT = os.environ.get("OC_CLIMB_OUT", "/workspace/ue/world_gen/climb")  # elsewhere for a trial
 SEED = 31
 VALLEY_Y = 640.0  # metres south of the origin: the valley floor's line
 FLANK = 0.34  # the mountainside's rise per metre north of it
@@ -48,7 +48,15 @@ SHAPES = {
     "desert": {"treeline": NONE, "snowline": NONE, "wood": 0.0},
     "coast": {"treeline": NONE, "snowline": NONE, "wood": 0.08, "spruce": False, "sea": 60.0},
 }
-SHAPE = SHAPES[BIOME]
+SHAPE = dict(SHAPES[BIOME])
+# A window of the world plan (make_window.py) instead of the hand-made flank: OC_WINDOW names one
+# under world_gen/window. Its ground and road are the plan's, at world heights (metres above
+# sea level), so the treeline and snowline need the plan's heights too.
+WINDOW = os.environ.get("OC_WINDOW", "")
+WINDOW_DIR = "/workspace/ue/world_gen/window"
+# wood: the window is 3x the flank's wooded area; keep the tree count near the flank's.
+WINDOW_SHAPES = {"mountain": {"treeline": 820.0, "snowline": 900.0, "wood": 0.4}}
+SHAPE.update(WINDOW_SHAPES.get(WINDOW, {}))
 TREELINE = SHAPE["treeline"]
 SNOWLINE = SHAPE["snowline"]
 # Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
@@ -115,6 +123,15 @@ def at(xy):
     )
 
 
+def load_window():
+    """The window's ground (RES x RES, metres above sea level) and its road, already graded."""
+    h = np.load(f"{WINDOW_DIR}/{WINDOW}/height.npy").astype(np.float32)
+    with open(f"{WINDOW_DIR}/{WINDOW}/window.json") as f:
+        road = np.array(json.load(f)["road"], dtype=np.float64)
+    assert h.shape == (RES, RES), h.shape
+    return h, {"hero": {"xy": road[:, :2], "z": road[:, 2], "closed": False}}
+
+
 def lay_road(h):
     xy = mi.catmull(PLAN, False)
     z = np.maximum(mi.smooth(mi.sample(h, xy), 20, False), 1.0)
@@ -139,7 +156,9 @@ def open_valley_side(h, x, y, road):
     dist, (ri, ci) = mi.ndimage.distance_transform_edt(~mark, return_indices=True)
     dist = dist * SPACING
     nearest = index[ri, ci]
-    below = (y - xy[nearest, 1]) > 0
+    # The flank falls toward +Y; a window's ground may fall any way, so there the low side is
+    # wherever the ground is under the path.
+    below = (h < z[nearest]) if WINDOW else (y - xy[nearest, 1]) > 0
     cap = z[nearest] + 0.3 + 0.15 * np.maximum(dist - mi.ROAD_HALF - mi.SHOULDER, 0)
     weight = mi.smoothstep(25.0, 12.0, dist) * below * (dist > mi.ROAD_HALF + mi.SHOULDER)
     h = h - weight * np.maximum(h - cap, 0)
@@ -194,7 +213,10 @@ def paint(x, y, h, road_dist):
     soil = bank * (1 - rock) * (1 - overgrown) * (1 - shoulder)
     # Grass: the valley floor and clearings up the flank, and a broken verge beside the path, as in
     # the spruce photos: 1-2 m wide with a wandering edge, gone for a few metres here and there.
-    floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
+    if WINDOW:  # no valley line: the floor is wherever the ground is nearly level
+        floor = mi.smoothstep(0.12, 0.05, mi.ndimage.uniform_filter(slope, 15))
+    else:
+        floor = mi.smoothstep(VALLEY_Y - 140, VALLEY_Y - 40, y)
     clearing = mi.smoothstep(0.66, 0.74, mi.fbm(x, y, 120, 3, SEED + 40))
     # Fields: most of the flank open, with copses and hedged woods left between them.
     field = mi.smoothstep(0.36, 0.44, mi.fbm(x, y, 220, 3, SEED + 45))
@@ -427,8 +449,11 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     c = (np.arange(RES, dtype=np.float32) - (RES - 1) / 2) * SPACING
     x, y = np.meshgrid(c, c)
-    h = terrain(x, y)
-    roads = lay_road(h)
+    if WINDOW:
+        h, roads = load_window()
+    else:
+        h = terrain(x, y)
+        roads = lay_road(h)
     road = roads["hero"]
     h, road_dist = mi.carve(h, roads)
     h = open_valley_side(h, x, y, road)
@@ -442,6 +467,7 @@ def main():
     with open(f"{OUT}/info.json") as f:
         info = json.load(f)
     info["biome"] = BIOME
+    info["window"] = WINDOW or None
     if "sea" in SHAPE:
         info["sea_cm"] = SHAPE["sea"] * 100
     with open(f"{OUT}/info.json", "w") as f:
@@ -466,7 +492,8 @@ def main():
     grade = np.diff(z) / np.linalg.norm(np.diff(xy, axis=0), axis=1)
     spruce = sum(t[0] == "spruce" for t in tree_list)
     print(
-        f"{OUT} ({BIOME}): ground {h.min():.0f}..{h.max():.0f} m; road {length:.0f} m from"
+        f"{OUT} ({BIOME}{', window ' + WINDOW if WINDOW else ''}):"
+        f" ground {h.min():.0f}..{h.max():.0f} m; road {length:.0f} m from"
         f" {z[0]:.0f} to {z[-1]:.0f} m, mean {(z[-1] - z[0]) / length:.1%},"
         f" steepest {grade.max():.1%};"
         f" {len(pieces)} road pieces; trees {len(tree_list)} ({spruce} spruce);"
