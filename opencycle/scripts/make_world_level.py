@@ -38,6 +38,11 @@ OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/ride")
 # VK_ERROR_DEVICE_LOST. 4065 (32 x 32) built on 9 Nov, its grid step leaving 4.2 GB free.
 RES = int(os.environ.get("OC_RES", "4065"))
 SPACING = mw.EXTENT / (RES - 1)  # 14.0 m at 4065
+# The ground flat beside the road, and the bare verge (Dirt: no grass) on it. At 14 m a sample
+# the climb's 3 m shoulder and 0.9 m verge fall between samples, so the bank rose over the road
+# and the Grass layer's blades grew through it (11 Nov). Both take at least a sample's width.
+FLAT = max(mi.SHOULDER, SPACING * 1.1)
+VERGE = max(0.9, SPACING)
 HALF = (RES - 1) / 2
 BAND = 512  # rows per band
 SEED = 41
@@ -175,7 +180,7 @@ def carve(h, line):
             bed = (np.where(gap_back < gap_on, z_back, z_on) - 0.15).astype(np.float32)
             dist = np.sqrt(np.minimum(gap_back, gap_on)).astype(np.float32)
             sub = h[ra:rb, ca:cb]
-            out = np.maximum(dist - mi.ROAD_HALF - mi.SHOULDER, 0) * mi.BANK_SLOPE
+            out = np.maximum(dist - mi.ROAD_HALF - FLAT, 0) * mi.BANK_SLOPE
             capped = np.maximum(np.minimum(sub, bed + out), bed - out)
             result = bed + (capped - bed) * mi.smoothstep(0, 4, out)
             keep = mi.smoothstep(mi.CORRIDOR * 0.6, mi.CORRIDOR, dist)
@@ -191,7 +196,7 @@ def carve(h, line):
 def paint_band(x, y, h, slope, d, w, inland):
     """Each layer's weight, 0..1, for one band."""
     n = lambda s, seed, octaves=3: mi.fbm(x, y, s, octaves, SEED + seed)  # noqa: E731
-    shoulder = mi.smoothstep(mi.ROAD_HALF + 0.9, mi.ROAD_HALF + 0.2, d)
+    shoulder = mi.smoothstep(mi.ROAD_HALF + VERGE, mi.ROAD_HALF + 0.2, d)
     rock = mi.smoothstep(0.75, 1.05, slope) * mi.smoothstep(10.0, 25.0, d)
     high = w["mountain"] + w["heath"]
     rock = np.maximum(rock, high * mi.smoothstep(0.45, 0.7, slope) * mi.smoothstep(15, 30, d))
