@@ -454,3 +454,19 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
   - Fixed an editor crash when a level has no ride track (it broke the `L_Forest` spike).
 - **Only one Unreal at a time, across all sessions.** Two sessions rode at once on 9 Nov, and both
   wrote `/workspace/ue/ride_test.log`. Check `pgrep -a UnrealEditor` before starting one.
+- 2026-11-10, evening (the latest entry):
+  - **v31:** three times the scan grass, drawn taller and further (grass rows only: `look
+    --grass` multiplies props too). A full carpet with no soil showing, but still short cards.
+  - **The user's new direction (10 Nov):** two more references (the Folkvangr tundra grass and
+    `ref/climb/alpine_meadow_trail.jpg`), high-end visuals first, and "think big ... everything
+    is still on the table". Agreed plan: daylight, grass made of real blades, then placement by
+    ecology with PCG.
+  - **v32: daylight and blade grass.** Sun pitch -50 with ev=-2.6, sky=1.5, temp=6500,
+    sky_warm=0. `make_grass.py` writes nine blade clumps; the ground build imports them as
+    Nanite meshes with M_Blade (`BLADE_LOOK`, `look --blade-param`). The first chain shot the
+    old grass: the glTF import puts meshes in `<slug>/<file>/StaticMeshes`, the grass types
+    found none, rebuild-ground failed and `| tail -1` hid it (chains now use `set -o
+    pipefail`). The first real blades bleached white in full sun and their seed heads glowed;
+    darker tips, less translucency and roughness 0.85 fixed both. glTF v survived the import
+    unflipped (roots dark, tips light). Storybook v32 (img24).
+  - Next: see "What to do next" in CLAUDE.md.
