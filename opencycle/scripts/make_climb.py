@@ -46,7 +46,7 @@ SHAPES = {
     "alpine": {"treeline": 130.0, "snowline": 600.0},
     "meadow": {"treeline": NONE, "snowline": 600.0, "open": 1.0, "spruce": False},
     "desert": {"treeline": NONE, "snowline": NONE, "wood": 0.0},
-    "coast": {"treeline": NONE, "snowline": NONE, "wood": 0.3, "spruce": False, "sea": 52.0},
+    "coast": {"treeline": NONE, "snowline": NONE, "wood": 0.08, "spruce": False, "sea": 60.0},
 }
 SHAPE = SHAPES[BIOME]
 TREELINE = SHAPE["treeline"]
