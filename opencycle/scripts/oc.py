@@ -24,6 +24,7 @@ import fcntl
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -141,7 +142,23 @@ def supervisor_running():
         return False
 
 
+# The level a run works on. The supervisor keeps the environment it was started with, so these
+# reach the editor through a file it sources before each start: set them on the command that
+# restarts (`OC_SRC=... oc.py restart`), and a restart without them goes back to the hero.
+LEVEL_ENV = ("OC_SRC", "OC_LEVEL", "OC_STILLS")
+
+
+def write_level_env():
+    os.makedirs(DIR, exist_ok=True)
+    with open(f"{DIR}/level.env", "w") as f:
+        for k in LEVEL_ENV:
+            if os.environ.get(k):
+                f.write(f"{k}={shlex.quote(os.environ[k])}\n")
+    os.chmod(f"{DIR}/level.env", 0o666)
+
+
 def start_supervisor():
+    write_level_env()
     os.makedirs(JOBS, exist_ok=True)
     os.chmod(DIR, 0o777)
     os.chmod(JOBS, 0o777)
@@ -310,6 +327,7 @@ def run(op, args, ns):
 def restart_clean(ns):
     """Restart the editor onto the empty startup map and wait until it is back."""
     state = ensure_editor(ns.boot_timeout)
+    write_level_env()
     say("restarting the editor onto the empty map")
     code = wait(submit("restart", {}), 60)
     if code != OK:
