@@ -145,13 +145,21 @@ so far: mountain, meadow, desert, forest, coast.
   snowfield (carve the road into the plan instead); the snow is blown white; the fence
   zig-zagged across the road there (fixed in `rails`, not yet rebuilt); the horizon is the
   window's edge.
-- **coast window** (built: see below; storybook img34): a real shoreline, the ring road
-  crossing a sandy point by a bay; 20% of the window is sea.
+- **coast window** (built; storybook img34): the best coast so far. A real shoreline, the
+  ring road along a sandy point by a turquoise bay, marram tufts on the sand, grass and
+  beech inland. Wrong: palm fronds (GRASS rows) grow over the path and fill the road-level
+  views (keep palms off the verge); an inland hollow below 0 m shows as a stray blue pond
+  under the sea plane (fill the plan's inland hollows, or keep the sea plane off land);
+  beech, not palms or pines, are the trees. This build also carried 20 stale road pieces
+  from the mountain window (fixed since: make_climb clears old pieces).
 - **Not windowed yet:** desert (cut, not built), forest (cut; no forest preset: try alpine
   with `"treeline": NONE` or a new preset), heath and town (not cut).
-- **What all windows need next:** a far horizon (a low-resolution ring of the plan's
-  heights around the window, or a distant-terrain mesh, in place of the flank's rim of
-  ridges); the stills' `hairpin_above` view is placed by the road's midpoint and points
+- **The far horizon:** in window mode `make_climb.far_horizon` writes `far_<k>.gltf`, the
+  plan's heights out to 15 km at 60 m in 16 pieces, coloured from the plan's `albedo.png`
+  (which `make_world.py` now writes), sea flat at -0.5 m, dropped 40 m under the window;
+  `climb_world.far` imports them with M_ClimbFar (vertex colour). See the next status line
+  for how it looks.
+- **What all windows need next:** the stills' `hairpin_above` view is placed by the road's midpoint and points
   at a fifth of the way, which on a long window is often a dull view.
 
 **Lessons from the first builds**
