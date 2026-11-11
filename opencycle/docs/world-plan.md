@@ -158,7 +158,15 @@ so far: mountain, meadow, desert, forest, coast.
   plan's heights out to 15 km at 60 m in 16 pieces, coloured from the plan's `albedo.png`
   (which `make_world.py` now writes), sea flat at -0.5 m, dropped 40 m under the window;
   `climb_world.far` imports them with M_ClimbFar (vertex colour). See the next status line
-  for how it looks.
+  It works: from the meadow the road runs toward a sea line, and the coast looks out at
+  far hills and open water (storybook img35, img36). Its sea was matte navy against the
+  near sea's turquoise; the vertex alpha now carries roughness (glossy sea, matte land),
+  rebuilt with the desert and mountain windows (img37, img38). Still open: the seam at the
+  window's edge is hidden by grass and fog in these views but not checked from above
+  the mountain; the far land is flat-coloured (no trees), fine past 3 km.
+- **Palms** are GRASS rows, so they grow onto the verge and over the path. They need to be
+  placed like trees (`trees.json`, kept 4 m off the road) or held off the layer by a
+  verge mask.
 - **What all windows need next:** the stills' `hairpin_above` view is placed by the road's midpoint and points
   at a fifth of the way, which on a long window is often a dull view.
 
