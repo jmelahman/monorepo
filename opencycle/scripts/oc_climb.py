@@ -590,20 +590,22 @@ BLADE_LOOK = {
     # Root to tip. The root sits near the lit colour of the ground's own grass, so the blades
     # rise out of it; move them with LOOK_TINTS' "Forest mix".
     "Root colour": (0.03, 0.07, 0.012),
-    "Tip colour": (0.16, 0.3, 0.05),
+    # v32: (0.16, 0.3, 0.05) bleached to white in full sun past 10 m.
+    "Tip colour": (0.08, 0.16, 0.03),
     "Gradient": 0.5,
     # Over tens of metres the field drifts toward this multiplier (yellower, sunnier grass).
-    "Drift tint": (1.3, 1.1, 0.6),
+    "Drift tint": (1.15, 1.05, 0.7),
     "Blade variation": 0.5,
     "Variation": 0.25,
     "Dry share": 0.08,
     "Dry colour": (0.3, 0.26, 0.1),
-    "Seed colour": (0.35, 0.28, 0.14),
-    "Translucency": (0.5, 0.6, 0.2),
+    # v32: (0.35, 0.28, 0.14) glowed like cotton.
+    "Seed colour": (0.14, 0.11, 0.06),
+    "Translucency": (0.15, 0.25, 0.04),
     "Root shade": 0.35,
     "Up normal": 0.7,
-    "Roughness": 0.55,
-    "Specular": 0.2,
+    "Roughness": 0.85,
+    "Specular": 0.05,
 }
 
 
