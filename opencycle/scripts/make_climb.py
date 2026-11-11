@@ -480,6 +480,11 @@ def main():
     xy, z = road["xy"], road["z"]
     centre = [(a * 100, b * 100, c * 100 + 2) for (a, b), c in zip(xy, z, strict=True)]
     pieces = road_mesh.road_pieces(centre, mi.ROAD_HALF * 100, False)
+    # Clear the last build's pieces: a longer road (a window's) left extras that the next,
+    # shorter build's level imported as stray road hanging in the air.
+    for name in os.listdir(OUT):
+        if name.startswith("road_") and name.endswith(".gltf"):
+            os.remove(f"{OUT}/{name}")
     for k, piece in enumerate(pieces):
         piece.write(f"{OUT}/road_hero_{k}.gltf")
     line = np.column_stack([xy, z])
