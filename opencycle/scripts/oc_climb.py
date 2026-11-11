@@ -159,12 +159,12 @@ FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 # out of memory. The rows under 0.5 are props (logs, stumps, rocks), drawn farther.
 GRASS = {
     "Grass": (
-        # v31: a meadow with volume: 2.5 times the grass, and kikuyu (the tallest scan) leads.
-        ("shared", "wild_grass", 100.0, 3500, 5000, (1.5, 2.6)),
-        ("shared", "grass_clumps", 60.0, 3500, 5000, (1.3, 2.4)),
-        ("shared", "wheat_grass", 20.0, 3500, 5000),
-        ("shared", "tundra_grass", 12.0, 3500, 5000),
-        ("shared", "kikuyu_grass", 80.0, 2500, 4000, (1.2, 2.4)),
+        # v32: the meadow is the climb's own blade grass (make_grass.py), knee high with seed
+        # stalks; the scans' cards read thin at any density (v12-v31).
+        ("climb", "blade_short", 120.0, 3000, 5000, (0.8, 1.3)),
+        ("climb", "blade_mid", 160.0, 4000, 7000, (0.8, 1.4)),
+        ("climb", "blade_tall", 80.0, 4000, 7000, (0.7, 1.2)),
+        ("shared", "wheat_grass", 6.0, 3500, 5000),
         ("shared", "tall_grass", 2.4, 4000, 6000),
         ("shared", "ribbon_grass", 1.6, 3000, 4500),
         ("shared", "clovers", 12.0, 2000, 3000),
@@ -179,13 +179,13 @@ GRASS = {
     # so this draws fewer instances than v29 did. Scans near their own size (clumps are 60 cm
     # across and 25 cm tall; v19-v29 drew them up to 2.8 times that, as sparse reeds).
     "Forest": (
-        # v31: for volume (the user's Folkvangr shot: knee-high, no ground showing), three times
-        # v30's density, which `look --grass 3.6` showed closes the cover without a crash, drawn
-        # taller and further. Low graphics may thin it (grass.DensityScale); tune for Epic.
-        ("shared", "grass_clumps", 150.0, 2500, 4000, (1.3, 2.4)),
-        ("shared", "wild_grass", 100.0, 2500, 4000, (1.5, 2.6)),
-        ("shared", "kikuyu_grass", 200.0, 1500, 2500, (1.2, 2.4)),
-        ("shared", "tall_grass", 9.0, 4000, 6000),
+        # v32: blade grass (make_grass.py) for volume, after the user's Folkvangr shot: no ground
+        # showing, shin high in the woods. v31's three-times-denser scans closed the cover but
+        # stayed short, flat cards. Low graphics may thin it (grass.DensityScale); tune for Epic.
+        ("climb", "blade_short", 160.0, 2500, 4000, (0.8, 1.3)),
+        ("climb", "blade_mid", 120.0, 3000, 5000, (0.8, 1.3)),
+        ("climb", "blade_tall", 16.0, 3000, 5000, (0.7, 1.1)),
+        ("shared", "grass_clumps", 20.0, 2000, 3000, (1.2, 2.0)),
         ("shared", "clovers", 26.0, 1500, 2500, (1.0, 1.6)),
         ("shared", "clover_varieties", 14.0, 1500, 2500, (1.0, 1.6)),
         ("shared", "leafy_dandelions", 15.0, 1500, 2500),
@@ -222,13 +222,13 @@ GRASS = {
         ("forest", "mossy_rocks", 0.6, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 120.0, 3000, 4500, (1.2, 2.4)),
-        ("shared", "wild_grass", 80.0, 3000, 4500, (1.4, 2.4)),
+        ("climb", "blade_short", 120.0, 2500, 4000, (0.8, 1.3)),
+        ("climb", "blade_mid", 60.0, 3000, 4500, (0.7, 1.2)),
+        ("shared", "grass_clumps", 30.0, 3000, 4500, (1.2, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         # v27: twice the clover, bigger, over the bare soil between the tufts (QA, v26).
         ("shared", "clovers", 10.0, 1500, 2500, (1.2, 2.0)),
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
-        ("shared", "kikuyu_grass", 72.0, 1500, 2500, (1.4, 2.2)),
     ),
     # No "Dirt" row: the landscape under the road mesh is painted Dirt too, so v28's low verge
     # cover grew straight through the whole tarmac.
@@ -582,6 +582,146 @@ def _plant_master():
     log("rebuilt M_MS_Plant with per-instance variation")
 
 
+# The climb's own grass (make_grass.py): clumps of real blades, shaded by M_Blade. Set on MI_Blade
+# by every ground build and look; try values with `look --blade-param`.
+BLADES = f"{FOLDER}/Blades"
+BLADE_SRC = "/workspace/ue/world_gen/grass"
+BLADE_LOOK = {
+    # Root to tip. The root sits near the lit colour of the ground's own grass, so the blades
+    # rise out of it; move them with LOOK_TINTS' "Forest mix".
+    "Root colour": (0.03, 0.07, 0.012),
+    "Tip colour": (0.16, 0.3, 0.05),
+    "Gradient": 0.5,
+    # Over tens of metres the field drifts toward this multiplier (yellower, sunnier grass).
+    "Drift tint": (1.3, 1.1, 0.6),
+    "Blade variation": 0.5,
+    "Variation": 0.25,
+    "Dry share": 0.08,
+    "Dry colour": (0.3, 0.26, 0.1),
+    "Seed colour": (0.35, 0.28, 0.14),
+    "Translucency": (0.5, 0.6, 0.2),
+    "Root shade": 0.35,
+    "Up normal": 0.7,
+    "Roughness": 0.55,
+    "Specular": 0.2,
+}
+
+
+def _mesh_folder(biome, slug):
+    return f"{BLADES}/{slug}" if biome == "climb" else f"{MS}/{biome}/{slug}"
+
+
+def _blade_master():
+    """M_Blade: opaque two-sided foliage coloured by the blade mesh's UVs alone (u: the blade's
+    own random number, 1.0 a seed head; v: 0 at the root to 1 at the tip). No textures and no
+    cut-out, so nothing thins or shimmers with distance."""
+    g = _graph("M_Blade", BLADES)
+    uv = g.node(unreal.MaterialExpressionTextureCoordinate)
+    own, rise = g.mask(uv, "r"), g.mask(uv, "g")
+    curve = g.lerp(rise, g.mul(rise, rise), g.param("Gradient", 0.5))
+    colour = g.lerp(
+        g.mask(g.param("Root colour", (0.03, 0.07, 0.012)), "rgb"),
+        g.mask(g.param("Tip colour", (0.16, 0.3, 0.05)), "rgb"),
+        curve,
+    )
+    drift = g.saturate(g.world_noise(1.0 / 2500, -0.6, 1.6, 2))
+    tint = g.lerp(
+        g.const((1.0, 1.0, 1.0)), g.mask(g.param("Drift tint", (1.3, 1.1, 0.6)), "rgb"), drift
+    )
+    colour = g.mul(colour, tint)
+    rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
+    blade = g.link(g.add(g.mul(own, 7.31), rnd), g.node(unreal.MaterialExpressionFrac))
+    bright = g.add(
+        g.add(g.const(1.0), g.mul(g.add(blade, -0.5), g.param("Blade variation", 0.5))),
+        g.mul(g.add(rnd, -0.5), g.param("Variation", 0.25)),
+    )
+    colour = g.mul(colour, bright)
+    # A share of the blades dries toward the tip.
+    dry = g.saturate(g.mul(g.add(blade, g.add(g.param("Dry share", 0.08), -1.0)), 20.0))
+    colour = g.lerp(
+        colour, g.mask(g.param("Dry colour", (0.3, 0.26, 0.1)), "rgb"), g.mul(dry, rise)
+    )
+    seed = g.saturate(g.mul(g.add(own, -0.95), 40.0))
+    colour = g.lerp(colour, g.mask(g.param("Seed colour", (0.35, 0.28, 0.14)), "rgb"), seed)
+    root = g.lerp(g.param("Root shade", 0.35), g.const(1.0), g.saturate(g.mul(rise, 3.0)))
+    face = g.node(unreal.MaterialExpressionVertexNormalWS)
+    bent = g.lerp(g.mask(face, "rgb"), g.const((0.0, 0.0, 1.0)), g.param("Up normal", 0.7))
+    normal = g.link(bent, g.node(unreal.MaterialExpressionNormalize))
+    sss = g.mul(g.mul(colour, g.mask(g.param("Translucency", (0.5, 0.6, 0.2)), "rgb")), rise)
+    g.output(
+        colour,
+        normal,
+        g.param("Roughness", 0.55),
+        specular=g.param("Specular", 0.2),
+        subsurface=sss,
+        ao=root,
+    )
+    material = g.material
+    material.set_editor_property("tangent_space_normal", False)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
+    material.set_editor_property("two_sided", True)
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    material.set_editor_property("used_with_nanite", True)
+    g.finish()
+    path = f"{BLADES}/MI_Blade"
+    mi = unreal.load_asset(path) if assets.does_asset_exist(path) else None
+    if mi is None:
+        mi = lib.fresh(
+            "MI_Blade",
+            BLADES,
+            unreal.MaterialInstanceConstant,
+            unreal.MaterialInstanceConstantFactoryNew(),
+        )
+        lib.edit.set_material_instance_parent(mi, material)
+    _set_params(mi, BLADE_LOOK)
+    log("built M_Blade")
+    return mi
+
+
+def _blades(mi):
+    """Imports make_grass.py's clumps as Nanite meshes under /Game/Climb/Blades/<slug>."""
+    count = 0
+    for name in sorted(os.listdir(BLADE_SRC)):
+        if not name.endswith(".gltf"):
+            continue
+        task = unreal.AssetImportTask()
+        task.filename = f"{BLADE_SRC}/{name}"
+        task.destination_path = f"{BLADES}/{name[:-7]}"
+        task.destination_name = f"SM_{name[:-5]}"
+        task.replace_existing = True
+        task.automated = True
+        task.save = False
+        lib.tools.import_asset_tasks([task])
+        mesh = next(
+            a
+            for a in map(unreal.load_asset, task.get_editor_property("imported_object_paths"))
+            if isinstance(a, unreal.StaticMesh)
+        )
+        nanite = mesh.get_editor_property("nanite_settings")
+        nanite.set_editor_property("enabled", True)
+        # Thin blades vanish as Nanite simplifies them unless it keeps their area.
+        shape = getattr(unreal, "NaniteShapePreservation", None)
+        for prop, value in (
+            ("shape_preservation", shape and shape.PRESERVE_AREA),
+            ("preserve_area", True),
+        ):
+            try:
+                nanite.set_editor_property(prop, value)
+                log(f"{name}: nanite {prop}")
+                break
+            except Exception:
+                continue
+        mesh.set_editor_property("nanite_settings", nanite)
+        mesh.set_material(0, mi)
+        assets.save_loaded_asset(mesh, False)
+        b = mesh.get_bounds().box_extent
+        log(f"blade {name}: ext {b.x:.0f} {b.y:.0f} {b.z:.0f}")
+        count += 1
+        yield 10
+    log(f"blades: {count} meshes")
+
+
 def _keep_alpha_coverage(biome, slug):
     """Keeps a plant's cut-out (D's alpha) as full in its small mips as at full size. Averaged,
     the alpha falls under the material's 0.33 clip a few metres off, and ferns thin to slivers."""
@@ -661,13 +801,14 @@ def _grass_type(layer):
     for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
         meshes = [
             a
-            for a in map(unreal.load_asset, assets.list_assets(f"{MS}/{biome}/{slug}", False))
+            for a in map(unreal.load_asset, assets.list_assets(_mesh_folder(biome, slug), False))
             if isinstance(a, unreal.StaticMesh)
         ]
         if not meshes:
             raise RuntimeError(f"no meshes for {biome}/{slug}: run megascans.py first")
-        _keep_alpha_coverage(biome, slug)
-        _fill_empty_slots(biome, slug, meshes)
+        if biome != "climb":
+            _keep_alpha_coverage(biome, slug)
+            _fill_empty_slots(biome, slug, meshes)
         for mesh in meshes:
             v = unreal.GrassVariety()
             v.set_editor_property("grass_mesh", mesh)
@@ -680,7 +821,7 @@ def _grass_type(layer):
             # Plants grow upright: aligned to a 50 degree cut bank, tufts jutted sideways out of it
             # and read as almost nothing, whatever the density (v21: 3x density, no change).
             # Rocks, roots and logs still lie along the ground.
-            v.set_editor_property("align_to_surface", slug not in plants)
+            v.set_editor_property("align_to_surface", slug not in plants and biome != "climb")
             v.set_editor_property("cast_dynamic_shadow", True)
             varieties.append(v)
     gt.set_editor_property("grass_varieties", varieties)
@@ -938,7 +1079,7 @@ def _warm_grass_meshes():
             if slug in seen:
                 continue
             seen.add(slug)
-            for path in assets.list_assets(f"{MS}/{biome}/{slug}", False):
+            for path in assets.list_assets(_mesh_folder(biome, slug), False):
                 mesh = unreal.load_asset(path)
                 if isinstance(mesh, unreal.StaticMesh):
                     unreal.EditorStaticMeshLibrary.get_number_verts(mesh, 0)  # waits for it
@@ -957,6 +1098,9 @@ def op_rebuild_ground(rebuild_grass=False):
     _prop_params(PROP_LOOK)
     _tree_look()
     yield 20
+    blade = _blade_master()
+    if rebuild_grass or not assets.does_directory_exist(f"{BLADES}/blade_mid"):
+        yield from _blades(blade)
     yield from _warm_grass_meshes()
     grass = {}
     for layer in GRASS:
@@ -1587,6 +1731,7 @@ def op_look(
     plant_params=None,
     ground_params=None,
     prop_params=None,
+    blade_params=None,
     stills=True,
     shots=None,
     out=None,
@@ -1598,6 +1743,8 @@ def op_look(
     _plant_params(PLANT_LOOK)
     _plant_params(PLANT_SLUG_LOOK)
     _prop_params(PROP_LOOK)
+    if assets.does_asset_exist(f"{BLADES}/MI_Blade"):
+        _set_params(unreal.load_asset(f"{BLADES}/MI_Blade"), {**BLADE_LOOK, **(blade_params or {})})
     if prop_params:
         _prop_params(prop_params)
     # The baked tints first, so a false-colour look's tints don't outlive it.
@@ -1619,6 +1766,7 @@ def op_look(
     notes += [f"plant params {plant_params}"] if plant_params else []
     notes += [f"ground params {ground_params}"] if ground_params else []
     notes += [f"prop params {prop_params}"] if prop_params else []
+    notes += [f"blade params {blade_params}"] if blade_params else []
     notes += [f"grass {grass}"] if grass else []
     if fog is not None:
         yield from _ensure_level()
