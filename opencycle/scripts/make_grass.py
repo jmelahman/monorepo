@@ -32,6 +32,10 @@ KINDS = {
     "blade_mid": (3, 180, 28.0, (24.0, 46.0), (0.45, 0.8), (0.15, 0.6), 4, 0),
     # Knee high, with seed stalks standing above it.
     "blade_tall": (3, 140, 30.0, (42.0, 75.0), (0.5, 0.9), (0.12, 0.5), 5, 5),
+    # The treeline's heath (v35), shaded by MI_Heath: a low tangled cushion of small leaves
+    # whose short "seed" spikes are the heather's bloom, and a wiry tussock among it.
+    "heath_low": (3, 260, 24.0, (4.0, 11.0), (0.5, 0.9), (0.3, 1.2), 2, 10),
+    "heath_tuft": (3, 110, 12.0, (14.0, 30.0), (0.25, 0.45), (0.2, 0.8), 4, 2),
 }
 
 

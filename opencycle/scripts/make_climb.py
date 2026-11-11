@@ -34,7 +34,10 @@ VALLEY_Y = 640.0  # metres south of the origin: the valley floor's line
 FLANK = 0.34  # the mountainside's rise per metre north of it
 # The backdrop is alpine, as in the style shots: the woods thin out at the treeline into meadow,
 # and snow lies on the peaks. Metres of height, wandering with noise.
-TREELINE = 420.0
+# v35: 150 (was 420, far above the path), so the top of the hero stretch rides out of the
+# spruce into open heath, as in ref/climb/alpine_meadow_trail.jpg. The full climb will stretch
+# the zones back out.
+TREELINE = 150.0
 SNOWLINE = 600.0
 # Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
 # Gaussian, at the map's edge: a softer, nearer tail lifted the path 40 m and moved the bench.
@@ -187,8 +190,16 @@ def paint(x, y, h, road_dist):
     verge *= mi.smoothstep(0.38, 0.5, mi.fbm(x, y, 12, 2, SEED + 59))
     # Above the treeline, alpine meadow.
     alpine = mi.smoothstep(
-        TREELINE - 40, TREELINE + 20, h + 50 * (mi.fbm(x, y, 90, 3, SEED + 41) - 0.5)
+        TREELINE - 30, TREELINE + 15, h + 40 * (mi.fbm(x, y, 90, 3, SEED + 41) - 0.5)
     )
+    # Rock slabs lie flat in the heath, tens of metres apart, clear of the path.
+    slab = alpine * mi.smoothstep(0.7, 0.76, mi.fbm(x, y, 25, 3, SEED + 44))
+    rock = np.maximum(rock, slab * mi.smoothstep(mi.ROAD_HALF + 2.0, mi.ROAD_HALF + 5.0, road_dist))
+    soil = soil * (1 - rock)
+    # Above the treeline most ground is heath (the "Desert" layer, unused on the climb till
+    # now); meadow grass keeps the damper hollows, the valley floor and the path's verge.
+    damp = mi.smoothstep(0.52, 0.64, mi.fbm(x, y, 45, 3, SEED + 43))
+    heath = alpine * (1 - damp) * (1 - np.maximum(floor, verge))
     grass = np.clip(np.maximum(np.maximum(np.maximum(floor, clearing), verge), alpine), 0, 1)
     # Snow on the heights, thinner on crags, in drifts rather than a level line.
     snow = mi.smoothstep(
@@ -200,20 +211,21 @@ def paint(x, y, h, road_dist):
     rest = (1 - shoulder - soil) * (1 - snow)
     soft = (1 - rock) * rest
     out = {k: np.zeros_like(h) for k in mi.LAYERS}
-    out["Grass"] = soft * grass
+    out["Grass"] = soft * np.clip(grass - heath, 0, 1)
+    out["Desert"] = soft * heath
     out["Forest"] = soft * (1 - grass)
     out["Rock"] = rock * rest
     out["Sand"] = soil * (1 - snow)
     out["Dirt"] = shoulder
     out["Snow"] = snow * (1 - shoulder)
-    return out, slope, grass
+    return out, slope, grass, heath
 
 
 # The share of trees kept beyond the full-density reach: static Nanite trees cover the whole map.
 FAR = float(os.environ.get("OC_FAR_TREES", "0.45"))
 
 
-def trees(h, road_dist, slope, grass):
+def trees(h, road_dist, slope, grass, heath):
     """Stems scattered about 4.5 m apart in the woods, in clumps and gaps (not rows), thinning to
     nothing in clearings and on crags, kept off the verge. Beech below, spruce above, mixed across
     a band with noise."""
@@ -229,7 +241,8 @@ def trees(h, road_dist, slope, grass):
     ok = (row >= 0) & (row < RES) & (col >= 0) & (col < RES)
     px, py, row, col = px[ok], py[ok], row[ok], col[ok]
     d = road_dist[row, col]
-    wood = 1 - grass[row, col]
+    # A few spruce stand out in the heath, alone or in small groups.
+    wood = 1 - grass[row, col] + 0.16 * heath[row, col]
     # Clumps and gaps tens of metres across, and finer ones a few trees wide.
     clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
     clump *= 0.55 + 0.45 * mi.smoothstep(0.25, 0.55, mi.fbm(px, py, 14, 2, SEED + 71))
@@ -243,7 +256,7 @@ def trees(h, road_dist, slope, grass):
         & (slope[row, col] < 1.45)
         & (rng.random(d.shape) < wood * 0.92 * np.where(d < reach, 1.0, FAR))
         # The treeline: stems thin out over 80 m of height, the last of them spruce.
-        & (rng.random(d.shape) < mi.smoothstep(TREELINE + 30, TREELINE - 50, h[row, col]))
+        & (rng.random(d.shape) < mi.smoothstep(TREELINE + 45, TREELINE - 20, h[row, col]))
     )
     px, py, row, col = px[keep], py[keep], row[keep], col[keep]
     # The lowest ground under the trunk, so it stands in the slope rather than on its high side.
@@ -258,8 +271,10 @@ def trees(h, road_dist, slope, grass):
     # The change from beech to spruce, in metres of height, wandering with noise.
     line = 95 + 30 * (mi.fbm(px, py, 150, 3, SEED + 60) - 0.5)
     spruce = rng.random(z.shape) < mi.smoothstep(line - 25, line + 25, z)
+    # Toward the treeline the spruce are stunted: half size where the woods end.
+    stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 30, TREELINE + 20, z)
     out = []
-    for xm, ym, zm, s in zip(px, py, z, spruce, strict=True):
+    for xm, ym, zm, s, small in zip(px, py, z, spruce, stunt, strict=True):
         roll = rng.random()
         size = (
             rng.uniform(1.25, 1.5)
@@ -275,7 +290,7 @@ def trees(h, road_dist, slope, grass):
                 round(float(ym) * 100, 1),
                 round(float(zm) * 100 - 30, 1),
                 round(float(rng.uniform(0, 360)), 1),
-                round(float(size), 3),
+                round(float(size * small), 3),
             ]
         )
     return out
@@ -396,8 +411,8 @@ def main():
     h, road_dist = mi.carve(h, roads)
     h = open_valley_side(h, x, y, road)
     h = roughen_banks(h, x, y, road_dist)
-    layers, slope, grass = paint(x, y, h, road_dist)
-    tree_list = trees(h, road_dist, slope, grass)
+    layers, slope, grass, heath = paint(x, y, h, road_dist)
+    tree_list = trees(h, road_dist, slope, grass, heath)
     rail_runs = rails(h, road)
     prop_list = props(h, road, road_dist)
     mi.OUT = OUT
