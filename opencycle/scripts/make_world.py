@@ -10,6 +10,7 @@ climb pipeline (`make_climb.py`, `oc.py build-level`) with that region's biome p
 
 Run: uv run -q --no-project --with numpy --with scipy --with pillow python -I
 scripts/make_world.py. Takes about 80 s. Writes to /workspace/ue/world_gen/world:
+- albedo.png: the map's colours alone (no relief or roads), for a stretch's far horizon;
 - preview.png (and preview_small.jpg): the map, shaded, coloured by region, with the roads,
   the landmarks (dark dots) and a 5 km grid;
 - world.json: the grid, the regions, the landmarks, each ride's length, climb, time and biome
@@ -653,6 +654,9 @@ def preview(h, land, weights, roads, cliff, marks):
     rgb = rgb * (1 - snow) + 245 * snow
     beach = (land & (h < 5.5) & (cliff < 0.5))[..., None]
     rgb = np.where(beach, np.array(COLOURS["beach"], dtype=np.float32), rgb)
+    # The colours without relief, roads or marks: a stretch's far horizon is coloured from it.
+    albedo = np.where(land[..., None], rgb, np.array(COLOURS["sea"], dtype=np.float32))
+    Image.fromarray(np.clip(albedo, 0, 255).astype(np.uint8)).save(f"{OUT}/albedo.png")
     rgb *= (0.35 + 0.8 * shade)[..., None]
     sea = (
         np.array(COLOURS["sea"], dtype=np.float32)

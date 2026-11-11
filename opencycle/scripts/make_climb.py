@@ -7,6 +7,7 @@ road grading and carving, and writes the same files island_world.py reads, to
 /workspace/ue/world_gen/climb:
 - height.r16, <Layer>.r8, info.json, layers.png, preview.png: the ground and its paint;
 - road_hero_<k>.gltf: the tarmac; routes.json: the ride, up and back down;
+- far_<k>.gltf (OC_WINDOW only): the world plan around the window, coarse, for the horizon;
 - trees.json: [kind, x, y, z, yaw, scale] in cm, kind "beech" or "spruce";
 - rails.json: guard-rail runs on the drop side, each a list of [x, y, z] in cm;
 - props.json: [kind, x, y, z, yaw], a bench at the hairpin and woodpiles by the path.
@@ -16,11 +17,13 @@ The road is a bike-only path, 3 m wide. The slope rises to the
 north (-Y); the valley floor is to the south.
 """
 
+import itertools
 import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gltf_writer
 import make_island as mi
 import road_mesh
 
@@ -133,6 +136,76 @@ def load_window():
         road = np.array(json.load(f)["road"], dtype=np.float64)
     assert h.shape == (RES, RES), h.shape
     return h, {"hero": {"xy": road[:, :2], "z": road[:, 2], "closed": False}}
+
+
+FAR_KM = 15.0  # how far the horizon mesh reaches from the window's centre
+FAR_STEP = 60.0  # m between its vertices
+FAR_TILES = 4  # pieces per side, so each is culled and streamed on its own
+
+
+def far_horizon():
+    """The world plan around the window, coarse, as meshes far_<k>.gltf in cm: the island's
+    hills, coast and sea out to FAR_KM, where the flank had a rim of ridges. Under the window
+    it drops 40 m, so the landscape covers it and its edge is a skirt, not a gap. Coloured per
+    vertex from the plan's albedo.png (linear); the sea is flat, just under 0 m."""
+    world_dir = "/workspace/ue/world_gen/world"
+    with open(f"{world_dir}/world.json") as f:
+        world = json.load(f)
+    with open(f"{WINDOW_DIR}/{WINDOW}/window.json") as f:
+        cx, cy = json.load(f)["centre_world_m"]
+    plan = np.load(f"{world_dir}/height.npy")
+    albedo = np.asarray(Image.open(f"{world_dir}/albedo.png"), dtype=np.float32) / 255.0
+    n = round(2 * FAR_KM * 1000 / FAR_STEP) + 1
+    u = (np.arange(n) - (n - 1) / 2) * FAR_STEP
+    ux, uy = np.meshgrid(u, u)
+    row = (cy + uy) / world["spacing_m"] + (world["res"] - 1) / 2
+    col = (cx + ux) / world["spacing_m"] + (world["res"] - 1) / 2
+    z = mi.ndimage.map_coordinates(plan, [row, col], order=3, mode="nearest")
+    rgb = np.stack(
+        [
+            mi.ndimage.map_coordinates(albedo[..., k], [row, col], order=1, mode="nearest")
+            for k in range(3)
+        ],
+        -1,
+    )
+    rgb = (rgb**2.2) * 0.8
+    sea = z < 0.3
+    rgb[sea] = (0.006, 0.03, 0.04)
+    z = np.where(sea, -0.5, z)
+    inside = np.maximum(np.abs(ux), np.abs(uy)) < (RES - 1) / 2 * SPACING - 2
+    z = np.where(inside, z - 40.0, z)
+    gy, gx = np.gradient(z, FAR_STEP)
+    normal = np.stack([-gx, -gy, np.ones_like(z)], -1)
+    normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
+    # A cell whose four corners are all deep inside the window is never seen: skip it.
+    deep = np.maximum(np.abs(ux), np.abs(uy)) < (RES - 1) / 2 * SPACING - 2 * FAR_STEP
+    edges = np.linspace(0, n - 1, FAR_TILES + 1).round().astype(int)
+    count = 0
+    for ta, tb in itertools.pairwise(edges):
+        for sa, sb in itertools.pairwise(edges):
+            mesh = gltf_writer.Mesh()
+            part = mesh.part("Far")
+            ids = {}
+
+            def vid(i, j, part=part, ids=ids):
+                if (i, j) not in ids:
+                    ids[i, j] = part.vertex(
+                        (float(ux[i, j]) * 100, float(uy[i, j]) * 100, float(z[i, j]) * 100),
+                        tuple(float(v) for v in normal[i, j]),
+                        (float(ux[i, j]) / 100, float(uy[i, j]) / 100),
+                        (*(float(v) for v in rgb[i, j]), 1.0),
+                    )
+                return ids[i, j]
+
+            for i in range(ta, tb):
+                for j in range(sa, sb):
+                    if deep[i, j] and deep[i + 1, j + 1] and deep[i, j + 1] and deep[i + 1, j]:
+                        continue
+                    part.quad(vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1))
+            if ids:
+                mesh.write(f"{OUT}/far_{count}.gltf")
+                count += 1
+    return count
 
 
 def lay_road(h):
@@ -483,12 +556,13 @@ def main():
     # Clear the last build's pieces: a longer road (a window's) left extras that the next,
     # shorter build's level imported as stray road hanging in the air.
     for name in os.listdir(OUT):
-        if name.startswith("road_") and name.endswith(".gltf"):
+        if name.startswith(("road_", "far_")) and name.endswith(".gltf"):
             os.remove(f"{OUT}/{name}")
     for k, piece in enumerate(pieces):
         piece.write(f"{OUT}/road_hero_{k}.gltf")
     line = np.column_stack([xy, z])
     ride = np.concatenate([line, line[::-1][1:]])  # up and back down
+    far = far_horizon() if WINDOW else 0
     with open(f"{OUT}/routes.json", "w") as f:
         json.dump({"island": ride.round(2).tolist()}, f)
     with open(f"{OUT}/trees.json", "w") as f:
@@ -507,7 +581,7 @@ def main():
         f" steepest {grade.max():.1%};"
         f" {len(pieces)} road pieces; trees {len(tree_list)} ({spruce} spruce);"
         f" rails {len(rail_runs)} runs, {sum(map(len, rail_runs))} m;"
-        f" props {[p[0] for p in prop_list]}"
+        f" props {[p[0] for p in prop_list]}; horizon {far} pieces"
     )
 
 
