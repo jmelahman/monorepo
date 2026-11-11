@@ -16,11 +16,17 @@ mountain or `-RideFtp=230` to set your FTP for the power zones.
 - **Esc, P or Space** pauses. The start and pause menus hold the video settings: an overall
   quality, each scalability group, render scale, a frame-rate cap, VSync and the window.
 
+## Changes since v0.1.0
+
+- No more grass tufts through the tarmac: the grass-free verge now reaches the road everywhere.
+- Desert and beach plants no longer grow on the road either; in dry country its verge is sand,
+  not dirt.
+
 ## Known faults
 
-- Grass tufts grow through the tarmac in places, along much of the ring: the ground beside the
-  road is measured too far from it, so its grass-free verge stops short. Fixed in the next build.
 - The landscape is 14 m a sample, so far slopes are coarse.
+- In places a red warning about Lumen's cached lighting being clipped shows across the screen.
+  It is an engine note this development build prints; the ride is unaffected.
 - Coast water is flat, and a precision warning about the sea plane may show in the log.
-- Performance: 33–39 fps at 1080p on a Radeon 890M (integrated) at the default settings; Low is
+- Performance: 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings; Low is
   faster. There is no tuning yet.
