@@ -538,7 +538,8 @@ def main(argv=None):
         "--ground-param",
         action="append",
         metavar="NAME=F|R,G,B",
-        help="a parameter on MI_ClimbGround, e.g. 'Forest steep=0.5,0.42,0.35'",
+        help="a parameter on the level's ground instance (MI_ClimbGround on L_Hero), "
+        "e.g. 'Forest steep=0.5,0.42,0.35'",
     )
     s.add_argument(
         "--prop-param",

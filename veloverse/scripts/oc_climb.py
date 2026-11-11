@@ -1,6 +1,7 @@
-"""The climb's world, inside the editor: its ground material, the look (tints on MI_ClimbGround),
-and stills from the editor viewport. Loaded afresh for each job by oc_server.py; oc.py is the way
-to run any of it. Self-contained apart from ue_lib's Graph helper.
+"""The climb's world, inside the editor: its ground material, the look (tints on the level's
+ground instance, MI_ClimbGround on L_Hero), and stills from the editor viewport. Loaded afresh
+for each job by oc_server.py; oc.py is the way to run any of it. Self-contained apart from
+ue_lib's Graph helper.
 
 The crash rules, enforced here rather than remembered:
 - The ground material is rebuilt only by op_rebuild_ground, which refuses if L_Hero was opened in
@@ -27,8 +28,21 @@ PREP = "/workspace/ue/fab_prep"
 MS = "/Game/Megascans"
 FOLDER = "/Game/Climb"
 LEVEL = os.environ.get("OC_LEVEL") or f"{FOLDER}/L_Hero"
-MATERIAL = "M_ClimbGround"
-INSTANCE = "MI_ClimbGround"
+
+
+def _ground_names(level):
+    """The level's own ground material: (folder, material, instance). L_Hero keeps
+    /Game/Climb/M_ClimbGround; any other level gets M_<name>Ground beside it, so building or
+    retinting one level's ground never touches another's (L_World shared L_Hero's until 11 Nov,
+    and each one's rebuild undid the other's look). climb_world.py names it the same way."""
+    folder, name = level.rsplit("/", 1)
+    if level.lower() == f"{FOLDER}/L_Hero".lower():
+        return FOLDER, "M_ClimbGround", "MI_ClimbGround"
+    stem = name.removeprefix("L_")
+    return folder, f"M_{stem}Ground", f"MI_{stem}Ground"
+
+
+GROUND, MATERIAL, INSTANCE = _ground_names(LEVEL)
 STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 STILL_SIZE = (1920, 1080)
@@ -100,7 +114,7 @@ MIXES = {
     "Rock": ("forest", "rocky_forest_path", "patches", 12.0),
     "Dirt": ("forest", "forest_floor", "patches", 4.0),
 }
-# The tuned look (see `oc.py look`), set on every rebuilt MI_ClimbGround.
+# The tuned look (see `oc.py look`), set on every rebuilt ground instance.
 # forest_floor (the Forest base, and the Sand and Dirt mixes) is olive as scanned: greyed and
 # warmed toward brown litter, keeping a little of its green.
 # Halved from v13 once exposure was locked (`--post ev=-4.5`): under auto exposure darker albedo
@@ -302,7 +316,7 @@ class Ground:
     surface's colour is multiplied by the vector parameter "<name> tint"."""
 
     def __init__(self):
-        self.g = g = _graph(MATERIAL, FOLDER)
+        self.g = g = _graph(MATERIAL, GROUND)
         world = g.node(unreal.MaterialExpressionWorldPosition)
         camera = g.node(unreal.MaterialExpressionCameraPositionWS)
         distance = g.node(unreal.MaterialExpressionDistance)
@@ -944,8 +958,8 @@ def _current_map():
 
 
 def _landscape_uses_ground():
-    """Whether a loaded landscape draws with M_ClimbGround, directly or through an instance. (The
-    startup map's own landscape doesn't, and is harmless.)"""
+    """Whether a loaded landscape draws with this level's ground material, directly or through an
+    instance. (The startup map's own landscape doesn't, and is harmless.)"""
     for actor in unreal.EditorActorSubsystem().get_all_level_actors():
         if not isinstance(actor, unreal.LandscapeProxy):
             continue
@@ -972,10 +986,11 @@ def _guard_rebuild():
 
 def _ensure_level():
     """Opens L_Hero (unless it is the open map: reloading it open segfaults) with every actor but
-    the skeletal trees loaded, and points its landscape at MI_ClimbGround. Returns the world."""
-    mi = unreal.load_asset(f"{FOLDER}/{INSTANCE}")
+    the skeletal trees loaded, and points its landscape at its own ground instance (INSTANCE).
+    Returns the world."""
+    mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     if mi is None:
-        raise RuntimeError(f"no {FOLDER}/{INSTANCE}: run `oc.py rebuild-ground` first")
+        raise RuntimeError(f"no {GROUND}/{INSTANCE}: run `oc.py rebuild-ground` first")
     world = unreal.UnrealEditorSubsystem().get_editor_world()
     if _current_map() != LEVEL:
         unreal._oc_opened_hero = True  # set before the load: from here on the ground is off limits
@@ -1193,8 +1208,9 @@ def _warm_grass_meshes():
 
 
 def op_rebuild_ground(rebuild_grass=False):
-    """M_ClimbGround and MI_ClimbGround, rebuilt. Only on the empty map (see _guard_rebuild).
-    Saved grass types are reused: building them takes over ten minutes, on one core."""
+    """The level's ground material and instance (MATERIAL, INSTANCE), rebuilt. Only on the empty
+    map (see _guard_rebuild). Saved grass types are reused: building them takes over ten
+    minutes, on one core."""
     _guard_rebuild()
     _plant_master()
     _prop_master()
@@ -1217,14 +1233,14 @@ def op_rebuild_ground(rebuild_grass=False):
     # The material goes too: a reused one can keep a stale Landscape Grass node that
     # delete_all_material_expressions misses (after the crash of 9 Nov), and the compile fails.
     for name in (INSTANCE, MATERIAL):
-        if assets.does_asset_exist(f"{FOLDER}/{name}"):
-            assets.delete_asset(f"{FOLDER}/{name}")
+        if assets.does_asset_exist(f"{GROUND}/{name}"):
+            assets.delete_asset(f"{GROUND}/{name}")
     yield 5
     material = Ground().build(grass)
     yield 30
     mi = lib.fresh(
         INSTANCE,
-        FOLDER,
+        GROUND,
         unreal.MaterialInstanceConstant,
         unreal.MaterialInstanceConstantFactoryNew(),
     )
@@ -1512,9 +1528,9 @@ def _tune(tints, greys=None):
     bad = [k for k in [*tints, *greys] if k not in names]
     if bad:
         raise RuntimeError(f"unknown tint {bad}; use one of {names}")
-    mi = unreal.load_asset(f"{FOLDER}/{INSTANCE}")
+    mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     if mi is None:
-        raise RuntimeError(f"no {FOLDER}/{INSTANCE}: run `oc.py rebuild-ground` first")
+        raise RuntimeError(f"no {GROUND}/{INSTANCE}: run `oc.py rebuild-ground` first")
     for name, rgb in tints.items():
         lib.edit.set_material_instance_vector_parameter_value(
             mi, f"{name} tint", unreal.LinearColor(*rgb, 1.0)
@@ -1857,7 +1873,7 @@ def op_look(
     shots=None,
     out=None,
 ):
-    """Recolour through MI_ClimbGround's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
+    """Recolour through the ground instance's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
     compiles. PLANT_LOOK and PROP_LOOK are applied too, so a false-colour look is undone by the
     next look, and trying a prop's tint needs only a restart."""
@@ -1879,7 +1895,7 @@ def op_look(
     if plant_params:
         _plant_params(plant_params)
     if ground_params:
-        _set_params(unreal.load_asset(f"{FOLDER}/{INSTANCE}"), ground_params)
+        _set_params(unreal.load_asset(f"{GROUND}/{INSTANCE}"), ground_params)
     yield
     notes = [f"tuned {tint} grey {grey}"] if tint or grey else []
     notes += [f"plants tinted {plants}"] if plants else []

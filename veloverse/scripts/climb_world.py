@@ -17,9 +17,10 @@ OC_STAGE picks what to build, so a change rebuilds only its part:
 Every stage but ground ends by rendering stills from fixed cameras along the road to OC_STILLS
 (default /workspace/ue/out/climb_stills), so each run ends in pictures.
 
-The ground is island_world.py's material, built afresh here as M_ClimbGround with only the grass
-this stretch grows: the island's grass types load every biome's scans, and building their meshes
-(1.5-3 GB each, the rocks, trunks and cacti) together gets the editor killed for memory.
+The ground is island_world.py's material, built afresh here as the level's own (M_ClimbGround on
+L_Hero) with only the grass this stretch grows: the island's grass types load every biome's scans,
+and building their meshes (1.5-3 GB each, the rocks, trunks and cacti) together gets the editor
+killed for memory.
 
 Trees: OC_SPRUCE and OC_BEECH name the meshes. By default they are the static copies in
 /Game/Climb/Trees if `oc.py static-trees` made them, else the vegetation plugin's sample trees. A
@@ -61,6 +62,14 @@ FOLDER = "/Game/Climb"
 LEVEL = os.environ.get("OC_LEVEL") or f"{FOLDER}/L_Hero"  # e.g. /Game/World/L_World
 # The ride track's folder: RidePawn loads <the level's folder>/Ride/DA_RideTrack.
 RIDE = f"{LEVEL.rsplit('/', 1)[0]}/Ride"
+# The level's own ground material, named as oc_climb._ground_names does: L_Hero keeps
+# /Game/Climb/M_ClimbGround, another level gets M_<name>Ground in its folder (L_World's is
+# /Game/World/M_WorldGround), so one level's build never re-bakes another's ground.
+if LEVEL.lower() == f"{FOLDER}/L_Hero".lower():
+    GROUND, MATERIAL, INSTANCE = FOLDER, "M_ClimbGround", "MI_ClimbGround"
+else:
+    _stem = LEVEL.rsplit("/", 1)[1].removeprefix("L_")
+    GROUND, MATERIAL, INSTANCE = LEVEL.rsplit("/", 1)[0], f"M_{_stem}Ground", f"MI_{_stem}Ground"
 QUADS = 127
 GRID = 4  # components a side per streaming proxy
 PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
@@ -106,14 +115,14 @@ MIXES = {"Rock": ("forest", "rocky_forest_path", "patches", 12.0)}
 
 
 def landscape_loaded():
-    """Whether a loaded landscape draws with M_ClimbGround, directly or through an instance. (The
-    empty startup map has a landscape of its own, which a rebuild doesn't touch.)"""
+    """Whether a loaded landscape draws with this level's ground material, directly or through an
+    instance. (The empty startup map has a landscape of its own, which a rebuild doesn't touch.)"""
     for actor in unreal.EditorActorSubsystem().get_all_level_actors():
         if not isinstance(actor, unreal.LandscapeProxy):
             continue
         material = actor.get_editor_property("landscape_material")
         while material is not None:
-            if material.get_name() == "M_ClimbGround":
+            if material.get_name() == MATERIAL:
                 return True
             if not isinstance(material, unreal.MaterialInstance):
                 break
@@ -122,8 +131,9 @@ def landscape_loaded():
 
 
 def ground_material():
-    """M_ClimbGround, rebuilt with this climb's surfaces; the saved grass types are reused
-    (building them takes over ten minutes, on one core) unless OC_REBUILD is set.
+    """The level's ground material (MATERIAL), rebuilt with this climb's surfaces; the saved
+    grass types are reused (building them takes over ten minutes, on one core) unless OC_REBUILD
+    is set.
 
     Only with no landscape loaded: under one, the editor recompiled every section's material in
     one frame for six minutes and the Radeon driver lost the device (twice). To recolour, use
@@ -144,17 +154,21 @@ def ground_material():
         grass[layer] = (
             saved if saved and not os.environ.get("OC_REBUILD") else island.grass_type(layer)
         )
-    return island.Ground("M_ClimbGround").build(grass)
+    island.FOLDER = GROUND  # the material goes in the level's folder; its grass stays shared
+    try:
+        return island.Ground(MATERIAL).build(grass)
+    finally:
+        island.FOLDER = FOLDER
 
 
 def ground_instance(parent):
-    """MI_ClimbGround, the landscape's material: M_ClimbGround with its tints set by tune()."""
-    path = f"{FOLDER}/MI_ClimbGround"
+    """INSTANCE, the landscape's material: MATERIAL with its tints set by tune()."""
+    path = f"{GROUND}/{INSTANCE}"
     mi = unreal.load_asset(path)
     if mi is None:
         mi = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-            "MI_ClimbGround",
-            FOLDER,
+            INSTANCE,
+            GROUND,
             unreal.MaterialInstanceConstant,
             unreal.MaterialInstanceConstantFactoryNew(),
         )
@@ -165,10 +179,10 @@ def ground_instance(parent):
 
 
 def tune(tints):
-    """Recolours the ground's surfaces on MI_ClimbGround, e.g. tune({"Dirt": (0.6, 0.62, 0.65)}),
+    """Recolours the ground's surfaces on INSTANCE, e.g. tune({"Dirt": (0.6, 0.62, 0.65)}),
     keys being SURFACES' layers (or "<layer> mix" for a MIXES surface). Parameters only: nothing
     compiles, so it's safe, and quick, with the level open."""
-    mi = unreal.load_asset(f"{FOLDER}/MI_ClimbGround")
+    mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     for name, rgb in tints.items():
         unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(
             mi, f"{name} tint", unreal.LinearColor(*rgb, 1.0)
@@ -183,7 +197,7 @@ def materials():
     """The ground, its grass and the road, island_world.py's made in this folder. Saved ones are
     reused unless OC_REBUILD is set."""
     island.FOLDER = FOLDER
-    ground = unreal.load_asset(f"{FOLDER}/M_ClimbGround")
+    ground = unreal.load_asset(f"{GROUND}/{MATERIAL}")
     road = unreal.load_asset(f"{FOLDER}/Road/M_ClimbRoad")
     if ground and road and not os.environ.get("OC_REBUILD"):
         log("materials: reusing the saved ones")
