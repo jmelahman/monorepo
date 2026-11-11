@@ -28,9 +28,9 @@ pythonpath = [
 ]
 
 [tool.ty.src]
-# opencycle's scripts run inside the Unreal editor, against its generated `unreal` module,
+# veloverse's scripts run inside the Unreal editor, against its generated `unreal` module,
 # which isn't on PyPI and which tools/containers/unreal shadows here as a namespace package.
-exclude = ["opencycle/scripts"]
+exclude = ["veloverse/scripts"]
 
 [tool.uv.sources]
 # A path source rather than a workspace member: manygo/ keeps its own uv.lock,

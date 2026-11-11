@@ -62,7 +62,7 @@ target "android-builder" {
   }
 }
 
-# The session image for opencycle's Unreal spike, built on Epic's image. Epic
+# The session image for veloverse's Unreal spike, built on Epic's image. Epic
 # publishes it for amd64 only and behind a GHCR login, so it stays out of the
 # default group: `docker login ghcr.io && docker buildx bake unreal-devcontainer`.
 target "unreal-devcontainer" {

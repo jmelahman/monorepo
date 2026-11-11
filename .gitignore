@@ -41,5 +41,5 @@ homelab/podcasts/
 settings.local.json
 plans/
 
-# opencycle's Unreal checkout, mounted here by its kanban devcontainer; it lives outside git.
+# veloverse's Unreal checkout, mounted here by its kanban devcontainer; it lives outside git.
 /ue/

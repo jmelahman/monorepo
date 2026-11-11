@@ -7,7 +7,7 @@ base image's Mesa doesn't support the local AMD Strix GPU.
 `USER root` appears only while building, because installing packages needs it.
 `ue4` is Epic's legacy account name and is used by the Unreal Engine 5 image too.
 
-opencycle's kanban sessions run in it: `opencycle/.config/kanban/config.toml` names
+veloverse's kanban sessions run in it: `veloverse/.config/kanban/config.toml` names
 the image and adds the GPU, display, Unreal checkout (`~/.cache/opencycle-neural/ue`
 at `/workspace/ue`) and shader-cache mounts.
 

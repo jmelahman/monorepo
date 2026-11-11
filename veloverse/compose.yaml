@@ -1,0 +1,45 @@
+# Run from the veloverse directory with `docker compose up`.
+# The host's Wayland socket and GPU provide the editor window; the project,
+# engine settings, and derived data cache survive container recreation.
+services:
+  unreal:
+    image: ghcr.io/jmelahman/unreal-devcontainer:latest
+    init: true
+    # Docker's user-namespace remapping makes the host Wayland socket root-owned.
+    # Match scripts/editor.sh: open the socket to ue4, then run Unreal unprivileged.
+    user: root
+    working_dir: /workspace/ue
+    environment:
+      HOME: /home/ue4
+      UE-LocalDataCachePath: /workspace/ddc
+      XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:?Set XDG_RUNTIME_DIR to your host runtime directory}
+      WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-wayland-1}
+      SDL_VIDEO_DRIVER: wayland
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/radeon_icd.x86_64.json
+    volumes:
+      - ${XDG_RUNTIME_DIR:?}/${WAYLAND_DISPLAY:-wayland-1}:${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-1}
+      - ${XDG_RUNTIME_DIR:?}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native
+      - /dev/dri:/dev/dri
+      # The Unreal checkout links its source and project file back to this tree.
+      - ${VELOVERSE_DIR:-.}:/workspace/veloverse
+      - ${UE_PROJECT_DIR:-${HOME}/.cache/opencycle-neural/ue}:/workspace/ue
+      - unreal-ddc:/workspace/ddc
+      - unreal-config:/home/ue4/.config/Epic
+    command:
+      - /bin/bash
+      - -c
+      - |
+        chmod o+w "$$XDG_RUNTIME_DIR/$$WAYLAND_DISPLAY"
+        exec sudo -u ue4 env \
+          HOME=/home/ue4 \
+          UE-LocalDataCachePath=/workspace/ddc \
+          XDG_RUNTIME_DIR="$$XDG_RUNTIME_DIR" \
+          WAYLAND_DISPLAY="$$WAYLAND_DISPLAY" \
+          SDL_VIDEO_DRIVER=wayland \
+          VK_ICD_FILENAMES="$$VK_ICD_FILENAMES" \
+          /home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor \
+          /workspace/ue/VeloverseUE/VeloverseUE.uproject -log
+
+volumes:
+  unreal-ddc:
+  unreal-config:

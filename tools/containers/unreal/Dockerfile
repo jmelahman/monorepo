@@ -31,7 +31,7 @@ RUN apt-get update \
         /etc/apt/sources.list.d/kisak-turtle.list /etc/apt/keyrings/git-core.gpg \
         /etc/apt/sources.list.d/git-core.list
 
-# OpenCycle's smart-trainer link talks to BlueZ over the system D-Bus: libdbus to build and run it,
+# Veloverse's smart-trainer link talks to BlueZ over the system D-Bus: libdbus to build and run it,
 # bluez for bluetoothctl. The radio is the host's: bind-mount /run/dbus/system_bus_socket so the
 # host's bluetoothd does the scanning and the container only speaks to it.
 RUN apt-get update \
