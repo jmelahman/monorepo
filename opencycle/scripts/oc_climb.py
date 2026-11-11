@@ -657,6 +657,26 @@ HEATH_LOOK = {
 BLADE_INSTANCES = {"blade": ("MI_Blade", {}), "heath": ("MI_Heath", HEATH_LOOK)}
 
 
+def _biome():
+    """The biome the generator last wrote (make_climb.py's OC_BIOME), and its preset laid over
+    the tables above: see biomes.py."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("biomes", os.path.join(here, "biomes.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        with open(f"{SRC}/info.json") as f:
+            name = json.load(f).get("biome", "alpine")
+    except OSError:
+        name = "alpine"
+    module.apply(name, globals())
+    log(f"biome {name}")
+    return name
+
+
+BIOME = _biome()
+
+
 def _blade_instances(material=None, params=None):
     """MI_Blade and MI_Heath by slug prefix, made if `material` is given, with their looks set.
     `params` are trial values: for MI_Blade, or for MI_Heath when the name starts "heath:"."""
@@ -869,7 +889,9 @@ def _fill_empty_slots(biome, slug, meshes):
 
 
 def _gt_name(layer):
-    return "GT_" + layer.replace(" ", "_")
+    """Grass types are saved per biome, so a switch of biome doesn't reuse the last one's."""
+    prefix = "GT_" if BIOME == "alpine" else f"GT_{BIOME}_"
+    return prefix + layer.replace(" ", "_")
 
 
 def _grass_type(layer):
