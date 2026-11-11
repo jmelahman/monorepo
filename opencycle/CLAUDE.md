@@ -105,6 +105,8 @@ the grass is built. Work on the structure below, in this order, before touching 
   `scripts/biomes.py`'s `PRESETS[name]` over its tables. L_Hero holds one biome at a time.
   Each biome's grass types are saved as `GT_<biome>_<layer>`.
 - The world plan is `scripts/make_world.py` (a 57 km map with rides per biome; not a level).
+  `OC_WINDOW=<window>` on `make_climb.py` (or `oc_biome.sh`) builds the stretch on a 2 km
+  window of it cut by `scripts/make_window.py`, at world heights, instead of the flank.
 - Read `docs/world-plan.md` before working on a biome or the world: it has the chain, each
   biome's status and the next steps.
 
