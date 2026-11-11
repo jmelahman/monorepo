@@ -18,8 +18,9 @@ mountain or `-RideFtp=230` to set your FTP for the power zones.
 
 ## Known faults
 
-- Grass grows on the paving of the town stretches, and on the road's edge in a few places.
+- Grass tufts grow through the tarmac in places, along much of the ring: the ground beside the
+  road is measured too far from it, so its grass-free verge stops short. Fixed in the next build.
 - The landscape is 14 m a sample, so far slopes are coarse.
 - Coast water is flat, and a precision warning about the sea plane may show in the log.
-- Performance: about 20 fps at Epic on a Radeon 890M (integrated). Low is faster; there is
-  no tuning yet.
+- Performance: 33–39 fps at 1080p on a Radeon 890M (integrated) at the default settings; Low is
+  faster. There is no tuning yet.
