@@ -434,10 +434,12 @@ PROP_MASTER = f"{MS}/Materials/M_MS_Prop"
 # Specular 0.4 and the scans' low roughness made fern fronds read blue-white and metallic against
 # the sky (QA, v12).
 PLANT_LOOK = {
-    "Tint": (0.6, 0.62, 0.42),
+    # v34: brighter for daylight: at (0.6, 0.62, 0.42) the ferns were near black in the shade.
+    "Tint": (1.0, 1.1, 0.6),
     # v27: halved: the grass glowed lime, back-lit, under the dark spruce (QA, v26). v28: less
     # again, as the blade tips still glowed in the shade.
-    "TranslucencyTint": (0.06, 0.08, 0.05),
+    # v34: up again with the high sun, from (0.06, 0.08, 0.05).
+    "TranslucencyTint": (0.14, 0.2, 0.07),
     "Grey": 0.12,
     # v30: less per-plant brightness and fewer dry plants (0.7 and 0.3 made the carpet blotchy).
     # v30: the first render's blades were grey and dark against the ground (gain 4, shade 0.35).
@@ -592,14 +594,16 @@ BLADE_LOOK = {
     # rise out of it; move them with LOOK_TINTS' "Forest mix".
     "Root colour": (0.03, 0.07, 0.012),
     # v32: (0.16, 0.3, 0.05) bleached to white in full sun past 10 m.
-    "Tip colour": (0.085, 0.15, 0.035),
+    # v34: a little darker and less yellow: v33 was one lime in full sun.
+    "Tip colour": (0.075, 0.125, 0.03),
     "Gradient": 0.5,
-    # Over tens of metres the field drifts toward this multiplier (yellower, sunnier grass).
-    "Drift tint": (1.15, 1.05, 0.7),
+    # Over tens of metres the field drifts toward this multiplier. v34: toward a duller, cooler
+    # green (was a yellower (1.15, 1.05, 0.7)), so the meadow mixes two greens.
+    "Drift tint": (0.7, 0.78, 0.8),
     # v33: more spread between blades and clumps: v32 was one even lime.
     "Blade variation": 0.8,
     "Variation": 0.4,
-    "Dry share": 0.15,
+    "Dry share": 0.25,
     "Dry colour": (0.3, 0.26, 0.1),
     # v32: (0.35, 0.28, 0.14) glowed like cotton.
     "Seed colour": (0.14, 0.11, 0.06),
@@ -608,6 +612,9 @@ BLADE_LOOK = {
     "Up normal": 0.7,
     "Roughness": 0.85,
     "Specular": 0.05,
+    # v34: sway at the tip in cm, and gusts per second (they roll across the slope every 13 m).
+    "Wind": 5.0,
+    "Wind speed": 0.35,
 }
 
 
@@ -661,6 +668,22 @@ def _blade_master():
         subsurface=sss,
         ao=root,
     )
+    # Wind: gusts roll across the slope and each blade bends from its root (v squared), a
+    # little out of step with its neighbours.
+    place = g.node(unreal.MaterialExpressionWorldPosition)
+    along = g.add(g.mul(g.mask(place, "r"), 1.0 / 1300), g.mul(g.mask(place, "g"), 1.0 / 2100))
+    beat = g.mul(g.node(unreal.MaterialExpressionTime), g.param("Wind speed", 0.35))
+    phase = g.add(beat, along)
+    gust = g.link(phase, g.node(unreal.MaterialExpressionSine, period=1.0))
+    own_phase = g.add(g.mul(phase, 2.3), g.add(rnd, g.mul(own, 0.3)))
+    flutter = g.link(own_phase, g.node(unreal.MaterialExpressionSine, period=1.0))
+    push = g.add(g.add(g.mul(gust, 0.6), g.mul(flutter, 0.4)), 0.4)
+    sway = g.mul(g.mul(push, g.mul(rise, rise)), g.param("Wind", 5.0))
+    offset = g.mul(g.const((0.8, 0.6, -0.12)), sway)
+    if not lib.edit.connect_material_property(
+        offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET
+    ):
+        raise RuntimeError("M_Blade: could not wire the wind")
     material = g.material
     material.set_editor_property("tangent_space_normal", False)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
