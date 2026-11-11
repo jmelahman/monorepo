@@ -65,10 +65,10 @@ These projects are still in active development but may be considered "stable".
 
 ## Subtrees
 
-Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.adoc).
-This allows them to be developed uniformly while leaving operational tasks, such as deployments, independent.
+Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.adoc) (like submodules, but better).
+This allows them to be developed uniformly inside the monorepo while leaving operational tasks, such as deployments, independent in upstream repositories.
 
-Subtrees and their repositories are listed in [`.config/git-orchard/subtrees`](.config/git-orchard/subtrees) and managed with [git-orchard](git-orchard):
+Subtrees are managed via a CLI, [git-orchard](https://github.com/jmelahman/git-orchard):
 
 ```shell
 git orchard status          # ahead/behind each upstream
@@ -77,17 +77,26 @@ git orchard push [prefix…]  # publish, fast-forward only
 git orchard add <prefix> git@github.com:jmelahman/<name>.git
 ```
 
-On every push to `master`, [`mirror.yml`](.github/workflows/mirror.yml) runs `git orchard push` for each changed subtree.
+On every push to `master`, [`mirror.yml`](.github/workflows/mirror.yml) runs `git orchard push` for each changed subtree to sync its repository.
 Mirror pushes are fast-forward only: if an upstream has commits the monorepo doesn't (e.g. a merged PR), `git orchard pull` it in before the next push.
 
-Releases are tagged in the monorepo as `<prefix>/v<version>`; the mirror job publishes the tag upstream as `v<version>`, which triggers that repository's release workflow.
+In addition to the monorepo's, each repository has it's own CI (as noted by the [badges above](#stable-projects)).
+`git-orchard` monitors CI across all repositories,
+
+```shell
+git orchard ci                  # Similar to `gh run list` across all repositories
+git orchard ci --failed --logs  # Only report the failing jobs and include their logs
+```
+
+Releases are tagged in the monorepo as `<prefix>/v<version>` (e.g. `connections/v1.0.0`).
+The mirror job publishes the tag upstream as `v<version>`, which triggers that repository's release workflow.
 
 ```shell
 git orchard release connections          # tags the next patch version, e.g. connections/v1.2.4, and pushes it
 git orchard release connections --minor  # or --major, --suffix rc, or an explicit version like v1.3.0
 ```
 
-The subtrees' repositories (and the monorepo's own) are configured by [`terraform/github`](terraform/github), which reads the same `subtrees` file.
+All repositories are configured by [`terraform/github`](terraform/github),
 
 ```shell
 cd terraform/github
