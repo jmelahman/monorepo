@@ -159,11 +159,12 @@ FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 # out of memory. The rows under 0.5 are props (logs, stumps, rocks), drawn farther.
 GRASS = {
     "Grass": (
-        ("shared", "wild_grass", 40.0, 3500, 5000, (1.2, 2.0)),
-        ("shared", "grass_clumps", 24.0, 3500, 5000, (1.2, 2.0)),
-        ("shared", "wheat_grass", 10.0, 3500, 5000),
-        ("shared", "tundra_grass", 6.0, 3500, 5000),
-        ("shared", "kikuyu_grass", 8.0, 3500, 5000),
+        # v31: a meadow with volume: 2.5 times the grass, and kikuyu (the tallest scan) leads.
+        ("shared", "wild_grass", 100.0, 3500, 5000, (1.5, 2.6)),
+        ("shared", "grass_clumps", 60.0, 3500, 5000, (1.3, 2.4)),
+        ("shared", "wheat_grass", 20.0, 3500, 5000),
+        ("shared", "tundra_grass", 12.0, 3500, 5000),
+        ("shared", "kikuyu_grass", 80.0, 2500, 4000, (1.2, 2.4)),
         ("shared", "tall_grass", 2.4, 4000, 6000),
         ("shared", "ribbon_grass", 1.6, 3000, 4500),
         ("shared", "clovers", 12.0, 2000, 3000),
@@ -178,15 +179,16 @@ GRASS = {
     # so this draws fewer instances than v29 did. Scans near their own size (clumps are 60 cm
     # across and 25 cm tall; v19-v29 drew them up to 2.8 times that, as sparse reeds).
     "Forest": (
-        # The first render at 30, 20 and 40 was thin; 1.7 times that (tried with `--grass 2.0`)
-        # reads as a carpet.
-        ("shared", "grass_clumps", 50.0, 2000, 3000, (1.0, 1.8)),
-        ("shared", "wild_grass", 33.0, 2000, 3000, (1.2, 2.0)),
-        ("shared", "kikuyu_grass", 66.0, 1500, 2000, (0.9, 1.6)),
-        ("shared", "tall_grass", 3.0, 4000, 6000),
-        ("shared", "clovers", 13.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "clover_varieties", 7.0, 1500, 2500, (1.0, 1.6)),
-        ("shared", "leafy_dandelions", 10.0, 1500, 2500),
+        # v31: for volume (the user's Folkvangr shot: knee-high, no ground showing), three times
+        # v30's density, which `look --grass 3.6` showed closes the cover without a crash, drawn
+        # taller and further. Low graphics may thin it (grass.DensityScale); tune for Epic.
+        ("shared", "grass_clumps", 150.0, 2500, 4000, (1.3, 2.4)),
+        ("shared", "wild_grass", 100.0, 2500, 4000, (1.5, 2.6)),
+        ("shared", "kikuyu_grass", 200.0, 1500, 2500, (1.2, 2.4)),
+        ("shared", "tall_grass", 9.0, 4000, 6000),
+        ("shared", "clovers", 26.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "clover_varieties", 14.0, 1500, 2500, (1.0, 1.6)),
+        ("shared", "leafy_dandelions", 15.0, 1500, 2500),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     "Forest floor": (
@@ -220,13 +222,13 @@ GRASS = {
         ("forest", "mossy_rocks", 0.6, 8000, 11000),
         ("shared", "fern", 2.0, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
-        ("shared", "grass_clumps", 60.0, 3000, 4500, (1.0, 2.8)),
-        ("shared", "wild_grass", 40.0, 3000, 4500, (1.4, 2.4)),
+        ("shared", "grass_clumps", 120.0, 3000, 4500, (1.2, 2.4)),
+        ("shared", "wild_grass", 80.0, 3000, 4500, (1.4, 2.4)),
         ("desert", "dry_grass", 1.5, 3000, 4500),
         # v27: twice the clover, bigger, over the bare soil between the tufts (QA, v26).
         ("shared", "clovers", 10.0, 1500, 2500, (1.2, 2.0)),
         # v26: the spruce banks read as flat brown mud (QA, v25): the floor's low carpet here too.
-        ("shared", "kikuyu_grass", 24.0, 1500, 2000, (1.4, 2.2)),
+        ("shared", "kikuyu_grass", 72.0, 1500, 2500, (1.4, 2.2)),
     ),
     # No "Dirt" row: the landscape under the road mesh is painted Dirt too, so v28's low verge
     # cover grew straight through the whole tarmac.
