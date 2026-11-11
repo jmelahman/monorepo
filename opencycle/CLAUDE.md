@@ -107,6 +107,9 @@ the grass is built. Work on the structure below, in this order, before touching 
 - The world plan is `scripts/make_world.py` (a 57 km map with rides per biome; not a level).
   `OC_WINDOW=<window>` on `make_climb.py` (or `oc_biome.sh`) builds the stretch on a 2 km
   window of it cut by `scripts/make_window.py`, at world heights, instead of the flank.
+- The whole world is one more level, `/Game/World/L_World` ("the golden ride"), written by
+  `scripts/make_world_level.py` to `world_gen/ride`. `OC_SRC`, `OC_LEVEL` and `OC_STILLS` on
+  every `oc.py` command point the pipeline at it; it shares the ground material with L_Hero.
 - Read `docs/world-plan.md` before working on a biome or the world: it has the chain, each
   biome's status and the next steps.
 
