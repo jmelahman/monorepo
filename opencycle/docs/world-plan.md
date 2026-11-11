@@ -126,6 +126,34 @@ All four use the same flank and path. Stills: the storybook, or re-run the chain
   no flowers (the user's flower scans are still to fetch); the alpine fence and snowy
   peaks are the flank's.
 
+**Windows: the stretch on the plan's own ground (10 Nov, night)**
+
+`OC_WINDOW=<window> scripts/oc_biome.sh <biome>` builds L_Hero from a window cut by
+`make_window.py` instead of the hand-made flank: its ground at world heights (metres above
+sea level) and its graded road. `make_climb.WINDOW_SHAPES` overrides a biome's shape for a
+window (the mountain's treeline at 820 m, snowline 900 m, a fifth of the trees; the coast's
+sea at 0 m). `OC_CLIMB_OUT=<dir>` writes a trial elsewhere, safe while Unreal builds. Cut
+so far: mountain, meadow, desert, forest, coast.
+
+- **meadow window** (built; storybook img32): open rolling grassland with beech copses,
+  the path straight across it. Reads right. Wrong: the horizon is the window's edge (flat
+  ground meets the sky); from above the far ground is washed out; the bench sits on a bare
+  bank.
+- **mountain window** (built as alpine; storybook img33): 6.6 km of road, 704 to 972 m,
+  13 fence runs, 10,015 spruce. Larch-like spruce on green slopes, heath and rock higher,
+  snow at the top. Wrong: the top kilometre is the plan's 67 m fill, a causeway along a
+  snowfield (carve the road into the plan instead); the snow is blown white; the fence
+  zig-zagged across the road there (fixed in `rails`, not yet rebuilt); the horizon is the
+  window's edge.
+- **coast window** (built: see below; storybook img34): a real shoreline, the ring road
+  crossing a sandy point by a bay; 20% of the window is sea.
+- **Not windowed yet:** desert (cut, not built), forest (cut; no forest preset: try alpine
+  with `"treeline": NONE` or a new preset), heath and town (not cut).
+- **What all windows need next:** a far horizon (a low-resolution ring of the plan's
+  heights around the window, or a distant-terrain mesh, in place of the flank's rim of
+  ridges); the stills' `hairpin_above` view is placed by the road's midpoint and points
+  at a fifth of the way, which on a long window is often a dull view.
+
 **Lessons from the first builds**
 
 - **Exposure is per biome.** The standard look is exposed for dark greens; sand blew out to
