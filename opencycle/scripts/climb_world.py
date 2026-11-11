@@ -372,13 +372,16 @@ def log_material():
     return g.finish()
 
 
-ROAD_DARKEN = 0.3  # the island's asphalt read washed-out grey on the climb (0.4 still pale, v13)
+# The island's asphalt read washed-out grey on the climb (0.4 still pale, v13). v34: 0.3 read
+# pale beige under the high sun.
+ROAD_DARKEN = 0.19
 # The scan's bright aggregate read as a regular white speckle (QA, v12): clamped before darkening.
 ROAD_SPECK_CLAMP = 0.3
 # The edge's soil_mud, darkened and browned to the ground's damp litter.
 ROAD_EDGE_SOIL = (0.36, 0.3, 0.24)  # v25: its pebbles read as pale orange ovals
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
-ROAD_WARM = (1.05, 1.0, 0.76)  # v25: (1.15, 1, 0.72) still read pink-grey (r/g 1.13 in v24)
+# v25: (1.15, 1, 0.72) still read pink-grey (r/g 1.13 in v24). v34: less yellow for daylight.
+ROAD_WARM = (1.03, 1.0, 0.86)
 
 
 def road_material():
