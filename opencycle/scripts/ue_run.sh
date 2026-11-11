@@ -34,7 +34,12 @@ editor=$!
 trap 'kill "$editor" 2>/dev/null' TERM INT
 exited=0
 while kill -0 "$editor" 2>/dev/null; do
-	if grep -a -q -E "LogExit: Exiting.|Tearing down SDL|double free or corruption" "$2" 2>/dev/null; then
+	# An ensure starts CrashReportClient, which logs to the same file and ends with its own
+	# "LogExit: Exiting." (11 Nov: that killed a healthy build two minutes later). Count only
+	# exits it doesn't account for.
+	exits=$(grep -a -c "LogExit: Exiting\." "$2" 2>/dev/null)
+	reports=$(grep -a -c "reason: CrashReportClientApp RequestExit" "$2" 2>/dev/null)
+	if [ "${exits:-0}" -gt "${reports:-0}" ] || grep -a -q -E "Tearing down SDL|double free or corruption" "$2" 2>/dev/null; then
 		exited=$((exited + 1))
 		[ "$exited" -eq 13 ] && echo "ue_run: editor hung after exiting; stopping it" && kill "$editor"
 		[ "$exited" -eq 25 ] && echo "ue_run: editor ignored TERM; killing it" && pkill -KILL -P "$editor"
