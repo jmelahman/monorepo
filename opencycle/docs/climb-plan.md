@@ -474,4 +474,11 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     grass reads as grass up close and the banks are covered. A restart after the mesh rebuild
     took over 60 s and timed out the chain; the stills step then ran on v32's files, so gate
     any post-processing with `&&`, never `;`. Storybook v33 (img25).
+  - **v34:** re-matched to daylight and added wind. BLADE_LOOK drifts toward a duller, cooler
+    green with more dry tips; PLANT_LOOK's Tint and TranslucencyTint are up so ferns aren't
+    black; ROAD_DARKEN 0.19. M_Blade has a world position offset ("Wind" in cm at the tip,
+    "Wind speed"); `look --blade-param Wind=40` shows the bend in a still. The bench's road
+    is still pale: false colour showed it is the road mesh, not a landscape layer, seen
+    against the sun, so it is sheen (try a lower specular and a rougher floor in
+    `road_material`). Storybook v34 (img26).
   - Next: see "What to do next" in CLAUDE.md.
