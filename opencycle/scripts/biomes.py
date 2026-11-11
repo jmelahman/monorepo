@@ -44,6 +44,9 @@ PRESETS = {
     # Farmland and lanes: the alpine tables on a generator shape with open fields (make_climb).
     "meadow": {},
     "desert": {
+        # Sand is several times brighter than the alpine greens the standard look is exposed
+        # for: at ev=-2.6 it blew out to white whatever its tint (10 Nov).
+        "POST": {"ev": -0.4},
         "SURFACES": {
             "Forest": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
             "Grass": ("desert", "dry_mud_ground", (1.0, 1.0, 1.0)),
@@ -125,6 +128,7 @@ PRESETS = {
         },
     },
     "coast": {
+        "POST": {"ev": -0.8},  # bright sand again; a guess from the desert's
         "SURFACES": {
             "Forest": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
             "Sand": ("coast", "rippled_sand", (1.0, 1.0, 1.0)),
@@ -172,6 +176,7 @@ PRESETS = {
         },
     },
 }
+# "POST" is not laid over a table: `scripts/oc_biome.sh` adds it to the look's `--post` keys.
 LAID_OVER = ("SURFACES", "MIXES", "LOOK_TINTS", "LOOK_GREYS", "STEEP", "BLADE_LOOK", "PROP_LOOK")
 
 
