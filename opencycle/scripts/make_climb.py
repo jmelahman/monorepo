@@ -171,6 +171,7 @@ def far_horizon():
     rgb = (rgb**2.2) * 0.8
     sea = z < 0.3
     rgb[sea] = (0.006, 0.03, 0.04)
+    rough = np.where(sea, 0.06, 0.9)  # the alpha is roughness: a sea that mirrors the sky
     z = np.where(sea, -0.5, z)
     inside = np.maximum(np.abs(ux), np.abs(uy)) < (RES - 1) / 2 * SPACING - 2
     z = np.where(inside, z - 40.0, z)
@@ -193,7 +194,7 @@ def far_horizon():
                         (float(ux[i, j]) * 100, float(uy[i, j]) * 100, float(z[i, j]) * 100),
                         tuple(float(v) for v in normal[i, j]),
                         (float(ux[i, j]) / 100, float(uy[i, j]) / 100),
-                        (*(float(v) for v in rgb[i, j]), 1.0),
+                        (*(float(v) for v in rgb[i, j]), float(rough[i, j])),
                     )
                 return ids[i, j]
 
