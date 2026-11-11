@@ -43,6 +43,7 @@ def _ground_names(level):
 
 
 GROUND, MATERIAL, INSTANCE = _ground_names(LEVEL)
+ROAD_INSTANCE = INSTANCE.removesuffix("Ground") + "Road"  # climb_world.road_instance's
 STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 STILL_SIZE = (1920, 1080)
@@ -986,7 +987,8 @@ def _guard_rebuild():
 
 def _ensure_level():
     """Opens L_Hero (unless it is the open map: reloading it open segfaults) with every actor but
-    the skeletal trees loaded, and points its landscape at its own ground instance (INSTANCE).
+    the skeletal trees loaded, and points its landscape at its own ground instance (INSTANCE) and
+    its road at its road instance (ROAD_INSTANCE).
     Returns the world."""
     mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     if mi is None:
@@ -1008,7 +1010,8 @@ def _ensure_level():
         wp.load_actors([d.guid for d in keep])
         yield 60
     unreal._oc_opened_hero = True
-    changed = 0
+    road = unreal.load_asset(f"{GROUND}/{ROAD_INSTANCE}")  # None until a rebuild-ground makes it
+    changed = roads = 0
     for actor in unreal.EditorActorSubsystem().get_all_level_actors():
         if (
             isinstance(actor, unreal.LandscapeProxy)
@@ -1016,11 +1019,23 @@ def _ensure_level():
         ):
             actor.set_editor_property("landscape_material", mi)
             changed += 1
-    if changed:
+        elif (
+            road is not None
+            and isinstance(actor, unreal.StaticMeshActor)
+            and str(actor.get_folder_path()) == "Road"
+        ):
+            mesh = actor.static_mesh_component
+            if mesh.get_material(0) != road:
+                mesh.set_material(0, road)
+                roads += 1
+    if changed or roads:
         yield 120
         unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
         unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL)
-        log(f"landscape pointed at {INSTANCE} ({changed} pieces); saved")
+        log(
+            f"landscape pointed at {INSTANCE} ({changed} pieces), road at {ROAD_INSTANCE} "
+            f"({roads}); saved"
+        )
     return world
 
 
@@ -1248,8 +1263,17 @@ def op_rebuild_ground(rebuild_grass=False):
     lib.edit.update_material_instance(mi)
     assets.save_loaded_asset(mi, False)
     _tune(LOOK_TINTS, LOOK_GREYS)
+    yield 10
+    # The road's material too, and the level's instance of it at its road's width.
+    build = _old_build()
+    build.island.FOLDER = FOLDER
+    build.road_instance(build.road_material())
+    yield 20
     return {
-        "notes": [f"rebuilt {MATERIAL} and {INSTANCE}, with the look {LOOK_TINTS} {LOOK_GREYS}"]
+        "notes": [
+            f"rebuilt {MATERIAL} and {INSTANCE}, with the look {LOOK_TINTS} {LOOK_GREYS}; "
+            f"rebuilt M_ClimbRoad and {ROAD_INSTANCE}"
+        ]
     }
 
 

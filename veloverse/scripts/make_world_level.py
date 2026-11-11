@@ -429,6 +429,7 @@ def main():
         "biome": "world",
         "window": None,
         "sea_cm": 0.0,
+        "road_half": mi.ROAD_HALF,  # m: the road material's edge (climb_world.road_instance)
         "ride": {
             "title": "The Ring",
             "blurb": "Once round the island: coast, desert, forest, mountain and meadow.",

@@ -70,6 +70,9 @@ if LEVEL.lower() == f"{FOLDER}/L_Hero".lower():
 else:
     _stem = LEVEL.rsplit("/", 1)[1].removeprefix("L_")
     GROUND, MATERIAL, INSTANCE = LEVEL.rsplit("/", 1)[0], f"M_{_stem}Ground", f"MI_{_stem}Ground"
+# Its road's instance beside it, MI_ClimbRoad or MI_<name>Road: the shared M_ClimbRoad at the
+# level's road width.
+ROAD_INSTANCE = INSTANCE.removesuffix("Ground") + "Road"
 QUADS = 127
 GRID = 4  # components a side per streaming proxy
 PVE = "/ProceduralVegetationEditor/SampleAssets/StarterContent"
@@ -234,7 +237,16 @@ def landscape(world, ground):
     log(f"landscape: {comps}x{comps} components of {QUADS} quads at {spacing:.0f} cm")
 
 
+def road_instance(parent):
+    """ROAD_INSTANCE, the level's road material: `parent` at this road's half width (info.json's
+    road_half, m; the climb's path when it has none)."""
+    with open(f"{SRC}/info.json") as f:
+        half = float(json.load(f).get("road_half", ROAD_HALF))
+    return lib.instance(ROAD_INSTANCE, parent, GROUND, scalars={"road half": half})
+
+
 def roads(material):
+    material = road_instance(material)
     count = 0
     for name in sorted(os.listdir(SRC)):
         if not (name.startswith("road_") and name.endswith(".gltf")):
@@ -483,6 +495,8 @@ ROAD_EDGE_SOIL = (0.36, 0.3, 0.24)  # v25: its pebbles read as pale orange ovals
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
 # v25: (1.15, 1, 0.72) still read pink-grey (r/g 1.13 in v24). v34: less yellow for daylight.
 ROAD_WARM = (1.03, 1.0, 0.86)
+# The road material's default half width, m: the climb's bike path (make_climb.py's ROAD_HALF).
+ROAD_HALF = 1.5
 
 
 def road_material():
@@ -547,7 +561,10 @@ def road_material():
     ragged = g.add(g.world_noise(0.02, -0.3, 0.3, 2), g.world_noise(0.15, -0.15, 0.15, 2))
     # Narrower than v13's (offset 0.95, x2.2): its pale soil pebbles spread halfway in and read as
     # a bright speckle of ovals on the tarmac.
-    edge = g.saturate(g.mul(g.add(g.add(across, g.mul(ragged, 0.6)), -1.0), 3.0))
+    # Measured in from the tarmac's edge, "road half" metres out (U is metres across): the climb's
+    # path is 1.5 m, the world's road 3.2 m, where an edge at 1 m browned two metres of each side.
+    inside = g.add(across, g.mul(g.param("road half", ROAD_HALF), -1.0))
+    edge = g.saturate(g.mul(g.add(g.add(inside, g.mul(ragged, 0.6)), 0.5), 3.0))
     stile = island.tile_cm("forest", "soil_mud")
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
