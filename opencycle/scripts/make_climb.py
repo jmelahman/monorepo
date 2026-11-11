@@ -54,8 +54,8 @@ SHAPE = dict(SHAPES[BIOME])
 # sea level), so the treeline and snowline need the plan's heights too.
 WINDOW = os.environ.get("OC_WINDOW", "")
 WINDOW_DIR = "/workspace/ue/world_gen/window"
-# wood: the window is 3x the flank's wooded area; keep the tree count near the flank's.
-WINDOW_SHAPES = {"mountain": {"treeline": 820.0, "snowline": 900.0, "wood": 0.4}}
+# wood: the window is 3x the flank's wooded area; keep about the flank's.
+WINDOW_SHAPES = {"mountain": {"treeline": 820.0, "snowline": 900.0, "wood": 0.2}}
 SHAPE.update(WINDOW_SHAPES.get(WINDOW, {}))
 TREELINE = SHAPE["treeline"]
 SNOWLINE = SHAPE["snowline"]
