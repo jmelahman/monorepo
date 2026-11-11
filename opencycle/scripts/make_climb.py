@@ -34,10 +34,10 @@ VALLEY_Y = 640.0  # metres south of the origin: the valley floor's line
 FLANK = 0.34  # the mountainside's rise per metre north of it
 # The backdrop is alpine, as in the style shots: the woods thin out at the treeline into meadow,
 # and snow lies on the peaks. Metres of height, wandering with noise.
-# v35: 150 (was 420, far above the path), so the top of the hero stretch rides out of the
+# v35: 130 (was 420, far above the path), so the top of the hero stretch rides out of the
 # spruce into open heath, as in ref/climb/alpine_meadow_trail.jpg. The full climb will stretch
 # the zones back out.
-TREELINE = 150.0
+TREELINE = 130.0
 SNOWLINE = 600.0
 # Peaks where the path's views end, east and west: (x, y, height, radius) in metres.
 # Gaussian, at the map's edge: a softer, nearer tail lifted the path 40 m and moved the bench.

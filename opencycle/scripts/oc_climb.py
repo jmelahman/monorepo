@@ -648,7 +648,8 @@ HEATH_LOOK = {
     "Variation": 0.6,
     "Dry share": 0.35,
     "Dry colour": (0.32, 0.25, 0.11),
-    "Seed colour": (0.3, 0.09, 0.22),
+    # (0.3, 0.09, 0.22) bleached to pale magenta in full sun.
+    "Seed colour": (0.15, 0.04, 0.12),
     "Translucency": (0.1, 0.1, 0.03),
     "Wind": 1.5,
 }
