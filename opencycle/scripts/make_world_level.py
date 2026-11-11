@@ -1,9 +1,9 @@
 """The golden ride: the whole world plan as one level, with the ring road carved in.
 
-make_world.py plans the world at 27.8 m a sample. This lays it out for Unreal at 7 m a sample
-(8129 a side, 64 x 64 landscape components) with the ring, the 165 km loop round the island,
-carved in as a bike path. Its output has make_climb.py's layout, so climb_world.py and
-oc_climb.py build it as /Game/World/L_World:
+make_world.py plans the world at 27.8 m a sample. This lays it out for Unreal at 14 m a sample
+(4065 a side, 32 x 32 landscape components; OC_RES=8129 gives 7 m) with the ring, the 165 km
+loop round the island, carved in as a bike path. Its output has make_climb.py's layout, so
+climb_world.py and oc_climb.py build it as /Game/World/L_World:
 
     uv run -q --no-project --with numpy --with scipy --with pillow python -I \
         scripts/make_world_level.py
@@ -33,8 +33,11 @@ import road_mesh
 
 PLAN = "/workspace/ue/world_gen/world"
 OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/ride")
-RES = 8129  # 64 components of 127 quads, plus one
-SPACING = mw.EXTENT / (RES - 1)  # 7.0 m
+# Components of 127 quads, plus one. 8129 (7 m) lost the GPU on 11 Nov: the editor's
+# ChangeGridSize on 64 x 64 components sat 8 minutes on one frame with 7.5 GB free, then
+# VK_ERROR_DEVICE_LOST. 4065 (32 x 32) built on 9 Nov, its grid step leaving 4.2 GB free.
+RES = int(os.environ.get("OC_RES", "4065"))
+SPACING = mw.EXTENT / (RES - 1)  # 14.0 m at 4065
 HALF = (RES - 1) / 2
 BAND = 512  # rows per band
 SEED = 41
@@ -86,7 +89,7 @@ def weights(x, y):
 
 def detail(x, y, base, slope):
     """Relief the 28 m plan can't hold: gullies, swells and crags on the steep and high
-    ground. Nothing finer than the 7 m grid."""
+    ground. Nothing finer than the landscape's grid."""
     steep = np.clip(mi.smoothstep(0.15, 0.5, slope) + mi.smoothstep(850, 1050, base), 0, 1)
     gully = (mi.fbm(x * 1.0, y * 0.35, 220, 4, SEED) - 0.5) * 14
     swell = (mi.fbm(x, y, 520, 3, SEED + 7) - 0.5) * 18
@@ -97,7 +100,7 @@ def detail(x, y, base, slope):
 
 
 def ground(plan):
-    """Heights at 7 m: the plan bicubic plus detail, band by band."""
+    """Heights at SPACING: the plan bicubic plus detail, band by band."""
     h = np.empty((RES, RES), dtype=np.float32)
     cols = np.arange(RES)
     for r0 in range(0, RES, BAND):
