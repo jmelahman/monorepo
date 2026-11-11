@@ -390,6 +390,7 @@ def cmd_look(ns):
         "plant_params": dict(parse_param(t) for t in ns.plant_param or []),
         "ground_params": dict(parse_param(t) for t in ns.ground_param or []),
         "prop_params": parse_prop_params(ns.prop_param or []),
+        "blade_params": dict(parse_param(t) for t in ns.blade_param or []),
         "stills": not ns.no_stills,
         "shots": shots(ns),
     }
@@ -508,6 +509,12 @@ def main(argv=None):
         action="append",
         metavar="NAME=F|R,G,B",
         help="a parameter on every plant MI, e.g. TranslucencyTint=0.3,0.35,0.2 or Grey=0.4",
+    )
+    s.add_argument(
+        "--blade-param",
+        action="append",
+        metavar="NAME=F|R,G,B",
+        help="a parameter on MI_Blade, the blade grass, e.g. 'Tip colour=0.2,0.35,0.06'",
     )
     s.add_argument(
         "--ground-param",
