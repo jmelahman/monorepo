@@ -403,17 +403,18 @@ def rails(h, road):
     d = np.gradient(xy, axis=0)
     d /= np.linalg.norm(d, axis=1, keepdims=True)
     runs, run = [], []
+    held = 0  # the side the current run is on: a fence never crosses the path
     for k in range(len(xy)):
         best = None
-        for side in (-1, 1):
+        for side in (-1, 1) if not run else (held,):
             normal = np.array([-d[k, 1], d[k, 0]]) * side
             p = xy[k] + normal * (mi.ROAD_HALF + 0.6)
             probe = xy[k] + normal * (mi.ROAD_HALF + 6)
             drop = z[k] - mi.sample(h, probe[None])[0]
             if drop > 1.5 and (best is None or drop > best[0]):
-                best = (drop, p)
+                best = (drop, p, side)
         if best is not None:
-            p = best[1]
+            p, held = best[1], best[2]
             run.append(
                 [
                     round(float(p[0]) * 100, 1),
