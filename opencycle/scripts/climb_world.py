@@ -278,7 +278,7 @@ def sea(material):
     actor = lib.mesh_actor(
         unreal.load_asset("/Engine/BasicShapes/Plane"),
         (0, 0, level),
-        scale=(60, 60, 1),
+        scale=(4000, 4000, 1),  # the engine plane is 1 m: 4 km of water
         label="Sea",
         folder="Sea",
     )

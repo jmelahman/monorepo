@@ -128,14 +128,14 @@ PRESETS = {
         },
     },
     "coast": {
-        "POST": {"ev": -0.8},  # bright sand again; a guess from the desert's
+        "POST": {"ev": -1.6},  # between the greens and the sand: -0.8 left the grass dark
         "SURFACES": {
             "Forest": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
             "Sand": ("coast", "rippled_sand", (1.0, 1.0, 1.0)),
             "Dirt": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
         },
         "MIXES": {
-            "Forest": ("shared", "uncut_grass", "patches", 14.0, (-1.0, 2.2)),
+            "Forest": ("shared", "uncut_grass", "patches", 14.0, (-1.8, 1.4)),
             "Sand": ("coast", "beach_pebbles", "patches", 5.0),
             "Dirt": ("coast", "beach_pebbles", "patches", 4.0),
         },
