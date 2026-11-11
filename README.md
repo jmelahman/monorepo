@@ -65,7 +65,7 @@ These projects are still in active development but may be considered "stable".
 
 ## Subtrees
 
-Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.txt).
+Most projects are tracked as [git-subtrees](https://github.com/git/git/blob/master/contrib/subtree/git-subtree.adoc).
 This allows them to be developed uniformly while leaving operational tasks, such as deployments, independent.
 
 Subtrees and their repositories are listed in [`.config/git-orchard/subtrees`](.config/git-orchard/subtrees) and managed with [git-orchard](git-orchard):
