@@ -62,7 +62,7 @@ services:
       - jellyfin_data:/config
       - ~/media:/media
     environment:
-      - TZ=America/Los_Angeles
+      - TZ=America/Chicago
 
   pihole:
     image: pihole/pihole
@@ -94,7 +94,7 @@ services:
     container_name: pacoloco
     restart: unless-stopped
     environment:
-      - TZ=America/Los_Angeles
+      - TZ=America/Chicago
     expose:
       - 9129
     volumes:

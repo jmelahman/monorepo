@@ -34,7 +34,7 @@ run_args = ["--cap-add=SYS_PTRACE", "--network=kanban-net"]
 # it by its service name on kanban-net.
 AGILECBT_LLM_BASE_URL = "http://ollama:11434/v1"
 COLORTERM = "truecolor"
-TZ = "America/Los_Angeles"
+TZ = "America/Chicago"
 
 [errors]
 enabled = true
