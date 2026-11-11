@@ -625,7 +625,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		}
 	}
 
-	// ---- Bottom middle: the ride so far ----------------------------------------------------------
+	// ---- Top middle: the ride so far -------------------------------------------------------------
 	{
 		struct FItem
 		{
@@ -653,7 +653,8 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			Widths.Add(FMath::Max(P.Width(Item.Label, Label), V));
 			Total += Widths.Last();
 		}
-		const float Tall = 54.f, Y = H - 20.f - Tall;
+		// Level with the power and route panels, between them.
+		const float Tall = 54.f, Y = 20.f;
 		float X = (W - Total) * 0.5f;
 		P.Panel(X, Y, Total, Tall, 12.f);
 		X += 22.f;

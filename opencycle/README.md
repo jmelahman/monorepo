@@ -41,7 +41,7 @@ whatever the player chose, so stills and tests don't change with someone's setti
 `ARideHUD` puts up `URideOverlay`, painted in code to the HUD design: power, its zone (of
 `-RideFtp=`, 250 W by default) and the zone bar top left; top right the road ahead or the climb
 you're on, its profile coloured by grade, with the stretch and the loop at its foot, and the weather
-under it; speed, cadence, heart rate, time and metres climbed along the bottom.
+under it; speed, cadence, heart rate, time and metres climbed top centre, between them.
 
 Smart trainers come in three layers, the first two plain C++ that `tests/run.sh` checks without the
 engine. `BleProtocol.h` reads and writes the Bluetooth packets: heart rate, cycling power, speed and
