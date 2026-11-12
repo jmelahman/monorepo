@@ -23,6 +23,10 @@ public:
 	// ERG mode: a power to hold, as a workout asks, or nullopt to ride the road again.
 	virtual void SetTargetPower(TOptional<double> Watts) { Target = Watts; }
 	TOptional<double> TargetPower() const { return Target; }
+	// A Bluetooth trainer's choice of devices: the names found, the one picked ("" for the first).
+	virtual TArray<FString> Devices() const { return {}; }
+	virtual FString Picked() const { return FString(); }
+	virtual void Pick(const FString& Device) {}
 
 protected:
 	TOptional<double> Target;

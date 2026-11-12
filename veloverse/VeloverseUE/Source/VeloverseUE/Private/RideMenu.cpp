@@ -353,7 +353,7 @@ void URideMenu::BuildStart()
 	    12.f);
 	Add(P,
 	    Cycler(
-		    TEXT("Power from"), {TEXT("Keyboard"), TEXT("Simulated trainer")},
+		    TEXT("Power from"), {TEXT("Keyboard"), TEXT("Simulated trainer"), TEXT("Bluetooth")},
 		    [this]
 		    {
 			    const ARidePawn* Pawn = Rider();
@@ -367,6 +367,29 @@ void URideMenu::BuildStart()
 			    }
 		    }),
 	    12.f);
+	// With Bluetooth, which trainer: the first found, or one by name. Its choices follow the scan.
+	DeviceCycler = Cyclers.Num();
+	DeviceRow = Cycler(
+		TEXT("Trainer"), {TEXT("First found")},
+		[this]
+		{
+			const ARidePawn* Pawn = Rider();
+			if (!Pawn || !Pawn->Trainer || Pawn->Trainer->Picked().IsEmpty())
+			{
+				return 0;
+			}
+			return Cyclers[DeviceCycler].Choices.IndexOfByKey(Pawn->Trainer->Picked());
+		},
+		[this](int32 I)
+		{
+			const TArray<FString>& Choices = Cyclers[DeviceCycler].Choices;
+			if (ARidePawn* Pawn = Rider(); Pawn && Pawn->Trainer)
+			{
+				Pawn->Trainer->Pick(I > 0 && Choices.IsValidIndex(I) ? Choices[I] : FString());
+			}
+		});
+	DeviceRow->SetVisibility(ESlateVisibility::Collapsed);
+	Add(P, DeviceRow, 6.f);
 	TrainerNote = Text(TEXT(""), 13, Faint);
 	Add(P, TrainerNote, 6.f);
 	// Ride the road, or a workout from the library with its length and load.
@@ -842,10 +865,20 @@ void URideMenu::Refresh()
 	if (Pawn)
 	{
 		const bool bSim = Pawn->TrainerSource == TEXT("sim");
-		TrainerNote->SetText(FText::FromString(
-			bSim ? TEXT("A trainer played from the keyboard's watts, through the same Bluetooth code a real "
-		                "one will use. It takes the grade and sends back power, cadence and heart rate.")
-				 : TEXT("Hold W or Up to push harder, S or Down to ease off. Bluetooth trainers are next.")));
+		const bool bBle = Pawn->TrainerSource == TEXT("ble");
+		FString Note = bSim ? TEXT("A trainer played from the keyboard's watts, through the same Bluetooth code a real "
+		                           "one uses. It takes the grade and sends back power, cadence and heart rate.")
+		                    : TEXT("Hold W or Up to push harder, S or Down to ease off.");
+		if (bBle && Pawn->Trainer)
+		{
+			// Experimental: a smart trainer (FTMS) or power meter and a heart-rate strap, through BlueZ.
+			Note = Pawn->Trainer->Name() + TEXT(". Experimental: smart trainers (FTMS), power meters and heart-rate straps.");
+			TArray<FString> Choices = {TEXT("First found")};
+			Choices.Append(Pawn->Trainer->Devices());
+			Cyclers[DeviceCycler].Choices = MoveTemp(Choices);
+		}
+		DeviceRow->SetVisibility(bBle ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		TrainerNote->SetText(FText::FromString(Note));
 		PauseTitle->SetText(FText::FromString(Pawn->bFinished ? TEXT("Finished") : TEXT("Paused")));
 		const float Km = static_cast<float>(Pawn->Ridden() / 100000.0);
 		const float Average = Pawn->Elapsed > 0.f ? Km / (Pawn->Elapsed / 3600.f) : 0.f;

@@ -1,6 +1,7 @@
 #include "RidePawn.h"
 
 #include "BleTrainer.h"
+#include "BlueZLink.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/DirectionalLightComponent.h"
@@ -65,7 +66,7 @@ void ARidePawn::CameraLook(FPostProcessSettings& Look)
 	Look.SceneFringeIntensity = 0.25f;
 }
 
-const TArray<FString> ARidePawn::TrainerSources = {TEXT("keyboard"), TEXT("sim")};
+const TArray<FString> ARidePawn::TrainerSources = {TEXT("keyboard"), TEXT("sim"), TEXT("ble")};
 
 bool ARidePawn::Automated()
 {
@@ -489,6 +490,16 @@ void ARidePawn::UseTrainer(const FString& Source)
 	if (Source == TEXT("sim"))
 	{
 		Trainer = MakeUnique<FBleTrainer>(MakeUnique<FSimulatedLink>(&Legs));
+		return;
+	}
+	if (Source == TEXT("ble"))
+	{
+		Trainer = MakeUnique<FBleTrainer>(MakeUnique<FBlueZLink>());
+		FString Device;
+		if (FParse::Value(FCommandLine::Get(), TEXT("RideBleDevice="), Device))
+		{
+			Trainer->Pick(Device);
+		}
 		return;
 	}
 	// The keyboard trainer reads the legs; this proxy keeps one owner for both cases.

@@ -17,6 +17,10 @@ public:
 	virtual void Poll(Veloverse::Ble::FSession& Session, double Now) = 0;
 	virtual void Write(const Veloverse::Ble::Bytes& ControlPoint) = 0;
 	virtual bool HasTrainer() const = 0;
+	// The trainers found, by name, for the rider to pick from; and the one picked ("" for any).
+	virtual TArray<FString> Devices() const { return {}; }
+	virtual FString Picked() const { return FString(); }
+	virtual void Pick(const FString& Device) {}
 };
 
 class FBleTrainer : public ITrainer
@@ -71,6 +75,10 @@ public:
 		Reading.HeartRateBpm = R.HeartRateBpm;
 		return Reading;
 	}
+
+	virtual TArray<FString> Devices() const override { return Link->Devices(); }
+	virtual FString Picked() const override { return Link->Picked(); }
+	virtual void Pick(const FString& Device) override { Link->Pick(Device); }
 
 	virtual void SetGrade(double InGrade) override { Grade = InGrade; }
 	virtual void SetTargetPower(TOptional<double> Watts) override

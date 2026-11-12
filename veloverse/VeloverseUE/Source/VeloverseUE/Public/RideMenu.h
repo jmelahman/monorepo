@@ -76,6 +76,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> StartLevel;
 	UPROPERTY(Transient) TObjectPtr<UWidget> RouteRow;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> TrainerNote;
+	UPROPERTY(Transient) TObjectPtr<UWidget> DeviceRow;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseStats;
 	UPROPERTY(Transient) TObjectPtr<URideButton> ResumeButton;
@@ -103,7 +104,8 @@ private:
 	TArray<Veloverse::FWorkout> Workouts; // the library, for the start page's workout choice
 	int32 WorkoutCycler = -1;
 	float WorkoutsFtp = 0.f;              // the FTP the library was read with (files in watts need it)
-	int32 ThemeCycler = -1;               // its choices are the unlocked HUD colours
+	int32 ThemeCycler = -1;
+	int32 DeviceCycler = -1;               // Bluetooth trainers found, with "First found" first               // its choices are the unlocked HUD colours
 	int32 StartCycler = -1; // and these the route's stretches, refilled when the route changes
 	TWeakObjectPtr<const URideTrack> StartsOf;
 	float RefreshClock = 0.f;
