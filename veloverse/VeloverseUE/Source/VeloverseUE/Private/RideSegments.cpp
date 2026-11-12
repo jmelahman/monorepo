@@ -52,6 +52,8 @@ void FRideSegments::Use(const URideTrack& Track)
 		Timers.Emplace(Named, TrackLength, bClosed);
 		Names.Add(Name);
 		Keys.Add(FString::Printf(TEXT("%s@%.0f"), *Track.Title, Climb.Start));
+		UE_LOG(LogTemp, Display, TEXT("RIDE segment at %.0f m: %s, %.0f m at %.1f%%"), Climb.Start, *Name,
+		       Climb.Length(TrackLength), Climb.Grade(TrackLength) * 100.0);
 	}
 	Load();
 	UE_LOG(LogTemp, Display, TEXT("RIDE segments: %d climbs on %s"), Timers.Num(), *Track.Title);
