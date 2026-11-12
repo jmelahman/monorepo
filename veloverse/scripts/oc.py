@@ -456,7 +456,7 @@ def cmd_static_trees(ns):
 def cmd_build_level(ns):
     """The whole level from world_gen/climb (run make_climb.py first): each stage on a freshly
     restarted editor, since the ground stage deletes L_Hero and the dress stage loads it."""
-    for stage in ("ground", "dress"):
+    for stage in [ns.stage] if ns.stage else ("ground", "dress"):
         restart_clean(ns)
         code = wait(submit("build-level", {"stage": stage}), ns.timeout)
         if code != OK:
@@ -577,6 +577,7 @@ def main(argv=None):
     s.add_argument("--shots")
     s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
+    s.add_argument("--stage", choices=("ground", "dress"), help="only this stage (default both)")
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
     add("ride-track", cmd_ride_track, help="rewrite the level's DA_RideTrack only")
     add("road-look", cmd_road_look, help="rebuild the road and path materials only")
