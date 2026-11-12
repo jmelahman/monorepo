@@ -603,7 +603,7 @@ def _road_fold(g, kind, offset=None):
         transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL,
         transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
     )
-    g.link(g.const((0.0, 0.0, 0.0)), base, "Input")
+    g.link(g.const((0.0, 0.0, 0.0)), base)
     texel = (half + 0.5) / ROAD_DIST_SIZE
     shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
     uv = g.add(g.mul(g.mask(base, "rg"), 1.0 / (spacing * ROAD_DIST_SIZE)), shift)
