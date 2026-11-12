@@ -596,7 +596,8 @@ def _road_look(kind):
         return {}
     with open(f"{SRC}/info.json") as f:
         clear = json.load(f)["road_half"] + ROAD_REACH[kind]
-    return {"Road clear": clear, "Road debug": 0.0} if kind == "blade" else {"Road clear": clear}
+    debug = {"Road debug": 0.0, "Road debug sample": 0.0, "Road debug uv": 0.0}
+    return {"Road clear": clear, **debug} if kind == "blade" else {"Road clear": clear}
 
 
 def _road_fold(g, kind, offset=None):
@@ -641,7 +642,7 @@ def _road_fold(g, kind, offset=None):
     metres = g.add(g.mul(length, ROAD_DIST_NEAR), far)
     clear = g.param("Road clear", info["road_half"] + ROAD_REACH[kind])
     hide = g.saturate(g.mul(g.add(clear, g.mul(metres, -1.0)), 4.0))
-    g.road_metres = metres  # for a master's "Road debug" colour
+    g.road_metres, g.road_sample, g.road_uv = metres, sample, uv  # for the "Road debug" colours
     fold = g.op(
         unreal.MaterialExpressionSubtract, base, g.node(unreal.MaterialExpressionWorldPosition)
     )
@@ -922,6 +923,12 @@ def _blade_master():
             near_road,
         )
         colour = g.lerp(colour, debug, g.param("Road debug", 0.0))
+        # "Road debug sample" shows the map's texel as read; "Road debug uv" the UV, banded every
+        # 1/8 of the map (red u, green v).
+        colour = g.lerp(colour, g.mask(g.road_sample, "rgb"), g.param("Road debug sample", 0.0))
+        tiles = g.link(g.mul(g.road_uv, 8.0), g.node(unreal.MaterialExpressionFrac))
+        uv_colour = g.op(unreal.MaterialExpressionAppendVector, tiles, g.const(0.0))
+        colour = g.lerp(colour, uv_colour, g.param("Road debug uv", 0.0))
     g.output(
         colour,
         normal,
