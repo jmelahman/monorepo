@@ -38,7 +38,14 @@ twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
    - alpine cliffs, scree and snow-capped rock;
    - clutter: logs, stumps, stones and moss;
    - ground textures: coastal grass and sand, and fine sand or shingle for the quay.
-4. More dramatic terrain at the next reshape: ridges, cliffs, cuttings and gorges that frame
-   the road, with big vistas between them.
+4. The next reshape, from the AAA gap review (`/workspace/ue/out/qa/aaa_gap_review.md`):
+   - erosion, cliffs placed on steep contours, and scree below them;
+   - roads that follow the contours, with real cut and fill;
+   - a higher Vael, a gorge on Red Sands and a cliffed shore on the hub;
+   - real trees in clustered size classes, with an understory;
+   - a Heath layer for the Moor;
+   - walls, fences, hamlets and a quay.
+   Lighting goes first, because it needs no rebuild: a low raking sun, volumetric fog and
+   cloud, and an overcast preset.
 5. Later: HLODs for the far landscape and trees, L_World's own ground material, per-island
    grass presets, and PCG placement at world scale.
