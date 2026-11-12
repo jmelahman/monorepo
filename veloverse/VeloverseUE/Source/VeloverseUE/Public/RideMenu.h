@@ -71,6 +71,9 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UWidgetSwitcher> Pages;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> CourseTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> CourseText;
+	UPROPERTY(Transient) TObjectPtr<URideChart> RoutePreview;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> CourseClimbs;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> StartLevel;
 	UPROPERTY(Transient) TObjectPtr<UWidget> RouteRow;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> TrainerNote;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseTitle;

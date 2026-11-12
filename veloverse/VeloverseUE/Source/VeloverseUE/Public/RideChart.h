@@ -1,5 +1,6 @@
 // The ride summary's chart, painted in code: power over the ride (smoothed over 30 s, coloured by
-// zone) on the road's height, and under it a strip of the time spent in each power zone.
+// zone) on the road's height, and under it a strip of the time spent in each power zone. Or, on the
+// start page, the route's preview: its height all the way round, its climbs, and the start.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -14,6 +15,10 @@ class VELOVERSEUE_API URideChart : public UUserWidget
 
 public:
 	void SetRide(const std::vector<Veloverse::FSample>& Samples, float Ftp);
+	// Heights (m) evenly along the route; climbs as fractions of it, start to end (a loop's last
+	// may wrap, end < start); where the ride starts, also a fraction.
+	void SetRoute(TArray<float> Heights, TArray<FVector2f> Climbs, float Start, FLinearColor Accent);
+	void SetStart(float Start);
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -27,4 +32,11 @@ private:
 	TArray<float> Elevation; // m
 	float Zones[7] = {};     // seconds
 	float Ftp = 250.f;
+
+	bool bRoute = false;
+	TArray<float> RouteHeights;
+	TArray<FVector2f> RouteClimbs;
+	float RouteStart = 0.f;
+	FLinearColor RouteAccent = FLinearColor::White;
+	int32 PaintRoute(const FGeometry& Geometry, FSlateWindowElementList& Out, int32 Layer) const;
 };

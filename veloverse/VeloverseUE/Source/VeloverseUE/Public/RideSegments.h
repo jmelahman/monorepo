@@ -44,6 +44,8 @@ public:
 
 	const TArray<FSegmentResult>& Results() const { return Finished; }
 	int32 Num() const { return Timers.Num(); }
+	const Veloverse::FSegment& Segment(int32 I) const { return Timers[I].Seg(); }
+	const FString& Name(int32 I) const { return Names[I]; }
 
 	// Adds this ride's efforts to the history and writes it.
 	void Save(const FString& When);

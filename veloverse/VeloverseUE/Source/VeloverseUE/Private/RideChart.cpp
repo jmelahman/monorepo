@@ -27,8 +27,84 @@ TSharedRef<SWidget> URideChart::RebuildWidget()
 	return Super::RebuildWidget();
 }
 
+void URideChart::SetRoute(TArray<float> Heights, TArray<FVector2f> Climbs, float Start, FLinearColor Accent)
+{
+	bRoute = true;
+	RouteHeights = MoveTemp(Heights);
+	RouteClimbs = MoveTemp(Climbs);
+	RouteStart = Start;
+	RouteAccent = Accent;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void URideChart::SetStart(float Start)
+{
+	if (!FMath::IsNearlyEqual(Start, RouteStart))
+	{
+		RouteStart = Start;
+		Invalidate(EInvalidateWidgetReason::Paint);
+	}
+}
+
+int32 URideChart::PaintRoute(const FGeometry& Geometry, FSlateWindowElementList& Out, int32 Layer) const
+{
+	const FVector2f Size = Geometry.GetLocalSize();
+	const float W = Size.X, H = Size.Y;
+	const FSlateColorBrush White(FLinearColor::White);
+	auto Box = [&](float X, float Y, float BW, float BH, const FLinearColor& Colour)
+	{
+		FSlateDrawElement::MakeBox(Out, ++Layer,
+		                           Geometry.ToPaintGeometry(FVector2f(BW, BH), FSlateLayoutTransform(FVector2f(X, Y))),
+		                           &White, ESlateDrawEffect::None, Colour);
+	};
+	const int32 Count = RouteHeights.Num();
+	if (Count < 2)
+	{
+		return Layer;
+	}
+	float Low = RouteHeights[0], High = RouteHeights[0];
+	for (const float E : RouteHeights)
+	{
+		Low = FMath::Min(Low, E);
+		High = FMath::Max(High, E);
+	}
+	const float Span = FMath::Max(High - Low, 20.f);
+	auto OnClimb = [this](float F)
+	{
+		for (const FVector2f& C : RouteClimbs)
+		{
+			if (C.X <= C.Y ? (F >= C.X && F <= C.Y) : (F >= C.X || F <= C.Y))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	// The height as columns, the climbs in the accent; a line along the base.
+	const float Step = W / Count, Room = H - 14.f;
+	for (int32 C = 0; C < Count; ++C)
+	{
+		const float F = (C + 0.5f) / Count;
+		const float Tall = 3.f + (RouteHeights[C] - Low) / Span * (Room - 3.f);
+		Box(C * Step, H - Tall, Step + 0.5f, Tall,
+		    OnClimb(F) ? FLinearColor(RouteAccent.R, RouteAccent.G, RouteAccent.B, 0.85f)
+		               : FLinearColor(1.f, 1.f, 1.f, 0.18f));
+	}
+	Box(0.f, H - 1.f, W, 1.f, FLinearColor(1.f, 1.f, 1.f, 0.3f));
+	// The start: a white tick through the profile, labelled above it.
+	const float Sx = FMath::Clamp(RouteStart, 0.f, 1.f) * W;
+	Box(Sx - 1.f, 12.f, 2.f, H - 12.f, FLinearColor::White);
+	const bool bRight = Sx > W - 40.f;
+	FSlateDrawElement::MakeText(
+		Out, ++Layer,
+		Geometry.ToPaintGeometry(FVector2f(40.f, 12.f), FSlateLayoutTransform(FVector2f(bRight ? Sx - 34.f : Sx + 3.f, -1.f))),
+		FString(TEXT("Start")), FCoreStyle::GetDefaultFontStyle("Bold", 8), ESlateDrawEffect::None, FLinearColor::White);
+	return Layer;
+}
+
 void URideChart::SetRide(const std::vector<Veloverse::FSample>& Samples, float InFtp)
 {
+	bRoute = false;
 	Ftp = FMath::Max(InFtp, 1.f);
 	Power.Reset();
 	Elevation.Reset();
@@ -66,6 +142,10 @@ int32 URideChart::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry,
                               bool bParentEnabled) const
 {
 	Layer = Super::NativePaint(Args, Geometry, Culling, Out, Layer, Style, bParentEnabled);
+	if (bRoute)
+	{
+		return PaintRoute(Geometry, Out, Layer);
+	}
 	const FVector2f Size = Geometry.GetLocalSize();
 	const float W = Size.X, StripH = 10.f, Gap = 8.f, H = Size.Y - StripH - Gap;
 	const FSlateColorBrush White(FLinearColor::White);

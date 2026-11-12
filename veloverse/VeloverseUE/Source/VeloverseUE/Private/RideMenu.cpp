@@ -275,10 +275,20 @@ void URideMenu::BuildStart()
 {
 	UVerticalBox* P = Page(TEXT(""));
 	Add(P, Text(TEXT("Veloverse"), 44, FLinearColor::White, true), 0.f);
+	StartLevel = Text(TEXT(""), 13, Faint);
+	Add(P, StartLevel, 0.f);
 	CourseTitle = Text(TEXT(""), 22, Accent);
 	Add(P, CourseTitle, 0.f);
 	CourseText = Text(TEXT(""), 15, Faint);
-	Add(P, CourseText, 14.f);
+	Add(P, CourseText, 10.f);
+	// The route's profile, its climbs (the timed segments) in the accent, and the start.
+	RoutePreview = CreateWidget<URideChart>(this, URideChart::StaticClass());
+	USizeBox* PreviewBox = WidgetTree->ConstructWidget<USizeBox>();
+	PreviewBox->SetHeightOverride(64.f);
+	PreviewBox->SetContent(RoutePreview);
+	Add(P, PreviewBox, 6.f);
+	CourseClimbs = Text(TEXT(""), 12, Faint);
+	Add(P, CourseClimbs, 4.f);
 	RouteCycler = Cyclers.Num();
 	RouteRow = Cycler(
 		TEXT("Route"), {},
@@ -709,12 +719,44 @@ void URideMenu::Survey()
 	{
 		ClimbMetres += FMath::Max(0.f, Track.Height(S) - Track.Height(S - 1000.f)) / 100.f;
 	}
+	// The preview: 240 heights, and the climbs the ride will time.
+	ARidePawn* Mutable = Rider();
+	if (!Mutable->Segments.UsesTrack(&Track))
+	{
+		Mutable->Segments.Use(Track);
+	}
+	TArray<float> Heights;
+	for (int32 I = 0; I < 240; ++I)
+	{
+		Heights.Add(Track.Height(Length * (I + 0.5f) / 240.f) / 100.f);
+	}
+	TArray<FVector2f> Climbs;
+	FString Names;
+	const double Metres = Length / 100.0;
+	for (int32 I = 0; I < Pawn->Segments.Num(); ++I)
+	{
+		const Veloverse::FSegment& S = Pawn->Segments.Segment(I);
+		Climbs.Add(FVector2f(static_cast<float>(S.Start / Metres), static_cast<float>(S.End / Metres)));
+		Names += FString::Printf(TEXT("%s%s %.1f km at %.0f%%"), I ? TEXT(" · ") : TEXT(""), *Pawn->Segments.Name(I),
+		                         S.Length(Metres) / 1000.0, S.Grade(Metres) * 100.0);
+	}
+	RoutePreview->SetRoute(MoveTemp(Heights), MoveTemp(Climbs), Pawn->StartMetres * 100.f / Length, Accent);
+	CourseClimbs->SetText(FText::FromString(
+		Pawn->Segments.Num() ? FString::Printf(TEXT("%d timed climbs: %s"), Pawn->Segments.Num(), *Names)
+							 : FString(TEXT("No timed climbs on this route."))));
 }
 
 void URideMenu::Refresh()
 {
 	Survey();
 	const ARidePawn* Pawn = Rider();
+	if (Pawn)
+	{
+		const Veloverse::FLevel L = Veloverse::LevelFor(Pawn->Profile.Xp);
+		StartLevel->SetText(FText::FromString(
+			L.Needed > 0 ? FString::Printf(TEXT("Level %d · %d / %d XP"), L.Level, L.Into, L.Needed)
+						 : FString::Printf(TEXT("Level %d"), L.Level)));
+	}
 	if (CourseKm > 0.f && Pawn && Pawn->Track)
 	{
 		const URideTrack& Track = *Pawn->Track;
@@ -725,6 +767,7 @@ void URideMenu::Refresh()
 		CourseText->SetText(FText::FromString(FString::Printf(
 			TEXT("%.1f km, %s, with %.0f m of climbing. %s%sThe weather changes as you go."), CourseKm, *Kind,
 			ClimbMetres, *Track.Blurb, Track.Blurb.IsEmpty() ? TEXT("") : TEXT(" "))));
+		RoutePreview->SetStart(Pawn->StartMetres * 100.f / FMath::Max(Track.Length(), 1.f));
 	}
 	if (Pawn && Cyclers.IsValidIndex(RouteCycler))
 	{
