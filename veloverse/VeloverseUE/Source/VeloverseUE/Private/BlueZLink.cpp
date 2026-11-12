@@ -33,7 +33,7 @@ struct DBusMessageIter
 };
 using dbus_bool_t = uint32;
 constexpr int BusSystem = 1;
-constexpr int TArr = 'a', TDict = 'e', TVariant = 'v', TString = 's', TPath = 'o', TBool = 'b', TByte = 'y';
+constexpr int DArray = 'a', DDict = 'e', DVariant = 'v', DString = 's', DPath = 'o', DBool = 'b', DByte = 'y';
 
 struct FDBus
 {
@@ -313,7 +313,7 @@ struct FBlueZLink::FImpl : public FRunnable
 		DBusMessageIter V;
 		Bus.Recurse(&It, &V);
 		const int Type = Bus.ArgType(&V);
-		if (Type == TString || Type == TPath)
+		if (Type == DString || Type == DPath)
 		{
 			const std::string S = String(V);
 			if (Key == "Name") Out.Name = S;
@@ -322,7 +322,7 @@ struct FBlueZLink::FImpl : public FRunnable
 			else if (Key == "Service") Out.Service = S;
 			else if (Key == "Device") Out.Device = S;
 		}
-		else if (Type == TBool)
+		else if (Type == DBool)
 		{
 			dbus_bool_t B = 0;
 			Bus.GetBasic(&V, &B);
@@ -336,7 +336,7 @@ struct FBlueZLink::FImpl : public FRunnable
 				Out.bResolved = B != 0;
 			}
 		}
-		else if (Type == TArr && Bus.ElementType(&V) == TByte && Key == "Value")
+		else if (Type == DArray && Bus.ElementType(&V) == DByte && Key == "Value")
 		{
 			DBusMessageIter A;
 			Bus.Recurse(&V, &A);
@@ -346,11 +346,11 @@ struct FBlueZLink::FImpl : public FRunnable
 			Out.bHasValue = true;
 			Out.Value.assign(Data, Data + FMath::Max(N, 0));
 		}
-		else if (Type == TArr && Bus.ElementType(&V) == TString && Key == "UUIDs")
+		else if (Type == DArray && Bus.ElementType(&V) == DString && Key == "UUIDs")
 		{
 			DBusMessageIter A;
 			Bus.Recurse(&V, &A);
-			while (Bus.ArgType(&A) == TString)
+			while (Bus.ArgType(&A) == DString)
 			{
 				if (const uint16 U = ShortUuid(String(A)))
 				{
@@ -367,13 +367,13 @@ struct FBlueZLink::FImpl : public FRunnable
 		FProps Out;
 		DBusMessageIter Entries;
 		Bus.Recurse(&Dict, &Entries);
-		while (Bus.ArgType(&Entries) == TDict)
+		while (Bus.ArgType(&Entries) == DDict)
 		{
 			DBusMessageIter Entry;
 			Bus.Recurse(&Entries, &Entry);
 			const std::string Key = String(Entry);
 			Bus.Next(&Entry);
-			if (Bus.ArgType(&Entry) == TVariant)
+			if (Bus.ArgType(&Entry) == DVariant)
 			{
 				Variant(Entry, Key, Out);
 			}
@@ -405,17 +405,17 @@ struct FBlueZLink::FImpl : public FRunnable
 		Known.clear();
 		Characteristics.clear();
 		DBusMessageIter Root, Objects;
-		if (Bus.IterInit(Reply, &Root) && Bus.ArgType(&Root) == TArr)
+		if (Bus.IterInit(Reply, &Root) && Bus.ArgType(&Root) == DArray)
 		{
 			Bus.Recurse(&Root, &Objects);
-			while (Bus.ArgType(&Objects) == TDict)
+			while (Bus.ArgType(&Objects) == DDict)
 			{
 				DBusMessageIter Object, Interfaces;
 				Bus.Recurse(&Objects, &Object);
 				const std::string Path = String(Object);
 				Bus.Next(&Object);
 				Bus.Recurse(&Object, &Interfaces);
-				while (Bus.ArgType(&Interfaces) == TDict)
+				while (Bus.ArgType(&Interfaces) == DDict)
 				{
 					DBusMessageIter Interface;
 					Bus.Recurse(&Interfaces, &Interface);
@@ -642,10 +642,10 @@ struct FBlueZLink::FImpl : public FRunnable
 				const char* Path = Bus.GetPath(M);
 				const auto Sub = Path ? Subscribed.find(Path) : Subscribed.end();
 				DBusMessageIter It;
-				if (Sub != Subscribed.end() && Bus.IterInit(M, &It) && Bus.ArgType(&It) == TString)
+				if (Sub != Subscribed.end() && Bus.IterInit(M, &It) && Bus.ArgType(&It) == DString)
 				{
 					Bus.Next(&It); // past the interface name, to the changed properties
-					if (Bus.ArgType(&It) == TArr)
+					if (Bus.ArgType(&It) == DArray)
 					{
 						FProps P = Properties(It);
 						if (P.bHasValue)
@@ -677,17 +677,17 @@ struct FBlueZLink::FImpl : public FRunnable
 			auto Fill = [this, &Value](DBusMessageIter& It)
 			{
 				DBusMessageIter Array, Options, Entry, Var;
-				Bus.Open(&It, TArr, "y", &Array);
+				Bus.Open(&It, DArray, "y", &Array);
 				const uint8* Data = Value.data();
-				Bus.AppendFixedArray(&Array, TByte, &Data, static_cast<int>(Value.size()));
+				Bus.AppendFixedArray(&Array, DByte, &Data, static_cast<int>(Value.size()));
 				Bus.CloseContainer(&It, &Array);
-				Bus.Open(&It, TArr, "{sv}", &Options);
-				Bus.Open(&Options, TDict, nullptr, &Entry);
+				Bus.Open(&It, DArray, "{sv}", &Options);
+				Bus.Open(&Options, DDict, nullptr, &Entry);
 				const char* Key = "type";
-				Bus.AppendBasic(&Entry, TString, &Key);
-				Bus.Open(&Entry, TVariant, "s", &Var);
+				Bus.AppendBasic(&Entry, DString, &Key);
+				Bus.Open(&Entry, DVariant, "s", &Var);
 				const char* Kind = "request";
-				Bus.AppendBasic(&Var, TString, &Kind);
+				Bus.AppendBasic(&Var, DString, &Kind);
 				Bus.CloseContainer(&Entry, &Var);
 				Bus.CloseContainer(&Options, &Entry);
 				Bus.CloseContainer(&It, &Options);

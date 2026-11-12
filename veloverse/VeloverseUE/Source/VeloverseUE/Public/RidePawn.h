@@ -121,6 +121,7 @@ public:
 	static const TArray<FString> TrainerSources;
 	FString TrainerSource;
 	void UseTrainer(const FString& Source);
+	ITrainer* CurrentTrainer() const { return Trainer.Get(); }
 
 	// An unattended ride, for tests and stills: any of -RideStart, -RideFrom, -RideWatts, -RideShots or
 	// -RideNoMenu skips the start screen and the menus.

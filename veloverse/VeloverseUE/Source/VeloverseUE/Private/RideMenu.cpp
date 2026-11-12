@@ -374,18 +374,18 @@ void URideMenu::BuildStart()
 		[this]
 		{
 			const ARidePawn* Pawn = Rider();
-			if (!Pawn || !Pawn->Trainer || Pawn->Trainer->Picked().IsEmpty())
+			if (!Pawn || !Pawn->CurrentTrainer() || Pawn->CurrentTrainer()->Picked().IsEmpty())
 			{
 				return 0;
 			}
-			return Cyclers[DeviceCycler].Choices.IndexOfByKey(Pawn->Trainer->Picked());
+			return Cyclers[DeviceCycler].Choices.IndexOfByKey(Pawn->CurrentTrainer()->Picked());
 		},
 		[this](int32 I)
 		{
 			const TArray<FString>& Choices = Cyclers[DeviceCycler].Choices;
-			if (ARidePawn* Pawn = Rider(); Pawn && Pawn->Trainer)
+			if (ARidePawn* Pawn = Rider(); Pawn && Pawn->CurrentTrainer())
 			{
-				Pawn->Trainer->Pick(I > 0 && Choices.IsValidIndex(I) ? Choices[I] : FString());
+				Pawn->CurrentTrainer()->Pick(I > 0 && Choices.IsValidIndex(I) ? Choices[I] : FString());
 			}
 		});
 	DeviceRow->SetVisibility(ESlateVisibility::Collapsed);
@@ -869,12 +869,12 @@ void URideMenu::Refresh()
 		FString Note = bSim ? TEXT("A trainer played from the keyboard's watts, through the same Bluetooth code a real "
 		                           "one uses. It takes the grade and sends back power, cadence and heart rate.")
 		                    : TEXT("Hold W or Up to push harder, S or Down to ease off.");
-		if (bBle && Pawn->Trainer)
+		if (bBle && Pawn->CurrentTrainer())
 		{
 			// Experimental: a smart trainer (FTMS) or power meter and a heart-rate strap, through BlueZ.
-			Note = Pawn->Trainer->Name() + TEXT(". Experimental: smart trainers (FTMS), power meters and heart-rate straps.");
+			Note = Pawn->CurrentTrainer()->Name() + TEXT(". Experimental: smart trainers (FTMS), power meters and heart-rate straps.");
 			TArray<FString> Choices = {TEXT("First found")};
-			Choices.Append(Pawn->Trainer->Devices());
+			Choices.Append(Pawn->CurrentTrainer()->Devices());
 			Cyclers[DeviceCycler].Choices = MoveTemp(Choices);
 		}
 		DeviceRow->SetVisibility(bBle ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
