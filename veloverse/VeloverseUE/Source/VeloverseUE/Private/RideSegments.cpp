@@ -171,8 +171,9 @@ void FRideSegments::Load()
 	{
 		return;
 	}
-	for (const auto& [Key, Value] : Root->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Root->Values)
 	{
+		const TSharedPtr<FJsonValue>& Value = Pair.Value;
 		const TSharedPtr<FJsonObject>* O = nullptr;
 		if (!Value->TryGetObject(O))
 		{
@@ -216,7 +217,7 @@ void FRideSegments::Load()
 				H.Best = MoveTemp(B);
 			}
 		}
-		History.Add(Key, MoveTemp(H));
+		History.Emplace(Pair.Key, MoveTemp(H));
 	}
 }
 
