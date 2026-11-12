@@ -74,6 +74,13 @@ int32 InRange(float Value, int32 From, int32 To, int32 Step)
 
 // "212 W", or a dash for a ride too short to have it.
 FString Watts(double W) { return W > 0.0 ? FString::Printf(TEXT("%.0f W"), W) : FString(TEXT("—")); }
+// "11 Nov 22:07": FDateTime::ToString has no month names.
+FString RideDay(const FDateTime& When)
+{
+	static const TCHAR* Months[] = {TEXT("Jan"), TEXT("Feb"), TEXT("Mar"), TEXT("Apr"), TEXT("May"), TEXT("Jun"),
+		TEXT("Jul"), TEXT("Aug"), TEXT("Sep"), TEXT("Oct"), TEXT("Nov"), TEXT("Dec")};
+	return FString::Printf(TEXT("%d %s %s"), When.GetDay(), Months[FMath::Clamp(When.GetMonth(), 1, 12) - 1], *When.ToString(TEXT("%H:%M")));
+}
 } // namespace
 
 void URideButton::Bind() { OnClicked.AddUniqueDynamic(this, &URideButton::Fire); }
@@ -653,7 +660,7 @@ void URideMenu::ShowHistory()
 		}
 		if (I < 6)
 		{
-			Lines += FString::Printf(TEXT("%s   %.1f km in %s   %s   TSS %.0f\n"), *Ride.Started.ToString(TEXT("%d %b %H:%M")),
+			Lines += FString::Printf(TEXT("%s   %.1f km in %s   %s   TSS %.0f\n"), *RideDay(Ride.Started),
 			                         Ride.Summary.Metres / 1000.0, *Clock(Ride.Summary.Seconds),
 			                         *Watts(Ride.Summary.AverageWatts), Ride.Summary.Tss);
 		}
