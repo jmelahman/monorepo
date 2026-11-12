@@ -402,6 +402,7 @@ void ARidePawn::ReadKeys()
 	const bool Up = Player->IsInputKeyDown(EKeys::Up) || Player->IsInputKeyDown(EKeys::W);
 	const bool Down = Player->IsInputKeyDown(EKeys::Down) || Player->IsInputKeyDown(EKeys::S);
 	Legs.Direction = (Up ? 1 : 0) - (Down ? 1 : 0);
+	MouseLook(*Player);
 	const bool bMenuKey = Player->WasInputKeyJustPressed(EKeys::Escape) || Player->WasInputKeyJustPressed(EKeys::P) ||
 	                      Player->WasInputKeyJustPressed(EKeys::SpaceBar) ||
 	                      Player->WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
@@ -413,6 +414,33 @@ void ARidePawn::ReadKeys()
 	else if (Player->WasInputKeyJustPressed(EKeys::Escape))
 	{
 		UKismetSystemLibrary::QuitGame(this, Player, EQuitPreference::Quit, false);
+	}
+}
+
+void ARidePawn::MouseLook(APlayerController& Player)
+{
+	// The mouse as a head: it turns the view up to a little past the shoulder and up or down, and
+	// after a couple of seconds' rest the eyes drift back to the road. Not in a menu, where the
+	// mouse is the menu's.
+	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	float Dx = 0.f, Dy = 0.f;
+	if (!bPaused)
+	{
+		Player.GetInputMouseDelta(Dx, Dy);
+	}
+	if (!FMath::IsNearlyZero(Dx) || !FMath::IsNearlyZero(Dy))
+	{
+		LookYaw = FMath::Clamp(LookYaw + Dx * LookSpeed, -110.f, 110.f);
+		LookPitch = FMath::Clamp(LookPitch + Dy * LookSpeed, -45.f, 35.f);
+		LookRest = 0.f;
+		return;
+	}
+	LookRest += Dt;
+	if (LookRest > 2.f && Dt > 0.f)
+	{
+		const float Ease = 1.f - FMath::Exp(-Dt / 0.6f);
+		LookYaw = FMath::Lerp(LookYaw, 0.f, Ease);
+		LookPitch = FMath::Lerp(LookPitch, 0.f, Ease);
 	}
 }
 
@@ -456,9 +484,9 @@ void ARidePawn::Place()
 	}
 	const float S = Track->Wrap(static_cast<float>(Distance));
 	const FVector Eye = Track->Point(S, -Track->KeepLeft, EyeHeight);
-	FVector Ahead;
-	float Unused;
-	Track->At(Track->Wrap(S + LookAhead), Ahead, Unused);
+	// Along the rider's own line, not at the centreline: aiming there turned the view inward by
+	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead.
+	const FVector Ahead = Track->Point(Track->Wrap(S + LookAhead), -Track->KeepLeft, EyeHeight);
 	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = Track->Height(Track->Wrap(S + GradeSpan)) - Track->Height(S);
 	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
@@ -504,7 +532,9 @@ void ARidePawn::Place()
 		Head = FMath::Lerp(Head, Head + (Road - Head).GetNormalized(), Ease);
 		Head.Normalize();
 	}
-	SetActorLocationAndRotation(Eye + Lift, Head + FRotator(0.f, Turn, Roll + Lean));
+	// The mouse turns the head on top of all that, the road's frame first and the look in it.
+	const FQuat Body = (Head + FRotator(0.f, Turn, Roll + Lean)).Quaternion();
+	SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
 }
 
 void ARidePawn::FindWeather()

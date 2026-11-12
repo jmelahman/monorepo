@@ -17,6 +17,7 @@ class UDirectionalLightComponent;
 class USkyLightComponent;
 class UExponentialHeightFogComponent;
 class APostProcessVolume;
+class APlayerController;
 
 UCLASS()
 class VELOVERSEUE_API ARidePawn : public APawn
@@ -124,6 +125,12 @@ private:
 	float Crank = 0.f;
 	float Sway = 0.f;
 	float Lean = 0.f;
+	// The mouse's look round, degrees on top of the road's view, and how long it has rested.
+	float LookYaw = 0.f;
+	float LookPitch = 0.f;
+	float LookRest = 0.f;
+	static constexpr float LookSpeed = 0.12f; // degrees per mouse count
+	void MouseLook(APlayerController& Player);
 	float QuitAt = -1.f;
 	float ProfileAt = -1.f;
 	void ReadCommandLine();
