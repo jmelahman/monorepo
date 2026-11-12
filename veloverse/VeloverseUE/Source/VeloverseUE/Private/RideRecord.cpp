@@ -120,12 +120,14 @@ FString FRideProfile::Folder()
 #endif
 		const FString Old = FPaths::ProjectSavedDir() / TEXT("Veloverse");
 		IFileManager& Files = IFileManager::Get();
+		// An empty file in the folder's place is a stub from a failed move in a 0.2.0 test build.
+		if (Files.FileExists(*Mine) && Files.FileSize(*Mine) == 0) Files.Delete(*Mine);
 		if (!Files.DirectoryExists(*Mine) && Files.DirectoryExists(*Old))
 		{
 			Files.MakeDirectory(*FPaths::GetPath(Mine), true);
-			// A rename fails across filesystems; a copy doesn't, and the old folder stays as a backup.
-			if (!Files.Move(*Mine, *Old, true, true, false, true)
-				&& !FPlatformFileManager::Get().GetPlatformFile().CopyDirectoryTree(*Mine, *Old, false))
+			// Copied, not moved: a move across filesystems leaves an empty file behind. The old folder
+			// stays as a backup.
+			if (!FPlatformFileManager::Get().GetPlatformFile().CopyDirectoryTree(*Mine, *Old, false))
 			{
 				UE_LOG(LogTemp, Warning, TEXT("RIDE couldn't move %s to %s"), *Old, *Mine);
 				return Old;
