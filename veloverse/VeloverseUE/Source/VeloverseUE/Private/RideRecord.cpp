@@ -100,7 +100,30 @@ Veloverse::FSummary SummaryOf(const FJsonObject& O)
 
 FString FRideRecorder::RidesFolder() { return FRideProfile::Folder() / TEXT("Rides"); }
 
-FString FRideProfile::Folder() { return FPaths::ProjectSavedDir() / TEXT("Veloverse"); }
+// The rider's own folder (~/.config/Veloverse on Linux), outside the game's install, so a new build
+// unpacked over or beside the old one keeps the profile, rides and segment history. Anything a build
+// before this kept in the game's Saved folder moves across the first time.
+FString FRideProfile::Folder()
+{
+	static const FString Path = []
+	{
+		const FString Mine = FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("Veloverse"));
+		const FString Old = FPaths::ProjectSavedDir() / TEXT("Veloverse");
+		IFileManager& Files = IFileManager::Get();
+		if (!Files.DirectoryExists(*Mine) && Files.DirectoryExists(*Old))
+		{
+			Files.MakeDirectory(*FPaths::GetPath(Mine), true);
+			if (!Files.Move(*Mine, *Old))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("RIDE couldn't move %s to %s"), *Old, *Mine);
+				return Old;
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("RIDE profile folder %s"), *Mine);
+		return Mine;
+	}();
+	return Path;
+}
 
 FRideProfile FRideProfile::Load()
 {

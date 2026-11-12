@@ -82,7 +82,7 @@ public:
 	float ZoneSeconds[7] = {};
 	FString TrainerName() const;
 
-	// The rider's FTP and weight, kept in Saved/Veloverse/profile.json. -RideFtp= overrides the FTP
+	// The rider's FTP and weight, kept in ~/.config/Veloverse/profile.json. -RideFtp= overrides the FTP
 	// for one ride. SetProfile saves it and rides with it from now.
 	FRideProfile Profile;
 	void SetProfile(const FRideProfile& Changed);
@@ -113,7 +113,7 @@ public:
 	void StartWorkout(const Veloverse::FWorkout& Chosen);
 	void EndWorkout();
 	TOptional<double> WorkoutTarget() const;
-	// The workouts to choose from: the built-in ones, then any in Saved/Veloverse/Workouts.
+	// The workouts to choose from: the built-in ones, then any in ~/.config/Veloverse/Workouts.
 	static TArray<Veloverse::FWorkout> WorkoutLibrary(float RiderFtp);
 	static FString WorkoutsFolder();
 

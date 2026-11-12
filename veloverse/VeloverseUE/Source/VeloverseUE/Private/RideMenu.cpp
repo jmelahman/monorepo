@@ -695,8 +695,8 @@ void URideMenu::ShowSummary()
 	SummaryXp->SetVisibility(Xp.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 	SummarySaved->SetText(FText::FromString(
 		!Pawn->SavedRide.IsEmpty()
-			? FString::Printf(TEXT("Saved to your rides. %s.fit is ready to upload to Strava (strava.com/upload) or Garmin Connect."),
-			                  *FPaths::GetBaseFilename(Pawn->SavedRide))
+			? FString::Printf(TEXT("Saved to your rides. %s.fit, in %s, is ready to upload to Strava (strava.com/upload) or Garmin Connect."),
+			                  *FPaths::GetBaseFilename(Pawn->SavedRide), *FPaths::GetPath(Pawn->SavedRide))
 		: S.Seconds < FRideRecorder::MinSeconds ? FString(TEXT("Under 30 seconds, so not kept."))
 												 : FString(TEXT("Not saved."))));
 }

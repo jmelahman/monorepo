@@ -1,5 +1,5 @@
 // The rider's profile and their rides, kept between sessions as JSON in the game's Saved folder:
-// Saved/Veloverse/profile.json, and a file per ride in Saved/Veloverse/Rides. The numbers are
+// ~/.config/Veloverse/profile.json, and a file per ride in ~/.config/Veloverse/Rides. The numbers are
 // RideStats.h's; this is where they're sampled, stored and read back.
 #pragma once
 
@@ -21,7 +21,7 @@ struct FRideProfile
 
 	static FRideProfile Load();
 	void Save() const;
-	static FString Folder(); // Saved/Veloverse
+	static FString Folder(); // ~/.config/Veloverse
 };
 
 // One saved ride as the history lists it: its summary without the samples.
@@ -47,7 +47,7 @@ public:
 	const std::vector<Veloverse::FSample>& Samples() const { return Recorded; }
 	Veloverse::FSummary Summary(float Ftp) const { return Veloverse::Summarize(Recorded, Ftp); }
 
-	// Writes the ride to Saved/Veloverse/Rides/<when>.json, and beside it <when>.fit for Strava and
+	// Writes the ride to ~/.config/Veloverse/Rides/<when>.json, and beside it <when>.fit for Strava and
 	// the like; returns the .json, or "" if it was too short to keep (under MinSeconds) or the write
 	// failed.
 	FString Save(const FString& Route, float StartMetres, const FRideProfile& Profile) const;
@@ -55,7 +55,7 @@ public:
 
 	// The saved rides, newest first.
 	static TArray<FRideEntry> History();
-	static FString RidesFolder(); // Saved/Veloverse/Rides
+	static FString RidesFolder(); // ~/.config/Veloverse/Rides
 
 private:
 	std::vector<Veloverse::FSample> Recorded;

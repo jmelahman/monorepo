@@ -1,5 +1,5 @@
 // The route's segments in the ride: its climbs, timed as the rider passes through, each against
-// the rider's best (its ghost), and kept between rides in Saved/Veloverse/segments.json. The
+// the rider's best (its ghost), and kept between rides in ~/.config/Veloverse/segments.json. The
 // timing and the ghost are Segments.h's; this finds the climbs on a track, names them after their
 // stretch, and stores the history.
 #pragma once
