@@ -53,6 +53,9 @@ VERGE = max(0.9, SPACING)
 # The island's layers and Verge, the bare sand beside the road in the desert and on the beaches:
 # a layer of its own because Desert and Sand grow plants (paint_band).
 LAYERS = {**mi.LAYERS, "Verge": (215, 180, 130)}
+# The road's earth bank, cm down (road_mesh.section): clear_road sinks whole 14 m cells, so
+# beside the road the ground can sit tens of cm low, and a bare slab edge cast a dark band.
+BANK = 80.0
 REACH = math.ceil(SPACING * 1.5)  # road points either side of a cell's one, for carve()
 HALF = (RES - 1) / 2
 BAND = 512  # rows per band
@@ -497,7 +500,7 @@ def main():
         # wraps to the ring's first point.
         run = [centre[k % len(centre)] for k in range(a, b + 1)]
         half = (PATH_HALF if surface == "path" else mi.ROAD_HALF) * 100
-        for piece in road_mesh.road_pieces(run, half, False, PIECE):
+        for piece in road_mesh.road_pieces(run, half, False, PIECE, BANK):
             piece.write(f"{OUT}/road_{surface}_{count[surface]:03d}.gltf")
             count[surface] += 1
     print(f"road pieces {count}", flush=True)

@@ -9,18 +9,24 @@ import math
 import gltf_writer
 
 
-def section(half):
+def section(half, bank=0.0):
     """Across the road, in cm: offset from the centre and height under the centreline. The
     tarmac is 2 cm under it; a 20 cm skirt each side drops below the ground so the edge doesn't
-    float."""
-    return ((-half - 20, -12.0), (-half, -2.0), (half, -2.0), (half + 20, -12.0))
+    float. A `bank` (cm) carries the skirt on down at about 30 degrees, for ground too coarse to
+    meet the road: where it sits low, the road stands on an earth bank, not a slab with a shadow
+    under its edge."""
+    inner = ((-half - 20, -12.0), (-half, -2.0), (half, -2.0), (half + 20, -12.0))
+    if not bank:
+        return inner
+    out = 20 + bank * 1.7
+    return ((-half - out, -12.0 - bank), *inner, (half + out, -12.0 - bank))
 
 
-def road_pieces(centre, half, closed=False, piece=200):
+def road_pieces(centre, half, closed=False, piece=200, bank=0.0):
     """The road as meshes, one per `piece` centreline points (a metre apart), each in world
     coordinates. `centre` is (x, y, z) in cm; UVs are in metres, u across and v along, for
     markings later. A closed road joins its end to its start."""
-    across = section(half)
+    across = section(half, bank)
     points = list(centre) + ([centre[0]] if closed else [])
     pieces = []
     for start in range(0, len(points) - 1, piece):
