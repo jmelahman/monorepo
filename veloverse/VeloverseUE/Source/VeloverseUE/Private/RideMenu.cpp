@@ -11,6 +11,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/WidgetSwitcher.h"
 #include "GameFramework/GameUserSettings.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
@@ -112,7 +113,7 @@ FReply URideMenu::NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Ev
 		}
 		if (Current == ERideMenuPage::Profile)
 		{
-			Show(ERideMenuPage::Start);
+			LeaveProfile();
 			return FReply::Handled();
 		}
 		const ARidePawn* Pawn = Rider();
@@ -147,6 +148,13 @@ void URideMenu::NativeTick(const FGeometry& Geometry, float DeltaTime)
 
 void URideMenu::Show(ERideMenuPage Page)
 {
+	// A first run asks for the rider's FTP and weight before anything else, once.
+	if (Page == ERideMenuPage::Start && !bWelcome && !FRideProfile::Saved())
+	{
+		bWelcome = true;
+		Page = ERideMenuPage::Profile;
+		UE_LOG(LogTemp, Display, TEXT("RIDE first run: the profile page first"));
+	}
 	if (Page == ERideMenuPage::Video && Current != ERideMenuPage::Video)
 	{
 		Back = Current;
@@ -157,6 +165,10 @@ void URideMenu::Show(ERideMenuPage Page)
 	if (Page == ERideMenuPage::Profile)
 	{
 		ShowHistory();
+		ProfileIntro->SetText(FText::FromString(
+			bWelcome && !FRideProfile::Saved()
+				? TEXT("Welcome to Veloverse. Set your FTP and weight first: your weight sets how hard the climbs are, and FTP sets the power zones, the workouts and the training load.")
+				: TEXT("Your weight sets how hard the climbs are; FTP sets the power zones and the training load.")));
 	}
 	if (Page == ERideMenuPage::Summary)
 	{
@@ -396,7 +408,11 @@ void URideMenu::BuildStart()
 	Add(P, Button(TEXT("Profile and rides"), [this] { Show(ERideMenuPage::Profile); }), 10.f);
 	Add(P, Button(TEXT("Video settings"), [this] { Show(ERideMenuPage::Video); }), 10.f);
 	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
+	// The build, for bug reports: the version from DefaultGame.ini.
+	FString Version;
+	GConfig->GetString(TEXT("/Script/EngineSettings.GeneralProjectSettings"), TEXT("ProjectVersion"), Version, GGameIni);
 	Add(P, Text(TEXT("W/S or Up/Down change power. Esc pauses. In a workout: [ and ] easier or harder, N skips a step, E toggles ERG."), 13, Faint), 24.f);
+	Add(P, Text(FString::Printf(TEXT("Veloverse %s"), Version.IsEmpty() ? TEXT("dev") : *Version), 12, Faint), 10.f);
 }
 
 void URideMenu::BuildPause()
@@ -506,9 +522,8 @@ void URideMenu::BuildVideo()
 void URideMenu::BuildProfile()
 {
 	UVerticalBox* P = Page(TEXT("Profile"));
-	Add(P, Text(TEXT("Your weight sets how hard the climbs are; FTP sets the power zones and the training load."), 13,
-	            Faint),
-	    6.f);
+	ProfileIntro = Text(TEXT(""), 13, Faint);
+	Add(P, ProfileIntro, 6.f);
 	auto Setting = [this](float FRideProfile::*Field, int32 From, int32 To, int32 Step)
 	{
 		return TPair<TFunction<int32()>, TFunction<void(int32)>>(
@@ -559,7 +574,7 @@ void URideMenu::BuildProfile()
 	Add(P, Text(TEXT("Recent rides"), 20, FLinearColor::White, true), 24.f);
 	HistoryText = Text(TEXT(""), 14, Faint);
 	Add(P, HistoryText, 8.f);
-	URideButton* Done = Button(TEXT("Back"), [this] { Show(ERideMenuPage::Start); }, true);
+	URideButton* Done = Button(TEXT("Back"), [this] { LeaveProfile(); }, true);
 	FirstButton[static_cast<int32>(ERideMenuPage::Profile)] = Done;
 	Add(P, Done, 24.f);
 }
@@ -845,6 +860,16 @@ void URideMenu::Refresh()
 		const int32 I = Item.Get();
 		Item.Value->SetText(FText::FromString(Item.Choices.IsValidIndex(I) ? Item.Choices[I] : TEXT("Custom")));
 	}
+}
+
+// Back to the start; a first run's profile is kept as it stands, so the welcome shows once.
+void URideMenu::LeaveProfile()
+{
+	if (ARidePawn* Pawn = Rider(); Pawn && !FRideProfile::Saved())
+	{
+		Pawn->SetProfile(Pawn->Profile);
+	}
+	Show(ERideMenuPage::Start);
 }
 
 void URideMenu::Recolour(FLinearColor Now)

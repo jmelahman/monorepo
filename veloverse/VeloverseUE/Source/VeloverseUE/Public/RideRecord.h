@@ -20,6 +20,7 @@ struct FRideProfile
 	FLinearColor Accent() const;
 
 	static FRideProfile Load();
+	static bool Saved(); // false until the rider's first profile is written: a first run
 	void Save() const;
 	static FString Folder(); // ~/.config/Veloverse
 };

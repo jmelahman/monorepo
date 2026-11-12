@@ -87,6 +87,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummarySaved;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryXp;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> ProfileLevel;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ProfileIntro;
 	UPROPERTY(Transient) TObjectPtr<URideChart> SummaryChart;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> HistoryText;
 	UPROPERTY(Transient) TArray<TObjectPtr<URideButton>> FirstButton; // focused when a page opens
@@ -106,6 +107,7 @@ private:
 	int32 StartCycler = -1; // and these the route's stretches, refilled when the route changes
 	TWeakObjectPtr<const URideTrack> StartsOf;
 	float RefreshClock = 0.f;
+	bool bWelcome = false; // a first run: the profile page opens before the start page
 
 	ARidePlayerController* Controller() const;
 	ARidePawn* Rider() const;
@@ -122,6 +124,7 @@ private:
 	void Survey();
 	void Cycle(int32 Index, int32 Step);
 	void Recolour(FLinearColor Now);
+	void LeaveProfile();
 	void ReadWorkouts(float RiderFtp);
 	static TArray<FString> UnlockedThemes(int64 Xp);
 

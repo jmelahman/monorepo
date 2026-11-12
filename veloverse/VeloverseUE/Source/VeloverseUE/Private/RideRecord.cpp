@@ -125,6 +125,8 @@ FString FRideProfile::Folder()
 	return Path;
 }
 
+bool FRideProfile::Saved() { return IFileManager::Get().FileExists(*ProfileFile()); }
+
 FRideProfile FRideProfile::Load()
 {
 	FRideProfile Profile;
