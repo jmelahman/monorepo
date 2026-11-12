@@ -10,6 +10,7 @@ const ICONS = {
   chart: 'M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6',
   chat: 'M4 5h16v11H9l-5 4z',
   code: 'M9 7l-5 5 5 5M15 7l5 5-5 5',
+  document: 'M6 3h9l4 4v14H6zM14 3v5h5',
   download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
   draw: 'M4 20l1-4L16 5l3 3L8 19zM14 7l3 3',
   folder: 'M3 6h6l2 2h10v11H3z',

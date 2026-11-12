@@ -26,6 +26,12 @@
           "description": "Image editor",
           "url": "/draw/",
           "icon": "draw"
+        },
+        {
+          "name": "View",
+          "description": "PDF viewer",
+          "url": "/view/",
+          "icon": "document"
         }
       ]
     },
