@@ -13,6 +13,8 @@ tar -h -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCac
 echo "snapshot $(du -sh "$snap" | cut -f1) at $(date +%H:%M)"
 OC_PKG_PROJECT=$snap OC_PKG_OUT=/workspace/ue/out/package_snap OC_PKG_LOG=/workspace/ue/package_snap.log \
 	bash "$(dirname "$0")/package.sh"
+# The notes ride along: how to install and run it, and what's new.
+cp "$(dirname "$0")/../docs/release-notes.md" /workspace/ue/out/package_snap/README.md
 name=/workspace/ue/out/veloverse-linux-$(date +%Y%m%d-%H%M).tar.gz
 tar -C /workspace/ue/out -czf "$name" package_snap
 echo "artifact $name ($(du -sh "$name" | cut -f1))"

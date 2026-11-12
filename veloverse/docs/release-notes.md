@@ -1,34 +1,79 @@
-# Veloverse preview
+# Veloverse 0.2.0 preview
 
-A first look at Veloverse, a free, open cycling sim. This build has one ride: **The Ring**, a
-closed 165.5 km loop round a generated island. It passes coast, forest, heath, mountain and
-desert. It is a preview: the world is complete end to end, but most of it is a first pass.
+Veloverse is a free, open cycling sim. This build has one ride, **The Ring**: a closed 165.5 km
+loop round a generated island, through coast, forest, heath, mountain and desert. It is still a
+preview. The world is complete end to end, but much of it is a first pass.
 
-## Running it
+## Installing
 
-Linux x86-64 with a Vulkan GPU. Unpack it and run `./VeloverseUE.sh` in the unpacked folder.
-Extra arguments pass through, for example `./VeloverseUE.sh -RideFrom=Mountain` to start at the
-mountain or `-RideFtp=230` to set your FTP for the power zones.
+You need Linux x86-64 with a Vulkan GPU. The build is a tarball, `veloverse-linux-<date>.tar.gz`.
 
-## Controls
+```sh
+tar -xzf veloverse-linux-<date>.tar.gz          # unpacks to package_snap/Linux
+cd package_snap/Linux && ./VeloverseUE.sh
+```
 
-- **W / Up** adds power, **S / Down** takes it away (there is no trainer support in this build).
-- **Esc, P or Space** pauses. The start and pause menus hold the video settings: an overall
-  quality, each scalability group, render scale, a frame-rate cap, VSync and the window.
+The game folder can sit anywhere, and you can delete it to uninstall. Your profile, rides and
+segment bests are kept in `~/.config/Veloverse`, so they survive a new build. Delete that folder
+to start over.
 
-## Changes since v0.1.0
+Extra arguments pass through to the game, for example:
 
-- No more grass tufts through the tarmac: the grass-free verge now reaches the road everywhere.
-- Desert and beach plants no longer grow on the road either; in dry country its verge is sand,
-  not dirt.
-- Pick where to start on the start screen ("Start in": any stretch of the ring), or with
-  `-RideFrom=Desert`. The ride now starts on the coast past the harbour by default.
-- The HUD names the stretch you're in correctly; it was off by one stretch all the way round.
-- Under the mountain, the lighting was clipped and a red engine warning showed across the screen.
+- `./VeloverseUE.sh -RideFrom=Mountain` starts at the mountain.
+- `-RideFtp=230` sets your FTP for one ride.
+
+## Riding
+
+- **W / Up** adds power and **S / Down** takes it away.
+- **Esc, P or Space** pauses.
+- In a workout, **[** and **]** make it easier or harder by 5 %, **N** skips a step, and **E**
+  turns ERG on and off.
+
+The start page sets up a ride:
+
+- **Power** comes from the keyboard, or from a simulated smart trainer that behaves like a real
+  one, ERG included. Bluetooth trainers aren't supported in this build.
+- **Route preview:** the route's profile, its timed climbs, and where you start ("Start in": any
+  stretch of the ring).
+- **Workouts:** pick one, or just ride.
+- **Your level** and XP are shown.
+
+Video settings are on the start and pause menus: an overall quality, each scalability group,
+render scale, a frame-rate cap, VSync and the window.
+
+## New in 0.2.0
+
+- **Profile and ride log.** Set your FTP, weight and bike weight; the first run asks for them.
+  - Every ride is saved with its summary: time, distance, climbing, average and normalised power,
+    TSS, and best efforts.
+  - The profile page lists recent rides and the past week's load.
+  - Each ride is also written as a `.fit` file in `~/.config/Veloverse/Rides`, ready to upload to
+    Strava or Garmin Connect. It is placed at Point Nemo, since The Ring isn't on a real map.
+- **Workouts with ERG.**
+  - There are eight built in: sweet spot, VO2 max, threshold, over-unders, an endurance hour,
+    sprints, a ramp test and a recovery spin.
+  - Your own `.zwo`, `.erg` or `.mrc` files can go in `~/.config/Veloverse/Workouts`.
+  - A HUD bar shows the blocks, the target, the time left in the step and what comes next. ERG
+    holds the target on a trainer that supports it.
+- **Segments.** The Ring's seven climbs are timed segments.
+  - A banner shows the next one coming up.
+  - On a climb, the banner shows your time and your gap to your best (the ghost).
+  - At the top, it shows your result: a new best, or where the effort ranks.
+  - The ride summary lists every segment you rode.
+- **Points and levels.** Rides earn XP:
+  - for distance and climbing;
+  - for each segment, with more for a new best;
+  - for a finished workout.
+
+  XP adds up to levels, and levels unlock HUD colours, which you pick on the profile page.
+- The start page shows the version, so you can quote it in bug reports.
 
 ## Known faults
 
+- Bluetooth trainers and power meters can't be used yet.
+- The `.fit` file leaves out paused time. A ride paused halfway shows as one continuous effort.
+- Segment bests are tied to the route as generated. A regenerated route starts them over.
 - The landscape is 14 m a sample, so far slopes are coarse.
 - Coast water is flat, and a precision warning about the sea plane may show in the log.
-- Performance: 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings; Low is
+- Performance is 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings. Low is
   faster. There is no tuning yet.
