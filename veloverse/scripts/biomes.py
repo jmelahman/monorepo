@@ -182,8 +182,8 @@ PRESETS = {
 # the alpine daylight (ev -2.6), so the sand is tinted darker than in the desert's own preset
 # (ev -0.4). Grass keeps the alpine rows bar the heath's and the cut banks'.
 PRESETS["world"] = {
-    # Dirt is the verge, a sample (14 m) wide beside the road: short turf with no blades
-    # (Dirt has no GRASS row), the Grass layer's look, rather than a 35 m strip of mud.
+    # Dirt is the verge, the road's own shoulder: short turf, the Grass layer's look, rather than
+    # a 35 m strip of mud.
     "SURFACES": {
         "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
         "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
@@ -218,6 +218,14 @@ PRESETS["world"] = {
     "STEEP": {"Desert": (0.85, 0.7, 0.55), "Sand": (0.9, 0.85, 0.75)},
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
+        # The verge (12 Nov): short turf to the tarmac's edge, now that the road fold works. Bare,
+        # it read as a lime strip in the sun beside the darker blades.
+        "Dirt": (
+            ("climb", "blade_short", 140.0, 2500, 4000, (0.6, 1.0)),
+            ("climb", "blade_mid", 40.0, 3000, 4500, (0.6, 1.0)),
+            ("shared", "clovers", 12.0, 1500, 2500),
+            ("shared", "ribwort_plantain", 0.4, 2000, 3000),
+        ),
         "Desert": (
             ("desert", "dry_grass", 2.0, 4000, 6000, (0.8, 1.5)),
             ("desert", "dead_shrubs", 0.4, 6000, 9000, (0.8, 1.6)),

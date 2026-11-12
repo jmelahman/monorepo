@@ -198,6 +198,17 @@ GRASS = {
         ("shared", "clovers", 12.0, 2000, 3000),
         ("shared", "clover_varieties", 6.0, 2000, 3000),
         ("shared", "leafy_dandelions", 4.0, 2000, 3000),
+        # 12 Nov: the Fab meadow flowers, sparse, for the colour a meadow has (densities are per
+        # variant, 5 to 9 each): white, yellow, purple thyme, a few poppies and goldenrod.
+        ("shared", "yellow_flower", 0.5, 2500, 4000),
+        ("shared", "bermuda_buttercup", 0.4, 2500, 4000),
+        ("shared", "white_everlasting", 0.3, 2500, 4000),
+        ("shared", "white_windflower", 0.4, 2500, 4000),
+        ("shared", "thyme", 0.8, 2000, 3000),
+        ("shared", "ribwort_plantain", 0.6, 2500, 4000),
+        ("shared", "field_poppy", 0.15, 3000, 4500),
+        ("shared", "common_hemp_nettle", 0.15, 3000, 4500),
+        ("shared", "goldenrods", 0.08, 3500, 5000),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     # The woods' floor is two tables (v30). "Forest" grows only on the layer's grass patches (its
@@ -217,9 +228,25 @@ GRASS = {
         ("shared", "clovers", 26.0, 1500, 2500, (1.0, 1.6)),
         ("shared", "clover_varieties", 14.0, 1500, 2500, (1.0, 1.6)),
         ("shared", "leafy_dandelions", 15.0, 1500, 2500),
+        # 12 Nov Fab: woodland herbs in the patches.
+        ("forest", "wood_sorrel", 3.0, 2000, 3500),
+        ("shared", "herb_robert", 1.0, 2000, 3500),
+        ("forest", "lily_of_the_valley", 1.0, 2000, 3500),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     "Forest floor": (
+        # 12 Nov Fab: the low cover a broadleaf floor has, so the litter isn't bare: ivy, sorrel,
+        # lingonberry, periwinkle and brambles, with moss mounds, mushrooms and cones.
+        ("forest", "english_ivy", 1.5, 3000, 4500),
+        ("forest", "wood_sorrel", 2.0, 2000, 3500),
+        ("forest", "lingonberry", 1.5, 2500, 4000),
+        ("shared", "lesser_periwinkle", 1.0, 2500, 4000),
+        ("shared", "blackberry", 0.25, 4000, 6000),
+        ("forest", "icelandic_moss_clusters", 0.3, 6000, 8000),
+        ("forest", "nordic_forest_ledge_moss_small_02", 0.1, 6000, 8000),
+        ("forest", "bolete_mushrooms", 0.4, 1500, 2500),
+        ("forest", "puffball_mushrooms", 0.4, 1500, 2500),
+        ("forest", "small_pine_cones", 1.0, 1500, 2500),
         ("shared", "fern", 1.6, 4000, 6000),
         ("shared", "lady_fern", 1.0, 4000, 6000),
         ("shared", "common_fern", 1.0, 4000, 6000),
