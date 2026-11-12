@@ -188,8 +188,11 @@ void FRideSegments::Load()
 				const TSharedPtr<FJsonObject>* EO = nullptr;
 				if (E->TryGetObject(EO))
 				{
-					H.Records.Add({TCHAR_TO_UTF8(*(*EO)->GetStringField(TEXT("when"))),
-					               (*EO)->GetNumberField(TEXT("s")), (*EO)->GetNumberField(TEXT("w"))});
+					Veloverse::FSegmentRecord R;
+					R.When = TCHAR_TO_UTF8(*(*EO)->GetStringField(TEXT("when")));
+					R.Seconds = (*EO)->GetNumberField(TEXT("s"));
+					R.AverageWatts = (*EO)->GetNumberField(TEXT("w"));
+					H.Records.Add(MoveTemp(R));
 				}
 			}
 		}
@@ -233,7 +236,11 @@ void FRideSegments::Save(const FString& When)
 		}
 		FHistory& H = History.FindOrAdd(Keys[I]);
 		H.Name = R.Name;
-		H.Records.Add({TCHAR_TO_UTF8(*When), R.Effort.Seconds, R.Effort.AverageWatts});
+		Veloverse::FSegmentRecord Record;
+		Record.When = TCHAR_TO_UTF8(*When);
+		Record.Seconds = R.Effort.Seconds;
+		Record.AverageWatts = R.Effort.AverageWatts;
+		H.Records.Add(MoveTemp(Record));
 		if (!H.Best || R.Effort.Seconds < H.Best->Seconds)
 		{
 			H.Best = R.Effort;

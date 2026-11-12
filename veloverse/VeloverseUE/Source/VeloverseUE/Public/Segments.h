@@ -50,14 +50,14 @@ struct FSegmentEffort
 		return Splits[I] + (Splits[I + 1] - Splits[I]) * (F - I);
 	}
 
-	// Metres into the segment the effort had ridden after Seconds.
-	double MetresAt(double Seconds) const
+	// Metres into the segment the effort had ridden after At seconds.
+	double MetresAt(double At) const
 	{
 		if (Splits.size() < 2)
 		{
 			return 0.0;
 		}
-		const auto It = std::upper_bound(Splits.begin(), Splits.end(), Seconds);
+		const auto It = std::upper_bound(Splits.begin(), Splits.end(), At);
 		if (It == Splits.begin())
 		{
 			return 0.0;
@@ -68,7 +68,7 @@ struct FSegmentEffort
 		}
 		const std::size_t I = static_cast<std::size_t>(It - Splits.begin()) - 1;
 		const double Span = Splits[I + 1] - Splits[I];
-		return Step * (I + (Span > 0.0 ? (Seconds - Splits[I]) / Span : 0.0));
+		return Step * (I + (Span > 0.0 ? (At - Splits[I]) / Span : 0.0));
 	}
 };
 
