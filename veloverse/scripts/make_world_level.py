@@ -364,7 +364,9 @@ def paint_band(x, y, h, slope, d, w, inland):
     snow *= 1 - mi.smoothstep(0.7, 1.1, slope)
     rock *= 1 - snow
     beach_top = 5.5 + 2.5 * n(300, 2)
-    beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(900, 500, inland)
+    # A strip along the water, not a plain: 500..900 m painted the hub's low coast, and the coast
+    # road 200 m in, as one sand flat like Red Sands (12 Nov stills).
+    beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(260, 120, inland)
     beach = np.maximum(beach, h < 0.5)
     desert = w["desert"]
     # The verge reaches a whole sample past the road, as any sample nearer feeds the road's grass
