@@ -1,56 +1,5 @@
-/* The fonts are borrowed from an app served beside this page. */
-@font-face {
-  font-family: "Plex Cond";
-  src: url(/draw/fonts/plex-cond-600.woff2) format("woff2");
-  font-weight: 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Plex Sans";
-  src: url(/draw/fonts/plex-sans-var.woff2) format("woff2");
-  font-weight: 100 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Plex Mono";
-  src: url(/draw/fonts/plex-mono-400.woff2) format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-
-:root {
-  color-scheme: dark;
-  --ink: #0a0a0c;
-  --ink-2: #141417;
-  --rule: #2b2b32;
-  --chalk: #f4f4f5;
-  --dim: #9797a2;
-  --accent: #f4635e;
-  --accent-soft: rgb(244 99 94 / 0.15);
-  --on-accent: #0a0a0c;
-
-  --control: 2.125rem;
-
-  --mono: "Plex Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
-  --sans: "Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --cond: "Plex Cond", "Plex Sans", system-ui, sans-serif;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --ink: #fafafa;
-    --ink-2: #f1f1f3;
-    --rule: #dcdce1;
-    --chalk: #18181b;
-    --dim: #57575f;
-    --accent: #c0272d;
-    --accent-soft: rgb(192 39 45 / 0.09);
-    --on-accent: #fafafa;
-  }
-}
+/* Fonts, the shared tokens, and the toolbar come from design/, which nginx
+   serves from .config/git-orchard/shared/design. */
 
 * {
   box-sizing: border-box;
@@ -63,16 +12,6 @@ body {
   color: var(--chalk);
   font: 400 0.875rem/1.4 var(--sans);
   -webkit-font-smoothing: antialiased;
-}
-
-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 1.25rem;
-  min-height: 3rem;
-  padding: 0.375rem 1rem;
-  border-bottom: 1px solid var(--rule);
 }
 
 h1,

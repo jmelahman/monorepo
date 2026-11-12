@@ -5,7 +5,6 @@
 import * as db from './db.js';
 import { BrowserEngine, ServerEngine, RATE, assemble, gap, trim, wav, toInt16, fromInt16 } from './audio.js';
 
-const THEME_KEY = 'notebook:theme'; // also read by theme.js
 const CURRENT_KEY = 'notebook:current';
 const MODEL_KEY = 'notebook:model';
 const SETTINGS_KEY = 'notebook:settings';
@@ -19,8 +18,6 @@ const VOICES = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const root = document.documentElement;
-const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
 const state = {
   notebook: null,
@@ -181,20 +178,6 @@ async function checkStatus() {
   if (!tts.ok && $('engine').value === 'server') $('engine').value = 'browser';
   $('publish').title = publish.ok ? `Publish to ${publish.detail}` : publish.detail;
   renderPlayer();
-}
-
-// ---------------------------------------------------------------- theme
-
-function isDark() {
-  return root.dataset.theme ? root.dataset.theme === 'dark' : darkScheme.matches;
-}
-
-function applyTheme() {
-  const dark = isDark();
-  root.classList.toggle('dark', dark);
-  const label = `Switch to the ${dark ? 'light' : 'dark'} theme`;
-  $('theme').title = label;
-  $('theme').ariaLabel = label;
 }
 
 // ---------------------------------------------------------------- notebooks
@@ -937,15 +920,6 @@ async function publish() {
 
 // ---------------------------------------------------------------- wiring
 
-$('theme').addEventListener('click', () => {
-  root.dataset.theme = isDark() ? 'light' : 'dark';
-  try {
-    localStorage.setItem(THEME_KEY, root.dataset.theme);
-  } catch {}
-  applyTheme();
-});
-darkScheme.addEventListener('change', applyTheme);
-
 $('model').addEventListener('change', () => save(MODEL_KEY, model()));
 
 // The menu opens below its button, kept on screen.
@@ -1129,7 +1103,6 @@ window.addEventListener('beforeunload', (e) => {
 document.addEventListener('visibilitychange', () => document.hidden && flushSaves());
 window.addEventListener('pagehide', flushSaves);
 
-applyTheme();
 await openNotebook(load(CURRENT_KEY, null));
 checkStatus();
 db.pruneClips(CLIP_ROOM).catch(() => {});

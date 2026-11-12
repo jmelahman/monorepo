@@ -4,20 +4,22 @@
 
 `nginx` serves a dashboard at `/` and every app under a path of its own:
 
-| Address           | Serves                                      |
-| ----------------- | ------------------------------------------- |
-| `/`               | `dashboard/`, linking to the rest           |
-| `/draw`           | `../image-editor`, from the working tree    |
-| `/write`          | `../text-editor`, from the working tree     |
-| `/view`           | `../document-viewer`, from the working tree |
-| `/files`          | `..`, the monorepo, for `/write` to save    |
-| `/notebook`       | notebook, built from `../notebook`          |
-| `/audiobookshelf` | audiobookshelf                              |
-| `/video`          | jellyfin                                    |
-| `/pihole/admin`   | pihole                                      |
+| Address           | Serves                                                            |
+| ----------------- | ----------------------------------------------------------------- |
+| `/`               | `dashboard/`, linking to the rest                                 |
+| `/draw`           | `../image-editor`, from the working tree                          |
+| `/write`          | `../text-editor`, from the working tree                           |
+| `/view`           | `../document-viewer`, from the working tree                       |
+| `/files`          | `..`, the monorepo, for `/write` to save                          |
+| `/design`         | `../.config/git-orchard/shared/design/design`, shared by them all |
+| `/notebook`       | notebook, built from `../notebook`                                |
+| `/audiobookshelf` | audiobookshelf                                                    |
+| `/video`          | jellyfin                                                          |
+| `/pihole/admin`   | pihole                                                            |
 
 These answer on any name or address that reaches the host, other than the
-`.home` names, which still go straight to their own service.
+`.home` names, which still go straight to their own service. Being on one
+origin, the apps also share a theme, switched from the right of each header.
 
 Two of the services have to be told about their path. For pihole that is
 `FTLCONF_webserver_paths_prefix` in `docker-compose.yml`. For jellyfin it is
