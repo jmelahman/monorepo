@@ -348,6 +348,24 @@ def roads(material, path=None):
     log(f"roads: {count} pieces")
 
 
+def _listed(name):
+    """Whether the source's `name` (rails.json, props.json) lists anything."""
+    path = f"{SRC}/{name}"
+    if not os.path.exists(path):
+        return False
+    with open(path) as f:
+        return bool(json.load(f))
+
+
+def dressing_materials():
+    """The rails' and props' materials, built before the level loads, and only when the source has
+    any: compiled with the world open, the third of them crashed the Vulkan RHI (a descriptor
+    assert) every time on 11 Nov. Returns (timber, posts, logs), None where unused."""
+    fence, stacks = _listed("rails.json"), _listed("props.json")
+    timber = rail_material() if fence or stacks else None
+    return timber, post_material() if fence else None, log_material() if stacks else None
+
+
 def _has_paths():
     """Whether the source has dirt-path pieces (the world's remote stretches)."""
     return any(n.startswith("road_path_") and n.endswith(".gltf") for n in os.listdir(SRC))
@@ -981,6 +999,7 @@ def main():
             path = None
         water = sea_material()
         horizon = far_material()
+        dressing = dressing_materials()
         yield
         world = undress()
     else:
@@ -988,6 +1007,7 @@ def main():
         path = path_material() if _has_paths() else None
         water = sea_material()
         horizon = far_material()
+        dressing = dressing_materials()
         yield
         world = fresh_level(ground)
     yield
@@ -998,9 +1018,11 @@ def main():
     roads(road, path)
     if _has_paths():  # the world: its ground writes the RVT the road edges read
         rvt_volume()
-    timber = rail_material()
-    rails(timber, post_material())
-    props(timber, log_material())
+    timber, posts, logs = dressing
+    if posts is not None:
+        rails(timber, posts)
+    if logs is not None:
+        props(timber, logs)
     track()
     sea(water)
     if horizon is not None:
