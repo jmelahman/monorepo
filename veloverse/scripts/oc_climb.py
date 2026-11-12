@@ -437,9 +437,12 @@ class Ground:
                 g.link(parts[prop], blend, f"Layer {name}")
                 g.link(parts["height"], blend, f"Height {name}")
             outputs[prop] = blend
-        g.output(
-            g.mul(outputs["colour"], self.macro), outputs["normal"], outputs["rough"], specular=0.3
-        )
+        colour = g.mul(outputs["colour"], self.macro)
+        g.output(colour, outputs["normal"], outputs["rough"], specular=0.3)
+        # Its colour into the ground RVT too (written only where a level's volume covers it: the
+        # world's), for the road's and path's edges to fade into.
+        rvt = g.node(unreal.MaterialExpressionRuntimeVirtualTextureOutput)
+        g.link(colour, rvt, "BaseColor")
         out = g.node(unreal.MaterialExpressionLandscapeGrassOutput)
         inputs = []
         for name, gt in grass_types.items():

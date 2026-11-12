@@ -472,7 +472,7 @@ def main():
         "road_half": mi.ROAD_HALF,  # m: the road material's edge (climb_world.road_instance)
         # The world's asphalt: lighter and greyer than the woods' dark climb, with a dashed line
         # down the middle (climb_world.road_instance); the path's tarmac-free look is its own.
-        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0},
+        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 1.0},
         "ride": {
             "title": "The Ring",
             "blurb": "Once round the island: coast, desert, forest, mountain and meadow.",

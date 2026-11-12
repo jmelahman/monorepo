@@ -237,6 +237,73 @@ def landscape(world, ground):
     log(f"landscape: {comps}x{comps} components of {QUADS} quads at {spacing:.0f} cm")
 
 
+# The ground's colour as a runtime virtual texture, shared by the levels (only the world's has a
+# volume, so only its landscape writes it): the road's and path's edges fade into it.
+GROUND_RVT = f"{FOLDER}/RVT_Ground"
+# 2^12 tiles of 256 texels: about 5.5 cm a texel over the world's 57 km landscape.
+RVT_TILES, RVT_TILE_SIZE = 12, 4
+
+
+def ground_rvt():
+    """GROUND_RVT, made once (base colour only; its pages render on demand where sampled)."""
+    rvt = unreal.load_asset(GROUND_RVT)
+    if rvt is None:
+        folder, name = GROUND_RVT.rsplit("/", 1)
+        rvt = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            name, folder, unreal.RuntimeVirtualTexture, unreal.RuntimeVirtualTextureFactory()
+        )
+    rvt.set_editor_property("material_type", unreal.RuntimeVirtualTextureMaterialType.BASE_COLOR)
+    rvt.set_editor_property("tile_count", RVT_TILES)
+    rvt.set_editor_property("tile_size", RVT_TILE_SIZE)
+    rvt.set_editor_property("adaptive", True)
+    unreal.EditorAssetLibrary.save_loaded_asset(rvt, False)
+    return rvt
+
+
+def _rvt_colour(g):
+    """The ground's colour here, from GROUND_RVT (black where no volume covers it)."""
+    sample = g.node(unreal.MaterialExpressionRuntimeVirtualTextureSample)
+    sample.set_editor_property("virtual_texture", ground_rvt())
+    sample.set_editor_property("material_type", unreal.RuntimeVirtualTextureMaterialType.BASE_COLOR)
+    sample.set_editor_property("adaptive", True)
+    return g.link(
+        sample,
+        g.node(unreal.MaterialExpressionComponentMask, r=True, g=True, b=True),
+        "",
+        "BaseColor",
+    )
+
+
+def rvt_volume():
+    """The world's landscape writes GROUND_RVT: a volume over its bounds, in the Road folder so the
+    dress stage clears and places it with the road."""
+    land = next(
+        (a for a in actors.get_all_level_actors() if isinstance(a, unreal.LandscapeProxy)), None
+    )
+    if land is None:
+        raise RuntimeError("rvt_volume: no landscape")
+    rvt = ground_rvt()
+    for proxy in actors.get_all_level_actors():
+        if isinstance(proxy, unreal.LandscapeProxy):
+            proxy.set_editor_property("runtime_virtual_textures", [rvt])
+    # From the source, not the actor: under world partition the landscape's own bounds are empty.
+    with open(f"{SRC}/info.json") as f:
+        info = json.load(f)
+    half = (info["size"] - 1) * info["spacing"] / 2
+    low, tall = -50000.0, 300000.0  # cm: below the sea floor to above the peaks
+    extent = unreal.Vector(half, half, tall / 2)
+    volume = actors.spawn_actor_from_class(
+        unreal.RuntimeVirtualTextureVolume, unreal.Vector(-half, -half, low)
+    )
+    volume.set_actor_label("RVT_Ground")
+    volume.set_folder_path("Road")
+    volume.set_actor_scale3d(extent * 2.0)  # the volume's box is the unit cube from its origin
+    component = volume.get_editor_property("virtual_texture_component")
+    component.set_editor_property("virtual_texture", rvt)
+    log(f"ground RVT over {extent.x * 2 / 100000:.1f} km")
+    return volume
+
+
 def road_instance(parent):
     """ROAD_INSTANCE, the level's road material: `parent` at this road's half width (info.json's
     road_half, m; the climb's path when it has none) and its road_look, scalars and colours by
@@ -584,6 +651,10 @@ def road_material():
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
     colour = g.lerp(colour, soil, g.mul(edge, 0.85))
+    # Where the world's ground RVT covers it ("ground blend" 1), the last few cm fade into the
+    # ground's own colour, so the tarmac doesn't end on a line against sand or turf.
+    rim = g.saturate(g.mul(g.add(inside, g.add(g.mul(ragged, 0.3), 0.12)), 8.0))
+    colour = g.lerp(colour, _rvt_colour(g), g.mul(rim, g.param("ground blend", 0.0)))
     leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.8), 7.0))
     leaves = g.mul(leaves, g.lerp(g.const(0.2), g.const(1.0), edge))
     # Once the road went dark, leaves at 0.11 read as pale ovals (v14): a shade off the tarmac, and
@@ -655,6 +726,9 @@ def path_material():
     colour = g.lerp(colour, loose, g.mul(edge, 0.8))
     normal = g.lerp(normal, g.mask(g.sample(gn, guv, "normal"), "rgb"), edge)
     rough = g.lerp(rough, g.const(1.0), edge)
+    # The outer 15-30 cm is the ground's own colour, from the world's ground RVT.
+    rim = g.saturate(g.mul(g.add(g.add(inside, ragged), -0.22), -6.0))
+    colour = g.lerp(colour, _rvt_colour(g), g.mul(rim, g.param("ground blend", 1.0)))
     g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
@@ -903,6 +977,8 @@ def main():
         island.FOLDER = FOLDER
         road = road_material()  # before the level loads: no compile with its meshes in view
         path = path_material() if _has_paths() else None
+        if os.environ.get("OC_PATH") == "road":  # bisecting: the path pieces in the road's look
+            path = None
         water = sea_material()
         horizon = far_material()
         yield
@@ -920,6 +996,8 @@ def main():
         return
     yield
     roads(road, path)
+    if _has_paths():  # the world: its ground writes the RVT the road edges read
+        rvt_volume()
     timber = rail_material()
     rails(timber, post_material())
     props(timber, log_material())
