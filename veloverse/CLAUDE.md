@@ -1,29 +1,23 @@
 # Veloverse: working notes for Claude
 
-Veloverse is an original cycling world in Unreal Engine 5, in the spirit of Zwift but not a copy,
-and it should look **realistic** ("no stylized"). This file is the goal and the rules. Keep it
-short and current. Version history goes in the plan and the storybook, and the detail goes in
-`docs/engine-notes.md`.
+This file is the goal and the rules. Keep it short and current. Version history goes in the
+storybook, the plan in `docs/world-plan.md`, and the detail in `docs/engine-notes.md`.
 
 ## The goal
 
-**An immersive world at the Epic settings that plays at 30 fps on mid- to high-end consumer
-hardware** (the user, 12 Nov: "make sure it is abundantly clear"). In that order:
+**A lifelike fantasy world to cycle through.** That's it.
 
-1. **Immersive at Epic first.** Judge every look at Epic.
-2. **30 fps at Epic on a 4070-class GPU is the only performance target.** Don't trade Epic
-   visuals for speed beyond what that needs.
-3. **Low settings and this laptop's Radeon 890M come later.** Don't cut density, draw distance or
-   quality for them, and don't plan around them.
-
-**Judging performance.** Measure on a 4070-class GPU: a Runpod pod (quote the price first) or a
-packaged build (`scripts/package_snapshot.sh`). This laptop builds and takes stills. Its editor
-fps only compares A against B and is never the verdict.
-
-**Cheap wins that keep the look:** TSR at about 67% screen, haze, the far canopy tint (below)
-instead of far blades, Nanite and occlusion culling for trees and rocks, and ridges or cuttings
-that hide cull edges, while keeping some vistas. Grass cost scales with its radius, so hills
-don't reduce it.
+- **Skyrim is the bare minimum.** The bar is a AAA environment: dense, lived-in, lit and
+  composed like the best open-world games. Aim there, not at "good enough for a cycling app".
+- **Believe it's achievable, and build like it.** Unreal 5 has the tools (Nanite, Lumen,
+  virtual shadow maps, PCG, Megascans-grade assets), so a bad result means the approach needs
+  to change, not the ambition. Make big structural changes when the look needs them.
+- **Don't hold back for performance.** Build the world at full quality first. Performance is
+  tuned later, and it doesn't limit density, draw distance, lighting or assets today. This
+  laptop's editor has crash limits (see the crash rules), and those are about building here, not
+  a budget for the world.
+- **It's original.** Take mood, colour and quality bar from references; never copy a game's
+  places, characters or art.
 
 ## What we're building: the hub world
 
@@ -38,13 +32,11 @@ history, not instructions; don't work from them.
 
 ## The user's direction
 
-- **The look:** "vibrant yet realistic", like the modded Skyrim shots in
-  `/workspace/ue/ref/climb/style_*.jpg`. That means rich green grass with small flowers, warm
-  brown dirt, big rounded boulders, red-brown pine trunks, deep shadows and moody skies. Take
-  mood and colour from them only, and build nothing from that game.
-  - `ref/climb/alpine_meadow_trail.jpg` is the real treeline reference.
-  - Grass should be knee-high, dense and show no ground: "this has volume and looks real".
-- **Think big:** "I am not attached to anything at present." Major changes are fine.
+- **The look:** lifelike fantasy, "vibrant yet realistic": rich green grass with small flowers,
+  warm brown dirt, big rounded boulders, red-brown pine trunks, deep shadows and moody skies
+  with snowy peaks. The references are in `/workspace/ue/ref/climb/`: the modded Skyrim shots
+  (`style_*.jpg`) as the minimum bar, `alpine_meadow_trail.jpg` for a real treeline, and
+  knee-high, dense grass that shows no ground ("this has volume and looks real").
 - **Discretion:** "Please use your discretion when executing these features. I trust you."
 - **Assets:** ask the user and another agent fetches them from fab.com. Say what you need, in
   priority order. Never buy anything on Fab yourself.

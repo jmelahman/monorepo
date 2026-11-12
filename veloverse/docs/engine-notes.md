@@ -65,8 +65,8 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
   invisible. Never use an opacity scan as a ground surface: check `opacity` in
   `fab_prep/index.json`.
 - **Density** multiplies per mesh variant and again by `look --grass`. Instances grow as
-  density times cull squared. The laptop editor dies of a GPUVM fault well before a 4070
-  would struggle.
+  density times cull squared. The laptop editor dies of a GPUVM fault at high counts: that's a
+  limit on building here, not on the world.
 - **Far canopy:** "Grass canopy start/span/share" on MI_ClimbGround tints the Grass layer's
   ground toward the blades' colour past the cull.
 
@@ -87,3 +87,10 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
   skinning buffer.
 - **PCG:** its classes are exposed to Python (`out/qa/probe_pcg.py`). Placement rules live in
   the numpy generators for now, which are fast and can't crash the editor.
+
+## Performance (for later)
+
+When the time comes: measure on a real gaming GPU (a pod or a packaged build), never in the
+laptop editor. Levers that keep the look: TSR at a lower screen percentage, haze, the far canopy
+tint instead of far blades, Nanite and occlusion culling, HLODs, and terrain that hides cull
+edges.

@@ -40,9 +40,7 @@ twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
    - alpine cliffs, scree and snow-capped rock;
    - clutter: logs, stumps, stones and moss;
    - ground textures: coastal grass and sand, and fine sand or shingle for the quay.
-4. At the next terrain reshape, add ridges and cuttings that hide cull edges, and keep some
-   vistas.
-5. Measure performance at Epic on a 4070-class GPU (a pod or a packaged build) once the look
-   holds. Then use TSR at about 67%, haze and culling to reach 30 fps.
-6. Later: HLODs for the far landscape and trees, L_World's own ground material, per-island
+4. More dramatic terrain at the next reshape: ridges, cliffs, cuttings and gorges that frame
+   the road, with big vistas between them.
+5. Later: HLODs for the far landscape and trees, L_World's own ground material, per-island
    grass presets, and PCG placement at world scale.
