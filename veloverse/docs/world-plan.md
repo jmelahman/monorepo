@@ -268,4 +268,5 @@ source:
 6. Streaming the ride: L_World (above) is the first whole-world level. Next: HLODs for the
    far landscape and trees, its own ground material, per-stretch grass presets instead of
    one shared table, and the town stretches.
-7. Performance (30 fps at Low on the Radeon 890M) is still deferred by the user.
+7. Performance: the target is 30 fps at Epic on mid- to high-end consumer hardware (the primary
+   goal, 12 Nov). Low settings and the Radeon 890M come later.

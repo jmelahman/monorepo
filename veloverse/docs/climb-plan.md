@@ -17,14 +17,17 @@ next.
 
 ## Target hardware (the user's decision)
 
+**The primary goal (12 Nov, the user):** an immersive world on the **Epic** settings that plays at
+**30 fps on mid- to high-end consumer hardware**. Low-settings visuals and performance come later.
+
 | Tier | Machine | Target |
 | --- | --- | --- |
-| Floor | This laptop: Radeon 890M iGPU | **30 fps at Low** (`scalability 0`), 1080p output, upscaled from a lower internal resolution if needed |
-| Full | A discrete GPU, RTX 4070 class and up | Epic: Lumen, Nanite, dense foliage, the "immersive" look |
+| **Primary** | A mid- to high-end consumer GPU, RTX 4070 class | **Epic at 30 fps**: Lumen, Nanite, dense foliage, the "immersive" look |
+| Later | This laptop: Radeon 890M iGPU | 30 fps at Low (`scalability 0`). Deferred: don't cut Epic quality for it |
 
-Every milestone is measured on both tiers. A milestone isn't done until the laptop holds 30 fps at
-Low on it. The discrete tier is measured on a rented Runpod GPU. Quote the price first, and ask the
-user before any spend over $10.
+A milestone is done when it looks immersive at Epic and holds 30 fps there on the primary tier,
+measured on a rented Runpod GPU. Quote the price first, and ask the user before any spend over $10.
+The laptop's Low numbers are kept for reference only.
 
 ## Quality bar
 

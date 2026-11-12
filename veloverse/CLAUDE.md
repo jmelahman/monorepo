@@ -5,6 +5,21 @@ says what was done last, what is open and what comes next. This file holds the r
 things work, not a version log: put each version's changes and status in the plan, and
 update this file only when a rule or a mechanism changes.
 
+## THE PRIMARY GOAL (12 Nov, the user: "make sure it is abundantly clear")
+
+**An immersive world on the Epic settings that plays at 30 fps on mid- to high-end consumer
+hardware.** Every decision serves that, in that order:
+
+1. **Immersive at Epic first.** Judge the look at Epic, and judge the frame rate on a mid- to
+   high-end consumer GPU, not on this laptop's 890M.
+2. **30 fps at Epic is the only performance target.** Don't trade Epic visuals for speed beyond
+   what that needs.
+3. **Low-settings visuals and Low performance come later.** They are not current goals: don't
+   cut density, draw distance or quality to help Low or the 890M, and don't plan work around
+   "30 fps on Low".
+
+Where anything below or in the docs says otherwise, this section wins.
+
 ## The goal (the user's decisions)
 
 - **The goal:** an original cycling world (Zwift-like, not a copy) that looks **realistic**.
@@ -24,8 +39,9 @@ update this file only when a rule or a mechanism changes.
   degrade the quality for the sake of frames."
 - **The first target:** one realistic mountain climb. Build a 1 km hero stretch first, then the
   full climb, then other biomes.
-- **Performance:** this laptop (Radeon 890M) must hold 30 fps at Low *eventually*. For now the
-  user says **visuals first, perf later**: keep trees at full quality (2 km cull, shadows, wind).
+- **Performance:** superseded by THE PRIMARY GOAL above (30 fps at Epic on mid- to high-end
+  consumer hardware; Low and the 890M later). The history: the 890M at Low was the old target,
+  with **visuals first, perf later**: keep trees at full quality (2 km cull, shadows, wind).
   Measured on 9 Nov at Low: about 16–19 fps with all trees and about 29 with none (v20 on
   10 Nov: 20–23 with all trees). Shadows
   off or a 300 m cull each give about 20–24 (`oc.py fps`). The v24 `fps --try` ablation: grass,
