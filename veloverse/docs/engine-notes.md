@@ -1,0 +1,89 @@
+# Veloverse: engine notes
+
+How things work and the tips that save time. `CLAUDE.md` has the goal and the rules, and wins
+where the two differ. The old plans are in `docs/archive/`, for history only.
+
+## The look and `oc.py look`
+
+- `look` sets parameters without a rebuild, then takes stills. Always pass `--shots`. Its flags:
+  - `--tint LAYER=r,g,b` and `--grey LAYER=0..1`: ground colours.
+  - `--grass DENSITY CULL` and `--fog DENSITY [FALLOFF]`.
+  - `--post KEY=F`: the grade.
+  - `--ground-param`, `--blade-param` (`heath:NAME=` for MI_Heath), `--plant-param` and
+    `--prop-param SLUG:NAME=`: material parameters, `NAME=F` or `NAME=R,G,B`.
+- Bake the values that win into `oc_climb.py` (`LOOK_TINTS`, `LOOK_GREYS`, `PLANT_LOOK`,
+  `BLADE_LOOK`, `PROP_LOOK`) or `biomes.PRESETS["world"]`. Every look re-applies the baked
+  values first, so a trial value lasts one look.
+- **Post keys:**
+  - The grade: ev, exposure, contrast, saturation, vignette, sky, sun, temp, sky_warm.
+  - Fog and sky: fog_start, fog_inscatter, volumetric, aerial, clouds, cloud_bottom,
+    cloud_wind.
+  - Light: shafts, contact, bloom, flare, sun_pitch, sun_yaw.
+  - Post keys persist in the level, so put a test value back explicitly.
+- **The daylight baseline:** `ev=-2.6 exposure=0.5 sky=1.5 temp=6500 sky_warm=0 sun_pitch=-50
+  sun_yaw=43.7 contrast=1.1 saturation=1.05 vignette=0.3 fog_start=150 volumetric=0
+  contact=0.05 clouds=-0.2 cloud_wind=0`, with fog `0.004 0.02`.
+- **Keep exposure locked** (`ev`). Auto exposure undoes every albedo change.
+- **In full sun, bright albedo bleaches to white.** Keep blade tips and ground tints dark.
+  Sand and snow may need their own exposure.
+- **False colour finds a layer.** `--tint Grass=1,0,0 --tint Sand=0,0,1` on one shot shows
+  which paint layer a surface is. A bad colour is often the wrong layer, not the wrong tint.
+
+## Stills
+
+- Stills wait at least 240 frames, then until the grass instance count holds steady (the log
+  says `OC settled <shot>`). Missing grass is more often timing than density.
+- The first view of a session renders brighter and hazier. For an A/B, use the same shot list
+  in the same order.
+- `cloud_wind=0` freezes the clouds, so the sky matches between shots.
+- Review from a contact sheet, then full-resolution crops of what changed. Keep the sheet
+  scripts in `out/qa`.
+
+## Grass and plants
+
+- **Paint layers carry grass.** Each layer's `GRASS` rows grow where its weight is.
+  - A layer with a "patches" mix (`MIXES`, whose fifth item is the patch noise's low and high)
+    can also have a `"<layer> floor"` table, which grows on the litter between the patches.
+  - Grass and flowers go on the patches; ferns, shrubs, logs and stones on the litter.
+- **Weights are per landscape vertex (7 m).** Painting can't make a sharp edge, so the road
+  edge comes from the road fold (`road_dist.png` and `_road_fold` in `oc_climb.py`):
+  - "Road clear" is the road's half width plus a reach per kind: blades 0.35 m, plants 0.6 m,
+    props 1.5 m.
+  - `out/qa/road_dist_check.py` decodes the map across the road at each view.
+- **Blades** are `make_grass.py` meshes, imported by `rebuild-ground --rebuild-grass`.
+  - M_Blade colours them from their UVs alone. u is random per blade (1.0 for a seed head),
+    and v runs from 0 at the root to 1 at the tip.
+  - Its parameters: root and tip colour, drift tint, dry share, and wind.
+  - Stills can't show motion, so check wind with `--blade-param Wind=40`.
+- **Scans** (M_MS_Plant):
+  - "Up normal" bends the normal up, so the carpet lights as one surface.
+  - "Root shade" and "Root height" darken toward the root.
+  - "Flat" and "Flat colour" pull a scan toward the ground's green.
+  - Never push "Tint" hard: it goes neon.
+  - Keep scans near their own size: scale 2 or more reads as sparse reeds.
+- **Check the inputs.** An opacity map that peaks under the clip value makes a plant
+  invisible. Never use an opacity scan as a ground surface: check `opacity` in
+  `fab_prep/index.json`.
+- **Density** multiplies per mesh variant and again by `look --grass`. Instances grow as
+  density times cull squared. The laptop editor dies of a GPUVM fault well before a 4070
+  would struggle.
+- **Far canopy:** "Grass canopy start/span/share" on MI_ClimbGround tints the Grass layer's
+  ground toward the blades' colour past the cull.
+
+## Builds and the editor
+
+- `rebuild-ground --rebuild-grass` builds the 1M-triangle prop meshes one at a time (all at
+  once crashed Vulkan). Give it `--timeout 2400`.
+- `oc.py wait JOB` prints a failed job's traceback. The log loses it after a restart.
+- Chains: `set -o pipefail`, and `&&` between every step, including any step that reads the
+  stills. Piping a step into `| tail` or joining with `;` has let a chain go on after a failure.
+- **The landscape:** 4065² at 7 m builds its grid in minutes. 8129² lost the GPU.
+- **Riding:** `DefaultEngine.ini` sets `landscape.RenderNanite=0`. With it on, the first game
+  frame grew to 57 GB. `play.sh` widens World Partition's loading range (`OC_RANGE`, in cm),
+  or the landscape is cut at 256 m.
+- **The sea plane** trips a handled "precision loss" ensure. It's harmless; tiling the sea
+  would silence it.
+- **Trees** are static Nanite bakes (`oc.py static-trees`). Skeletal PVE trees overflow the
+  skinning buffer.
+- **PCG:** its classes are exposed to Python (`out/qa/probe_pcg.py`). Placement rules live in
+  the numpy generators for now, which are fast and can't crash the editor.
