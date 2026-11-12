@@ -699,11 +699,11 @@ def road_material():
 
 
 # The path's compacted earth, a little greyed so it sits on sand, turf and granite alike.
-PATH_TINT = (0.86, 0.82, 0.76)
+PATH_TINT = (0.72, 0.70, 0.67)
 # Its edge, m from the middle: the mesh's own (make_world_level.PATH_HALF), about 2.4 m across.
 PATH_HALF = 1.2
 # Its loose edge: the gravel, darker.
-PATH_EDGE = (0.62, 0.58, 0.52)
+PATH_EDGE = (0.54, 0.52, 0.49)
 
 
 def path_material():
@@ -899,7 +899,8 @@ def track():
     with open(f"{SRC}/routes.json") as f:
         centre = json.load(f)["island"]
     with open(f"{SRC}/info.json") as f:
-        ride = json.load(f).get("ride")
+        info = json.load(f)
+    ride = info.get("ride")
     cls = unreal.load_class(None, "/Script/VeloverseUE.RideTrack")
     factory = unreal.DataAssetFactory()
     factory.set_editor_property("data_asset_class", cls)
@@ -912,7 +913,9 @@ def track():
     t.set_editor_property("title", "Hero stretch")
     t.set_editor_property("blurb", "A kilometre up through the beech and spruce, and back down.")
     t.set_editor_property("step", 100.0)
-    t.set_editor_property("keep_left", 160.0)
+    # cm left of the centre line: the hero's wide climb keeps well left; the world's narrow
+    # path and two-lane asphalt ride near the middle (info.json's "keep_left").
+    t.set_editor_property("keep_left", float(info.get("keep_left", 160.0)))
     t.set_editor_property("sun_azimuth", -62.0)
     coast = unreal.load_asset("/Game/Coast/Ride/DA_RideTrack")
     for prop in ("rain_shell", "collection"):
