@@ -34,19 +34,23 @@ class FRideRecorder
 {
 public:
 	// Called every frame the rider moves on, with that frame's riding time.
-	void Tick(float Dt, double Metres, double Watts, double Cadence, double HeartRate, double Speed, double Elevation);
+	// East and South are metres from the world origin, for the map.
+	void Tick(float Dt, double Metres, double Watts, double Cadence, double HeartRate, double Speed, double Elevation,
+	          double East, double South);
 	void Reset();
 
 	const std::vector<Veloverse::FSample>& Samples() const { return Recorded; }
 	Veloverse::FSummary Summary(float Ftp) const { return Veloverse::Summarize(Recorded, Ftp); }
 
-	// Writes the ride to Saved/Veloverse/Rides/<when>.json; returns the file, or "" if it was
-	// too short to keep (under MinSeconds) or the write failed.
+	// Writes the ride to Saved/Veloverse/Rides/<when>.json, and beside it <when>.fit for Strava and
+	// the like; returns the .json, or "" if it was too short to keep (under MinSeconds) or the write
+	// failed.
 	FString Save(const FString& Route, float StartMetres, const FRideProfile& Profile) const;
 	static constexpr double MinSeconds = 30.0;
 
 	// The saved rides, newest first.
 	static TArray<FRideEntry> History();
+	static FString RidesFolder(); // Saved/Veloverse/Rides
 
 private:
 	std::vector<Veloverse::FSample> Recorded;

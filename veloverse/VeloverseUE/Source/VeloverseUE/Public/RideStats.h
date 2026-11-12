@@ -21,6 +21,8 @@ struct FSample
 	double HeartRate = 0.0; // bpm, 0 without a strap
 	double Speed = 0.0;     // m/s
 	double Elevation = 0.0; // m
+	double East = 0.0;      // m from the world's origin, for a map (FitFile.h's Geo)
+	double South = 0.0;
 };
 
 // Coggan's seven power zones as shares of FTP: the top of zones 1 to 6 (zone 7 has no top).

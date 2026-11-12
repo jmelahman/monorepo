@@ -1,5 +1,7 @@
 #include "RideRecord.h"
 
+#include "FitFile.h"
+
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -11,7 +13,6 @@
 namespace
 {
 FString ProfileFile() { return FRideProfile::Folder() / TEXT("profile.json"); }
-FString RidesFolder() { return FRideProfile::Folder() / TEXT("Rides"); }
 
 TSharedPtr<FJsonObject> ReadJson(const FString& File)
 {
@@ -96,6 +97,8 @@ Veloverse::FSummary SummaryOf(const FJsonObject& O)
 }
 } // namespace
 
+FString FRideRecorder::RidesFolder() { return FRideProfile::Folder() / TEXT("Rides"); }
+
 FString FRideProfile::Folder() { return FPaths::ProjectSavedDir() / TEXT("Veloverse"); }
 
 FRideProfile FRideProfile::Load()
@@ -137,7 +140,7 @@ void FRideRecorder::Reset()
 }
 
 void FRideRecorder::Tick(float Dt, double Metres, double InWatts, double InCadence, double HeartRate, double Speed,
-                         double Elevation)
+                         double Elevation, double East, double South)
 {
 	if (Recorded.empty() && Span == 0.0)
 	{
@@ -159,6 +162,8 @@ void FRideRecorder::Tick(float Dt, double Metres, double InWatts, double InCaden
 		S.HeartRate = Heart / Span;
 		S.Speed = Speed;
 		S.Elevation = Elevation;
+		S.East = East;
+		S.South = South;
 		Recorded.push_back(S);
 		Watts = Cadence = Heart = Span = 0.0;
 	}
@@ -197,9 +202,21 @@ FString FRideRecorder::Save(const FString& Route, float StartMetres, const FRide
 	Column(TEXT("bpm"), &Veloverse::FSample::HeartRate, 1.0);
 	Column(TEXT("ms"), &Veloverse::FSample::Speed, 100.0);
 	Column(TEXT("ele_m"), &Veloverse::FSample::Elevation, 10.0);
+	Column(TEXT("east_m"), &Veloverse::FSample::East, 10.0);
+	Column(TEXT("south_m"), &Veloverse::FSample::South, 10.0);
 	O->SetObjectField(TEXT("samples"), Columns);
-	const FString File = RidesFolder() / Started.ToString(TEXT("%Y%m%d-%H%M%S")) + TEXT(".json");
-	return WriteJson(File, O) ? File : FString();
+	const FString Base = RidesFolder() / Started.ToString(TEXT("%Y%m%d-%H%M%S"));
+	if (!WriteJson(Base + TEXT(".json"), O))
+	{
+		return FString();
+	}
+	// FIT wants UTC: Started is local time, so take the offset from now.
+	const FTimespan ToUtc = FDateTime::UtcNow() - FDateTime::Now();
+	const std::vector<uint8_t> Fit = Veloverse::Fit::Activity(Recorded, Summary(Profile.Ftp),
+	                                                          (Started + ToUtc).ToUnixTimestamp(), Profile.Ftp);
+	FFileHelper::SaveArrayToFile(TArrayView<const uint8>(Fit.data(), static_cast<int32>(Fit.size())),
+	                             *(Base + TEXT(".fit")));
+	return Base + TEXT(".json");
 }
 
 TArray<FRideEntry> FRideRecorder::History()
