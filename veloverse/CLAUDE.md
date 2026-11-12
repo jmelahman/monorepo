@@ -83,8 +83,9 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
 - `build-level` drops fog and post settings, so re-run `look` after it.
 - Ride the level with `OC_MAP=/Game/World/L_World scripts/play.sh` (on screen) or
   `scripts/ride_test.sh WATTS SHOTS START_M` (offscreen, with screenshots).
-- Make a release with `scripts/package_snapshot.sh`. It packages a frozen copy, so it's safe
-  while the editor builds.
+- **No routine releases:** the storybook is the QA channel. Package only when the user asks,
+  with `scripts/package_snapshot.sh` (a frozen copy, so it's safe while the editor builds), and
+  delete the older tarballs, `snap/` and `out/package*` afterwards: disk is tight.
 - The world's surfaces and grass rows are `biomes.PRESETS["world"]`. Its ground material and
   grass types live in `/Game/Climb`.
 
