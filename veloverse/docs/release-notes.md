@@ -32,7 +32,9 @@ Extra arguments pass through to the game, for example:
 The start page sets up a ride:
 
 - **Power** comes from the keyboard, or from a simulated smart trainer that behaves like a real
-  one, ERG included. Bluetooth trainers aren't supported in this build.
+  one, ERG included. **Bluetooth** (experimental) connects a smart trainer or power meter, and a
+  heart-rate strap, through BlueZ; pick the trainer under "Trainer", or start with
+  `-RideTrainer=ble`. It needs BlueZ and libdbus, and hasn't been tried on many trainers yet.
 - **Route preview:** the route's profile, its timed climbs, and where you start ("Start in": any
   stretch of the ring).
 - **Workouts:** pick one, or just ride.
@@ -70,7 +72,7 @@ render scale, a frame-rate cap, VSync and the window.
 
 ## Known faults
 
-- Bluetooth trainers and power meters can't be used yet.
+- Bluetooth is experimental. It has been tested against a simulated trainer, not yet a real one.
 - The `.fit` file leaves out paused time. A ride paused halfway shows as one continuous effort.
 - Segment bests are tied to the route as generated. A regenerated route starts them over.
 - The landscape is 14 m a sample, so far slopes are coarse.
