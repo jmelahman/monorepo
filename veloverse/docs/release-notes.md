@@ -7,7 +7,7 @@ desert. It is a preview: the world is complete end to end, but most of it is a f
 ## Running it
 
 Linux x86-64 with a Vulkan GPU. Unpack it and run `./VeloverseUE.sh` in the unpacked folder.
-Extra arguments pass through, for example `./VeloverseUE.sh -RideStart=102850` to start at the
+Extra arguments pass through, for example `./VeloverseUE.sh -RideFrom=Mountain` to start at the
 mountain or `-RideFtp=230` to set your FTP for the power zones.
 
 ## Controls
@@ -21,12 +21,14 @@ mountain or `-RideFtp=230` to set your FTP for the power zones.
 - No more grass tufts through the tarmac: the grass-free verge now reaches the road everywhere.
 - Desert and beach plants no longer grow on the road either; in dry country its verge is sand,
   not dirt.
+- Pick where to start on the start screen ("Start in": any stretch of the ring), or with
+  `-RideFrom=Desert`. The ride now starts on the coast past the harbour by default.
+- The HUD names the stretch you're in correctly; it was off by one stretch all the way round.
+- Under the mountain, the lighting was clipped and a red engine warning showed across the screen.
 
 ## Known faults
 
 - The landscape is 14 m a sample, so far slopes are coarse.
-- In places a red warning about Lumen's cached lighting being clipped shows across the screen.
-  It is an engine note this development build prints; the ride is unaffected.
 - Coast water is flat, and a precision warning about the sea plane may show in the log.
 - Performance: 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings; Low is
   faster. There is no tuning yet.
