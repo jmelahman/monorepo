@@ -91,6 +91,8 @@ public:
 	FRideRecorder Recorder;
 	// Ends the ride and saves it, once; returns the file, or "" when it wasn't kept.
 	FString EndRide();
+	// Clears any ERG target and flattens the road on the trainer: on pause, at the end, on leaving.
+	void ReleaseTrainer();
 	FString SavedRide;
 	bool bRideSaved = false;
 	// What the kept ride earned toward the rider's level, and the XP before it.

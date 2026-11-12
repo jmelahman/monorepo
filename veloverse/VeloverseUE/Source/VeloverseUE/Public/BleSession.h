@@ -30,6 +30,7 @@ public:
 	double Resend = 5.0; // and again this often, in case a write was lost
 	double ReplyTimeout = 2.0; // a write with no reply by then is given up on
 	double PowerStep = 1.0;    // ERG: a target that moves less than this many watts isn't resent
+	double RetryControl = 5.0; // a refused request for control is asked again after this
 
 	// A notification from any device, by characteristic UUID, received at Now (seconds).
 	void Notify(uint16_t Characteristic, const Bytes& Value, double Now)
@@ -71,14 +72,23 @@ public:
 	{
 		if (Succeeded(Value, 0x00)) State = EState::Controlled;
 		else if (Value.size() >= 2 && Value[0] == 0x80 && Value[1] == 0x00) State = EState::Refused;
-		if (Succeeded(Value, 0x07) && State == EState::Controlled) State = EState::Started;
+		// Any answer to Start will do: some trainers answer "already started" with a failure code.
+		if (Value.size() >= 2 && Value[0] == 0x80 && Value[1] == 0x07 && State == EState::Controlled)
+			State = EState::Started;
 		Waiting = false;
 	}
 
 	// Call every frame with the grade under the wheels; returns a control point write, if one is due.
 	std::optional<Bytes> Tick(double Grade, double Now)
 	{
-		if (Waiting && Now - SentAt > ReplyTimeout) Waiting = false;
+		if (Waiting && Now - SentAt > ReplyTimeout)
+		{
+			Waiting = false;
+			// No answer to Start: carry on as started, as many trainers take commands regardless.
+			if (State == EState::Controlled) State = EState::Started;
+		}
+		// Refused control (another app had it, say): ask again now and then.
+		if (State == EState::Refused && Now - SentAt >= RetryControl) State = EState::Idle;
 		if (!HasTrainer || Waiting || State == EState::Refused) return std::nullopt;
 		if (State == EState::Idle) return Send(Command::RequestControl(), Now);
 		if (State == EState::Controlled) return Send(Command::Start(), Now);

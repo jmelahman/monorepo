@@ -104,7 +104,24 @@ int main()
 	Locked.SetTrainer(true);
 	auto Write = Locked.Tick(0.0, 0.0);
 	Locked.Reply({0x80, 0x00, 0x05});
-	Check(Write && Locked.Refused() && !Locked.Tick(0.05, 5.0), "a refusal stops the writes");
+	Check(Write && Locked.Refused() && !Locked.Tick(0.05, 4.0), "a refusal stops the writes a while");
+	Check(Locked.Tick(0.05, 5.5).has_value() && !Locked.Refused(), "then control is asked for again");
+
+	// A trainer that answers Start with a failure ("already started"), and one that doesn't answer.
+	FSession Already;
+	Already.SetTrainer(true);
+	Already.Tick(0.0, 0.0);
+	Already.Reply({0x80, 0x00, 0x01});
+	Already.Tick(0.0, 0.1);
+	Already.Reply({0x80, 0x07, 0x02});
+	Check(Already.Controlling(), "a failed Start still starts");
+	FSession Silent;
+	Silent.SetTrainer(true);
+	Silent.Tick(0.0, 0.0);
+	Silent.Reply({0x80, 0x00, 0x01});
+	Silent.Tick(0.0, 0.1);
+	Silent.Tick(0.0, 3.0);
+	Check(Silent.Controlling(), "an unanswered Start times out into started");
 
 	std::printf("%s\n", Failures ? "FAILED" : "passed");
 	return Failures ? 1 : 0;

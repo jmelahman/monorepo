@@ -275,6 +275,14 @@ void ARidePawn::Tick(float Dt)
 	{
 		Ride(Dt);
 	}
+	else if (Trainer)
+	{
+		// Paused or done: keep the link polled, but let the legs go: no ERG target, a flat road.
+		// Riding again sets the workout's target afresh.
+		Trainer->Tick(Dt);
+		Reading = Trainer->Read();
+		ReleaseTrainer();
+	}
 	Place();
 	Automate(Dt);
 	WeatherClock += Dt;
@@ -285,11 +293,30 @@ void ARidePawn::Tick(float Dt)
 	}
 }
 
+void ARidePawn::ReleaseTrainer()
+{
+	if (!Trainer)
+	{
+		return;
+	}
+	if (Trainer->TargetPower())
+	{
+		Trainer->SetTargetPower(TOptional<double>());
+	}
+	Trainer->SetGrade(0.0);
+}
+
 void ARidePawn::EndPlay(const EEndPlayReason::Type Reason)
 {
 	if (bStarted && !bRideSaved)
 	{
 		EndRide();
+	}
+	// Leaving: the trainer shouldn't hold a workout's watts or a climb after the game has gone.
+	if (Trainer)
+	{
+		ReleaseTrainer();
+		Trainer->Tick(0.f); // sends it, if the link isn't holding back (most trainers drop ERG on disconnect too)
 	}
 	Super::EndPlay(Reason);
 }
@@ -297,6 +324,8 @@ void ARidePawn::EndPlay(const EEndPlayReason::Type Reason)
 FString ARidePawn::EndRide()
 {
 	bFinished = true;
+	ReleaseTrainer();
+	UE_LOG(LogTemp, Display, TEXT("RIDE trainer released: %s"), Trainer ? *Trainer->Name() : TEXT("none"));
 	if (bRideSaved)
 	{
 		return SavedRide;
