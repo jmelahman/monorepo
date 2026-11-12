@@ -7,6 +7,7 @@ is done, failed, crashed, or a hard timeout passed, and says which, in the last 
     python3 scripts/oc.py stills [--shots road_08,hairpin_above]
     python3 scripts/oc.py rebuild-ground [--no-stills] [--rebuild-grass]
     python3 scripts/oc.py ride-track
+    python3 scripts/oc.py road-look
     python3 scripts/oc.py wait JOB | log [N] | restart | stop
 
 It makes sure one supervised warm editor is up (oc_supervisor.sh runs oc_server.py in it; a second
@@ -465,6 +466,11 @@ def cmd_ride_track(ns):
     return wait(submit("ride-track", {}), ns.timeout)
 
 
+def cmd_road_look(ns):
+    restart_clean(ns)  # materials rebuild on the empty map, never with the road in view
+    return wait(submit("road-look", {}), ns.timeout)
+
+
 def cmd_wait(ns):
     return wait(ns.job, ns.timeout)
 
@@ -570,6 +576,7 @@ def main(argv=None):
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
     add("ride-track", cmd_ride_track, help="rewrite the level's DA_RideTrack only")
+    add("road-look", cmd_road_look, help="rebuild the road and path materials only")
     s = add("probe", cmd_probe, help="run a read-only inspection script from out/qa")
     s.add_argument("path")
     s = add("fps", cmd_fps, help="frame times at each still's view (quality 0 Low .. 3 Epic)")

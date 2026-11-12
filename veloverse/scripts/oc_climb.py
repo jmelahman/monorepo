@@ -1053,6 +1053,20 @@ def op_ride_track():
     return {"notes": [f"rewrote {cw.RIDE}/DA_RideTrack from {cw.SRC}"]}
 
 
+def op_road_look():
+    """Rebuilds only the road's looks: M_ClimbRoad, M_ClimbPath (when the source has dirt-path
+    pieces) and the level's road instance with info.json's road_look. Run on the empty map: the
+    level's road meshes keep these asset paths, so its next load shows the new look."""
+    yield
+    cw = _old_build()
+    road = cw.road_material()
+    notes = [f"rebuilt {road.get_path_name()}"]
+    if cw._has_paths():
+        notes.append(f"rebuilt {cw.path_material().get_path_name()}")
+    notes.append(f"rebuilt {cw.road_instance(road).get_path_name()}")
+    return {"notes": notes}
+
+
 def op_ping():
     yield
     return {"notes": [f"map {_current_map()}"]}
