@@ -14,7 +14,8 @@
 #
 # Keep the next step queued before the running one ends, so the editor never idles: review a
 # step's stills while the next one builds, with `wait NAME` as the per-step notification. Before
-# each step the runner waits out any oc.py or ue_run.sh run started outside the queue.
+# each step the runner waits out any oc.py or ue_run.sh run started outside the queue
+# (the oc server's own editor doesn't count).
 set -u
 Q=/workspace/ue/out/oc/queue
 mkdir -p "$Q/done" "$Q/failed"
@@ -51,7 +52,9 @@ run)
 	summary=()
 	while step=$(steps "$Q" | head -1) && [ -n "$step" ]; do
 		# A build started by hand finishes first: only one Unreal at a time.
-		while pgrep -f "scripts/oc.py |scripts/ue_run.sh|UnrealEditor-Cmd" >/dev/null; do
+		# The oc server's own editor (ue_run.sh oc_server.py) stays up between jobs: not a build.
+		while pgrep -af "scripts/oc.py |scripts/ue_run.sh|UnrealEditor-Cmd" | grep -v oc_server.py |
+			grep -q .; do
 			sleep 20 &
 			wait $!
 		done
