@@ -916,6 +916,130 @@ def props(timber, logs):
     log(f"props: {[i[0] for i in items]}")
 
 
+def _features():
+    path = f"{SRC}/features.json"
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)
+
+
+def feature_materials():
+    """features.json's paints as instances of one plain, two-sided master (thin blades, cables
+    and open girders show either face), built before the level loads like the other dressing.
+    Returns {slot name: instance}, empty without features."""
+    spec = _features()
+    if not spec:
+        return {}
+    folder = f"{LEVEL.rsplit('/', 1)[0]}/Features"
+    g = lib.Graph("M_FeaturePaint", folder)
+    colour = g.param("colour", (0.5, 0.5, 0.5))
+    g.output(colour, rough=g.param("rough", 0.6), metallic=g.param("metal", 0.0), specular=0.4)
+    master = g.finish(two_sided=True)
+    out = {}
+    for slot, (r, gr, b, rough, metal) in spec["paints"].items():
+        out[slot] = lib.instance(
+            f"MI_Feature_{slot}",
+            master,
+            folder,
+            scalars={"rough": rough, "metal": metal},
+            vectors={"colour": (r, gr, b, 1.0)},
+        )
+    return out
+
+
+def _feature_mesh(name, folder):
+    """feat_<name>.gltf from the source, imported with Nanite off (thin parts: cables, lattice)."""
+    task = unreal.AssetImportTask()
+    task.filename = f"{SRC}/feat_{name}.gltf"
+    task.destination_path = folder
+    task.destination_name = f"SM_feat_{name}"
+    task.replace_existing = True
+    task.automated = True
+    task.save = False
+    lib.tools.import_asset_tasks([task])
+    mesh = next(
+        a
+        for a in map(unreal.load_asset, task.get_editor_property("imported_object_paths"))
+        if isinstance(a, unreal.StaticMesh)
+    )
+    assets.save_loaded_asset(mesh, False)
+    return mesh
+
+
+def _slots(mesh, paints):
+    """{slot index: paint} by the glTF material names the slots carry."""
+    out = {}
+    for i, m in enumerate(mesh.get_editor_property("static_materials")):
+        name = str(m.get_editor_property("material_slot_name"))
+        for paint, material in paints.items():
+            if name == paint or name.startswith(f"{paint}_") or name.endswith(f"_{paint}"):
+                out[i] = material
+    return out
+
+
+def features(paints):
+    """features.json (make_features.py): the bridges, harbour, wind farm, power lines and rock
+    formations. Kit meshes and the Megascans rocks go into instanced groups; the turbines'
+    rotors are actors of their own, spun by a rotating movement."""
+    spec = _features()
+    if not spec:
+        log("features: none")
+        return
+    folder = f"{LEVEL.rsplit('/', 1)[0]}/Features"
+    meshes, materials = {}, {}
+    for key, source in spec["meshes"].items():
+        if source.startswith("gltf:"):
+            mesh = _feature_mesh(source[5:], folder)
+            materials[mesh.get_path_name()] = _slots(mesh, paints)
+        else:
+            mesh = unreal.load_asset(source)
+            if mesh is None:
+                unreal.log_warning(f"CLIMB features: no {source}")
+                continue
+            if source.startswith("/Engine/"):  # the quay's cubes: concrete
+                materials[mesh.get_path_name()] = {0: paints["concrete"]}
+        meshes[key] = mesh
+    groups = {name: lib.Instances(f"Features/{name}") for name in spec["groups"]}
+    count = 0
+    for group, key, x, y, z, yaw, scale, pitch, roll in spec["items"]:
+        if key not in meshes:
+            continue
+        groups[group].add(meshes[key], (x, y, z), yaw, scale, pitch=pitch, roll=roll)
+        count += 1
+    for name, instances in groups.items():
+        g = spec["groups"][name]
+        instances.commit(cull=g["cull"] or None, shadows=g["shadows"], materials=materials)
+    for key, x, y, z, yaw, rate, phase in spec["spin"]:
+        mesh = meshes[key]
+        actor = lib.mesh_actor(
+            mesh,
+            (x, y, z),
+            yaw,
+            label="Rotor",
+            folder="Features/Rotors",
+            materials=materials.get(mesh.get_path_name()),
+            roll=phase,
+        )
+        actor.static_mesh_component.set_editor_property(
+            "mobility", unreal.ComponentMobility.MOVABLE
+        )
+        root = lib.subobjects.k2_gather_subobject_data_for_instance(actor)[0]
+        handle, _fail = lib.subobjects.add_new_subobject(
+            unreal.AddNewSubobjectParams(
+                parent_handle=root,
+                new_class=unreal.RotatingMovementComponent,
+                blueprint_context=None,
+            )
+        )
+        spin = unreal.SubobjectDataBlueprintFunctionLibrary.get_object(
+            unreal.SubobjectDataBlueprintFunctionLibrary.get_data(handle)
+        )
+        spin.set_editor_property("rotation_rate", unreal.Rotator(rate, 0.0, 0.0))  # roll: about X
+        spin.set_editor_property("rotation_in_local_space", True)
+    log(f"features: {count} placed, {len(spec['spin'])} rotors")
+
+
 def track():
     """The ride as the level's DA_RideTrack: up the stretch and back down, or, for the world's
     ride (info.json's "ride"), once round its loop by stretches, with no weather rows so the
@@ -969,7 +1093,14 @@ def track():
     log(f"track: {len(centre)} m, {ride['title'] + ' loop' if ride else 'out and back'} in {RIDE}")
 
 
-DRESSING = ("Road", "Rail", "Trees", "Props", "Sea")  # outliner folders the dress stage owns
+DRESSING = (
+    "Road",
+    "Rail",
+    "Trees",
+    "Props",
+    "Sea",
+    "Features",
+)  # outliner folders the dress stage owns
 
 
 def drop_sky_dome():
@@ -1041,6 +1172,7 @@ def main():
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
+        paints = feature_materials()
         yield
         world = undress()
     else:
@@ -1049,6 +1181,7 @@ def main():
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
+        paints = feature_materials()
         yield
         world = fresh_level(ground)
     yield
@@ -1071,6 +1204,11 @@ def main():
     yield
     save(world)
     yield
+    if paints:
+        features(paints)
+        yield
+        save(world)
+        yield
     # The trees last, saved on their own: thousands of actors on top of a fresh landscape
     # got the editor killed for memory as it saved them all together.
     trees()
@@ -1087,6 +1225,7 @@ def _views():
             views = json.load(f).get("views")
     except OSError:
         return None
+    views = list(views or []) + list((_features() or {}).get("views", []))
     if not views:
         return None
     return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in views]
