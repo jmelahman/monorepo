@@ -186,6 +186,6 @@ How it's built:
 - **Storybook:** https://claude.ai/artifact/UuLeEWcskoabDCuZceuLqb
   - Update it whenever the look changes. Read it with the Artifact tool first, then republish
     to the same URL.
-  - Keep it condensed (about 8 KB): the current stills and changes at the top, then one line
-    per version in History.
-  - Each version's stills go in a new `imgN/` folder.
+  - Carry only the last 3–4 iterations: the current stills and changes at the top, then the
+    two or three before it. Drop older ones entirely (no long history list).
+  - Each version's stills go in a new `imgN/` folder; remove the folders of dropped versions.
