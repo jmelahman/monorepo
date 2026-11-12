@@ -57,8 +57,8 @@ isn't importing, and never as a "check".
    - `info.json`, with the routes and the still views (`ride_NN_<island>`, `feat_*`, `above`).
 3. `make_features.py` → `ride_hub/features.json`: the rocks, cliffs and wind turbines.
 
-The editor side is `scripts/oc.py`, run from `/workspace/ue` as a **background** Bash. Each
-command blocks until its job ends, so you get one notification; don't poll it. Its last line is
+The editor side is `scripts/oc.py`, run from `/workspace/ue` inside a queue step (see "Working
+fast"). Each command blocks until its job ends; don't poll it. Its last line is
 DONE, FAILED, CRASHED, TIMEOUT or NO EDITOR. Point every command at the hub with the env
 (without it, `oc.py` defaults to the old L_Hero):
 
@@ -91,15 +91,31 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
 
 ## Working fast
 
-- **Batch** every queued fix into one rebuild, and lint and commit before launching it.
+- **Builds are the bottleneck: the editor never idles.** Every build goes through the queue,
+  `scripts/oc_queue.sh`, and the next step is queued before the running one ends:
+  1. `oc_queue.sh add NAME <<'EOF' ... EOF` queues a step: a bash script, run with `-e`, that
+     sets the hub env and `OC_STILLS` itself and calls `oc.py`. Names sort into run order.
+  2. `oc_queue.sh run`, as a background Bash, works through the queue and exits when it's
+     empty. Start it again if it has exited. It waits out any `oc.py` run started by hand.
+  3. `oc_queue.sh wait NAME`, as a background Bash, is the per-step notification: it ends when
+     that step does and prints its log's tail.
+  4. When a step ends, the next is already building. Review its stills, commit the fixes, and
+     queue the step after next. If nothing is ready to bake, queue cheap `look` trials (tints,
+     post, other views) so the next review has data.
+  - `oc_queue.sh list` shows waiting, done and failed steps; logs are in
+    `/workspace/ue/out/oc/queue/{done,failed}`.
+  - Don't put the text `scripts/oc.py ` in a background Bash's own command line: the runner
+    would take it for a build and wait. Put such commands in a step.
+- **Batch** every ready fix into the next step, and lint, commit and merge before queuing it:
+  steps run the scripts in `/workspace/veloverse`.
 - **Use the cheapest test.** Try values with `look` before baking them into code.
-- **Run one chain**, joined with `&&` under `set -o pipefail`, so a failed step stops it and
-  you get one notification.
 - **Work while it runs:** review stills, plan the next batch and update the docs. Don't edit
-  `oc_climb.py`, `climb_world.py` or `biomes.py` mid-build.
+  `oc_climb.py`, `climb_world.py` or `biomes.py` while a step that reads them is running.
 - **Diagnose before rebuilding.** Use a `probe`, a `look` or an offline check in `out/qa` to
   confirm a cause first.
 - **Fix the tooling** when a step fails or repeats, and note the fix in the engine notes.
+
+New Fab downloads: `docs/engine-notes.md`, "Importing Fab assets".
 
 ## Judging the look
 
