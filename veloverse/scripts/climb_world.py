@@ -1042,17 +1042,25 @@ def features(paints):
 
 def track():
     """The ride as the level's DA_RideTrack: up the stretch and back down, or, for the world's
-    ride (info.json's "ride"), once round its loop by stretches, with no weather rows so the
-    level's own light stays."""
+    rides (info.json's "rides", the default first), once round each loop by stretches, with no
+    weather rows so the level's own light stays. The default is DA_RideTrack, which lists the
+    others, each DA_Route_<key>, for the start page's route choice."""
     with open(f"{SRC}/routes.json") as f:
-        centre = json.load(f)["island"]
+        routes = json.load(f)
     with open(f"{SRC}/info.json") as f:
         info = json.load(f)
-    ride = info.get("ride")
+    rides = info.get("rides") or ([info["ride"]] if info.get("ride") else [None])
+    others = [
+        _track(f"DA_Route_{r['key']}", routes["routes"][r["key"]], r, info) for r in rides[1:]
+    ]
+    _track("DA_RideTrack", routes["island"], rides[0], info, others)
+
+
+def _track(asset, centre, ride, info, others=()):
     cls = unreal.load_class(None, "/Script/VeloverseUE.RideTrack")
     factory = unreal.DataAssetFactory()
     factory.set_editor_property("data_asset_class", cls)
-    t = lib.fresh("DA_RideTrack", RIDE, cls, factory)
+    t = lib.fresh(asset, RIDE, cls, factory)
     # The rider's line 6 cm under the tarmac, as on the island.
     t.set_editor_property(
         "centre", [unreal.Vector(x * 100, y * 100, z * 100 - 6) for x, y, z in centre]
@@ -1065,6 +1073,7 @@ def track():
     # path and two-lane asphalt ride near the middle (info.json's "keep_left").
     t.set_editor_property("keep_left", float(info.get("keep_left", 160.0)))
     t.set_editor_property("sun_azimuth", -62.0)
+    t.set_editor_property("routes", list(others))
     coast = unreal.load_asset("/Game/Coast/Ride/DA_RideTrack")
     for prop in ("rain_shell", "collection"):
         t.set_editor_property(prop, coast.get_editor_property(prop))
@@ -1090,7 +1099,8 @@ def track():
         t.set_editor_property("stretches", runs)
         t.set_editor_property("start_at", ride.get("start", ""))
     assets.save_loaded_asset(t, False)
-    log(f"track: {len(centre)} m, {ride['title'] + ' loop' if ride else 'out and back'} in {RIDE}")
+    log(f"track {asset}: {len(centre)} m, {ride['title'] + ' loop' if ride else 'out and back'}")
+    return t
 
 
 DRESSING = (

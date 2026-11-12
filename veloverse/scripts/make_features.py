@@ -1,6 +1,6 @@
-"""The island chain's landmarks, from make_world_level.py's output: rock formations by biome,
-wind turbines on The Moor, power lines, the harbour (piers, boats, a quay and a lighthouse) and
-the five bridges. Writes, into the ride folder (OC_SRC, default /workspace/ue/world_gen/ride_chain):
+"""The islands' landmarks, from make_world_level.py's output: rock formations by biome, wind
+turbines on The Moor, power lines, the harbour (piers, boats, a quay and a lighthouse) and the
+bridges. Writes, into the ride folder (OC_SRC, default /workspace/ue/world_gen/ride_hub):
 
 - feat_<name>.gltf: the meshes made here. Kit pieces (a turbine, a pylon, a boat) sit at their
   own origin and are placed many times; the bridges and the cables are built where they stand,
@@ -34,8 +34,8 @@ import itertools
 
 import gltf_writer
 
-PLAN = os.environ.get("OC_PLAN", "/workspace/ue/world_gen/chain")
-SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/ride_chain")
+PLAN = os.environ.get("OC_PLAN", "/workspace/ue/world_gen/hub")
+SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/ride_hub")
 SEED = 23
 MS = "/Game/Megascans"
 ROAD_HALF = 3.2  # m, make_island.ROAD_HALF: the bridge deck's road
@@ -479,9 +479,16 @@ class Road:
     def __init__(self):
         with open(f"{SRC}/routes.json") as f:
             r = json.load(f)
+        # The default route, which crosses every bridge; the hub's coast road, if there is one;
+        # and every metre of road, for distances to it.
         self.line = np.array(r["island"], dtype=float)
         self.spans = r.get("bridges", [])
-        self.tree = cKDTree(self.line[::5, :2])
+        hub = r.get("routes", {}).get("harbour")
+        self.hub = np.array(hub, dtype=float) if hub else None
+        every = [self.line[::5, :2]] + [
+            np.array(e, dtype=float)[::5, :2] for e in r.get("extra", [])
+        ]
+        self.tree = cKDTree(np.vstack(every))
 
     def dist(self, x, y):
         d, _ = self.tree.query(np.column_stack([np.ravel(x), np.ravel(y)]))
@@ -601,10 +608,11 @@ def turbines(out, g, bio, road, rng, taken):
     return [(x, y) for x, y, _ in spots]
 
 
-def power_line(out, g, road, rng, taken, name, a, b, side):
-    """Pylons ~280 m apart, set off the road by `side` m along the road's points a..b (metres
-    along it), and the cables between them as one mesh built where it stands."""
-    line = road.line
+def power_line(out, g, road, rng, taken, name, a, b, side, line=None):
+    """Pylons ~280 m apart, set off the road by `side` m (left of the riding direction) along its
+    points a..b (metres along `line`, the default route if None), and the cables between them as
+    one mesh built where it stands."""
+    line = road.line if line is None else line
     n = len(line)
     idx = np.arange(a, b) % n
     smooth = np.column_stack(
@@ -957,10 +965,13 @@ def main():
     out.group("Cables", cull=0, shadows=False)
     out.gltf("pylon", pylon())
     n = len(road.line)
-    # Lines: across Harbour Isle from the town; out of The Moor's wind farm; along Greenwood.
+    # Lines: inland of Harbour Isle's coast road from the town; out of The Moor's wind farm;
+    # along Greenwood.
     stretch_at = _stretch_starts()
+    if road.hub is not None:
+        start = _stretch_starts("harbour")["The Coast"][0] + 1500
+        power_line(out, g, road, rng, taken, "harbour", start, start + 6000, 160, road.hub)
     for name, (start, length, side) in {
-        "harbour": (stretch_at["Farmland"][1] + 1500, 6000, 160),
         "moor": (stretch_at["The Moor"][0] + 2500, 9000, -220),
         "greenwood": (stretch_at["Greenwood"][0] + 4000, 7000, 140),
     }.items():
@@ -988,10 +999,13 @@ def main():
     )
 
 
-def _stretch_starts():
-    """{stretch name: [metres where each of its runs starts]} from info.json."""
+def _stretch_starts(key=None):
+    """{stretch name: [metres where each of its runs starts]} on the default ride, or the ride
+    `key`, from info.json."""
     with open(f"{SRC}/info.json") as f:
-        runs = json.load(f)["ride"]["stretches"]
+        info = json.load(f)
+    ride = next((r for r in info.get("rides", []) if r["key"] == key), info["ride"])
+    runs = ride["stretches"]
     out, at = {}, 0
     for name, metres in runs:
         out.setdefault(name, []).append(at)

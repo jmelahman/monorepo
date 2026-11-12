@@ -1,16 +1,18 @@
-"""The golden ride: the whole world plan as one level, with its loop road carved in.
+"""The golden ride: the whole world plan as one level, with its roads carved in.
 
-The plan (OC_PLAN) is either make_chain.py's island chain, the default since 12 Nov, or
+The plan (OC_PLAN) is either make_chain.py's hub and islands, the default since 12 Nov, or
 make_world.py's single island (OC_PLAN=/workspace/ue/world_gen/world, the 165 km ring). A chain
 plan has a world.json, which gives its size, and its own biome weights; the single island's
 come from make_world. This lays the plan out for Unreal at 4065 samples a side (32 x 32
 landscape components): 7 m a sample for the 28 km chain, 14 m for the 57 km island. The plan's
-"ring" road is carved in as a bike path, except where it crosses the sea on a bridge. The output
-has make_climb.py's layout, so climb_world.py and oc_climb.py build it as /Game/World/L_World:
+roads are carved in as a bike path, except where they cross the sea on a bridge: the fewest of its
+routes that between them ride every road (covering()), the others riding the same roads.
+The output has make_climb.py's layout, so climb_world.py and oc_climb.py build it as
+/Game/World/L_World:
 
     uv run -q --no-project --with numpy --with scipy --with pillow python -I \
         scripts/make_world_level.py
-    OC_SRC=/workspace/ue/world_gen/ride_chain OC_LEVEL=/game/World/L_World oc.py build-level ...
+    OC_SRC=/workspace/ue/world_gen/ride_hub OC_LEVEL=/Game/World/L_World oc.py build-level ...
 
 The seven paint layers mean what biomes.py's "world" preset says: Desert is the desert's sand,
 Sand the beaches, the rest as on the alpine climb. Trees stand only in a corridor along the
@@ -29,6 +31,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from scipy import ndimage
+from scipy.spatial import cKDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_island as mi
@@ -42,13 +45,11 @@ mi.ROAD_HALF = 1.75
 # it (an opaque edge; a masked one crashes the shader compiler on Nanite).
 PATH_HALF = 1.2
 
-PLAN = os.environ.get("OC_PLAN", "/workspace/ue/world_gen/chain")
+PLAN = os.environ.get("OC_PLAN", "/workspace/ue/world_gen/hub")
 # make_chain.py's world.json, or None for make_world.py's single island.
 _WORLD = Path(PLAN, "world.json")
 CHAIN = json.loads(_WORLD.read_text()) if _WORLD.exists() else None
-OUT = os.environ.get(
-    "OC_RIDE_OUT", "/workspace/ue/world_gen/" + ("ride_chain" if CHAIN else "ride")
-)
+OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/" + ("ride_hub" if CHAIN else "ride"))
 # Components of 127 quads, plus one. 8129 (7 m) lost the GPU on 11 Nov: the editor's
 # ChangeGridSize on 64 x 64 components sat 8 minutes on one frame with 7.5 GB free, then
 # VK_ERROR_DEVICE_LOST. 4065 (32 x 32) built on 9 Nov, its grid step leaving 4.2 GB free.
@@ -80,13 +81,19 @@ FAR_WOODS, FAR_STEP, FAR_MAX = 3500.0, 42.0, 150000
 TREE_STEP = 7.0  # m between candidate stems
 PIECE = 1000  # road points (1 m apart) per road mesh
 MIN_STRETCH = 3000.0  # m: a biome's run shorter than this joins its neighbour
+# A route adds to the carved and meshed road if more than COVER_GAP of its metres lie over
+# COVER_FAR m from the routes already taken (covering()).
+COVER_FAR, COVER_GAP = 6.0, 200
+# The road only a later route covers sits this far (cm) under the first's, so where the two meet
+# at a junction the first's tarmac shows, not a flicker of both.
+UNDER = 3.0
 # The road's surface by stretch: asphalt near people, a compacted dirt path in the remote
 # country (the user, 11 Nov: "it should stay a path in the more remote regions").
 REMOTE = {"Mountain", "Heath", "Desert"}
 # On the chain a stretch is named for its island, with the harbour town and its farmland apart.
 CHAIN_NAMES = {
     "town": "Harbour",
-    "meadow": "Farmland",
+    "meadow": "The Coast",
     "forest": "Greenwood",
     "heath": "The Moor",
     "mountain": "Vael",
@@ -168,12 +175,30 @@ def ground(plan):
     return h
 
 
-def ring(plan, h):
-    """The ring at 1 m: the plan's line, its heights moved with the detail under it (smoothed
-    over 400 m, so the grades stay the plan's). Also returns which of its points are on a
-    bridge (the chain's world.json gives each as metres along the plan's 10 m points)."""
+def plan_routes():
+    """The plan's routes, the level's default first: [{"key", "title", "blurb", "xyz" (every 10
+    m), "bridges" ((first, last) indices into xyz)}]. make_chain.py writes them; make_world.py's
+    single island has one, its "ring"."""
     with open(f"{PLAN}/roads.json") as f:
-        pts = np.asarray(json.load(f)["ring"], dtype=np.float64)
+        roads = json.load(f)
+    if "routes" in roads:
+        return roads["routes"]
+    return [
+        {
+            "key": "island",
+            "title": "The Ring",
+            "blurb": "Once round the island: coast, desert, forest, mountain and meadow.",
+            "xyz": roads["ring"],
+            "bridges": [],
+        }
+    ]
+
+
+def ring(plan, h, route):
+    """A route at 1 m, closed: the plan's line, its heights moved with the detail under it
+    (smoothed over 400 m, so the grades stay the plan's). Also returns which of its points are on
+    a bridge."""
+    pts = np.asarray(route["xyz"], dtype=np.float64)
     xy, z = pts[:, :2], pts[:, 2]
     fine = ndimage.map_coordinates(
         h, [xy[:, 1] / SPACING + HALF, xy[:, 0] / SPACING + HALF], order=1, mode="nearest"
@@ -191,11 +216,50 @@ def ring(plan, h):
     for k in range(3):
         line[:, k] = ndimage.uniform_filter1d(line[:, k], 31, mode="wrap")
     on = np.zeros(len(loop))
-    for a, b in (CHAIN or {}).get("bridges", []):
-        on[round(a / 10.0) : round(b / 10.0) + 1] = 1.0
+    for a, b in route["bridges"]:
+        on[a : b + 1] = 1.0
     bridge = np.interp(t, s, on) > 0.5
-    print(f"bridges: {bridge.sum() / 1000:.1f} km of the loop", flush=True)
+    print(
+        f"{route['key']}: {len(line) / 1000:.1f} km, bridges {bridge.sum() / 1000:.1f} km",
+        flush=True,
+    )
     return line, bridge
+
+
+def covering(lines):
+    """The fewest routes whose roads cover every route's: each route in turn, if more than
+    COVER_GAP of its points are over COVER_FAR from those already taken. On the hub plan that's
+    the Grand Tour and the coast road."""
+    taken = []
+    for key, (line, _) in lines.items():
+        if not taken:
+            taken.append(key)
+            continue
+        tree = cKDTree(np.vstack([lines[k][0][:, :2] for k in taken]))
+        d, _ = tree.query(line[:, :2])
+        if (d > COVER_FAR).sum() > COVER_GAP:
+            taken.append(key)
+    return taken
+
+
+def extra_runs(line, others, far=1.5):
+    """[(first, end)] runs of a closed line's points more than `far` m from the `others`' points:
+    the road only it covers, to be meshed on its own."""
+    d, _ = cKDTree(others[:, :2]).query(line[:, :2])
+    away = d > far
+    if away.all():
+        return [(0, len(line))]
+    # Start at a covered point, so no run wraps.
+    roll = int(np.argmin(away))
+    out, start = [], None
+    for k in range(roll, roll + len(line) + 1):
+        on = away[k % len(line)]
+        if on and start is None:
+            start = k
+        elif not on and start is not None:
+            out.append((start, k))
+            start = None
+    return out
 
 
 def carve(h, line, bridge):
@@ -568,22 +632,56 @@ def split_at_bridges(a, b, spans, n):
     return out
 
 
+def ride_of(route, runs):
+    """info.json's ride entry for a route."""
+    return {
+        "key": route["key"],
+        "title": route["title"],
+        "blurb": route["blurb"],
+        "closed": True,
+        "stretches": runs,
+        # Rides start past the harbour (the island's coast), not in the town's bare ground.
+        "start": "Harbour" if CHAIN else "Coast",
+    }
+
+
+def mesh_run(centre, a, b, surface, spans, count, sink=0.0):
+    """Road pieces for centre[a..b] (wrapping), split where bridges are; `sink` cm lower."""
+    n = len(centre)
+    for kind, c, d in split_at_bridges(a, b, spans, n):
+        here = "bridge" if kind else surface
+        run = [(x, y, z - sink) for x, y, z in (centre[k % n] for k in range(c, d + 1))]
+        half = (PATH_HALF if here == "path" else mi.ROAD_HALF) * 100
+        bank = 0.0 if kind else BANK
+        for piece in road_mesh.road_pieces(run, half, False, PIECE, bank):
+            piece.write(f"{OUT}/road_{here}_{count[here]:03d}.gltf")
+            count[here] += 1
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     plan = Plan()
     h = ground(plan)
     print(f"ground {h.min():.0f}..{h.max():.0f} m", flush=True)
-    line, bridge = ring(plan, h)
-    dist = carve(h, line, bridge)
-    clear_road(h, line)
-    print(f"ring {len(line) / 1000:.1f} km, carved", flush=True)
+    routes = plan_routes()
+    lines = {r["key"]: ring(plan, h, r) for r in routes}
+    cover = covering(lines)
+    print(f"carved and meshed from {cover}", flush=True)
+    dist = None
+    for key in cover:
+        d = carve(h, *lines[key])
+        dist = d if dist is None else np.minimum(dist, d)
+    for key in cover:
+        clear_road(h, lines[key][0])
     stems, small = paint_and_trees(plan, h, dist)
     del dist
     q = np.clip(np.round(32768 + h * 100 * 128 / mi.Z_SCALE), 0, 65535).astype("<u2")
     q.tofile(f"{OUT}/height.r16")
     del q
     Image.fromarray(small).save(f"{OUT}/layers.png")
-    runs = stretches(plan, line)
+    rides = [ride_of(r, stretches(plan, lines[r["key"]][0])) for r in routes]
+    first = routes[0]["key"]
+    line, bridge = lines[first]
     info = {
         "size": RES,
         "spacing": SPACING * 100,
@@ -598,44 +696,48 @@ def main():
         "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 1.0},
         # The rider half a metre left of centre: on the 2.4 m path and inside the asphalt's lane.
         "keep_left": 50.0,
-        "ride": {
-            "title": "The Island Loop" if CHAIN else "The Ring",
-            "blurb": (
-                "Once round the chain and its bridges: Harbour Isle, Greenwood, The Moor, Vael"
-                " and Red Sands."
-                if CHAIN
-                else "Once round the island: coast, desert, forest, mountain and meadow."
-            ),
-            "closed": True,
-            "stretches": runs,
-            # Rides start on the coast past the harbour, not in the town's bare ground.
-            "start": "Harbour" if CHAIN else "Coast",
-        },
-        "views": views(line, runs),
+        # The default ride, and every ride (climb_world.track writes each as a track).
+        "ride": rides[0],
+        "rides": rides,
+        "views": views(line, rides[0]["stretches"]),
     }
     with open(f"{OUT}/info.json", "w") as f:
         json.dump(info, f)
     for name in os.listdir(OUT):
         if name.startswith(("road_", "far_")) and name.endswith(".gltf"):
             os.remove(f"{OUT}/{name}")
-    centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in line]
     count = {"asphalt": 0, "path": 0, "bridge": 0}
-    spans = bridge_spans(bridge)
-    for surface, a, b in surfaces(runs, len(centre)):
-        # Each run of a surface on its own, a point past its end so the pieces meet; the last
-        # wraps to the ring's first point. A bridge is a run of its own: asphalt, a deck with no
-        # earth bank under it (make_features.py builds the bridge).
-        for kind, c, d in split_at_bridges(a, b, spans, len(centre)):
-            surface_here = "bridge" if kind else surface
-            run = [centre[k % len(centre)] for k in range(c, d + 1)]
-            half = (PATH_HALF if surface_here == "path" else mi.ROAD_HALF) * 100
-            bank = 0.0 if kind else BANK
-            for piece in road_mesh.road_pieces(run, half, False, PIECE, bank):
-                piece.write(f"{OUT}/road_{surface_here}_{count[surface_here]:03d}.gltf")
-                count[surface_here] += 1
+    # The first covering route whole; each later one only where it leaves the earlier.
+    extra, done = [], None
+    for key in cover:
+        here, here_bridge = lines[key]
+        ride = next(r for r in rides if r["key"] == key)
+        centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in here]
+        spans = bridge_spans(here_bridge)
+        if done is None:
+            for surface, a, b in surfaces(ride["stretches"], len(centre)):
+                mesh_run(centre, a, b, surface, spans, count)
+            done = here
+            continue
+        kinds = surfaces(ride["stretches"], len(centre))
+        for a, b in extra_runs(here, done):
+            # Its surface where the run starts; the coast road's is asphalt all round.
+            surface = next(s for s, c, d in kinds if c <= a % len(centre) < d)
+            mesh_run(centre, a, b, surface, spans, count, sink=UNDER)
+            extra.append(here[np.arange(a, b + 1) % len(here)].round(2).tolist())
+        done = np.vstack([done, here])
     print(f"road pieces {count}", flush=True)
     with open(f"{OUT}/routes.json", "w") as f:
-        json.dump({"island": line.round(2).tolist(), "bridges": spans}, f)
+        json.dump(
+            {
+                "island": line.round(2).tolist(),
+                "bridges": bridge_spans(bridge),
+                # Every route at 1 m, and the road only the later covering routes ride.
+                "routes": {k: v[0].round(2).tolist() for k, v in lines.items()},
+                "extra": extra,
+            },
+            f,
+        )
     with open(f"{OUT}/trees.json", "w") as f:
         json.dump(stems, f)
     for name in ("rails", "props"):
@@ -644,11 +746,14 @@ def main():
     grade = np.diff(line[:, 2])
     spruce = sum(t[0] == "spruce" for t in stems)
     print(
-        f"{OUT}: ground {h.min():.0f}..{h.max():.0f} m; ring {len(line) / 1000:.1f} km,"
+        f"{OUT}: ground {h.min():.0f}..{h.max():.0f} m; {first} {len(line) / 1000:.1f} km,"
         f" {line[:, 2].min():.0f}..{line[:, 2].max():.0f} m, steepest"
         f" {np.abs(ndimage.uniform_filter1d(grade, 100, mode='wrap')).max() * 100:.1f}% over 100 m;"
-        f" {len(stems)} trees ({spruce} spruce); stretches {runs}"
+        f" {len(stems)} trees ({spruce} spruce)"
     )
+    for r in rides:
+        km = sum(m for _, m in r["stretches"]) / 1000
+        print(f"ride {r['key']}: {r['title']}, {km:.1f} km, {r['stretches']}", flush=True)
 
 
 if __name__ == "__main__":
