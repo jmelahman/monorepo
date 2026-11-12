@@ -95,6 +95,7 @@ def tree_mesh(kind):
 
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
 TREE_CULL = 200000.0  # cm: instanced trees past this aren't drawn (the map is 2 km across)
+FAR_CULL = 800000.0  # cm: the world's far forest (trees_far.json), seen to 8 km
 RAIL_HEIGHT = 85.0  # cm, the fence rail's middle above the path
 # Grass per layer, as island_world.GRASS: grasses and flowers in the verges and clearings, ferns
 # under the trees. No rocks, trunks or logs yet: their scans are the ones too big to build.
@@ -501,6 +502,22 @@ def trees():
         placed[kind] += 1
     instances.commit(cull=TREE_CULL)
     log(f"trees: {placed}")
+    far_trees(meshes)
+
+
+def far_trees(meshes):
+    """The world's far forest, past the ring's woods (trees_far.json): instanced, casting no
+    shadow (only seen from a distance; the shadow maps would pay for every one), to 8 km."""
+    path = f"{SRC}/trees_far.json"
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        stems = json.load(f)
+    instances = lib.Instances("Trees/Far")
+    for kind, x, y, z, yaw, scale in stems:
+        if isinstance(meshes[kind], unreal.StaticMesh):
+            instances.add(meshes[kind], (x, y, z), yaw, scale)
+    instances.commit(cull=FAR_CULL, shadows=False)
 
 
 def _noise_at(g, position, scale, low, high, levels=3):
@@ -703,7 +720,7 @@ def road_material():
 
 
 # The path's compacted earth, a little greyed so it sits on sand, turf and granite alike.
-PATH_TINT = (0.72, 0.70, 0.67)
+PATH_TINT = (0.6, 0.58, 0.56)
 # Its edge, m from the middle: the mesh's own (make_world_level.PATH_HALF), about 2.4 m across.
 PATH_HALF = 1.2
 # Its loose edge: the gravel, darker.

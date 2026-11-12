@@ -63,6 +63,9 @@ SEED = 41
 TREELINE = 820.0
 SNOWLINE = 900.0
 WOODS = 160.0  # m from the ring: trees stand this far out
+# Past WOODS, to FAR_WOODS, a sparse far forest every FAR_STEP m (trees_far.json): it casts no
+# shadow and is only seen from a distance, so the hills to the horizon aren't bare.
+FAR_WOODS, FAR_STEP, FAR_MAX = 3500.0, 42.0, 150000
 TREE_STEP = 7.0  # m between candidate stems
 PIECE = 1000  # road points (1 m apart) per road mesh
 MIN_STRETCH = 3000.0  # m: a biome's run shorter than this joins its neighbour
@@ -339,6 +342,45 @@ def trees_band(rng, x, y, h, slope, d, forest, desert):
     return out
 
 
+def far_trees_band(rng, x, y, h, slope, d, forest, desert):
+    """The far forest's stems in a band: [kind, x, y, z, yaw, scale] in cm, as trees.json."""
+    stride = max(1, round(FAR_STEP / SPACING))
+    pick = np.zeros(d.shape, bool)
+    pick[::stride, ::stride] = True
+    rows, cols = np.nonzero(pick & (d >= WOODS) & (d < FAR_WOODS))
+    if not len(rows):
+        return []
+    jitter = rng.normal(0, 0.45, (2, len(rows))) * FAR_STEP
+    px, py = x[rows, cols] + jitter[0], y[rows, cols] + jitter[1]
+    zz = h[rows, cols]
+    clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
+    wood = forest[rows, cols] * np.clip(0.15 + 1.1 * clump, 0, 1) * (1 - desert[rows, cols])
+    keep = (
+        (slope[rows, cols] < 1.0)
+        & (rng.random(len(rows)) < wood * 0.8)
+        & (rng.random(len(rows)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
+        & (zz > 6)
+    )
+    px, py, zz = px[keep], py[keep], zz[keep] - 0.6
+    line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
+    spruce = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
+    size = rng.uniform(0.9, 1.35, len(zz)) * (
+        1 - 0.5 * mi.smoothstep(TREELINE - 30, TREELINE + 20, zz)
+    )
+    yaw = rng.uniform(0, 360, len(zz))
+    return [
+        [
+            "spruce" if s else "beech",
+            round(float(a) * 100, 1),
+            round(float(b) * 100, 1),
+            round(float(c) * 100, 1),
+            round(float(r), 1),
+            round(float(k), 3),
+        ]
+        for a, b, c, s, r, k in zip(px, py, zz, spruce, yaw, size, strict=True)
+    ]
+
+
 def paint_and_trees(plan, h, dist):
     """Writes each layer's .r8 band by band; returns the trees and the preview's colours."""
     rng = np.random.default_rng(SEED + 100)
@@ -348,6 +390,7 @@ def paint_and_trees(plan, h, dist):
     colours = np.array([LAYERS[k] for k in names], dtype=np.uint8)
     small = []
     stems = []
+    far = []
     cols = np.arange(RES)
     for r0 in range(0, RES, BAND):
         r1 = min(r0 + BAND, RES)
@@ -368,7 +411,13 @@ def paint_and_trees(plan, h, dist):
         img = np.where((hb > 0)[..., None], colours[top], np.uint8([40, 80, 120]))
         small.append(img[::4, ::4])
         stems += trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"])
+        far += far_trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"])
         print(f"band {r0 // BAND + 1}/{math.ceil(RES / BAND)}: {len(stems)} trees", flush=True)
+    if len(far) > FAR_MAX:
+        far = [far[i] for i in sorted(rng.choice(len(far), FAR_MAX, replace=False))]
+    print(f"far forest: {len(far)} trees", flush=True)
+    with open(f"{OUT}/trees_far.json", "w") as f:
+        json.dump(far, f)
     return stems, np.vstack(small)
 
 

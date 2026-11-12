@@ -22,5 +22,5 @@ timeout "${OC_TIMEOUT:-900}" sudo -u ue4 env UE-LocalDataCachePath=/workspace/dd
 	"${ride[@]}" "${@:4}" \
 	>ride_test.log 2>&1 </dev/null
 echo "exit $?"
-grep -E "RIDE |Error|Fatal" ride_test.log | grep -v "LogPython" | cut -c30- | tail -30
+grep -a -E "RIDE |Error|Fatal" ride_test.log | grep -v "LogPython" | cut -c30- | tail -30
 ls "$OUT"
