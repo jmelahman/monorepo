@@ -20,10 +20,17 @@ public:
 	virtual FTrainerReading Read() const = 0;
 	// The grade under the wheels, rise over run, for a trainer that can resist like the road.
 	virtual void SetGrade(double Grade) {}
+	// ERG mode: a power to hold, as a workout asks, or nullopt to ride the road again.
+	virtual void SetTargetPower(TOptional<double> Watts) { Target = Watts; }
+	TOptional<double> TargetPower() const { return Target; }
+
+protected:
+	TOptional<double> Target;
 };
 
 // Power from the keyboard: hold Up or W to push harder and Down or S to ease off. Cadence follows
-// power, roughly.
+// power, roughly. In ERG mode it eases to the target the way a smart trainer does, and the keys
+// nudge it.
 class FKeyboardTrainer : public ITrainer
 {
 public:
@@ -32,7 +39,14 @@ public:
 	int Direction = 0;  // +1 harder, -1 easier, 0 steady
 
 	virtual FString Name() const override { return TEXT("Keyboard"); }
-	virtual void Tick(float Dt) override { Watts = FMath::Clamp(Watts + Direction * Rate * Dt, 0.0, 1200.0); }
+	virtual void Tick(float Dt) override
+	{
+		if (Target && Direction == 0)
+		{
+			Watts += (*Target - Watts) * (1.0 - FMath::Exp(-Dt / 1.5));
+		}
+		Watts = FMath::Clamp(Watts + Direction * Rate * Dt, 0.0, 1200.0);
+	}
 	virtual FTrainerReading Read() const override
 	{
 		FTrainerReading Reading;

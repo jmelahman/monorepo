@@ -16,7 +16,9 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
+#include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
+#include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RidePlayerController.h"
@@ -344,6 +346,22 @@ void ARidePawn::ReadCommandLine()
 	FString Source = TrainerSources[0];
 	FParse::Value(Line, TEXT("RideTrainer="), Source);
 	UseTrainer(TrainerSources.Contains(Source) ? Source : TrainerSources[0]);
+	FString WorkoutName;
+	if (FParse::Value(Line, TEXT("RideWorkout="), WorkoutName))
+	{
+		for (const Veloverse::FWorkout& W : WorkoutLibrary(Ftp))
+		{
+			if (FString(UTF8_TO_TCHAR(W.Name.c_str())).Contains(WorkoutName))
+			{
+				StartWorkout(W);
+				break;
+			}
+		}
+		if (!Workout.Active())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("RIDE no workout matches %s"), *WorkoutName);
+		}
+	}
 	float Watts = 0.f;
 	if (FParse::Value(Line, TEXT("RideWatts="), Watts))
 	{
@@ -366,6 +384,57 @@ void ARidePawn::ReadCommandLine()
 	}
 }
 
+TOptional<double> ARidePawn::WorkoutTarget() const
+{
+	const std::optional<double> T = Workout.Target(Ftp, WorkoutBias);
+	return T ? TOptional<double>(FMath::RoundToDouble(*T)) : TOptional<double>();
+}
+
+void ARidePawn::StartWorkout(const Veloverse::FWorkout& Chosen)
+{
+	Workout = Veloverse::FWorkoutPlayer(Chosen);
+	WorkoutBias = 0.f;
+	UE_LOG(LogTemp, Display, TEXT("RIDE workout %hs: %d steps, %.0f min"), Chosen.Name.c_str(),
+	       static_cast<int32>(Chosen.Steps.size()), Chosen.Seconds() / 60.0);
+}
+
+void ARidePawn::EndWorkout()
+{
+	Workout = Veloverse::FWorkoutPlayer();
+	if (Trainer)
+	{
+		Trainer->SetTargetPower(TOptional<double>());
+	}
+}
+
+FString ARidePawn::WorkoutsFolder() { return FRideProfile::Folder() / TEXT("Workouts"); }
+
+TArray<Veloverse::FWorkout> ARidePawn::WorkoutLibrary(float RiderFtp)
+{
+	TArray<Veloverse::FWorkout> Out;
+	for (Veloverse::FWorkout& W : Veloverse::BuiltInWorkouts())
+	{
+		Out.Add(MoveTemp(W));
+	}
+	TArray<FString> Files;
+	IFileManager::Get().FindFiles(Files, *(WorkoutsFolder() / TEXT("*")), true, false);
+	Files.Sort();
+	for (const FString& Name : Files)
+	{
+		FString Text;
+		if (!FFileHelper::LoadFileToString(Text, *(WorkoutsFolder() / Name)))
+		{
+			continue;
+		}
+		if (std::optional<Veloverse::FWorkout> W =
+		        Veloverse::WorkoutImport::Read(TCHAR_TO_UTF8(*Name), TCHAR_TO_UTF8(*Text), RiderFtp))
+		{
+			Out.Add(MoveTemp(*W));
+		}
+	}
+	return Out;
+}
+
 void ARidePawn::UseTrainer(const FString& Source)
 {
 	TrainerSource = Source;
@@ -377,10 +446,18 @@ void ARidePawn::UseTrainer(const FString& Source)
 	// The keyboard trainer reads the legs; this proxy keeps one owner for both cases.
 	struct FLegs : ITrainer
 	{
-		const FKeyboardTrainer* Legs;
-		explicit FLegs(const FKeyboardTrainer* In) : Legs(In) {}
-		virtual FString Name() const override { return Legs->Name(); }
+		FKeyboardTrainer* Legs;
+		explicit FLegs(FKeyboardTrainer* In) : Legs(In) {}
+		virtual FString Name() const override
+		{
+			return Target ? FString::Printf(TEXT("Keyboard, ERG %.0f W"), *Target) : Legs->Name();
+		}
 		virtual FTrainerReading Read() const override { return Legs->Read(); }
+		virtual void SetTargetPower(TOptional<double> Watts) override
+		{
+			ITrainer::SetTargetPower(Watts);
+			Legs->SetTargetPower(Watts);
+		}
 	};
 	Trainer = MakeUnique<FLegs>(&Legs);
 }
@@ -442,6 +519,25 @@ void ARidePawn::ReadKeys()
 	const bool Down = Player->IsInputKeyDown(EKeys::Down) || Player->IsInputKeyDown(EKeys::S);
 	Legs.Direction = (Up ? 1 : 0) - (Down ? 1 : 0);
 	MouseLook(*Player);
+	if (Workout.Active() && !bPaused)
+	{
+		if (Player->WasInputKeyJustPressed(EKeys::RightBracket))
+		{
+			WorkoutBias = FMath::Min(WorkoutBias + 0.05f, 0.5f);
+		}
+		if (Player->WasInputKeyJustPressed(EKeys::LeftBracket))
+		{
+			WorkoutBias = FMath::Max(WorkoutBias - 0.05f, -0.5f);
+		}
+		if (Player->WasInputKeyJustPressed(EKeys::N))
+		{
+			Workout.Skip();
+		}
+		if (Player->WasInputKeyJustPressed(EKeys::E))
+		{
+			bErg = !bErg;
+		}
+	}
 	const bool bMenuKey = Player->WasInputKeyJustPressed(EKeys::Escape) || Player->WasInputKeyJustPressed(EKeys::P) ||
 	                      Player->WasInputKeyJustPressed(EKeys::SpaceBar) ||
 	                      Player->WasInputKeyJustPressed(EKeys::Gamepad_Special_Right);
@@ -490,6 +586,15 @@ void ARidePawn::Ride(float Dt)
 	Reading = Trainer->Read();
 	Grade = Track->Grade(Track->Wrap(static_cast<float>(Distance)));
 	Trainer->SetGrade(Grade);
+	if (Workout.Active())
+	{
+		Workout.Tick(Dt);
+		const TOptional<double> Target = bErg ? WorkoutTarget() : TOptional<double>();
+		if (Target != Trainer->TargetPower())
+		{
+			Trainer->SetTargetPower(Target);
+		}
+	}
 	const float Before = Track->Height(Track->Wrap(static_cast<float>(Distance)));
 	// Fixed substeps, so the speed doesn't depend on the frame rate.
 	for (float Left = Dt; Left > 0.f; Left -= PhysicsStep)
@@ -503,7 +608,8 @@ void ARidePawn::Ride(float Dt)
 	Joules += Reading.Watts * Dt;
 	ZoneSeconds[Zone(Reading.Watts)] += Dt;
 	Recorder.Tick(Dt, Ridden() / 100.0, Reading.Watts, Reading.CadenceRpm, Reading.HeartRateBpm, Speed,
-	              Track->Height(Track->Wrap(static_cast<float>(Distance))) / 100.0);
+	              Track->Height(Track->Wrap(static_cast<float>(Distance))) / 100.0, GetActorLocation().X / 100.0,
+	              GetActorLocation().Y / 100.0);
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
 		Distance = static_cast<double>(Track->Length());

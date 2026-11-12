@@ -13,6 +13,8 @@
 #include "GameFramework/GameUserSettings.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "RideChart.h"
 #include "RidePawn.h"
 #include "RidePlayerController.h"
@@ -328,13 +330,49 @@ void URideMenu::BuildStart()
 	    12.f);
 	TrainerNote = Text(TEXT(""), 13, Faint);
 	Add(P, TrainerNote, 6.f);
+	// Ride the road, or a workout from the library with its length and load.
+	Workouts = ARidePawn::WorkoutLibrary(Rider() ? Rider()->Ftp : FRideProfile::Load().Ftp);
+	TArray<FString> WorkoutNames = {TEXT("None, just ride")};
+	for (const Veloverse::FWorkout& W : Workouts)
+	{
+		WorkoutNames.Add(FString::Printf(TEXT("%hs, %.0f min, TSS %.0f"), W.Name.c_str(), W.Seconds() / 60.0, W.Tss()));
+	}
+	Add(P,
+	    Cycler(
+		    TEXT("Workout"), WorkoutNames,
+		    [this]
+		    {
+			    const ARidePawn* Pawn = Rider();
+			    if (!Pawn || !Pawn->Workout.Active())
+			    {
+				    return 0;
+			    }
+			    const int32 I = Workouts.IndexOfByPredicate([Pawn](const Veloverse::FWorkout& W)
+			                                                { return W.Name == Pawn->Workout.Workout().Name; });
+			    return I + 1;
+		    },
+		    [this](int32 I)
+		    {
+			    if (ARidePawn* Pawn = Rider())
+			    {
+				    if (Workouts.IsValidIndex(I - 1))
+				    {
+					    Pawn->StartWorkout(Workouts[I - 1]);
+				    }
+				    else
+				    {
+					    Pawn->EndWorkout();
+				    }
+			    }
+		    }),
+	    12.f);
 	URideButton* Go = Button(TEXT("Ride"), [this] { Controller()->Ride(); }, true);
 	FirstButton[static_cast<int32>(ERideMenuPage::Start)] = Go;
 	Add(P, Go, 28.f);
 	Add(P, Button(TEXT("Profile and rides"), [this] { Show(ERideMenuPage::Profile); }), 10.f);
 	Add(P, Button(TEXT("Video settings"), [this] { Show(ERideMenuPage::Video); }), 10.f);
 	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
-	Add(P, Text(TEXT("W/S or Up/Down change power. Esc pauses."), 13, Faint), 24.f);
+	Add(P, Text(TEXT("W/S or Up/Down change power. Esc pauses. In a workout: [ and ] easier or harder, N skips a step, E toggles ERG."), 13, Faint), 24.f);
 }
 
 void URideMenu::BuildPause()
@@ -500,6 +538,14 @@ void URideMenu::BuildSummary()
 	URideButton* Again = Button(TEXT("Back to the start"), [this] { Controller()->Restart(); }, true);
 	FirstButton[static_cast<int32>(ERideMenuPage::Summary)] = Again;
 	Add(P, Again, 22.f);
+	Add(P, Button(TEXT("Open the rides folder"),
+	              []
+	              {
+		              const FString Folder = FPaths::ConvertRelativePathToFull(FRideRecorder::RidesFolder());
+		              IFileManager::Get().MakeDirectory(*Folder, true);
+		              FPlatformProcess::ExploreFolder(*Folder);
+	              }),
+	    10.f);
 	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
 }
 
@@ -566,7 +612,9 @@ void URideMenu::ShowSummary()
 	}
 	SummaryBest->SetText(FText::FromString(Best));
 	SummarySaved->SetText(FText::FromString(
-		!Pawn->SavedRide.IsEmpty() ? FString::Printf(TEXT("Saved to your rides: %s"), *FPaths::GetCleanFilename(Pawn->SavedRide))
+		!Pawn->SavedRide.IsEmpty()
+			? FString::Printf(TEXT("Saved to your rides. %s.fit is ready to upload to Strava (strava.com/upload) or Garmin Connect."),
+			                  *FPaths::GetBaseFilename(Pawn->SavedRide))
 		: S.Seconds < FRideRecorder::MinSeconds ? FString(TEXT("Under 30 seconds, so not kept."))
 												 : FString(TEXT("Not saved."))));
 }

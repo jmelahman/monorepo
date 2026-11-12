@@ -8,6 +8,7 @@
 #include "RidePhysics.h"
 #include "RideRecord.h"
 #include "Trainer.h"
+#include "Workout.h"
 #include "RidePawn.generated.h"
 
 class UCameraComponent;
@@ -91,6 +92,20 @@ public:
 	FString SavedRide;
 	bool bRideSaved = false;
 	float TrackLength() const;
+
+	// A structured workout, if one is on: each step's target goes to the trainer in ERG mode (or, with
+	// ERG off, is only shown). StartWorkout replaces any running one; Bias is the rider's own
+	// adjustment, a share of the target ([ and ] in 5% steps); N skips a step, E toggles ERG.
+	// -RideWorkout=NAME starts a built-in one by name, or a .zwo/.erg/.mrc file.
+	Veloverse::FWorkoutPlayer Workout;
+	float WorkoutBias = 0.f;
+	bool bErg = true;
+	void StartWorkout(const Veloverse::FWorkout& Chosen);
+	void EndWorkout();
+	TOptional<double> WorkoutTarget() const;
+	// The workouts to choose from: the built-in ones, then any in Saved/Veloverse/Workouts.
+	static TArray<Veloverse::FWorkout> WorkoutLibrary(float RiderFtp);
+	static FString WorkoutsFolder();
 
 	// Where power comes from: "keyboard", or "sim", a Bluetooth trainer played from the keys.
 	static const TArray<FString> TrainerSources;

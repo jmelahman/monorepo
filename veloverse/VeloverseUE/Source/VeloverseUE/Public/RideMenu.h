@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
+#include "Workout.h"
 #include "RideMenu.generated.h"
 
 class ARidePawn;
@@ -90,6 +91,7 @@ private:
 	float CourseKm = 0.f, ClimbMetres = 0.f;
 	TWeakObjectPtr<const URideTrack> Surveyed;
 	int32 RouteCycler = -1; // its choices are the rider's routes, filled in once they're read
+	TArray<Veloverse::FWorkout> Workouts; // the library, for the start page's workout choice
 	int32 StartCycler = -1; // and these the route's stretches, refilled when the route changes
 	TWeakObjectPtr<const URideTrack> StartsOf;
 	float RefreshClock = 0.f;

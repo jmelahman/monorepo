@@ -32,7 +32,11 @@ public:
 		{
 			Text += FString::Printf(TEXT(", power from %hs"), R.PowerSource.c_str());
 		}
-		if (Session.Controlling())
+		if (Session.Controlling() && Session.TargetPower())
+		{
+			Text += FString::Printf(TEXT(", ERG %.0f W"), *Session.TargetPower());
+		}
+		else if (Session.Controlling())
 		{
 			Text += FString::Printf(TEXT(", grade %+.1f%%"), Session.LastGrade() * 100.0);
 		}
@@ -69,6 +73,11 @@ public:
 	}
 
 	virtual void SetGrade(double InGrade) override { Grade = InGrade; }
+	virtual void SetTargetPower(TOptional<double> Watts) override
+	{
+		ITrainer::SetTargetPower(Watts);
+		Session.SetTargetPower(Watts ? std::optional(*Watts) : std::nullopt);
+	}
 
 private:
 	TUniquePtr<IBleLink> Link;
@@ -101,7 +110,15 @@ public:
 		}
 		Sent = Now;
 		const FTrainerReading Effort = Legs->Read();
-		Bike.Watts = Effort.Watts;
+		if (Bike.TargetWatts && Bike.bStarted && Effort.CadenceRpm > 0.0)
+		{
+			// ERG: the brake brings the rider to the target over a couple of seconds.
+			Bike.Watts += (*Bike.TargetWatts - Bike.Watts) * 0.15;
+		}
+		else
+		{
+			Bike.Watts = Effort.Watts;
+		}
 		Bike.CadenceRpm = Effort.CadenceRpm;
 		Session.Notify(Veloverse::Ble::IndoorBikeData, Bike.IndoorBike(0.0), Now);
 		// The heart follows the effort, slowly.
