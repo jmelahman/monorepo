@@ -31,6 +31,10 @@ import make_island as mi
 import make_world as mw
 import road_mesh
 
+# A two-lane bike path, 3.5 m across (11 Nov: the island's 6.4 m read as a road for cars). Set
+# before anything reads it: carve, clear_road, the verge and the trees all keep clear of it.
+mi.ROAD_HALF = 1.75
+
 PLAN = "/workspace/ue/world_gen/world"
 OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/ride")
 # Components of 127 quads, plus one. 8129 (7 m) lost the GPU on 11 Nov: the editor's
@@ -56,6 +60,9 @@ WOODS = 160.0  # m from the ring: trees stand this far out
 TREE_STEP = 7.0  # m between candidate stems
 PIECE = 1000  # road points (1 m apart) per road mesh
 MIN_STRETCH = 3000.0  # m: a biome's run shorter than this joins its neighbour
+# The road's surface by stretch: asphalt near people, a compacted dirt path in the remote
+# country (the user, 11 Nov: "it should stay a path in the more remote regions").
+REMOTE = {"Mountain", "Heath", "Desert"}
 NAMES = {
     "coast": "Coast",
     "desert": "Desert",
@@ -392,6 +399,21 @@ def stretches(plan, line):
     return [(NAMES.get(k, k.title()), round(m)) for k, m in runs]
 
 
+def surfaces(runs, points):
+    """[(surface, first point, end point)] round the ring: runs of stretches on one surface."""
+    out, start = [], 0
+    for name, metres in runs:
+        surface = "path" if name in REMOTE else "asphalt"
+        end = min(start + round(metres), points)
+        if out and out[-1][0] == surface:
+            out[-1][2] = end
+        else:
+            out.append([surface, start, end])
+        start = end
+    out[-1][2] = points
+    return [tuple(r) for r in out]
+
+
 def views(line, runs):
     """Stills along the ride, [name, eye, target] in m: a rider's eye halfway along each
     stretch looking 30 m up the road, and one from 120 m up over the first mountain stretch."""
@@ -445,6 +467,9 @@ def main():
         "window": None,
         "sea_cm": 0.0,
         "road_half": mi.ROAD_HALF,  # m: the road material's edge (climb_world.road_instance)
+        # The world's asphalt: lighter and greyer than the woods' dark climb, with a dashed line
+        # down the middle (climb_world.road_instance); the path's tarmac-free look is its own.
+        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0},
         "ride": {
             "title": "The Ring",
             "blurb": "Once round the island: coast, desert, forest, mountain and meadow.",
@@ -461,8 +486,15 @@ def main():
         if name.startswith(("road_", "far_")) and name.endswith(".gltf"):
             os.remove(f"{OUT}/{name}")
     centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in line]
-    for k, piece in enumerate(road_mesh.road_pieces(centre, mi.ROAD_HALF * 100, True, PIECE)):
-        piece.write(f"{OUT}/road_ring_{k:03d}.gltf")
+    count = {"asphalt": 0, "path": 0}
+    for surface, a, b in surfaces(runs, len(centre)):
+        # Each run of a surface on its own, a point past its end so the pieces meet; the last
+        # wraps to the ring's first point.
+        run = [centre[k % len(centre)] for k in range(a, b + 1)]
+        for piece in road_mesh.road_pieces(run, mi.ROAD_HALF * 100, False, PIECE):
+            piece.write(f"{OUT}/road_{surface}_{count[surface]:03d}.gltf")
+            count[surface] += 1
+    print(f"road pieces {count}", flush=True)
     with open(f"{OUT}/routes.json", "w") as f:
         json.dump({"island": line.round(2).tolist()}, f)
     with open(f"{OUT}/trees.json", "w") as f:

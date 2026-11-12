@@ -239,18 +239,26 @@ def landscape(world, ground):
 
 def road_instance(parent):
     """ROAD_INSTANCE, the level's road material: `parent` at this road's half width (info.json's
-    road_half, m; the climb's path when it has none)."""
+    road_half, m; the climb's path when it has none) and its road_look, scalars and colours by
+    parameter name (the world's lighter asphalt with a centre line)."""
     with open(f"{SRC}/info.json") as f:
-        half = float(json.load(f).get("road_half", ROAD_HALF))
-    return lib.instance(ROAD_INSTANCE, parent, GROUND, scalars={"road half": half})
+        info = json.load(f)
+    scalars = {"road half": float(info.get("road_half", ROAD_HALF))}
+    vectors = {}
+    for key, value in info.get("road_look", {}).items():
+        (vectors if isinstance(value, list) else scalars)[key] = value
+    return lib.instance(ROAD_INSTANCE, parent, GROUND, scalars=scalars, vectors=vectors)
 
 
-def roads(material):
+def roads(material, path=None):
+    """The road pieces: road_path_*.gltf in `path` (the remote country's dirt path), the rest in
+    the level's road instance of `material`."""
     material = road_instance(material)
     count = 0
     for name in sorted(os.listdir(SRC)):
         if not (name.startswith("road_") and name.endswith(".gltf")):
             continue
+        surface = path if (path is not None and name.startswith("road_path_")) else material
         task = unreal.AssetImportTask()
         task.filename = f"{SRC}/{name}"
         task.destination_path = f"{FOLDER}/Road"
@@ -268,9 +276,14 @@ def roads(material):
         nanite.set_editor_property("enabled", True)
         mesh.set_editor_property("nanite_settings", nanite)
         assets.save_loaded_asset(mesh, False)
-        lib.mesh_actor(mesh, label=name[:-5], folder="Road", materials={0: material})
+        lib.mesh_actor(mesh, label=name[:-5], folder="Road", materials={0: surface})
         count += 1
     log(f"roads: {count} pieces")
+
+
+def _has_paths():
+    """Whether the source has dirt-path pieces (the world's remote stretches)."""
+    return any(n.startswith("road_path_") and n.endswith(".gltf") for n in os.listdir(SRC))
 
 
 def road_points():
@@ -495,6 +508,8 @@ ROAD_EDGE_SOIL = (0.36, 0.3, 0.24)  # v25: its pebbles read as pale orange ovals
 # Old country tarmac is warm grey-brown, not the scan's blue-grey (QA, v11).
 # v25: (1.15, 1, 0.72) still read pink-grey (r/g 1.13 in v24). v34: less yellow for daylight.
 ROAD_WARM = (1.03, 1.0, 0.86)
+# The world's centre line: old white paint, a little dirty.
+LINE_WHITE = (0.62, 0.61, 0.57)
 # The road material's default half width, m: the climb's bike path (make_climb.py's ROAD_HALF).
 ROAD_HALF = 1.5
 
@@ -579,7 +594,63 @@ def road_material():
     # v35: rougher and less specular: seen against the high sun the tarmac shone pale (the
     # bench, v34).
     rough = g.op(unreal.MaterialExpressionMax, rough, g.const(0.9))
+    # A dashed line down the middle, 3 m on and 3 m off, worn: off ("line" 0) on the climb's
+    # one-lane path, on for the world's two-lane bike path. V is metres along the piece.
+    along = g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "g")
+    dash = g.link(g.mul(along, 1 / 6), g.node(unreal.MaterialExpressionFrac))
+    dash = g.saturate(g.mul(g.add(dash, -0.5), -40.0))
+    stripe = g.saturate(g.mul(g.add(across, -0.06), -60.0))
+    paint = g.mul(g.mul(stripe, dash), g.param("line", 0.0))
+    paint = g.mul(paint, g.world_noise(0.05, 0.55, 1.0, 2))
+    colour = g.lerp(colour, g.const(LINE_WHITE), paint)
+    rough = g.lerp(rough, g.const(0.7), paint)
     g.output(colour, normal, rough, specular=0.2, ao=g.mask(masks, "r"))
+    g.material.set_editor_property("used_with_nanite", True)
+    return g.finish()
+
+
+# The path's compacted earth, a little greyed so it sits on sand, turf and granite alike.
+PATH_TINT = (0.86, 0.82, 0.76)
+# Its edge, m from the middle, where the ground shows through raggedly: the mesh is the
+# asphalt's 1.75 m, the path about 2.4 m across.
+PATH_HALF = 1.2
+
+
+def path_material():
+    """The remote country's path: compacted dirt with patches of gravel, worn smoother in the
+    middle, its edges cut ragged (masked) so the verge shows through instead of a hard line."""
+    g = lib.Graph("M_ClimbPath", f"{FOLDER}/Road")
+    d, n, m = (island.ms_texture("shared", "dirt_road", k) for k in ("D", "N", "M"))
+    gd, gn = (island.ms_texture("shared", "gravel_on_soil", k) for k in ("D", "N"))
+    # Two scales of the 0.87 m scan, so the tile doesn't print a grid down the path.
+    uv, uv2 = g.world_uv(140.0), g.world_uv(410.0, (0.37, 0.11))
+    mix = g.world_noise(0.01, 0.0, 1.0, 2)
+    colour = g.lerp(
+        g.mask(g.sample(d, uv), "rgb"), g.mask(g.sample(d, uv2), "rgb"), g.mul(mix, 0.5)
+    )
+    normal = g.mask(g.sample(n, uv, "normal"), "rgb")
+    masks = g.sample(m, uv, "masks")
+    gravel = g.saturate(g.mul(g.add(g.world_noise(0.006, 0.0, 1.0, 3), -0.55), 3.0))
+    guv = g.world_uv(150.0, (0.21, 0.63))
+    colour = g.lerp(colour, g.mask(g.sample(gd, guv), "rgb"), g.mul(gravel, 0.7))
+    normal = g.lerp(normal, g.mask(g.sample(gn, guv, "normal"), "rgb"), g.mul(gravel, 0.7))
+    colour = g.mul(colour, g.world_noise(0.0015, 0.88, 1.1, 3))
+    across = g.link(
+        g.mask(g.node(unreal.MaterialExpressionTextureCoordinate), "r"),
+        g.node(unreal.MaterialExpressionAbs),
+    )
+    # Worn by tyres down the middle: darker and finer, wandering a little.
+    wander = g.world_noise(0.003, -0.15, 0.15, 2)
+    worn = g.saturate(g.mul(g.add(g.add(across, wander), -0.55), -2.5))
+    colour = g.lerp(colour, g.mul(colour, 0.86), g.mul(worn, 0.8))
+    colour = g.mul(colour, g.param("tint", PATH_TINT))
+    rough = g.lerp(g.const(0.95), g.const(0.88), worn)
+    ragged = g.add(g.world_noise(0.02, -0.3, 0.3, 2), g.world_noise(0.15, -0.12, 0.12, 2))
+    edge = g.saturate(
+        g.mul(g.add(g.add(g.mul(across, -1.0), g.param("path half", PATH_HALF)), ragged), 4.0)
+    )
+    g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"), opacity_mask=edge)
+    g.material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 
@@ -826,12 +897,14 @@ def main():
     if STAGE == "dress":
         island.FOLDER = FOLDER
         road = road_material()  # before the level loads: no compile with its meshes in view
+        path = path_material() if _has_paths() else None
         water = sea_material()
         horizon = far_material()
         yield
         world = undress()
     else:
         ground, road = materials()
+        path = path_material() if _has_paths() else None
         water = sea_material()
         horizon = far_material()
         yield
@@ -841,7 +914,7 @@ def main():
     if STAGE == "ground":
         return
     yield
-    roads(road)
+    roads(road, path)
     timber = rail_material()
     rails(timber, post_material())
     props(timber, log_material())
