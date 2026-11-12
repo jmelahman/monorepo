@@ -90,6 +90,9 @@ private:
 	UPROPERTY(Transient) TObjectPtr<URideChart> SummaryChart;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> HistoryText;
 	UPROPERTY(Transient) TArray<TObjectPtr<URideButton>> FirstButton; // focused when a page opens
+	// What's drawn in the HUD colour, recoloured when the rider picks another.
+	UPROPERTY(Transient) TArray<TObjectPtr<UTextBlock>> AccentTexts;
+	UPROPERTY(Transient) TArray<TObjectPtr<URideButton>> PrimaryButtons;
 
 	ERideMenuPage Current = ERideMenuPage::Start;
 	ERideMenuPage Back = ERideMenuPage::Start; // where the video page returns to
@@ -97,6 +100,9 @@ private:
 	TWeakObjectPtr<const URideTrack> Surveyed;
 	int32 RouteCycler = -1; // its choices are the rider's routes, filled in once they're read
 	TArray<Veloverse::FWorkout> Workouts; // the library, for the start page's workout choice
+	int32 WorkoutCycler = -1;
+	float WorkoutsFtp = 0.f;              // the FTP the library was read with (files in watts need it)
+	int32 ThemeCycler = -1;               // its choices are the unlocked HUD colours
 	int32 StartCycler = -1; // and these the route's stretches, refilled when the route changes
 	TWeakObjectPtr<const URideTrack> StartsOf;
 	float RefreshClock = 0.f;
@@ -115,6 +121,9 @@ private:
 	void Refresh();
 	void Survey();
 	void Cycle(int32 Index, int32 Step);
+	void Recolour(FLinearColor Now);
+	void ReadWorkouts(float RiderFtp);
+	static TArray<FString> UnlockedThemes(int64 Xp);
 
 	UTextBlock* Text(const FString& String, int32 Size, FLinearColor Colour = FLinearColor::White, bool bBold = false);
 	URideButton* Button(const FString& Label, TFunction<void()> Action, bool bPrimary = false);

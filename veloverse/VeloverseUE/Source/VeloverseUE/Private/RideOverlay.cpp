@@ -254,6 +254,10 @@ void URideOverlay::NativeTick(const FGeometry& Geometry, float DeltaTime)
 	{
 		Survey(*Pawn->Track);
 	}
+	if (Pawn->Track && ClimbsOf.Get() != Pawn->Track && Pawn->Segments.UsesTrack(Pawn->Track))
+	{
+		TakeClimbs(Pawn->Segments);
+	}
 	Watts += (Pawn->Reading.Watts - Watts) * (1.f - FMath::Exp(-DeltaTime / 0.8f));
 }
 
@@ -291,45 +295,32 @@ void URideOverlay::Survey(const URideTrack& Track)
 		}
 		Grades.Add(Sum / Count);
 	}
-	// Climbs: runs of 2 % and steeper, joined across a short let-up, that rise 8 m or more.
-	TArray<TPair<int32, int32>> Runs;
-	for (int32 I = 0; I < N; ++I)
+}
+
+// The climbs are the route's segments, the ones timed and kept as bests, so the panel and the
+// segment banner agree on where a climb starts and ends.
+void URideOverlay::TakeClimbs(const FRideSegments& Segments)
+{
+	ClimbsOf = Surveyed;
+	Climbs.Reset();
+	for (int32 I = 0; I < Segments.Num(); ++I)
 	{
-		if (Grades[I] < 0.02f)
+		const Veloverse::FSegment& S = Segments.Segment(I);
+		if (!S.bClimb)
 		{
 			continue;
 		}
-		int32 End = I;
-		while (End + 1 < N && Grades[End + 1] >= 0.02f)
+		FClimb C;
+		C.Start = static_cast<float>(S.Start);
+		C.Top = C.Start + static_cast<float>(S.Length(LengthM)); // past LengthM when it wraps the seam
+		C.Rise = static_cast<float>(S.Rise);
+		for (float M = C.Start; M <= C.Top; M += SampleM)
 		{
-			++End;
+			C.Steepest = FMath::Max(C.Steepest, GradeAt(M));
 		}
-		if (!Runs.IsEmpty() && (I - Runs.Last().Value) * SampleM < 120.f &&
-		    Heights[I] >= Heights[Runs.Last().Value] - 3.f)
-		{
-			Runs.Last().Value = End;
-		}
-		else
-		{
-			Runs.Add({I, End});
-		}
-		I = End;
+		Climbs.Add(C);
 	}
-	for (const auto& [A, B] : Runs)
-	{
-		int32 Top = A;
-		float Steepest = 0.f;
-		for (int32 I = A; I <= FMath::Min(B + 1, N - 1); ++I)
-		{
-			Top = Heights[I] > Heights[Top] ? I : Top;
-			Steepest = FMath::Max(Steepest, Grades[FMath::Min(I, B)]);
-		}
-		const float Rise = Heights[Top] - Heights[A];
-		if (Rise >= 8.f && (Top - A) * SampleM >= 150.f)
-		{
-			Climbs.Add({A * SampleM, Top * SampleM, Rise, Steepest});
-		}
-	}
+	Climbs.Sort([](const FClimb& A, const FClimb& B) { return A.Start < B.Start; });
 }
 
 float URideOverlay::HeightAt(float Metres) const
@@ -359,7 +350,9 @@ const URideOverlay::FClimb* URideOverlay::ClimbAt(float Here, bool& bOn, float& 
 	bOn = false;
 	for (const FClimb& C : Climbs)
 	{
-		if (C.Start <= Here && Here < C.Top)
+		// On it, or on the far side of the seam of one that wraps it.
+		const float At = bClosed && Here < C.Start && C.Top > LengthM ? Here + LengthM : Here;
+		if (C.Start <= At && At < C.Top)
 		{
 			bOn = true;
 			Start = C.Start;
@@ -401,6 +394,8 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	const float W = Local.X / P.S; // the frame's width in canvas units: 1280 at 16:9
 	const float H = 720.f;
 	const float Here = Track.Wrap(static_cast<float>(Pawn->Distance)) / 100.f;
+	// The rider's HUD colour, unlocked with levels and picked on the profile page.
+	const FLinearColor Accent = Pawn->Profile.Accent();
 
 	// ---- Top left: power ------------------------------------------------------------------------
 	{
@@ -571,7 +566,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			const float B = Stretches.IsValidIndex(I + 1) ? Stretches[I + 1].Metres : LengthM;
 			const float Wd = Usable * FMath::Max(B - A, 0.f) / FMath::Max(LengthM, 1.f);
 			const bool bHere = I == In || (In == INDEX_NONE && I == 0);
-			P.Round(Sx, Foot - (bHere ? 9.f : 5.f), Wd, bHere ? 9.f : 5.f, 2.f, Hex(0xF4F1EA, bHere ? 0.55f : 0.25f));
+			P.Round(Sx, Foot - (bHere ? 9.f : 5.f), Wd, bHere ? 9.f : 5.f, 2.f, bHere ? Accent : Hex(0xF4F1EA, 0.25f));
 			Sx += Wd + Gap;
 		}
 		// Where you are along it, a tick through the bar.
@@ -641,7 +636,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		{
 			Mode = FString::Printf(TEXT("%+.0f%%  "), Pawn->WorkoutBias * 100.f) + Mode;
 		}
-		const float ModeW = P.Text(X0 + Inner, Y + 22.f, Mode, Label, Pawn->bErg ? SkyText : Dim, EAlign::Right);
+		const float ModeW = P.Text(X0 + Inner, Y + 22.f, Mode, Label, Pawn->bErg ? Accent : Dim, EAlign::Right);
 		if (Player.Done() || !Step)
 		{
 			P.Text(X0, Y + 50.f, TEXT("Workout done"), Big, Ink);
@@ -801,12 +796,12 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			}
 			// How far up, a bar along the foot.
 			const float Done = FMath::Clamp(static_cast<float>(1.0 - Live->ToGo / FMath::Max(Live->Length, 1.0)), 0.f, 1.f);
-			P.Round(X + 12.f, Y + Tall - 5.f, (Wide - 24.f) * Done, 3.f, 1.5f, Hex(0xF4F1EA, 0.6f));
+			P.Round(X + 12.f, Y + Tall - 5.f, (Wide - 24.f) * Done, 3.f, 1.5f, Accent);
 		}
 		else if (Live)
 		{
 			P.Panel(X, Y, Wide, Tall, 12.f);
-			P.Text(X + 16.f, Y + 19.f, FString::Printf(TEXT("SEGMENT IN %s"), *Km(static_cast<float>(Live->ToGo)).ToUpper()), Label, Dim);
+			P.Text(X + 16.f, Y + 19.f, FString::Printf(TEXT("SEGMENT IN %s"), *Km(static_cast<float>(Live->ToGo)).ToUpper()), Label, Accent);
 			P.Text(X + 16.f, Y + 41.f, Live->Name, Name, Ink);
 			FString Line = FString::Printf(TEXT("%s at %.1f%%"), *Km(static_cast<float>(Live->Length)), Live->Grade * 100.0);
 			if (Live->Best)

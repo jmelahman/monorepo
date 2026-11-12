@@ -24,7 +24,7 @@
 namespace
 {
 // The HUD's orange.
-FLinearColor Accent(1.f, 0.42f, 0.08f); // the profile's HUD colour, set as the menu builds
+FLinearColor Accent(1.f, 0.42f, 0.08f); // the profile's HUD colour: set as the menu builds, and by Recolour
 const FLinearColor Faint(1.f, 1.f, 1.f, 0.6f);
 const TArray<FString> Levels = {TEXT("Low"), TEXT("Medium"), TEXT("High"), TEXT("Epic"), TEXT("Cinematic")};
 const TArray<float> Scales = {50.f, 67.f, 75.f, 85.f, 100.f};
@@ -181,11 +181,14 @@ UTextBlock* URideMenu::Text(const FString& String, int32 Size, FLinearColor Colo
 	return Block;
 }
 
-URideButton* URideMenu::Button(const FString& Label, TFunction<void()> Action, bool bPrimary)
+// A button's look: its colour, and its colour hovered (brighter, when not given).
+static FButtonStyle ButtonStyle(FLinearColor Base, FLinearColor Hover)
 {
-	URideButton* Button = WidgetTree->ConstructWidget<URideButton>();
-	const FLinearColor Base = bPrimary ? Accent : FLinearColor(1.f, 1.f, 1.f, 0.08f);
-	const FLinearColor Hover = bPrimary ? Accent * 1.15f : FLinearColor(1.f, 1.f, 1.f, 0.18f);
+	if (Hover == FLinearColor())
+	{
+		Hover = Base * 1.15f;
+		Hover.A = Base.A;
+	}
 	FButtonStyle Style;
 	Style.SetNormal(FSlateRoundedBoxBrush(Base, 6.f));
 	Style.SetHovered(FSlateRoundedBoxBrush(Hover, 6.f));
@@ -193,7 +196,18 @@ URideButton* URideMenu::Button(const FString& Label, TFunction<void()> Action, b
 	Style.SetDisabled(FSlateRoundedBoxBrush(FLinearColor(1.f, 1.f, 1.f, 0.03f), 6.f));
 	Style.SetNormalPadding(FMargin(18.f, 10.f));
 	Style.SetPressedPadding(FMargin(18.f, 11.f, 18.f, 9.f));
-	Button->SetStyle(Style);
+	return Style;
+}
+
+URideButton* URideMenu::Button(const FString& Label, TFunction<void()> Action, bool bPrimary)
+{
+	URideButton* Button = WidgetTree->ConstructWidget<URideButton>();
+	Button->SetStyle(ButtonStyle(bPrimary ? Accent : FLinearColor(1.f, 1.f, 1.f, 0.08f),
+	                             bPrimary ? FLinearColor() : FLinearColor(1.f, 1.f, 1.f, 0.18f)));
+	if (bPrimary)
+	{
+		PrimaryButtons.Add(Button);
+	}
 	UTextBlock* Caption = Text(Label, 18, FLinearColor::White, bPrimary);
 	Caption->SetAutoWrapText(false);
 	Button->SetContent(Caption);
@@ -214,6 +228,7 @@ UWidget* URideMenu::Cycler(const FString& Label, TArray<FString> Choices, TFunct
 	USizeBox* Box = WidgetTree->ConstructWidget<USizeBox>();
 	Box->SetWidthOverride(170.f);
 	UTextBlock* Value = Text(TEXT(""), 16, Accent);
+	AccentTexts.Add(Value);
 	Value->SetJustification(ETextJustify::Center);
 	Box->SetContent(Value);
 	UHorizontalBoxSlot* Middle = Row->AddChildToHorizontalBox(Box);
@@ -278,6 +293,7 @@ void URideMenu::BuildStart()
 	StartLevel = Text(TEXT(""), 13, Faint);
 	Add(P, StartLevel, 0.f);
 	CourseTitle = Text(TEXT(""), 22, Accent);
+	AccentTexts.Add(CourseTitle);
 	Add(P, CourseTitle, 0.f);
 	CourseText = Text(TEXT(""), 15, Faint);
 	Add(P, CourseText, 10.f);
@@ -342,15 +358,11 @@ void URideMenu::BuildStart()
 	TrainerNote = Text(TEXT(""), 13, Faint);
 	Add(P, TrainerNote, 6.f);
 	// Ride the road, or a workout from the library with its length and load.
-	Workouts = ARidePawn::WorkoutLibrary(Rider() ? Rider()->Ftp : FRideProfile::Load().Ftp);
-	TArray<FString> WorkoutNames = {TEXT("None, just ride")};
-	for (const Veloverse::FWorkout& W : Workouts)
-	{
-		WorkoutNames.Add(FString::Printf(TEXT("%hs, %.0f min, TSS %.0f"), W.Name.c_str(), W.Seconds() / 60.0, W.Tss()));
-	}
+	// Its choices are filled in by ReadWorkouts, again whenever the FTP changes.
+	WorkoutCycler = Cyclers.Num();
 	Add(P,
 	    Cycler(
-		    TEXT("Workout"), WorkoutNames,
+		    TEXT("Workout"), {},
 		    [this]
 		    {
 			    const ARidePawn* Pawn = Rider();
@@ -377,6 +389,7 @@ void URideMenu::BuildStart()
 			    }
 		    }),
 	    12.f);
+	ReadWorkouts(Rider() ? Rider()->Ftp : FRideProfile::Load().Ftp);
 	URideButton* Go = Button(TEXT("Ride"), [this] { Controller()->Ride(); }, true);
 	FirstButton[static_cast<int32>(ERideMenuPage::Start)] = Go;
 	Add(P, Go, 28.f);
@@ -520,28 +533,21 @@ void URideMenu::BuildProfile()
 	Add(P, Cycler(TEXT("Your weight"), Range(40, 150, 1, TEXT("kg")), Weight.Key, Weight.Value), 6.f);
 	const auto Bike = Setting(&FRideProfile::BikeKg, 6, 20, 1);
 	Add(P, Cycler(TEXT("Bike"), Range(6, 20, 1, TEXT("kg")), Bike.Key, Bike.Value), 6.f);
-	// The level, and the HUD colours it has unlocked (the menus take a new one from the next ride).
+	// The level, and the HUD colours it has unlocked; the HUD and menus take a new one at once.
 	ProfileLevel = Text(TEXT(""), 14, Faint);
 	Add(P, ProfileLevel, 20.f);
-	const FRideProfile Now = Rider() ? Rider()->Profile : FRideProfile::Load();
-	TArray<FString> Themes;
-	for (const Veloverse::FTheme& T : Veloverse::Themes())
-	{
-		if (Veloverse::IsUnlocked(T, Now.Xp))
-		{
-			Themes.Add(UTF8_TO_TCHAR(T.Name));
-		}
-	}
+	ThemeCycler = Cyclers.Num();
 	Add(P,
 	    Cycler(
-			TEXT("HUD colour"), Themes,
-			[this, Themes]
+			TEXT("HUD colour"), UnlockedThemes((Rider() ? Rider()->Profile : FRideProfile::Load()).Xp),
+			[this]
 			{
 				const ARidePawn* Pawn = Rider();
-				return Pawn ? FMath::Max(Themes.IndexOfByKey(Pawn->Profile.Theme), 0) : 0;
+				return Pawn ? FMath::Max(Cyclers[ThemeCycler].Choices.IndexOfByKey(Pawn->Profile.Theme), 0) : 0;
 			},
-			[this, Themes](int32 I)
+			[this](int32 I)
 			{
+				const TArray<FString>& Themes = Cyclers[ThemeCycler].Choices;
 				if (ARidePawn* Pawn = Rider(); Pawn && Themes.IsValidIndex(I))
 				{
 					FRideProfile Changed = Pawn->Profile;
@@ -564,6 +570,7 @@ void URideMenu::BuildSummary()
 	SummaryTitle = Text(TEXT("Ride summary"), 34, FLinearColor::White, true);
 	Add(P, SummaryTitle, 0.f);
 	SummaryRide = Text(TEXT(""), 16, Accent);
+	AccentTexts.Add(SummaryRide);
 	Add(P, SummaryRide, 6.f);
 	SummaryChart = CreateWidget<URideChart>(this, URideChart::StaticClass());
 	USizeBox* ChartBox = WidgetTree->ConstructWidget<USizeBox>();
@@ -764,6 +771,18 @@ void URideMenu::Refresh()
 	const ARidePawn* Pawn = Rider();
 	if (Pawn)
 	{
+		if (const FLinearColor Now = Pawn->Profile.Accent(); !Now.Equals(Accent))
+		{
+			Recolour(Now);
+		}
+		if (Pawn->Ftp != WorkoutsFtp)
+		{
+			ReadWorkouts(Pawn->Ftp);
+		}
+		if (Cyclers.IsValidIndex(ThemeCycler))
+		{
+			Cyclers[ThemeCycler].Choices = UnlockedThemes(Pawn->Profile.Xp); // a ride may have unlocked more
+		}
 		const Veloverse::FLevel L = Veloverse::LevelFor(Pawn->Profile.Xp);
 		StartLevel->SetText(FText::FromString(
 			L.Needed > 0 ? FString::Printf(TEXT("Level %d · %d / %d XP"), L.Level, L.Into, L.Needed)
@@ -826,6 +845,45 @@ void URideMenu::Refresh()
 		const int32 I = Item.Get();
 		Item.Value->SetText(FText::FromString(Item.Choices.IsValidIndex(I) ? Item.Choices[I] : TEXT("Custom")));
 	}
+}
+
+void URideMenu::Recolour(FLinearColor Now)
+{
+	Accent = Now;
+	for (UTextBlock* Each : AccentTexts)
+	{
+		Each->SetColorAndOpacity(FSlateColor(Accent));
+	}
+	for (URideButton* Each : PrimaryButtons)
+	{
+		Each->SetStyle(ButtonStyle(Accent, FLinearColor()));
+	}
+	RoutePreview->SetAccent(Accent);
+}
+
+void URideMenu::ReadWorkouts(float RiderFtp)
+{
+	WorkoutsFtp = RiderFtp;
+	Workouts = ARidePawn::WorkoutLibrary(RiderFtp);
+	TArray<FString>& Names = Cyclers[WorkoutCycler].Choices;
+	Names = {TEXT("None, just ride")};
+	for (const Veloverse::FWorkout& W : Workouts)
+	{
+		Names.Add(FString::Printf(TEXT("%hs, %.0f min, TSS %.0f"), W.Name.c_str(), W.Seconds() / 60.0, W.Tss()));
+	}
+}
+
+TArray<FString> URideMenu::UnlockedThemes(int64 Xp)
+{
+	TArray<FString> Out;
+	for (const Veloverse::FTheme& T : Veloverse::Themes())
+	{
+		if (Veloverse::IsUnlocked(T, Xp))
+		{
+			Out.Add(UTF8_TO_TCHAR(T.Name));
+		}
+	}
+	return Out;
 }
 
 void URideMenu::Cycle(int32 Index, int32 Step)

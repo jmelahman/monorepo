@@ -10,6 +10,7 @@
 #include "RideOverlay.generated.h"
 
 class ARidePawn;
+class FRideSegments;
 class URideTrack;
 
 UCLASS()
@@ -35,7 +36,9 @@ private:
 		float Rise = 0.f;             // metres
 		float Steepest = 0.f;         // rise over run
 	};
-	TArray<FClimb> Climbs;
+	TArray<FClimb> Climbs;          // the route's segment climbs, once the pawn has found them
+	TWeakObjectPtr<const URideTrack> ClimbsOf;
+	void TakeClimbs(const FRideSegments& Segments);
 	float LengthM = 0.f;
 	bool bClosed = false;
 	TWeakObjectPtr<const URideTrack> Surveyed;

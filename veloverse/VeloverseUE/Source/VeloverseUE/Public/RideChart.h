@@ -19,6 +19,7 @@ public:
 	// may wrap, end < start); where the ride starts, also a fraction.
 	void SetRoute(TArray<float> Heights, TArray<FVector2f> Climbs, float Start, FLinearColor Accent);
 	void SetStart(float Start);
+	void SetAccent(FLinearColor Accent);
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;

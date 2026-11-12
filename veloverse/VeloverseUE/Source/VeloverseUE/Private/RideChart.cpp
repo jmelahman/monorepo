@@ -37,6 +37,12 @@ void URideChart::SetRoute(TArray<float> Heights, TArray<FVector2f> Climbs, float
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void URideChart::SetAccent(FLinearColor Accent)
+{
+	RouteAccent = Accent;
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
 void URideChart::SetStart(float Start)
 {
 	if (!FMath::IsNearlyEqual(Start, RouteStart))
