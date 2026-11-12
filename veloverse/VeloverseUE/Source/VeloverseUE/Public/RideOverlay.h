@@ -1,7 +1,8 @@
 // The HUD over the ride, painted in code to the layout in the design canvas (a 1280x720 frame,
-// scaled to the screen's height). Top left: power, its zone and the zone bar. Top right: one
-// panel with the road ahead, or the climb you're on, its grade coloured yellow to red, and at its
-// foot the stretch you're in and the loop; the weather under it. Bottom middle: the ride so far.
+// scaled to the screen's height). Top left: power, its zone and the zone bar. Top right, the same
+// size as the power panel to mirror it: the grade as a badge, the road ahead or the climb you're
+// on coloured yellow to red, and at its foot the stretch you're in over a bar of the loop; the
+// weather under it. Top middle: the ride so far.
 #pragma once
 
 #include "CoreMinimal.h"
