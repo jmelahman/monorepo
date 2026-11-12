@@ -4,6 +4,18 @@ Written 10 Nov for whoever continues (the user plans to hand this to Opus). Read
 first for the loop, the crash rules and the vegetation rules; this file is the map of what
 exists beyond the alpine climb and what to do with it.
 
+## The world now (12 Nov): Harbour Isle and four islands
+
+What is built today is `scripts/make_chain.py` (→ `world_gen/hub`, then make_world_level.py →
+`world_gen/ride_hub`, then make_features.py), not the 57 km plan below. The user asked for
+"the Wattopia approach where each biome is a separate island", then to "put the beach/coast
+island in the middle which allows for more varied routes", for example forest to coast to
+mountain without the desert. So Harbour Isle (coast and harbour town) is a hub with a coast
+road, and Greenwood (forest), Vael (mountain), The Moor (heath) and Red Sands (desert) each hang
+off it on two bridges. `ROUTES` in make_chain.py lists the nine routes (any set of islands makes
+a loop with no road ridden twice); climb_world.py writes the first as DA_RideTrack and the rest
+as DA_Route_<key>. The sections below are the history of how the biomes were found.
+
 ## What the user asked for (10 Nov, evening)
 
 - "A whole world like Skyrim or Watopia. The asymmetry adds to the immersion." Creative

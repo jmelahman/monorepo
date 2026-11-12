@@ -1,18 +1,35 @@
 # Veloverse 0.2.0 preview
 
-Veloverse is a free, open cycling sim. This build has one ride, **The Island Loop**: a closed
-80.3 km loop round a chain of five islands joined by bridges. It is still a preview. The world is
-complete end to end, but much of it is a first pass.
+Veloverse is a free, open cycling sim. Its world is five islands: **Harbour Isle** in the middle,
+and four more round it, one for each biome, each joined to Harbour Isle by two bridges. It is
+still a preview. The world is complete end to end, but much of it is a first pass.
 
-The islands, in riding order from the start:
+- **Harbour Isle:** the coast, and a harbour town with boats, piers and a lighthouse. A coast
+  road rings it, and every route starts on the quay.
+- **Greenwood** (southwest): forest.
+- **Vael** (northwest): the mountain, topping out at about 450 m.
+- **The Moor** (northeast): open heath, with tors and a wind farm.
+- **Red Sands** (southeast): desert, with mesas and hoodoos.
 
-- **Harbour Isle:** farmland and a harbour with boats, piers and a lighthouse.
-- **Greenwood:** forest.
-- **The Moor:** open heath, with tors and a wind farm.
-- **Vael:** the mountain. The loop tops out at about 450 m.
-- **Red Sands:** desert, with mesas and hoodoos.
+## Routes
 
-The longest of the five bridges, back onto Harbour Isle, is cable-stayed.
+Because every island hangs off Harbour Isle, a route can visit any of them without the others,
+and none rides a road twice. Pick one under "Route" on the start page.
+
+| Route | km | Climb m | Islands |
+| --- | --- | --- | --- |
+| The Grand Tour | 84.1 | 1495 | all four (the default) |
+| Harbour Isle | 27.1 | 174 | the coast road alone |
+| Greenwood Loop | 40.8 | 459 | Greenwood |
+| Vael Loop | 39.5 | 612 | Vael |
+| Moor Loop | 41.1 | 532 | The Moor |
+| Red Sands Loop | 44.0 | 414 | Red Sands |
+| Woods and Peaks | 53.2 | 897 | Greenwood, Vael |
+| The Highlands | 53.5 | 970 | Vael, The Moor |
+| Heath and Sand | 57.9 | 772 | The Moor, Red Sands |
+
+Each route's climbs are timed separately, so a best on one doesn't count on another. Bests from
+0.2.0's Island Loop stay in your history but aren't on any of these routes.
 
 ## Installing
 
@@ -29,7 +46,8 @@ to start over.
 
 Extra arguments pass through to the game, for example:
 
-- `./VeloverseUE.sh -RideFrom=Vael` starts on Vael. Any island's name works.
+- `./VeloverseUE.sh -RideRoute="Woods and Peaks"` picks a route by its name.
+- `-RideFrom=Vael` starts on Vael. Any island on the route works, or "The Coast".
 - `-RideFtp=230` sets your FTP for one ride.
 
 ## Riding
@@ -46,7 +64,7 @@ The start page sets up a ride:
   heart-rate strap, through BlueZ; pick the trainer under "Trainer", or start with
   `-RideTrainer=ble`. It needs BlueZ and libdbus, and hasn't been tried on many trainers yet.
 - **Route preview:** the route's profile, its timed climbs, and where you start ("Start in": any
-  island on the loop).
+  island on the route).
 - **Workouts:** pick one, or just ride.
 - **Your level** and XP are shown.
 
@@ -67,7 +85,7 @@ render scale, a frame-rate cap, VSync and the window.
   - Your own `.zwo`, `.erg` or `.mrc` files can go in `~/.config/Veloverse/Workouts`.
   - A HUD bar shows the blocks, the target, the time left in the step and what comes next. ERG
     holds the target on a trainer that supports it.
-- **Segments.** The loop's climbs are timed segments.
+- **Segments.** Each route's climbs are timed segments.
   - A banner shows the next one coming up.
   - On a climb, the banner shows your time and your gap to your best (the ghost).
   - At the top, it shows your result: a new best, or where the effort ranks.
