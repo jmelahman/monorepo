@@ -157,6 +157,9 @@ def write_level_env():
             if os.environ.get(k):
                 f.write(f"{k}={shlex.quote(os.environ[k])}\n")
     os.chmod(f"{DIR}/level.env", 0o666)
+    # Said at every start: a stale or empty env silently builds the hero instead of the world.
+    level = os.environ.get("OC_LEVEL") or "L_Hero (default)"
+    say(f"level {level} from {os.environ.get('OC_SRC') or 'world_gen/climb (default)'}")
 
 
 def start_supervisor():
