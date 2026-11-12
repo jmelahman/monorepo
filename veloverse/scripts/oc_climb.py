@@ -631,6 +631,7 @@ def _road_fold(g, kind, offset=None):
     metres = g.add(g.mul(length, ROAD_DIST_NEAR), far)
     clear = g.param("Road clear", info["road_half"] + ROAD_REACH[kind])
     hide = g.saturate(g.mul(g.add(clear, g.mul(metres, -1.0)), 4.0))
+    g.road_metres = metres  # for a master's "Road debug" colour
     fold = g.op(
         unreal.MaterialExpressionSubtract, base, g.node(unreal.MaterialExpressionWorldPosition)
     )
@@ -882,14 +883,6 @@ def _blade_master():
     bent = g.lerp(g.mask(face, "rgb"), g.const((0.0, 0.0, 1.0)), g.param("Up normal", 0.7))
     normal = g.link(bent, g.node(unreal.MaterialExpressionNormalize))
     sss = g.mul(g.mul(colour, g.mask(g.param("Translucency", (0.5, 0.6, 0.2)), "rgb")), rise)
-    g.output(
-        colour,
-        normal,
-        g.param("Roughness", 0.55),
-        specular=g.param("Specular", 0.2),
-        subsurface=sss,
-        ao=root,
-    )
     # Wind: gusts roll across the slope and each blade bends from its root (v squared), a
     # little out of step with its neighbours.
     place = g.node(unreal.MaterialExpressionWorldPosition)
@@ -903,6 +896,30 @@ def _blade_master():
     sway = g.mul(g.mul(push, g.mul(rise, rise)), g.param("Wind", 5.0))
     offset = g.mul(g.const((0.8, 0.6, -0.12)), sway)
     _wire_wpo("M_Blade", _road_fold(g, "blade", offset))
+    metres = getattr(g, "road_metres", None)
+    if metres is not None:
+        # "Road debug" 1 colours each blade by the road distance it decodes: blue within 3 m of a
+        # road centre, red rising to 50 m, and a green band every 5 m.
+        band = g.link(g.mul(metres, 0.2), g.node(unreal.MaterialExpressionFrac))
+        near_road = g.saturate(g.add(g.const(3.0), g.mul(metres, -1.0)))
+        debug = g.op(
+            unreal.MaterialExpressionAppendVector,
+            g.op(
+                unreal.MaterialExpressionAppendVector,
+                g.saturate(g.mul(metres, 1.0 / 50)),
+                g.mul(band, 0.5),
+            ),
+            near_road,
+        )
+        colour = g.lerp(colour, debug, g.param("Road debug", 0.0))
+    g.output(
+        colour,
+        normal,
+        g.param("Roughness", 0.55),
+        specular=g.param("Specular", 0.2),
+        subsurface=sss,
+        ao=root,
+    )
     material = g.material
     material.set_editor_property("tangent_space_normal", False)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
