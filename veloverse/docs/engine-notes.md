@@ -36,6 +36,8 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
 - The first view of a session renders brighter and hazier. For an A/B, use the same shot list
   in the same order.
 - `cloud_wind=0` freezes the clouds, so the sky matches between shots.
+- The editor reads `OC_STILLS` when it starts: export it before `restart`, or the stills land
+  in `out/climb_stills` and the next look overwrites them.
 - Review from a contact sheet, then full-resolution crops of what changed. Keep the sheet
   scripts in `out/qa`.
 
@@ -50,6 +52,9 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
   - "Road clear" is the road's half width plus a reach per kind: blades 0.35 m, plants 0.6 m,
     props 1.5 m.
   - `out/qa/road_dist_check.py` decodes the map across the road at each view.
+  - M_Blade's "Road debug", "Road debug sample" and "Road debug uv" (0..1) colour the blades
+    by the decoded distance, the raw texel and the UV. Raise `--post ev` about 4 so the colours
+    don't clip in the sun.
 - **Blades** are `make_grass.py` meshes, imported by `rebuild-ground --rebuild-grass`.
   - M_Blade colours them from their UVs alone. u is random per blade (1.0 for a seed head),
     and v runs from 0 at the root to 1 at the tip.
