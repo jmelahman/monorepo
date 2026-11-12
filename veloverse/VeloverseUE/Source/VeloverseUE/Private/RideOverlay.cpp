@@ -766,13 +766,13 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		if (Recent)
 		{
 			P.Panel(X, Y, Wide, Tall, 12.f);
-			const bool bPr = Recent->Ranking.Rank == 1;
+			const bool bPr = Recent->Ranking.Pr(Recent->Effort.Seconds) || Recent->Ranking.Of == 1; // a first time sets the best
 			P.Text(X + 16.f, Y + 19.f, bPr ? TEXT("NEW BEST") : TEXT("SEGMENT DONE"), Label, bPr ? Gold : Dim);
 			P.Text(X + 16.f, Y + 41.f, Recent->Name, Name, Ink);
 			FString Line = FString::Printf(TEXT("%s · %.0f W"), *Time(Recent->Effort.Seconds), Recent->Effort.AverageWatts);
 			if (bPr && Recent->Ranking.PreviousBest)
 			{
-				Line += FString::Printf(TEXT(" · %.0f s faster"), *Recent->Ranking.PreviousBest - Recent->Effort.Seconds);
+				Line += FString::Printf(TEXT(" · %.1f s faster"), *Recent->Ranking.PreviousBest - Recent->Effort.Seconds);
 			}
 			else if (!bPr)
 			{
@@ -790,7 +790,9 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			{
 				const double Gap = *Live->Gap;
 				const FString Text = FString::Printf(TEXT("%s%s vs best"), Gap <= 0.0 ? TEXT("-") : TEXT("+"),
-				                                     *Time(FMath::Abs(Gap)));
+				                                     FMath::Abs(Gap) < 60.0
+				                                         ? *FString::Printf(TEXT("%.1f s"), FMath::Abs(Gap))
+				                                         : *Time(FMath::Abs(Gap)));
 				P.Text(X + Wide - 16.f, Y + 41.f, Text, Name, Gap <= 0.0 ? Ahead : Behind, EAlign::Right);
 			}
 			else

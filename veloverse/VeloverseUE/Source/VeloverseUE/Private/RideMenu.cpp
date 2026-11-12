@@ -665,8 +665,8 @@ void URideMenu::ShowSummary()
 	for (const FSegmentResult& R : Pawn->Segments.Results())
 	{
 		const int32 Sec = FMath::RoundToInt32(R.Effort.Seconds);
-		FString Place = R.Ranking.Rank == 1 && R.Ranking.PreviousBest
-			? FString::Printf(TEXT("PR, %.0f s faster"), *R.Ranking.PreviousBest - R.Effort.Seconds)
+		FString Place = R.Ranking.Pr(R.Effort.Seconds)
+			? FString::Printf(TEXT("PR, %.1f s faster"), *R.Ranking.PreviousBest - R.Effort.Seconds)
 			: R.Ranking.Of == 1 ? FString(TEXT("first time"))
 								: FString::Printf(TEXT("%d of %d"), R.Ranking.Rank, R.Ranking.Of);
 		Best += FString::Printf(TEXT("\n%s  %d:%02d at %s, %s"), *R.Name, Sec / 60, Sec % 60,

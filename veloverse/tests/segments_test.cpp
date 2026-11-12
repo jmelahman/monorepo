@@ -120,6 +120,7 @@ int main()
 	Check(Pr.Rank == 1 && Pr.Of == 4 && Pr.PreviousBest && *Pr.PreviousBest == 100.0, "a PR, 5 s under the old one",
 	      Pr.Rank);
 	Check(Rank(Past, 115.0).Rank == 3, "third of four", Rank(Past, 115.0).Rank);
+	Check(Rank(Past, 100.04).Rank == 1, "a tie with the best, to history's tenths, ranks first");
 	Check(Rank({}, 115.0).Rank == 1 && !Rank({}, 115.0).PreviousBest, "the first time is a PR");
 
 	std::printf("%s\n", Failures ? "FAILED" : "passed");

@@ -266,12 +266,16 @@ struct FSegmentRecord
 	double AverageWatts = 0.0;
 };
 
+constexpr double TieSeconds = 0.05;
+
 // Where a new time ranks among the past ones (1 is a personal best), and the best before it.
 struct FRanking
 {
 	int Rank = 1;
 	int Of = 1;
 	std::optional<double> PreviousBest;
+	// A personal record: faster than a best there was (a first time isn't one, nor a tie).
+	bool Pr(double Seconds) const { return PreviousBest && Seconds < *PreviousBest - TieSeconds; }
 };
 
 inline FRanking Rank(const std::vector<FSegmentRecord>& Past, double Seconds)
@@ -280,7 +284,7 @@ inline FRanking Rank(const std::vector<FSegmentRecord>& Past, double Seconds)
 	R.Of = static_cast<int>(Past.size()) + 1;
 	for (const FSegmentRecord& P : Past)
 	{
-		if (P.Seconds < Seconds)
+		if (P.Seconds < Seconds - TieSeconds) // history keeps tenths: a tie isn't a loss
 		{
 			++R.Rank;
 		}

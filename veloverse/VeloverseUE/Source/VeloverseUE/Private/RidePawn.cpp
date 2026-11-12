@@ -314,7 +314,7 @@ FString ARidePawn::EndRide()
 			int32 Prs = 0;
 			for (const FSegmentResult& R : Segments.Results())
 			{
-				Prs += R.Ranking.Rank == 1 && R.Ranking.PreviousBest ? 1 : 0;
+				Prs += R.Ranking.Pr(R.Effort.Seconds) ? 1 : 0;
 			}
 			EarnedXp = Veloverse::RideXp(S.Metres, S.Climbed, Segments.Results().Num(), Prs, Workout.Done());
 			XpBefore = Profile.Xp;
