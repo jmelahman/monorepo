@@ -75,6 +75,21 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
 - **Far canopy:** "Grass canopy start/span/share" on MI_ClimbGround tints the Grass layer's
   ground toward the blades' colour past the cull.
 
+## Importing Fab assets
+
+New downloads land in `/workspace/ue/fab/<biome>/<slug>/` (the asset agent's `MANIFEST.tsv`).
+Megascans with FBX meshes go in three steps, chained in one background run:
+
+1. `uv run -q --no-project --with pillow python -I scripts/prep_megascans.py`, offline and
+   with no editor needed. It skips assets already in `/workspace/ue/fab_prep` and adds the rest
+   to its `index.json`. Assets with no FBX (a "UE only" download) are left out.
+2. `scripts/oc.py stop`, then `OC_STAGE=import`, `assign` and `warm` in turn, each
+   `bash scripts/ue_run.sh megascans.py LOG` with `OC_ONLY` set to the new `biome/slug` pairs.
+   It's a second Unreal, so the oc server's editor must be stopped first. `ue_run.sh` exits 0
+   even when the script fails, so grep each log for `Traceback` before going on.
+3. Add rows to `GRASS` (`oc_climb.py`) or a preset (`biomes.py`), then
+   `rebuild-ground --rebuild-grass` and a `look`.
+
 ## Material graph gotchas
 
 - **HLSL writes constants with 8 decimals** (`%0.8f`). A tiny constant like 1/(700·4096) became
