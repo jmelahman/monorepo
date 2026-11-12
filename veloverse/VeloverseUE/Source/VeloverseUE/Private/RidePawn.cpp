@@ -280,6 +280,42 @@ void ARidePawn::Tick(float Dt)
 	}
 }
 
+void ARidePawn::EndPlay(const EEndPlayReason::Type Reason)
+{
+	if (bStarted && !bRideSaved)
+	{
+		EndRide();
+	}
+	Super::EndPlay(Reason);
+}
+
+FString ARidePawn::EndRide()
+{
+	bFinished = true;
+	if (bRideSaved)
+	{
+		return SavedRide;
+	}
+	bRideSaved = true;
+	if (!Automated() || FParse::Param(FCommandLine::Get(), TEXT("RideRecord")))
+	{
+		FRideProfile Used = Profile;
+		Used.Ftp = Ftp;
+		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used);
+		UE_LOG(LogTemp, Display, TEXT("RIDE saved %s (%d samples)"),
+		       SavedRide.IsEmpty() ? TEXT("nothing: too short") : *SavedRide, static_cast<int32>(Recorder.Samples().size()));
+	}
+	return SavedRide;
+}
+
+void ARidePawn::SetProfile(const FRideProfile& Changed)
+{
+	Profile = Changed;
+	Profile.Save();
+	Ftp = Profile.Ftp;
+	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
+}
+
 void ARidePawn::ReadCommandLine()
 {
 	const TCHAR* Line = FCommandLine::Get();
@@ -299,6 +335,9 @@ void ARidePawn::ReadCommandLine()
 		UE_CLOG(!bStartGiven, LogTemp, Warning, TEXT("RIDE no stretch %s to start from"), *From);
 	}
 	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
+	Profile = FRideProfile::Load();
+	Ftp = Profile.Ftp;
+	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
 	bSway = FParse::Param(Line, TEXT("RideSway"));
 	Ftp = FMath::Max(Ftp, 50.f);
@@ -463,15 +502,17 @@ void ARidePawn::Ride(float Dt)
 	ClimbedMetres += FMath::Max(0.f, Track->Height(Track->Wrap(static_cast<float>(Distance))) - Before) / 100.f;
 	Joules += Reading.Watts * Dt;
 	ZoneSeconds[Zone(Reading.Watts)] += Dt;
+	Recorder.Tick(Dt, Ridden() / 100.0, Reading.Watts, Reading.CadenceRpm, Reading.HeartRateBpm, Speed,
+	              Track->Height(Track->Wrap(static_cast<float>(Distance))) / 100.0);
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
 		Distance = static_cast<double>(Track->Length());
 		Speed = 0.f;
-		bFinished = true;
+		EndRide();
 		ARidePlayerController* Rides = GetController<ARidePlayerController>();
 		if (Rides && !Automated())
 		{
-			Rides->ShowPause();
+			Rides->ShowSummary();
 		}
 	}
 }

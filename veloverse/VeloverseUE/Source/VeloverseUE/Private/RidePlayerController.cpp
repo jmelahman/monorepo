@@ -32,6 +32,7 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 	ShowStart();
 	if (FParse::Value(FCommandLine::Get(), TEXT("RideTour="), TourDir))
 	{
+		FParse::Value(FCommandLine::Get(), TEXT("RideTourRide="), TourRide);
 		GetWorldTimerManager().SetTimer(TourTimer, this, &ARidePlayerController::Tour, 2.f, true);
 	}
 }
@@ -39,10 +40,17 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 void ARidePlayerController::Tour()
 {
 	// Every other step screenshots the page, which lands a frame or two later, and the next moves on.
-	const TCHAR* Shots[] = {TEXT("start"), TEXT("video"), TEXT("ride"), TEXT("pause")};
+	const TCHAR* Shots[] = {TEXT("start"), TEXT("profile"), TEXT("video"), TEXT("ride"), TEXT("pause"), TEXT("summary")};
 	const int32 Page = TourStep / 2;
-	if (TourStep++ % 2 == 0)
+	if (TourStep % 2 == 0)
 	{
+		// The ride is shot near its end, once there's some of it to summarize.
+		const ARidePawn* Pawn = Rider();
+		if (Page == 3 && Pawn && Pawn->Elapsed < TourRide)
+		{
+			return;
+		}
+		++TourStep;
 		if (Page < UE_ARRAY_COUNT(Shots))
 		{
 			const FString File = TourDir / FString::Printf(TEXT("menu_%d_%s.png"), Page, Shots[Page]);
@@ -51,11 +59,14 @@ void ARidePlayerController::Tour()
 		}
 		return;
 	}
+	++TourStep;
 	switch (Page)
 	{
-	case 0: Open(ERideMenuPage::Video); break;
-	case 1: Ride(); break;
-	case 2: ShowPause(); break;
+	case 0: Open(ERideMenuPage::Profile); break;
+	case 1: Open(ERideMenuPage::Video); break;
+	case 2: Ride(); break;
+	case 3: ShowPause(); break;
+	case 4: EndRide(); break;
 	default: Quit(); break;
 	}
 }
@@ -112,6 +123,17 @@ void ARidePlayerController::Ride()
 }
 
 void ARidePlayerController::Resume() { Close(); }
+
+void ARidePlayerController::EndRide()
+{
+	if (ARidePawn* Pawn = Rider())
+	{
+		Pawn->EndRide();
+	}
+	ShowSummary();
+}
+
+void ARidePlayerController::ShowSummary() { Open(ERideMenuPage::Summary); }
 
 void ARidePlayerController::Restart()
 {

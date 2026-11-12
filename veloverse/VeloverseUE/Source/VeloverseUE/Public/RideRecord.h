@@ -1,0 +1,57 @@
+// The rider's profile and their rides, kept between sessions as JSON in the game's Saved folder:
+// Saved/Veloverse/profile.json, and a file per ride in Saved/Veloverse/Rides. The numbers are
+// RideStats.h's; this is where they're sampled, stored and read back.
+#pragma once
+
+#include "CoreMinimal.h"
+#include "RideStats.h"
+
+#include <vector>
+
+struct FRideProfile
+{
+	float Ftp = 250.f;     // W
+	float WeightKg = 80.f; // the rider
+	float BikeKg = 10.f;
+
+	static FRideProfile Load();
+	void Save() const;
+	static FString Folder(); // Saved/Veloverse
+};
+
+// One saved ride as the history lists it: its summary without the samples.
+struct FRideEntry
+{
+	FString File;
+	FDateTime Started;
+	FString Route;
+	float Ftp = 0.f;
+	Veloverse::FSummary Summary;
+};
+
+// Samples a ride once a second of riding and writes it out when it ends.
+class FRideRecorder
+{
+public:
+	// Called every frame the rider moves on, with that frame's riding time.
+	void Tick(float Dt, double Metres, double Watts, double Cadence, double HeartRate, double Speed, double Elevation);
+	void Reset();
+
+	const std::vector<Veloverse::FSample>& Samples() const { return Recorded; }
+	Veloverse::FSummary Summary(float Ftp) const { return Veloverse::Summarize(Recorded, Ftp); }
+
+	// Writes the ride to Saved/Veloverse/Rides/<when>.json; returns the file, or "" if it was
+	// too short to keep (under MinSeconds) or the write failed.
+	FString Save(const FString& Route, float StartMetres, const FRideProfile& Profile) const;
+	static constexpr double MinSeconds = 30.0;
+
+	// The saved rides, newest first.
+	static TArray<FRideEntry> History();
+
+private:
+	std::vector<Veloverse::FSample> Recorded;
+	FDateTime Started;
+	double Clock = 0.0; // riding seconds
+	// Sums over the current second, averaged into its sample.
+	double Watts = 0.0, Cadence = 0.0, Heart = 0.0, Span = 0.0;
+};

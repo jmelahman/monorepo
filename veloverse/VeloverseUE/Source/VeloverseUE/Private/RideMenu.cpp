@@ -12,6 +12,8 @@
 #include "Components/WidgetSwitcher.h"
 #include "GameFramework/GameUserSettings.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
+#include "RideChart.h"
 #include "RidePawn.h"
 #include "RidePlayerController.h"
 #include "RideTrack.h"
@@ -51,6 +53,24 @@ FString Clock(float Seconds)
 	const int32 S = FMath::FloorToInt32(Seconds);
 	return FString::Printf(TEXT("%d:%02d:%02d"), S / 3600, S / 60 % 60, S % 60);
 }
+
+// The choices for a number setting, From to To in Step, and the index nearest a value.
+TArray<FString> Range(int32 From, int32 To, int32 Step, const TCHAR* Unit)
+{
+	TArray<FString> Out;
+	for (int32 V = From; V <= To; V += Step)
+	{
+		Out.Add(FString::Printf(TEXT("%d %s"), V, Unit));
+	}
+	return Out;
+}
+int32 InRange(float Value, int32 From, int32 To, int32 Step)
+{
+	return FMath::Clamp(FMath::RoundToInt32((Value - From) / Step), 0, (To - From) / Step);
+}
+
+// "212 W", or a dash for a ride too short to have it.
+FString Watts(double W) { return W > 0.0 ? FString::Printf(TEXT("%.0f W"), W) : FString(TEXT("—")); }
 } // namespace
 
 void URideButton::Bind() { OnClicked.AddUniqueDynamic(this, &URideButton::Fire); }
@@ -86,6 +106,11 @@ FReply URideMenu::NativeOnKeyDown(const FGeometry& Geometry, const FKeyEvent& Ev
 		if (Current == ERideMenuPage::Video)
 		{
 			Show(Back);
+			return FReply::Handled();
+		}
+		if (Current == ERideMenuPage::Profile)
+		{
+			Show(ERideMenuPage::Start);
 			return FReply::Handled();
 		}
 		const ARidePawn* Pawn = Rider();
@@ -127,6 +152,14 @@ void URideMenu::Show(ERideMenuPage Page)
 	Current = Page;
 	TakeWidget(); // builds the pages on first use
 	Pages->SetActiveWidgetIndex(static_cast<int32>(Page));
+	if (Page == ERideMenuPage::Profile)
+	{
+		ShowHistory();
+	}
+	if (Page == ERideMenuPage::Summary)
+	{
+		ShowSummary();
+	}
 	Refresh();
 	if (URideButton* First = FirstButton[static_cast<int32>(Page)])
 	{
@@ -226,10 +259,13 @@ void URideMenu::Build()
 
 	Pages = WidgetTree->ConstructWidget<UWidgetSwitcher>();
 	Panel->SetContent(Pages);
-	FirstButton.SetNum(3);
+	// In ERideMenuPage's order: the switcher's index is the page.
+	FirstButton.SetNum(5);
 	BuildStart();
 	BuildPause();
 	BuildVideo();
+	BuildProfile();
+	BuildSummary();
 }
 
 void URideMenu::BuildStart()
@@ -295,6 +331,7 @@ void URideMenu::BuildStart()
 	URideButton* Go = Button(TEXT("Ride"), [this] { Controller()->Ride(); }, true);
 	FirstButton[static_cast<int32>(ERideMenuPage::Start)] = Go;
 	Add(P, Go, 28.f);
+	Add(P, Button(TEXT("Profile and rides"), [this] { Show(ERideMenuPage::Profile); }), 10.f);
 	Add(P, Button(TEXT("Video settings"), [this] { Show(ERideMenuPage::Video); }), 10.f);
 	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
 	Add(P, Text(TEXT("W/S or Up/Down change power. Esc pauses."), 13, Faint), 24.f);
@@ -309,6 +346,8 @@ void URideMenu::BuildPause()
 	Add(P, PauseStats, 10.f);
 	ResumeButton = Button(TEXT("Resume"), [this] { Controller()->Resume(); }, true);
 	Add(P, ResumeButton, 28.f);
+	EndButton = Button(TEXT("End ride"), [this] { Controller()->EndRide(); });
+	Add(P, EndButton, 10.f);
 	Add(P, Button(TEXT("Video settings"), [this] { Show(ERideMenuPage::Video); }), 10.f);
 	Add(P, Button(TEXT("Back to the start"), [this] { Controller()->Restart(); }), 10.f);
 	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
@@ -402,6 +441,136 @@ void URideMenu::BuildVideo()
 	Add(P, Done, 24.f);
 }
 
+void URideMenu::BuildProfile()
+{
+	UVerticalBox* P = Page(TEXT("Profile"));
+	Add(P, Text(TEXT("Your weight sets how hard the climbs are; FTP sets the power zones and the training load."), 13,
+	            Faint),
+	    6.f);
+	auto Setting = [this](float FRideProfile::*Field, int32 From, int32 To, int32 Step)
+	{
+		return TPair<TFunction<int32()>, TFunction<void(int32)>>(
+			[this, Field, From, To, Step]
+			{
+				const ARidePawn* Pawn = Rider();
+				return Pawn ? InRange(Pawn->Profile.*Field, From, To, Step) : -1;
+			},
+			[this, Field, From, Step](int32 I)
+			{
+				if (ARidePawn* Pawn = Rider())
+				{
+					FRideProfile Changed = Pawn->Profile;
+					Changed.*Field = static_cast<float>(From + I * Step);
+					Pawn->SetProfile(Changed);
+				}
+			});
+	};
+	const auto Ftp = Setting(&FRideProfile::Ftp, 100, 450, 5);
+	Add(P, Cycler(TEXT("FTP"), Range(100, 450, 5, TEXT("W")), Ftp.Key, Ftp.Value), 20.f);
+	const auto Weight = Setting(&FRideProfile::WeightKg, 40, 150, 1);
+	Add(P, Cycler(TEXT("Your weight"), Range(40, 150, 1, TEXT("kg")), Weight.Key, Weight.Value), 6.f);
+	const auto Bike = Setting(&FRideProfile::BikeKg, 6, 20, 1);
+	Add(P, Cycler(TEXT("Bike"), Range(6, 20, 1, TEXT("kg")), Bike.Key, Bike.Value), 6.f);
+	Add(P, Text(TEXT("Recent rides"), 20, FLinearColor::White, true), 24.f);
+	HistoryText = Text(TEXT(""), 14, Faint);
+	Add(P, HistoryText, 8.f);
+	URideButton* Done = Button(TEXT("Back"), [this] { Show(ERideMenuPage::Start); }, true);
+	FirstButton[static_cast<int32>(ERideMenuPage::Profile)] = Done;
+	Add(P, Done, 24.f);
+}
+
+void URideMenu::BuildSummary()
+{
+	UVerticalBox* P = Page(TEXT(""));
+	SummaryTitle = Text(TEXT("Ride summary"), 34, FLinearColor::White, true);
+	Add(P, SummaryTitle, 0.f);
+	SummaryRide = Text(TEXT(""), 16, Accent);
+	Add(P, SummaryRide, 6.f);
+	SummaryChart = CreateWidget<URideChart>(this, URideChart::StaticClass());
+	USizeBox* ChartBox = WidgetTree->ConstructWidget<USizeBox>();
+	ChartBox->SetHeightOverride(150.f);
+	ChartBox->SetContent(SummaryChart);
+	Add(P, ChartBox, 16.f);
+	SummaryPower = Text(TEXT(""), 15, FLinearColor::White);
+	Add(P, SummaryPower, 14.f);
+	SummaryBest = Text(TEXT(""), 14, Faint);
+	Add(P, SummaryBest, 8.f);
+	SummarySaved = Text(TEXT(""), 12, Faint);
+	Add(P, SummarySaved, 10.f);
+	URideButton* Again = Button(TEXT("Back to the start"), [this] { Controller()->Restart(); }, true);
+	FirstButton[static_cast<int32>(ERideMenuPage::Summary)] = Again;
+	Add(P, Again, 22.f);
+	Add(P, Button(TEXT("Quit"), [this] { Controller()->Quit(); }), 10.f);
+}
+
+void URideMenu::ShowHistory()
+{
+	const TArray<FRideEntry> Rides = FRideRecorder::History();
+	FString Lines;
+	double Week = 0.0, WeekKm = 0.0;
+	const FDateTime WeekAgo = FDateTime::Now() - FTimespan::FromDays(7.0);
+	for (int32 I = 0; I < Rides.Num(); ++I)
+	{
+		const FRideEntry& Ride = Rides[I];
+		if (Ride.Started >= WeekAgo)
+		{
+			Week += Ride.Summary.Tss;
+			WeekKm += Ride.Summary.Metres / 1000.0;
+		}
+		if (I < 6)
+		{
+			Lines += FString::Printf(TEXT("%s   %.1f km in %s   %s   TSS %.0f\n"), *Ride.Started.ToString(TEXT("%d %b %H:%M")),
+			                         Ride.Summary.Metres / 1000.0, *Clock(Ride.Summary.Seconds),
+			                         *Watts(Ride.Summary.AverageWatts), Ride.Summary.Tss);
+		}
+	}
+	if (Rides.IsEmpty())
+	{
+		Lines = TEXT("None yet. Rides over 30 seconds are kept here.");
+	}
+	else
+	{
+		Lines += FString::Printf(TEXT("\nLast 7 days: %.0f km, training load %.0f TSS. %d rides in all."), WeekKm, Week,
+		                         Rides.Num());
+	}
+	HistoryText->SetText(FText::FromString(Lines));
+}
+
+void URideMenu::ShowSummary()
+{
+	const ARidePawn* Pawn = Rider();
+	if (!Pawn)
+	{
+		return;
+	}
+	const Veloverse::FSummary S = Pawn->Recorder.Summary(Pawn->Ftp);
+	const bool bEnd = Pawn->Track && !Pawn->Track->bClosed && Pawn->Distance >= Pawn->Track->Length();
+	SummaryTitle->SetText(FText::FromString(bEnd ? TEXT("Finished") : TEXT("Ride summary")));
+	SummaryRide->SetText(FText::FromString(FString::Printf(TEXT("%.1f km in %s · %.1f km/h · %.0f m climbed"),
+	                                                       S.Metres / 1000.0, *Clock(S.Seconds), S.AverageSpeed * 3.6,
+	                                                       S.Climbed)));
+	SummaryChart->SetRide(Pawn->Recorder.Samples(), Pawn->Ftp);
+	FString Power = FString::Printf(TEXT("Average %s · Normalized %s · Max %s\nIntensity %.2f · Training load %.0f TSS · %.0f kJ"),
+	                                *Watts(S.AverageWatts), *Watts(S.NormalizedWatts), *Watts(S.MaxWatts), S.Intensity,
+	                                S.Tss, S.Kilojoules);
+	Power += S.AverageCadence > 0.0 ? FString::Printf(TEXT("\nCadence %.0f rpm"), S.AverageCadence) : FString();
+	Power += S.AverageHeartRate > 0.0
+		? FString::Printf(TEXT(" · Heart rate %.0f bpm, max %.0f"), S.AverageHeartRate, S.MaxHeartRate)
+		: FString();
+	SummaryPower->SetText(FText::FromString(Power));
+	const TCHAR* Names[] = {TEXT("5 s"), TEXT("1 min"), TEXT("5 min"), TEXT("20 min"), TEXT("1 hr")};
+	FString Best = TEXT("Best efforts:");
+	for (int32 I = 0; I < UE_ARRAY_COUNT(Names); ++I)
+	{
+		Best += FString::Printf(TEXT("%s %s %s"), I ? TEXT(" ·") : TEXT(""), Names[I], *Watts(S.Best[I]));
+	}
+	SummaryBest->SetText(FText::FromString(Best));
+	SummarySaved->SetText(FText::FromString(
+		!Pawn->SavedRide.IsEmpty() ? FString::Printf(TEXT("Saved to your rides: %s"), *FPaths::GetCleanFilename(Pawn->SavedRide))
+		: S.Seconds < FRideRecorder::MinSeconds ? FString(TEXT("Under 30 seconds, so not kept."))
+												 : FString(TEXT("Not saved."))));
+}
+
 // ---- Showing ---------------------------------------------------------------------------------
 
 void URideMenu::Survey()
@@ -474,6 +643,7 @@ void URideMenu::Refresh()
 		PauseStats->SetText(FText::FromString(FString::Printf(TEXT("%.2f of %.1f km in %s, averaging %.1f km/h"), Km,
 		                                                      CourseKm, *Clock(Pawn->Elapsed), Average)));
 		ResumeButton->SetVisibility(Pawn->bFinished ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+		EndButton->SetVisibility(Pawn->bFinished ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 		FirstButton[static_cast<int32>(ERideMenuPage::Pause)] = Pawn->bFinished ? nullptr : ResumeButton.Get();
 	}
 	for (FCycler& Item : Cyclers)

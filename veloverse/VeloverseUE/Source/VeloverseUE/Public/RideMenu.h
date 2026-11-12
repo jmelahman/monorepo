@@ -1,4 +1,5 @@
-// The start screen, the pause menu and the video settings: one UMG widget built in code, so it
+// The start screen, the pause menu, the video settings, the rider's profile and history, and the
+// ride's summary: one UMG widget built in code, so it
 // needs no Blueprint asset, with a page for each. ARidePlayerController opens and closes it.
 #pragma once
 
@@ -13,6 +14,7 @@ class UTextBlock;
 class UVerticalBox;
 class UWidgetSwitcher;
 class URideTrack;
+class URideChart;
 
 // A button that runs a native function when clicked, so the menu needs no UFUNCTION per button.
 UCLASS()
@@ -34,6 +36,8 @@ enum class ERideMenuPage : uint8
 	Start,
 	Pause,
 	Video,
+	Profile, // FTP and weight, and the rides so far
+	Summary, // the ride just ended
 };
 
 UCLASS()
@@ -71,6 +75,14 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseTitle;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PauseStats;
 	UPROPERTY(Transient) TObjectPtr<URideButton> ResumeButton;
+	UPROPERTY(Transient) TObjectPtr<URideButton> EndButton;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryTitle;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryRide;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryPower;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryBest;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummarySaved;
+	UPROPERTY(Transient) TObjectPtr<URideChart> SummaryChart;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> HistoryText;
 	UPROPERTY(Transient) TArray<TObjectPtr<URideButton>> FirstButton; // focused when a page opens
 
 	ERideMenuPage Current = ERideMenuPage::Start;
@@ -89,6 +101,10 @@ private:
 	void BuildStart();
 	void BuildPause();
 	void BuildVideo();
+	void BuildProfile();
+	void BuildSummary();
+	void ShowHistory();
+	void ShowSummary();
 	void Refresh();
 	void Survey();
 	void Cycle(int32 Index, int32 Step);

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "RidePhysics.h"
+#include "RideRecord.h"
 #include "Trainer.h"
 #include "RidePawn.generated.h"
 
@@ -29,6 +30,7 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float Dt) override;
+	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UCameraComponent> Camera;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Rain;
@@ -76,6 +78,18 @@ public:
 	int32 Zone(float Watts) const;
 	float ZoneSeconds[7] = {};
 	FString TrainerName() const;
+
+	// The rider's FTP and weight, kept in Saved/Veloverse/profile.json. -RideFtp= overrides the FTP
+	// for one ride. SetProfile saves it and rides with it from now.
+	FRideProfile Profile;
+	void SetProfile(const FRideProfile& Changed);
+	// The ride so far, a sample a second, saved when it ends: at the finish, on "End ride", or when
+	// the level goes (back to the start, quit). Unattended rides aren't kept unless -RideRecord.
+	FRideRecorder Recorder;
+	// Ends the ride and saves it, once; returns the file, or "" when it wasn't kept.
+	FString EndRide();
+	FString SavedRide;
+	bool bRideSaved = false;
 	float TrackLength() const;
 
 	// Where power comes from: "keyboard", or "sim", a Bluetooth trainer played from the keys.
