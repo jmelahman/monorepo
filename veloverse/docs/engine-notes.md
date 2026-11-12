@@ -75,6 +75,14 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
 - **Far canopy:** "Grass canopy start/span/share" on MI_ClimbGround tints the Grass layer's
   ground toward the blades' colour past the cull.
 
+## Material graph gotchas
+
+- **HLSL writes constants with 8 decimals** (`%0.8f`). A tiny constant like 1/(700·4096) became
+  3.5e-7, 0.35% out. Divide by the big number instead of multiplying by its reciprocal.
+- **"Local" space is the primitive's, not the instance's,** for instanced meshes (landscape grass
+  included): TransformPosition Local→World of (0,0,0) is one point per grass component. Use
+  "Instance & Particle" space (`TRANSFORMPOSSOURCE_INSTANCE`) for a per-instance origin.
+
 ## Builds and the editor
 
 - `rebuild-ground --rebuild-grass` builds the 1M-triangle prop meshes one at a time (all at
