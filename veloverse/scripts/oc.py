@@ -496,8 +496,19 @@ def cmd_stop(ns):
     open(f"{DIR}/stop", "w").close()
     os.chmod(f"{DIR}/stop", 0o666)
     code = wait(submit("stop", {}), 60)
-    say("DONE: the editor and supervisor are stopping" if code == OK else "stop failed")
-    return code
+    if code != OK:
+        say("stop failed")
+        return code
+    # Wait for them to be gone: a ride or restart started while the editor is still quitting
+    # shares the GPU with it (7 fps rides) or finds a dead server (the 11 Nov bisect timed out).
+    deadline = time.time() + 180
+    while editor_pids() or supervisor_running():
+        if time.time() > deadline:
+            say("stop: the editor is still quitting after 180 s")
+            return TIMEOUT
+        time.sleep(2)
+    say("DONE: the editor and supervisor have stopped")
+    return OK
 
 
 def shots(ns):
