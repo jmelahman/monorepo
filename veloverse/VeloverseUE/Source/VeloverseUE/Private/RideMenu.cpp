@@ -731,18 +731,30 @@ void URideMenu::Survey()
 		Heights.Add(Track.Height(Length * (I + 0.5f) / 240.f) / 100.f);
 	}
 	TArray<FVector2f> Climbs;
-	FString Names;
+	FString Names; // the longest and the steepest
 	const double Metres = Length / 100.0;
+	int32 Longest = 0, Steepest = 0;
 	for (int32 I = 0; I < Pawn->Segments.Num(); ++I)
 	{
 		const Veloverse::FSegment& S = Pawn->Segments.Segment(I);
 		Climbs.Add(FVector2f(static_cast<float>(S.Start / Metres), static_cast<float>(S.End / Metres)));
-		Names += FString::Printf(TEXT("%s%s %.1f km at %.0f%%"), I ? TEXT(" · ") : TEXT(""), *Pawn->Segments.Name(I),
-		                         S.Length(Metres) / 1000.0, S.Grade(Metres) * 100.0);
+		Longest = S.Length(Metres) > Pawn->Segments.Segment(Longest).Length(Metres) ? I : Longest;
+		Steepest = S.Grade(Metres) > Pawn->Segments.Segment(Steepest).Grade(Metres) ? I : Steepest;
+	}
+	auto Describe = [&](int32 I)
+	{
+		const Veloverse::FSegment& S = Pawn->Segments.Segment(I);
+		return FString::Printf(TEXT("%s, %.1f km at %.0f%%"), *Pawn->Segments.Name(I), S.Length(Metres) / 1000.0,
+		                       S.Grade(Metres) * 100.0);
+	};
+	if (Pawn->Segments.Num() > 0)
+	{
+		Names = TEXT("longest ") + Describe(Longest);
+		Names += Steepest != Longest ? TEXT("; steepest ") + Describe(Steepest) : FString();
 	}
 	RoutePreview->SetRoute(MoveTemp(Heights), MoveTemp(Climbs), Pawn->StartMetres * 100.f / Length, Accent);
 	CourseClimbs->SetText(FText::FromString(
-		Pawn->Segments.Num() ? FString::Printf(TEXT("%d timed climbs: %s"), Pawn->Segments.Num(), *Names)
+		Pawn->Segments.Num() ? FString::Printf(TEXT("%d timed climbs, in orange: %s"), Pawn->Segments.Num(), *Names)
 							 : FString(TEXT("No timed climbs on this route."))));
 }
 
