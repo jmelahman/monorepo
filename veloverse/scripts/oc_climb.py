@@ -327,6 +327,14 @@ class Ground:
         self.far = g.saturate(g.mul(g.add(distance, -1500.0), 1 / 4500))
         self.height = g.mask(world, "b")
         self.macro = g.world_noise(0.0004, 0.82, 1.12, 4)
+        # Over a few hundred metres the ground drifts between drier, warmer and lusher, cooler
+        # ("macro hue" 0 turns it off without a rebuild), and darker and lighter, so a long
+        # view isn't one even colour.
+        drift = g.world_noise(0.000025, 0.0, 1.0, 3)
+        hue = g.lerp(g.const((1.07, 1.0, 0.86)), g.const((0.9, 1.0, 1.0)), drift)
+        hue = g.lerp(g.const((1.0, 1.0, 1.0)), hue, g.param("macro hue", 1.0))
+        shade = g.world_noise(0.00006, 0.88, 1.08, 3)
+        self.macro = g.mul(g.mul(self.macro, shade), hue)
         # Each layer's "patches" mix, 0 to 1, before the surfaces' heights break up its edge:
         # the layer's grass grows by it too (see build), so blades stand on the grass surface.
         self.patch = {}
