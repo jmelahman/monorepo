@@ -6,6 +6,7 @@ is done, failed, crashed, or a hard timeout passed, and says which, in the last 
     python3 scripts/oc.py look --tint Dirt=0.58,0.6,0.63 [--grey Dirt=0.8] [--shots road_50]
     python3 scripts/oc.py stills [--shots road_08,hairpin_above]
     python3 scripts/oc.py rebuild-ground [--no-stills] [--rebuild-grass]
+    python3 scripts/oc.py ride-track
     python3 scripts/oc.py wait JOB | log [N] | restart | stop
 
 It makes sure one supervised warm editor is up (oc_supervisor.sh runs oc_server.py in it; a second
@@ -459,6 +460,11 @@ def cmd_build_level(ns):
     return OK
 
 
+def cmd_ride_track(ns):
+    restart_clean(ns)  # the track is saved over: the level using it mustn't be open
+    return wait(submit("ride-track", {}), ns.timeout)
+
+
 def cmd_wait(ns):
     return wait(ns.job, ns.timeout)
 
@@ -563,6 +569,7 @@ def main(argv=None):
     s = add("build-level", cmd_build_level, help="rebuild L_Hero from world_gen/climb")
     s.set_defaults(timeout=1800.0)  # the ground stage imports the landscape: minutes
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
+    add("ride-track", cmd_ride_track, help="rewrite the level's DA_RideTrack only")
     s = add("probe", cmd_probe, help="run a read-only inspection script from out/qa")
     s.add_argument("path")
     s = add("fps", cmd_fps, help="frame times at each still's view (quality 0 Low .. 3 Epic)")

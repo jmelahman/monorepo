@@ -78,6 +78,8 @@ private:
 	float CourseKm = 0.f, ClimbMetres = 0.f;
 	TWeakObjectPtr<const URideTrack> Surveyed;
 	int32 RouteCycler = -1; // its choices are the rider's routes, filled in once they're read
+	int32 StartCycler = -1; // and these the route's stretches, refilled when the route changes
+	TWeakObjectPtr<const URideTrack> StartsOf;
 	float RefreshClock = 0.f;
 
 	ARidePlayerController* Controller() const;

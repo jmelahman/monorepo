@@ -1044,6 +1044,15 @@ def _ensure_level():
 # --- ops (run by oc_server.py; each a generator returning a result dict) -------------------------
 
 
+def op_ride_track():
+    """Rewrites the level's DA_RideTrack from its source (climb_world.track): the centreline,
+    stretches and where rides start, without opening the level or rebuilding anything else."""
+    yield
+    cw = _old_build()
+    cw.track()
+    return {"notes": [f"rewrote {cw.RIDE}/DA_RideTrack from {cw.SRC}"]}
+
+
 def op_ping():
     yield
     return {"notes": [f"map {_current_map()}"]}

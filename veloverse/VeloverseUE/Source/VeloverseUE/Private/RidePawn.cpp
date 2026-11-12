@@ -70,8 +70,9 @@ bool ARidePawn::Automated()
 	const TCHAR* Line = FCommandLine::Get();
 	float Unused;
 	FString Text;
-	return FParse::Value(Line, TEXT("RideStart="), Unused) || FParse::Value(Line, TEXT("RideWatts="), Unused) ||
-	       FParse::Value(Line, TEXT("RideShots="), Text) || FParse::Param(Line, TEXT("RideNoMenu"));
+	return FParse::Value(Line, TEXT("RideStart="), Unused) || FParse::Value(Line, TEXT("RideFrom="), Text) ||
+	       FParse::Value(Line, TEXT("RideWatts="), Unused) || FParse::Value(Line, TEXT("RideShots="), Text) ||
+	       FParse::Param(Line, TEXT("RideNoMenu"));
 }
 
 ARidePawn::ARidePawn()
@@ -143,6 +144,15 @@ void ARidePawn::BeginPlay()
 	}
 	ReadCommandLine();
 	bStarted = bStarted || Automated();
+	if (!bStartGiven)
+	{
+		// The start chosen before "Back to the start", if this route has it, else the track's own.
+		StartMetres = DefaultStart();
+		for (const FStart& Each : Starts())
+		{
+			StartMetres = FMath::IsNearlyEqual(Each.Metres, ChosenStart) ? ChosenStart : StartMetres;
+		}
+	}
 	Distance = StartMetres * 100.0;
 	FindWeather();
 	ApplyWeather();
@@ -163,6 +173,65 @@ int32 ARidePawn::Zone(float Watts) const
 }
 
 FString ARidePawn::ChosenRoute;
+float ARidePawn::ChosenStart = -1.f;
+
+TArray<ARidePawn::FStart> ARidePawn::Starts() const
+{
+	TArray<FStart> Out;
+	if (!Track)
+	{
+		return Out;
+	}
+	const TArray<FRideStretch>& Stretches = Track->Stretches;
+	if (Stretches.IsEmpty() || Stretches[0].Metres > 0.f)
+	{
+		Out.Add({TEXT("Start"), 0.f});
+	}
+	for (const FRideStretch& Stretch : Stretches)
+	{
+		if (Stretch.Metres * 100.f < Track->Length())
+		{
+			Out.Add({Stretch.Name, Stretch.Metres});
+		}
+	}
+	return Out;
+}
+
+int32 ARidePawn::StartIndex() const
+{
+	return Starts().IndexOfByPredicate([this](const FStart& Each)
+	                                   { return FMath::IsNearlyEqual(Each.Metres, StartMetres, 1.f); });
+}
+
+void ARidePawn::UseStart(int32 Index)
+{
+	const TArray<FStart> All = Starts();
+	if (bStarted || !All.IsValidIndex(Index))
+	{
+		return;
+	}
+	StartMetres = All[Index].Metres;
+	ChosenStart = StartMetres;
+	Distance = StartMetres * 100.0;
+	bHeadSet = false;
+	ApplyWeather();
+	Place();
+}
+
+float ARidePawn::DefaultStart() const
+{
+	if (Track && !Track->StartAt.IsEmpty())
+	{
+		for (const FRideStretch& Stretch : Track->Stretches)
+		{
+			if (Stretch.Name.Equals(Track->StartAt, ESearchCase::IgnoreCase))
+			{
+				return Stretch.Metres;
+			}
+		}
+	}
+	return 0.f;
+}
 
 void ARidePawn::UseRoute(int32 Index)
 {
@@ -172,6 +241,11 @@ void ARidePawn::UseRoute(int32 Index)
 	}
 	Track = Routes[Index];
 	ChosenRoute = Track->Title;
+	if (!bStartGiven)
+	{
+		StartMetres = DefaultStart();
+		ChosenStart = -1.f;
+	}
 	Distance = StartMetres * 100.0;
 	if (Track->RainShell)
 	{
@@ -209,7 +283,21 @@ void ARidePawn::Tick(float Dt)
 void ARidePawn::ReadCommandLine()
 {
 	const TCHAR* Line = FCommandLine::Get();
-	FParse::Value(Line, TEXT("RideStart="), StartMetres);
+	bStartGiven = FParse::Value(Line, TEXT("RideStart="), StartMetres);
+	FString From;
+	if (FParse::Value(Line, TEXT("RideFrom="), From))
+	{
+		for (const FStart& Each : Starts())
+		{
+			if (Each.Name.Equals(From, ESearchCase::IgnoreCase))
+			{
+				StartMetres = Each.Metres;
+				bStartGiven = true;
+				break;
+			}
+		}
+		UE_CLOG(!bStartGiven, LogTemp, Warning, TEXT("RIDE no stretch %s to start from"), *From);
+	}
 	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
 	bSway = FParse::Param(Line, TEXT("RideSway"));

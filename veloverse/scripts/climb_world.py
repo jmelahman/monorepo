@@ -760,13 +760,16 @@ def track():
         t.set_editor_property("title", ride["title"])
         t.set_editor_property("blurb", ride["blurb"])
         t.set_editor_property("weather", [])
-        runs = []
+        # info.json gives each stretch's length; the track wants where each starts.
+        runs, start = [], 0.0
         for name, metres in ride["stretches"]:
             run = unreal.RideStretch()
             run.set_editor_property("name", name)
-            run.set_editor_property("metres", float(metres))
+            run.set_editor_property("metres", start)
             runs.append(run)
+            start += float(metres)
         t.set_editor_property("stretches", runs)
+        t.set_editor_property("start_at", ride.get("start", ""))
     assets.save_loaded_asset(t, False)
     log(f"track: {len(centre)} m, {ride['title'] + ' loop' if ride else 'out and back'} in {RIDE}")
 

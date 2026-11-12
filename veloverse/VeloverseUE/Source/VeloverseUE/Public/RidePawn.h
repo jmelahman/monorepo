@@ -42,6 +42,21 @@ public:
 	UPROPERTY(EditAnywhere) float EyeHeight = 150.f; // cm above the road
 	UPROPERTY(EditAnywhere) float StartMetres = 0.f;
 
+	// Where a ride can start, for the start screen: the track's start, then each stretch's. The
+	// first is where it starts unless the rider picks another: the track's StartAt stretch, or its
+	// own start. -RideStart=METRES and -RideFrom=STRETCH choose too (the first of that name).
+	struct FStart
+	{
+		FString Name;
+		float Metres = 0.f;
+	};
+	TArray<FStart> Starts() const;
+	int32 StartIndex() const;
+	// Moves the rider to Starts()[Index]. Only before the ride starts.
+	void UseStart(int32 Index);
+	// cm ridden since the start, wherever it was.
+	double Ridden() const { return Distance - StartMetres * 100.0; }
+
 	// What the HUD shows.
 	// cm along the track, not wrapped: laps add up. Double: 25 km is 2.5 million cm, where a float
 	// resolves only a quarter of a centimetre against a physics substep's few.
@@ -67,20 +82,25 @@ public:
 	FString TrainerSource;
 	void UseTrainer(const FString& Source);
 
-	// An unattended ride, for tests and stills: any of -RideStart, -RideWatts, -RideShots or
+	// An unattended ride, for tests and stills: any of -RideStart, -RideFrom, -RideWatts, -RideShots or
 	// -RideNoMenu skips the start screen and the menus.
 	static bool Automated();
 
 private:
-	// The route picked on the start screen, for the reloaded level after "Back to the start".
+	// The route and start picked on the start screen, for the reloaded level after "Back to the
+	// start". ChosenStart is metres, negative for none.
 	static FString ChosenRoute;
+	static float ChosenStart;
+	bool bStartGiven = false; // -RideStart or -RideFrom on the command line
+	float DefaultStart() const;
 	TUniquePtr<ITrainer> Trainer;
 	// The keys always drive these legs: as the rider's power, or as a simulated trainer's rider.
 	FKeyboardTrainer Legs;
 	Veloverse::FRider Rider;
 	float WeatherClock = 0.f;
 
-	// Unattended rides for tests and stills, from the command line: -RideStart=METRES,
+	// Unattended rides for tests and stills, from the command line: -RideStart=METRES or
+	// -RideFrom=STRETCH,
 	// -RideWatts=W (held), -RideShots=SECONDS,SECONDS,... (screenshots with the HUD, into
 	// -RideShotDir=), then quit. -RideTrainer=keyboard|sim picks where power comes from, and is
 	// only the first choice on the start screen. A status line is logged every few seconds.

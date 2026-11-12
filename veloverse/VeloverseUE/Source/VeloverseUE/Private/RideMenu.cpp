@@ -257,6 +257,23 @@ void URideMenu::BuildStart()
 		});
 	RouteRow->SetVisibility(ESlateVisibility::Collapsed);
 	Add(P, RouteRow, 20.f);
+	StartCycler = Cyclers.Num();
+	Add(P,
+	    Cycler(
+		    TEXT("Start in"), {},
+		    [this]
+		    {
+			    const ARidePawn* Pawn = Rider();
+			    return Pawn ? Pawn->StartIndex() : -1;
+		    },
+		    [this](int32 I)
+		    {
+			    if (ARidePawn* Pawn = Rider())
+			    {
+				    Pawn->UseStart(I);
+			    }
+		    }),
+	    12.f);
 	Add(P,
 	    Cycler(
 		    TEXT("Power from"), {TEXT("Keyboard"), TEXT("Simulated trainer")},
@@ -433,6 +450,17 @@ void URideMenu::Refresh()
 			RouteRow->SetVisibility(Route.Choices.Num() > 1 ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 		}
 	}
+	if (Pawn && Cyclers.IsValidIndex(StartCycler) && StartsOf.Get() != Pawn->Track)
+	{
+		// "Coast · 5 km": a loop passes some places more than once.
+		StartsOf = Pawn->Track;
+		FCycler& Start = Cyclers[StartCycler];
+		Start.Choices.Reset();
+		for (const ARidePawn::FStart& Each : Pawn->Starts())
+		{
+			Start.Choices.Add(FString::Printf(TEXT("%s · %.0f km"), *Each.Name, Each.Metres / 1000.f));
+		}
+	}
 	if (Pawn)
 	{
 		const bool bSim = Pawn->TrainerSource == TEXT("sim");
@@ -441,7 +469,7 @@ void URideMenu::Refresh()
 		                "one will use. It takes the grade and sends back power, cadence and heart rate.")
 				 : TEXT("Hold W or Up to push harder, S or Down to ease off. Bluetooth trainers are next.")));
 		PauseTitle->SetText(FText::FromString(Pawn->bFinished ? TEXT("Finished") : TEXT("Paused")));
-		const float Km = static_cast<float>(Pawn->Distance / 100000.0);
+		const float Km = static_cast<float>(Pawn->Ridden() / 100000.0);
 		const float Average = Pawn->Elapsed > 0.f ? Km / (Pawn->Elapsed / 3600.f) : 0.f;
 		PauseStats->SetText(FText::FromString(FString::Printf(TEXT("%.2f of %.1f km in %s, averaging %.1f km/h"), Km,
 		                                                      CourseKm, *Clock(Pawn->Elapsed), Average)));

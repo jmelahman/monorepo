@@ -56,6 +56,9 @@ public:
 	UPROPERTY(EditAnywhere) TArray<FRideWeather> Weather;
 	// Stretches in order of Metres; empty in a track written before they were.
 	UPROPERTY(EditAnywhere) TArray<FRideStretch> Stretches;
+	// The stretch rides start in unless the rider picks another (the first of that name); empty,
+	// or a name no stretch has, starts at the track's own start.
+	UPROPERTY(EditAnywhere) FString StartAt;
 	// The rain shells carried round the camera; their material shows streaks only where it rains.
 	UPROPERTY(EditAnywhere) TObjectPtr<class UStaticMesh> RainShell;
 	// MPC_Ride, whose Rain and Wet the materials read: the shells' streaks and the wet ground.

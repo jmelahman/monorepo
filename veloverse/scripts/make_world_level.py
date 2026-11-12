@@ -450,6 +450,8 @@ def main():
             "blurb": "Once round the island: coast, desert, forest, mountain and meadow.",
             "closed": True,
             "stretches": runs,
+            # Rides start on the coast past the harbour, not in the town's bare ground.
+            "start": "Coast",
         },
         "views": views(line, runs),
     }
