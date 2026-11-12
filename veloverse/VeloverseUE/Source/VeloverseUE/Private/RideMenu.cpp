@@ -24,7 +24,7 @@
 namespace
 {
 // The HUD's orange.
-const FLinearColor Accent(1.f, 0.42f, 0.08f);
+FLinearColor Accent(1.f, 0.42f, 0.08f); // the profile's HUD colour, set as the menu builds
 const FLinearColor Faint(1.f, 1.f, 1.f, 0.6f);
 const TArray<FString> Levels = {TEXT("Low"), TEXT("Medium"), TEXT("High"), TEXT("Epic"), TEXT("Cinematic")};
 const TArray<float> Scales = {50.f, 67.f, 75.f, 85.f, 100.f};
@@ -263,6 +263,7 @@ void URideMenu::Build()
 	Panel->SetContent(Pages);
 	// In ERideMenuPage's order: the switcher's index is the page.
 	FirstButton.SetNum(5);
+	Accent = (Rider() ? Rider()->Profile : FRideProfile::Load()).Accent();
 	BuildStart();
 	BuildPause();
 	BuildVideo();
@@ -509,6 +510,36 @@ void URideMenu::BuildProfile()
 	Add(P, Cycler(TEXT("Your weight"), Range(40, 150, 1, TEXT("kg")), Weight.Key, Weight.Value), 6.f);
 	const auto Bike = Setting(&FRideProfile::BikeKg, 6, 20, 1);
 	Add(P, Cycler(TEXT("Bike"), Range(6, 20, 1, TEXT("kg")), Bike.Key, Bike.Value), 6.f);
+	// The level, and the HUD colours it has unlocked (the menus take a new one from the next ride).
+	ProfileLevel = Text(TEXT(""), 14, Faint);
+	Add(P, ProfileLevel, 20.f);
+	const FRideProfile Now = Rider() ? Rider()->Profile : FRideProfile::Load();
+	TArray<FString> Themes;
+	for (const Veloverse::FTheme& T : Veloverse::Themes())
+	{
+		if (Veloverse::IsUnlocked(T, Now.Xp))
+		{
+			Themes.Add(UTF8_TO_TCHAR(T.Name));
+		}
+	}
+	Add(P,
+	    Cycler(
+			TEXT("HUD colour"), Themes,
+			[this, Themes]
+			{
+				const ARidePawn* Pawn = Rider();
+				return Pawn ? FMath::Max(Themes.IndexOfByKey(Pawn->Profile.Theme), 0) : 0;
+			},
+			[this, Themes](int32 I)
+			{
+				if (ARidePawn* Pawn = Rider(); Pawn && Themes.IsValidIndex(I))
+				{
+					FRideProfile Changed = Pawn->Profile;
+					Changed.Theme = Themes[I];
+					Pawn->SetProfile(Changed);
+				}
+			}),
+	    6.f);
 	Add(P, Text(TEXT("Recent rides"), 20, FLinearColor::White, true), 24.f);
 	HistoryText = Text(TEXT(""), 14, Faint);
 	Add(P, HistoryText, 8.f);
@@ -533,6 +564,8 @@ void URideMenu::BuildSummary()
 	Add(P, SummaryPower, 14.f);
 	SummaryBest = Text(TEXT(""), 14, Faint);
 	Add(P, SummaryBest, 8.f);
+	SummaryXp = Text(TEXT(""), 14, FLinearColor::White);
+	Add(P, SummaryXp, 10.f);
 	SummarySaved = Text(TEXT(""), 12, Faint);
 	Add(P, SummarySaved, 10.f);
 	URideButton* Again = Button(TEXT("Back to the start"), [this] { Controller()->Restart(); }, true);
@@ -580,6 +613,14 @@ void URideMenu::ShowHistory()
 		                         Rides.Num());
 	}
 	HistoryText->SetText(FText::FromString(Lines));
+	if (const ARidePawn* Pawn = Rider())
+	{
+		const Veloverse::FLevel L = Veloverse::LevelFor(Pawn->Profile.Xp);
+		ProfileLevel->SetText(FText::FromString(
+			L.Needed > 0 ? FString::Printf(TEXT("Level %d · %d of %d XP to level %d · %lld XP in all"), L.Level, L.Into,
+			                               L.Needed, L.Level + 1, Pawn->Profile.Xp)
+						 : FString::Printf(TEXT("Level %d, the top · %lld XP in all"), L.Level, Pawn->Profile.Xp)));
+	}
 }
 
 void URideMenu::ShowSummary()
@@ -622,6 +663,26 @@ void URideMenu::ShowSummary()
 		                        *Watts(R.Effort.AverageWatts), *Place);
 	}
 	SummaryBest->SetText(FText::FromString(Best));
+	// What the ride earned, the level it leaves the rider at, and anything that unlocked.
+	FString Xp;
+	if (!Pawn->SavedRide.IsEmpty())
+	{
+		const Veloverse::FRideXp& E = Pawn->EarnedXp;
+		Xp = FString::Printf(TEXT("+%d XP: %d distance · %d climbing"), E.Total(), E.Distance, E.Climbing);
+		Xp += E.Segments ? FString::Printf(TEXT(" · %d segments"), E.Segments) : FString();
+		Xp += E.Workout ? FString::Printf(TEXT(" · %d workout"), E.Workout) : FString();
+		const Veloverse::FLevel Before = Veloverse::LevelFor(Pawn->XpBefore), After = Veloverse::LevelFor(Pawn->Profile.Xp);
+		Xp += After.Level > Before.Level ? FString::Printf(TEXT("\nLevel %d! "), After.Level)
+										 : FString::Printf(TEXT("\nLevel %d · "), After.Level);
+		Xp += After.Needed > 0 ? FString::Printf(TEXT("%d XP to level %d"), After.Needed - After.Into, After.Level + 1)
+							   : FString(TEXT("the top level"));
+		for (const Veloverse::FTheme& T : Veloverse::Unlocked(Pawn->XpBefore, Pawn->Profile.Xp))
+		{
+			Xp += FString::Printf(TEXT("\nUnlocked the %s HUD colour: choose it in Profile."), UTF8_TO_TCHAR(T.Name));
+		}
+	}
+	SummaryXp->SetText(FText::FromString(Xp));
+	SummaryXp->SetVisibility(Xp.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 	SummarySaved->SetText(FText::FromString(
 		!Pawn->SavedRide.IsEmpty()
 			? FString::Printf(TEXT("Saved to your rides. %s.fit is ready to upload to Strava (strava.com/upload) or Garmin Connect."),

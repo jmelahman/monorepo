@@ -13,6 +13,11 @@ struct FRideProfile
 	float Ftp = 250.f;     // W
 	float WeightKg = 80.f; // the rider
 	float BikeKg = 10.f;
+	int64 Xp = 0;                // points from every ride, toward levels (Progress.h)
+	FString Theme = TEXT("Ember"); // the HUD colour, one of the unlocked Progress.h themes
+
+	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
+	FLinearColor Accent() const;
 
 	static FRideProfile Load();
 	void Save() const;

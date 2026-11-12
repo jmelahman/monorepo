@@ -82,6 +82,8 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryPower;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryBest;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummarySaved;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> SummaryXp;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ProfileLevel;
 	UPROPERTY(Transient) TObjectPtr<URideChart> SummaryChart;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> HistoryText;
 	UPROPERTY(Transient) TArray<TObjectPtr<URideButton>> FirstButton; // focused when a page opens

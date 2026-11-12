@@ -1,6 +1,7 @@
 #include "RideRecord.h"
 
 #include "FitFile.h"
+#include "Progress.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -119,6 +120,11 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.BikeKg = FMath::Clamp(static_cast<float>(Value), 5.f, 30.f);
 		}
+		if (O->TryGetNumberField(TEXT("xp"), Value))
+		{
+			Profile.Xp = FMath::Max(static_cast<int64>(Value), int64{0});
+		}
+		O->TryGetStringField(TEXT("theme"), Profile.Theme);
 	}
 	return Profile;
 }
@@ -130,7 +136,22 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("ftp_w"), Ftp);
 	O->SetNumberField(TEXT("weight_kg"), WeightKg);
 	O->SetNumberField(TEXT("bike_kg"), BikeKg);
+	O->SetNumberField(TEXT("xp"), static_cast<double>(Xp));
+	O->SetStringField(TEXT("theme"), Theme);
 	WriteJson(ProfileFile(), O);
+}
+
+FLinearColor FRideProfile::Accent() const
+{
+	unsigned Rgb = Veloverse::Themes()[0].Rgb;
+	for (const Veloverse::FTheme& T : Veloverse::Themes())
+	{
+		if (Theme == UTF8_TO_TCHAR(T.Name) && Veloverse::IsUnlocked(T, Xp))
+		{
+			Rgb = T.Rgb;
+		}
+	}
+	return FLinearColor(FColor((Rgb >> 16) & 0xFF, (Rgb >> 8) & 0xFF, Rgb & 0xFF));
 }
 
 void FRideRecorder::Reset()

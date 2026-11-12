@@ -64,13 +64,13 @@ struct FTheme
 {
 	const char* Name;
 	int Level;
-	unsigned Rgb; // 0xRRGGBB
+	unsigned Rgb; // 0xRRGGBB, sRGB
 };
 
 inline const std::vector<FTheme>& Themes()
 {
 	static const std::vector<FTheme> All = {
-		{"Ember", 1, 0xFF6B14},  {"Surf", 3, 0x2EC4D6},  {"Moss", 5, 0x7BC043},  {"Lilac", 8, 0xB28DFF},
+		{"Ember", 1, 0xFFAD50},  {"Surf", 3, 0x2EC4D6},  {"Moss", 5, 0x7BC043},  {"Lilac", 8, 0xB28DFF},
 		{"Coral", 12, 0xFF6F7D}, {"Gold", 16, 0xF2C14E}, {"Ice", 20, 0xBFE6FF}, {"Night", 25, 0x5468FF},
 		{"Polka", 30, 0xE8262B}, {"Chalk", 40, 0xF4F1EA},
 	};

@@ -8,6 +8,7 @@
 #include "RidePhysics.h"
 #include "RideRecord.h"
 #include "Trainer.h"
+#include "Progress.h"
 #include "RideSegments.h"
 #include "Workout.h"
 #include "RidePawn.generated.h"
@@ -92,6 +93,9 @@ public:
 	FString EndRide();
 	FString SavedRide;
 	bool bRideSaved = false;
+	// What the kept ride earned toward the rider's level, and the XP before it.
+	Veloverse::FRideXp EarnedXp;
+	int64 XpBefore = 0;
 	float TrackLength() const;
 
 	// The route's climbs, timed against the rider's best; saved with the ride.

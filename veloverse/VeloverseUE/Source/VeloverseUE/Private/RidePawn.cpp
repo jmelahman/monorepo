@@ -308,6 +308,21 @@ FString ARidePawn::EndRide()
 		Used.Ftp = Ftp;
 		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used);
 		Segments.Save(FDateTime::Now().ToIso8601());
+		if (!SavedRide.IsEmpty())
+		{
+			const Veloverse::FSummary S = Recorder.Summary(Ftp);
+			int32 Prs = 0;
+			for (const FSegmentResult& R : Segments.Results())
+			{
+				Prs += R.Ranking.Rank == 1 && R.Ranking.PreviousBest ? 1 : 0;
+			}
+			EarnedXp = Veloverse::RideXp(S.Metres, S.Climbed, Segments.Results().Num(), Prs, Workout.Done());
+			XpBefore = Profile.Xp;
+			Profile.Xp += EarnedXp.Total();
+			Profile.Save();
+			UE_LOG(LogTemp, Display, TEXT("RIDE xp +%d, now %lld (level %d)"), EarnedXp.Total(), Profile.Xp,
+			       Veloverse::LevelFor(Profile.Xp).Level);
+		}
 		UE_LOG(LogTemp, Display, TEXT("RIDE saved %s (%d samples)"),
 		       SavedRide.IsEmpty() ? TEXT("nothing: too short") : *SavedRide, static_cast<int32>(Recorder.Samples().size()));
 	}
