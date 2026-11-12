@@ -948,6 +948,18 @@ def track():
 DRESSING = ("Road", "Rail", "Trees", "Props", "Sea")  # outliner folders the dress stage owns
 
 
+def drop_sky_dome():
+    """The OpenWorld template's SM_SkySphere: the level's SkyAtmosphere draws the sky, and the
+    dome, not covering the whole view, printed the engine's "skydome mesh" warning in rides."""
+    for actor in actors.get_all_level_actors():
+        if not isinstance(actor, unreal.StaticMeshActor):
+            continue
+        mesh = actor.static_mesh_component.get_editor_property("static_mesh")
+        if mesh is not None and mesh.get_name() == "SM_SkySphere":
+            actors.destroy_actor(actor)
+            log("dropped the template's sky sphere")
+
+
 def fresh_level(ground):
     if assets.does_asset_exist(LEVEL):
         assets.delete_asset(LEVEL)
@@ -957,6 +969,7 @@ def fresh_level(ground):
     for actor in actors.get_all_level_actors():
         if isinstance(actor, unreal.LandscapeProxy):
             actors.destroy_actor(actor)
+    drop_sky_dome()
     if not unreal.EditorLoadingAndSavingUtils.save_map(world, LEVEL):
         raise RuntimeError(f"could not save {LEVEL}")
     landscape(world, ground)
@@ -975,6 +988,7 @@ def undress():
         wp.load_actors([d.guid for d in wp.get_actor_descs()])
     else:
         unreal.log_warning("CLIMB no WorldPartitionBlueprintLibrary: unloaded dressing stays")
+    drop_sky_dome()  # levels built before the template's dome was dropped
     gone = 0
     for actor in actors.get_all_level_actors():
         folder = str(actor.get_folder_path())
