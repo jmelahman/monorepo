@@ -1,9 +1,14 @@
 # Veloverse: working notes for Claude
 
-Read `docs/climb-plan.md` first. It is the plan of record, and its "Where things stand" section
-says what was done last, what is open and what comes next. This file holds the rules and how
-things work, not a version log: put each version's changes and status in the plan, and
-update this file only when a rule or a mechanism changes.
+**What we're building now:** the hub world, `/Game/World/L_World`. Harbour Isle (coast and
+harbour town) sits in the middle, and four islands hang off it: Greenwood (forest), Vael
+(mountain), The Moor (heath) and Red Sands (desert). Read the section "The world now" in
+`docs/world-plan.md` first. It's the plan of record for the world. `docs/climb-plan.md` is the
+history of the alpine hero climb (L_Hero), where the vegetation rules below were worked out.
+
+This file holds the rules and how things work, not a version log. Record each version's changes
+and status in the plan and the storybook. Update this file only when a rule or a mechanism
+changes.
 
 ## THE PRIMARY GOAL (12 Nov, the user: "make sure it is abundantly clear")
 
@@ -18,12 +23,24 @@ hardware.** Every decision serves that, in that order:
    cut density, draw distance or quality to help Low or the 890M, and don't plan work around
    "30 fps on Low".
 
+- **How to judge performance.** Measure at Epic on a 4070-class GPU: a Runpod pod (quote the
+  price first) or a packaged build (`scripts/package_snapshot.sh`). Fps from the editor on this
+  laptop doesn't count; neither do the 890M numbers in the old docs. The laptop is for building
+  and stills only.
+- **Cheap wins that keep the look:** TSR at about 67% screen, haze, a far canopy tint on the
+  ground in place of far blades, Nanite and occlusion culling for trees and rocks, and ridges or
+  cuttings that hide cull edges (keep some vistas). Grass costs by radius, so hills don't make
+  it cheaper.
+
 Where anything below or in the docs says otherwise, this section wins.
 
-## The goal (the user's decisions)
+## The user's other decisions
 
 - **The goal:** an original cycling world (Zwift-like, not a copy) that looks **realistic**.
   "No stylized."
+- **The world (12 Nov):** "the Wattopia approach where each biome is a separate island", with
+  "the beach/coast island in the middle which allows for more varied routes". `ROUTES` in
+  `make_chain.py` lists the routes; any set of islands makes a loop with no road ridden twice.
 - **The look (10 Nov):** "vibrant yet realistic", like the modded Skyrim screenshots in
   `ref/climb/style_*.jpg`. That means rich green grass carpets with small flowers, warm brown dirt,
   big rounded boulders, red-brown pine trunks, deep shadows and moody skies with a snowy peak. Use
@@ -33,25 +50,14 @@ Where anything below or in the docs says otherwise, this section wins.
   the Folkvangr tundra grass shot (knee-high, dense, no ground showing, in daylight). The user
   on our grass: "very patch and thin and this has volume and looks real."
 - **Think big (10 Nov):** "If we need major changes to get the desired environment, I am for
-  it. I am not attached to anything at present." The agreed plan has three parts: daylight
-  (done, v32), grass made of real blades (done, v32), then placement by ecology with PCG.
-- **High end first (10 Nov):** "optimize for the high-end visual cases -- low graphics can
-  degrade the quality for the sake of frames."
-- **The first target:** one realistic mountain climb. Build a 1 km hero stretch first, then the
-  full climb, then other biomes.
-- **Performance:** superseded by THE PRIMARY GOAL above (30 fps at Epic on mid- to high-end
-  consumer hardware; Low and the 890M later). The history: the 890M at Low was the old target,
-  with **visuals first, perf later**: keep trees at full quality (2 km cull, shadows, wind).
-  Measured on 9 Nov at Low: about 16–19 fps with all trees and about 29 with none (v20 on
-  10 Nov: 20–23 with all trees). Shadows
-  off or a 300 m cull each give about 20–24 (`oc.py fps`). The v24 `fps --try` ablation: grass,
-  Lumen, reflections or 67% screen each gain only 1–2 fps, and VSM off halves it. The cost is the
-  trees' draw/CPU side, not pixels.
-- **Bike path:** the climb's road is a **bike-only path**, about 3 m of tarmac with no markings,
-  and a dark timber fence on the drop side.
-- **Trees:** the user wants trees across the whole slope, not just beside the road.
+  it. I am not attached to anything at present."
+- **Assets:** the user has another agent fetch assets from fab.com on request. Ask for what you
+  need, in priority order. Never buy on Fab yourself.
+- **Trees:** the user wants trees across whole slopes, not just beside the road.
 - **What the user values most:** fast iteration, real frames, and **no crashes**. Batch changes
   into one rebuild when you can.
+- **Discretion (12 Nov):** "Please use your discretion when executing these features. I trust
+  you."
 
 ## Vegetation: the approach (reset on 10 Nov, v30)
 
@@ -93,7 +99,8 @@ the grass is built. Work on the structure below, in this order, before touching 
 - Ask of each crop: can I see ground through the grass, and is it a different colour? Do single
   blades sparkle or go black? Is the cover even everywhere, or does it come in patches with
   bare ground between? Is anything neon?
-- A/B on `--shots road_50,bench` in that order (see "Stills don't repeat" below).
+- A/B on the same `--shots` in the same order: on L_World the `ride_NN_<island>` views, on L_Hero
+  `road_50,bench` (see "Stills don't repeat" below).
 
 **How the vegetation is built**
 
@@ -111,23 +118,52 @@ the grass is built. Work on the structure below, in this order, before touching 
   `look --blade-param NAME=F|R,G,B`. The heath uses MI_Heath: `--blade-param heath:NAME=...`.
 - **Daylight.** The sun is at pitch -50 with ev=-2.6, sky=1.5, temp=6500 and sky_warm=0. In
   full sun bright albedo bleaches to white: keep blade tips and ground tints dark.
-- **Treeline.** Above `TREELINE` in `make_climb.py` the forest opens into heath with stunted
+- **Treeline (the hero climb).** Above `TREELINE` in `make_climb.py` the forest opens into heath with stunted
   spruce.
 
-**Other biomes and the world**
+- **Roadside grass.** Landscape grass weights are per landscape vertex (7 m), so painting
+  alone can't stop blades at the tarmac. `make_world_level.py` writes `road_dist.png` (the offset
+  to the nearest road centre within 16 m), and the blade, plant and prop materials fold any
+  instance whose base is inside the road (plus a reach per kind) down to its root in the vertex
+  shader. So grass grows right to the road edge with no bare verge.
+- **Far canopy.** Past about 40 m the ground under the Grass layer tints toward the blades'
+  colour, with a mottle ("Grass canopy start", "span" and "share" on MI_ClimbGround), so the
+  carpet carries on past the grass cull.
 
-- `OC_BIOME=desert|coast|meadow|alpine` on `make_climb.py` picks the terrain shape and writes
-  the name into `world_gen/climb/info.json`; `oc_climb.py` reads it at load and lays
-  `scripts/biomes.py`'s `PRESETS[name]` over its tables. L_Hero holds one biome at a time.
-  Each biome's grass types are saved as `GT_<biome>_<layer>`.
-- The world plan is `scripts/make_world.py` (a 57 km map with rides per biome; not a level).
-  `OC_WINDOW=<window>` on `make_climb.py` (or `oc_biome.sh`) builds the stretch on a 2 km
-  window of it cut by `scripts/make_window.py`, at world heights, instead of the flank.
-- The whole world is one more level, `/Game/World/L_World` ("the golden ride"), written by
-  `scripts/make_world_level.py` to `world_gen/ride`. `OC_SRC`, `OC_LEVEL` and `OC_STILLS` on
-  every `oc.py` command point the pipeline at it; it shares the ground material with L_Hero.
-- Read `docs/world-plan.md` before working on a biome or the world: it has the chain, each
-  biome's status and the next steps.
+**The hub world: how it's built**
+
+All in `scripts/`, run with `uv run -q --no-project --with numpy --with scipy --with pillow
+python -I`. Never run a generator as a "check", and only while the editor isn't importing.
+
+1. `make_chain.py` → `/workspace/ue/world_gen/hub`: the islands' heights, the roads and
+   `ROUTES`.
+2. `make_world_level.py` (with the hub as its source) → `/workspace/ue/world_gen/ride_hub`: a
+   4065² landscape at 7 m (origin at minus half the size), the layer weights, the trees, the
+   road pieces, `road_dist.png`, and `info.json` with the routes and the still `views`
+   (`ride_NN_<island>`, plus `above`).
+3. `make_features.py` → `ride_hub/features.json`: the rocks, cliffs and wind turbines.
+
+Then build it in the editor with the env pointing every `oc.py` command at the hub:
+
+```
+export OC_SRC=/workspace/ue/world_gen/ride_hub OC_LEVEL=/Game/World/L_World \
+       OC_STILLS=/workspace/ue/out/hub_stills_vNN
+set -o pipefail; cd /workspace/ue
+scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 2400 \
+  && scripts/oc.py restart && scripts/oc.py build-level --timeout 10800
+```
+
+- `build-level` on L_World takes about 30 minutes and ends with a still per view. A bare
+  `oc.py restart` without the env goes back to L_Hero.
+- `biomes.PRESETS["world"]` holds the world's surfaces and grass rows. L_World shares
+  `M_ClimbGround` and the grass types in `/Game/Climb` with L_Hero, so a ground rebuild for one
+  changes the other.
+- Ride it: `OC_MAP=/Game/World/L_World scripts/play.sh` (on screen) or
+  `OC_MAP=/Game/World/L_World scripts/ride_test.sh WATTS SHOTS START_M` (offscreen, with
+  screenshots). A release: `scripts/package_snapshot.sh` (safe while the editor builds).
+- The old single-biome tools (`make_climb.py`, `OC_BIOME`, `oc_biome.sh`, `make_world.py`,
+  the 57 km ring in `world_gen/ride`) still work on L_Hero and the old ring, but they aren't the
+  current world. `docs/world-plan.md` has their history.
 
 ## The loop: `scripts/oc.py` (run from /workspace/ue)
 
@@ -138,19 +174,18 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
 | Command | What it does | Time |
 | --- | --- | --- |
 | `oc.py look --tint Dirt=r,g,b --grey Rock=0.75 --grass DENSITY CULL --fog DENSITY [FALLOFF] --shots a,b` | Parameters only, then stills. `--shots` takes a comma list. | 16 s for one still, ~95 s for six |
-| `oc.py stills` | Stills from the editor viewport into `out/climb_stills/` | about 1 min |
-| `oc.py build-level` | Rebuilds L_Hero from `world_gen/climb`: the ground stage, then the dress stage, each on a fresh editor | about 5 min |
+| `oc.py stills` | Stills from the editor viewport into `OC_STILLS` | about 1 min |
+| `oc.py build-level` | Rebuilds `OC_LEVEL` from `OC_SRC`: the ground stage, then the dress stage, each on a fresh editor | about 30 min for L_World |
 | `oc.py rebuild-ground` | Rebuilds the ground material on the empty map | about 1 min |
 | `oc.py static-trees` | Bakes static Nanite copies of the PVE trees, with their leaf assembly parts (capped at 2500 tris each), into `/Game/Climb/Trees/SM_*` | about 10 min |
 | `oc.py reimport-plants` | Re-imports the plants' D textures from `fab_prep` in place, after `OC_FORCE=1 OC_ONLY=<slugs> prep_megascans.py` | about 2 min |
-| `oc.py fps --quality 0..3 --frames N --shots a,b [--tree-cull M] [--tree-shadows 0/1] [--tree-wpo 0/1] [--try LABEL=CVAR V;CVAR V]...` | Measures frame times at each still's view; tree options apply for that run only. Each `--try` is also measured alone at every view (cvar ablation in one session) | about 30 s, plus ~10 s per try per view |
+| `oc.py fps --quality 0..3 --frames N --shots a,b [--try LABEL=CVAR V;CVAR V]...` | Frame times at each still's view, in the editor. On this laptop it only compares A against B; it isn't the performance verdict (see THE PRIMARY GOAL) | about 30 s, plus ~10 s per try per view |
 | `oc.py probe PATH` | Runs a read-only script with `unreal`, `log`, `lib` and `notes` in scope (API discovery; keep scripts in `out/qa`) | seconds |
+| `oc.py ride-track` / `road-look` | Rewrites only the level's ride tracks, or only the road materials | minutes |
 | `oc.py restart` / `stop` / `status` / `log` / `wait JOB` | `wait JOB` prints a failed job's traceback (the log loses it after a restart) | |
 
 - **Reload:** `oc_server.py` does not reload `oc_climb.py`. Run `oc.py restart` after you edit it.
-- **The generator:** `uv run -q --no-project --with numpy --with scipy --with pillow python -I
-  scripts/make_climb.py`. It takes 20 s and writes `world_gen/climb`. Run it only while the editor
-  is not importing, and never run a generator as a "check".
+- **The generators:** see "The hub world: how it's built" above.
 - **Current look:**
   - Tints and greys live in `oc_climb.LOOK_TINTS` / `LOOK_GREYS` and are applied by every
     ground build; `look --tint/--grey` is only for trying values.
@@ -170,7 +205,7 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     clouds drift with the editor clock and the sky light captures them live: the standard look
     passes `--post cloud_wind=0` to freeze them.
   - Every look re-applies LOOK_TINTS/GREYS, PLANT_LOOK and PROP_LOOK first, so false colour
-    (`--tint`, `--prop-param`) lasts only for that look. `look` takes only `bench` unless you pass `--shots`.
+    (`--tint`, `--prop-param`) lasts only for that look. Always pass `--shots` to `look`, so you know which views it takes.
   - More post keys: aerial (SkyAtmosphere aerial scale), cloud_bottom (km), fog_inscatter, bloom,
     flare, sun_pitch, sun_yaw. They persist in the level: put a test value back explicitly
     (sun_pitch=-50 sun_yaw=43.7, bloom=0.675, aerial=1, cloud_bottom=5).
@@ -182,8 +217,9 @@ to 4. It starts its own supervised editor (`oc_supervisor.sh` → `oc_server.py`
     fog_start=150 volumetric=0 contact=0.05 clouds=-0.2 (the default coverage) cloud_wind=0.
     Until v31 the look was a low sun: ev=-4.5 sky=1.8 temp=6700 sky_warm=0.35 sun_pitch=-16.3. sky=1.8 (v21) lifts the dark spruce more evenly than exposure did. Keep exposure locked: auto exposure undoes every
     albedo change (the sun is 6 lux, which is about EV -5).
-- **Rebuilds:** a change to the GRASS table needs `rebuild-ground --rebuild-grass`. It builds the
-  1M-tri prop meshes one at a time first (all at once crashed Vulkan); give it `--timeout 2400`.
+- **Rebuilds:** a change to the GRASS table or to a blade, plant or prop material needs
+  `rebuild-ground --rebuild-grass`. It builds the 1M-tri prop meshes one at a time first (all at
+  once crashed Vulkan); give it `--timeout 2400`.
 
 ## Iterate fast (the user's standing ask)
 
@@ -192,9 +228,9 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Batch.** Gather every queued fix (ground, grass, ferns, terrain, road) into one rebuild
   rather than one rebuild per fix. Lint and commit once, then launch one chain.
 - **Use the cheapest command that tests the change.** `look` takes seconds, `rebuild-ground`
-  about 1 min (4 min with `--rebuild-grass`), and `build-level` about 5 min. Try values with
+  about 1 min (4 min with `--rebuild-grass`), and `build-level` about 30 min on L_World. Try values with
   `look` before baking them into code. Rebuild grass only when GRASS changes.
-- **One background chain.** Run `restart → make_climb → rebuild-ground → build-level → look` as
+- **One background chain.** Run the generators, then `restart → rebuild-ground → restart → build-level`, as
   one `&&` command so it finishes with one notification. Don't poll it. Start it with
   `set -o pipefail`: with `| tail -1` after each step, a failed rebuild-ground once let the
   chain go on and shoot the old grass (10 Nov). Join any step that reads the stills with `&&`
@@ -220,11 +256,13 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   `LOOK_TINTS` or `LOOK_GREYS`.
 - **Restart between looks.** A second `look` on the same editor hit a radv GPUVM fault
   (DEVICE_LOST) on 9 Nov; put `oc.py restart` before each look in a chain.
-- **Keep grass density in budget.** GRASS densities are per mesh variant (fern's six variants at
-  2.0 draw 12 per 100 m^2), and `look --grass` multiplies them again. Instances go as density
-  times cull squared: v18's Forest table (about 250 drawn per 100 m^2) is safe, while v13's
-  extra ferns hit the GPUVM fault on the first look. For more cover, see the vegetation rules
-  above: neither denser nor bigger fixed it (v19–v29).
+- **Grass density and the laptop.** Too many grass instances crash *this laptop's editor*
+  (a radv GPUVM fault, DEVICE_LOST). That's a limit on building here, not a visual budget and not
+  the performance target. GRASS densities are per mesh variant (fern's six variants at 2.0 draw
+  12 per 100 m^2), `look --grass` multiplies them again, and instances go as density times cull
+  squared. v18's Forest table (about 250 drawn per 100 m^2) was safe; v13's extra ferns crashed.
+  When you need more cover than that, raise it in steps, or judge it on a pod. And density alone
+  never fixed thin grass (v19–v29): follow the vegetation rules.
 - **Diagnose before you rebuild.** Use a `probe` or a `look` to confirm a cause first (for
   example, streaming versus the material), so a rebuild isn't spent on a guess.
 
@@ -232,7 +270,7 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 
 - **Ground material:** never rebuild it while a landscape that uses M_ClimbGround is loaded
   (the GPU resets).
-- **L_Hero:** never reload it while it is open (segfault). `build-level` restarts before each
+- **Levels:** never reload L_Hero or L_World while it is open (segfault). `build-level` restarts before each
   stage.
 - **Skeletal PVE trees:** they overflow the GPU skinning buffer. Static trees are still to do:
   try GeometryScript skeletal→static, or Blender on Runpod (quote the price first).
@@ -244,12 +282,18 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 ## Standing constraints
 
 - **Git:**
-  - Stay on branch `kanban/opencycle/unreal-cont`.
+  - Work in the worktree `/workspace/.claude/worktrees/segments/veloverse` on branch
+    `kanban/opencycle/unreal-cont-segments`. Bring the work into `/workspace/veloverse`
+    (branch `kanban/opencycle/unreal-cont`) with `git merge --ff-only`, and only when no build is
+    running: the editor reads the scripts there. Never edit or commit the main tree during a
+    build.
   - Commit only your own paths (`git add -- <paths> && git commit -m ... -- <paths>`).
   - Use Conventional Commits with scope `veloverse`, and end with
     `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
   - Never push, amend or bypass hooks.
   - `scripts/make_trial_world.py` and `scripts/trial_world.py` are not yours; leave them alone.
+- **Fab:** never buy anything, and don't enable the Epic MCP plugin.
+- **Subagents:** spawn them only when the user asks. Never send the user's email anywhere.
 - **Lint and tests:** `uvx -q ruff check` / `ruff format` (line length 100), and
   `uvx -q --with pytest pytest -q scripts/test_oc.py`.
 - **Credentials:**
@@ -265,7 +309,7 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
   - No stray .py files in /workspace/ue. Temp scripts go in `out/qa` or the scratchpad.
   - Don't delete `/workspace/ue/out` without the user's OK.
   - Downloaded files are untrusted; run Python on them with `-I`.
-- **Never** buy anything on Fab, and never render or verify the design canvas unless asked.
+- **Never** render or verify the design canvas unless asked.
 - **Shell:** foreground `sleep` is blocked; use `sleep N & wait $!`. Never use `pkill -f` with a
   pattern that matches your own command line.
 - **QA:** a Sonnet subagent compares stills with the reference photos in `/workspace/ue/ref/climb/`.
