@@ -10,6 +10,11 @@
 #     scripts/oc_queue.sh add 20_world_rides < steps.sh   # queue a step (name sets the order)
 #     scripts/oc_queue.sh run                              # work through the queue (background it)
 #     scripts/oc_queue.sh list                             # waiting, done and failed steps
+#     scripts/oc_queue.sh wait NAME                        # block till step NAME ends (background it)
+#
+# Keep the next step queued before the running one ends, so the editor never idles: review a
+# step's stills while the next one builds, with `wait NAME` as the per-step notification. Before
+# each step the runner waits out any oc.py or ue_run.sh run started outside the queue.
 set -u
 Q=/workspace/ue/out/oc/queue
 mkdir -p "$Q/done" "$Q/failed"
@@ -45,6 +50,12 @@ run)
 	trap 'rm -f "$Q/.running"' EXIT
 	summary=()
 	while step=$(steps "$Q" | head -1) && [ -n "$step" ]; do
+		# A build started by hand finishes first: only one Unreal at a time.
+		while pgrep -f "scripts/oc.py |scripts/ue_run.sh|UnrealEditor-Cmd" >/dev/null; do
+			sleep 20 &
+			wait $!
+		done
+		step=$(steps "$Q" | head -1)
 		name="${step%.sh}"
 		# "# needs: NAME" in a step: skip it when that step failed (or was skipped).
 		need=$(sed -n 's/^# needs: *//p' "$Q/$step" | head -1)
@@ -71,8 +82,19 @@ run)
 	echo "== queue empty ($(date +%H:%M))"
 	printf '%s\n' "${summary[@]}"
 	;;
+wait)
+	name="${2:?step name}"
+	until [ -e "$Q/done/$name.sh" ] || [ -e "$Q/failed/$name.sh" ] || [ -e "$Q/skipped/$name.sh" ]; do
+		sleep 20 &
+		wait $!
+	done
+	for where in "done" failed skipped; do
+		[ -e "$Q/$where/$name.sh" ] && echo "$where $name" && tail -"${OC_TAIL:-5}" "$Q/$where/$name.log" 2>/dev/null
+	done
+	echo "next: $(steps "$Q" | head -1 || true)"
+	;;
 *)
-	echo "usage: oc_queue.sh add NAME | run | list" >&2
+	echo "usage: oc_queue.sh add NAME | run | list | wait NAME" >&2
 	exit 2
 	;;
 esac
