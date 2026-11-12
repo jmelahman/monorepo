@@ -598,7 +598,7 @@ def _road_look(kind):
         clear = json.load(f)["road_half"] + ROAD_REACH[kind]
     debug = {"Road debug": 0.0, "Road debug sample": 0.0, "Road debug uv": 0.0}
     debug |= {"Road debug uv scale": 8.0}
-    clear = {"Road clear": clear, "Road base vertex": 0.0, "Road base object": 0.0}
+    clear = {"Road clear": clear}
     return {**clear, **debug} if kind == "blade" else clear
 
 
@@ -611,23 +611,21 @@ def _road_fold(g, kind, offset=None):
     with open(f"{SRC}/info.json") as f:
         info = json.load(f)
     spacing, half = info["spacing"], (info["size"] - 1) / 2
+    # The instance's origin. "Local" space is the primitive's here, not the instance's (the
+    # engine's own TODO: inconsistent with instancing), so every blade of a grass component read
+    # one texel (12 Nov).
     base = g.node(
         unreal.MaterialExpressionTransformPosition,
-        transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL,
+        transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE,
         transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
     )
     g.link(g.const((0.0, 0.0, 0.0)), base)
-    # Trial bases while the fold is diagnosed (12 Nov: the transform above read the map's centre
-    # on every blade): "Road base vertex" uses each vertex's own world position, "Road base
-    # object" the primitive's.
-    vertex = g.node(unreal.MaterialExpressionWorldPosition)
-    base = g.lerp(base, vertex, g.param("Road base vertex", 0.0))
-    base = g.lerp(
-        base, g.node(unreal.MaterialExpressionObjectPositionWS), g.param("Road base object", 0.0)
-    )
     texel = (half + 0.5) / ROAD_DIST_SIZE
     shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
-    uv = g.add(g.mul(g.mask(base, "rg"), 1.0 / (spacing * ROAD_DIST_SIZE)), shift)
+    # Divide, not multiply by the reciprocal: HLSL constants are written with 8 decimals, so
+    # 1 / (700 * 4096) became 3.5e-7, 0.35% out, which moved the road 17 m at x = 4.7 km.
+    size = g.const(float(spacing * ROAD_DIST_SIZE))
+    uv = g.add(g.op(unreal.MaterialExpressionDivide, g.mask(base, "rg"), size), shift)
     sample = g.sample(tex, uv, "linear")
     sample.set_editor_property(
         "sampler_source", unreal.SamplerSourceMode.SSM_CLAMP_WORLD_GROUP_SETTINGS
