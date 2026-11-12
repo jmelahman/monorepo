@@ -13,9 +13,10 @@ storybook, the plan in `docs/world-plan.md`, and the detail in `docs/engine-note
   virtual shadow maps, PCG, Megascans-grade assets), so a bad result means the approach needs
   to change, not the ambition. Make big structural changes when the look needs them.
 - **Don't hold back for performance.** Build the world at full quality first. Performance is
-  tuned later, and it doesn't limit density, draw distance, lighting or assets today. This
-  laptop's editor has crash limits (see the crash rules), and those are about building here, not
-  a budget for the world.
+  tuned later, and it doesn't limit density, draw distance, lighting or assets today.
+- **This machine is yours alone** (moved here on 12 Nov to avoid the old laptop's crashes).
+  Don't let the old crash limits hold you back: try the bigger build, and fall back only if it
+  actually fails here.
 - **It's original.** Take mood, colour and quality bar from references; never copy a game's
   places, characters or art.
 
@@ -137,14 +138,16 @@ How it's built:
   prop materials fold any instance whose base is within "Road clear" of it down to its root.
 - **Far canopy:** past about 40 m the Grass layer's ground tints and mottles toward the blades'
   colour ("Grass canopy start/span/share" on `MI_ClimbGround`).
-- **The laptop's grass limit:** too many grass instances crash *this laptop's editor* (a radv
-  GPUVM fault). That limits building here, not the visual budget. Raise density in steps, or
-  judge it on a pod.
+- **Grass limit:** too many grass instances crashed the old laptop's editor (a radv GPUVM
+  fault). Re-test it on this machine before treating it as a limit; it was never a visual
+  budget.
 
 ## Crash rules (enforced in code; don't work around them)
 
-- **One Unreal at a time** across all sessions: check `pgrep -a UnrealEditor` first. Never
-  kill an editor, except your own confirmed-hung run.
+These came from the old laptop. Keep the ones that protect data; re-test the size limits here.
+
+- **One Unreal at a time:** check `pgrep -a UnrealEditor` first. Never kill an editor, except
+  your own confirmed-hung run.
 - Never rebuild the ground material while a landscape that uses it is loaded; the GPU resets.
 - Never reload an open level (L_World or L_Hero); it segfaults.
 - Do heavy work across frames with generators, and take stills from the editor viewport.
