@@ -611,14 +611,16 @@ def road_material():
 
 # The path's compacted earth, a little greyed so it sits on sand, turf and granite alike.
 PATH_TINT = (0.86, 0.82, 0.76)
-# Its edge, m from the middle, where the ground shows through raggedly: the mesh is the
-# asphalt's 1.75 m, the path about 2.4 m across.
+# Its edge, m from the middle: the mesh's own (make_world_level.PATH_HALF), about 2.4 m across.
 PATH_HALF = 1.2
+# Its loose edge: the gravel, darker.
+PATH_EDGE = (0.62, 0.58, 0.52)
 
 
 def path_material():
     """The remote country's path: compacted dirt with patches of gravel, worn smoother in the
-    middle, its edges cut ragged (masked) so the verge shows through instead of a hard line."""
+    middle, its edges loose and darker. Opaque: a masked Nanite material's rasteriser shader
+    overflows the shader compiler's stack on this machine (the v0.1.1 world build crash)."""
     g = lib.Graph("M_ClimbPath", f"{FOLDER}/Road")
     d, n, m = (island.ms_texture("shared", "dirt_road", k) for k in ("D", "N", "M"))
     gd, gn = (island.ms_texture("shared", "gravel_on_soil", k) for k in ("D", "N"))
@@ -645,12 +647,15 @@ def path_material():
     colour = g.lerp(colour, g.mul(colour, 0.86), g.mul(worn, 0.8))
     colour = g.mul(colour, g.param("tint", PATH_TINT))
     rough = g.lerp(g.const(0.95), g.const(0.88), worn)
-    ragged = g.add(g.world_noise(0.02, -0.3, 0.3, 2), g.world_noise(0.15, -0.12, 0.12, 2))
-    edge = g.saturate(
-        g.mul(g.add(g.add(g.mul(across, -1.0), g.param("path half", PATH_HALF)), ragged), 4.0)
-    )
-    g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"), opacity_mask=edge)
-    g.material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+    # The last 20-50 cm, raggedly: loose gravel, darker, rougher, so the edge isn't a clean line.
+    ragged = g.add(g.world_noise(0.02, -0.15, 0.15, 2), g.world_noise(0.15, -0.08, 0.08, 2))
+    inside = g.add(g.param("path half", PATH_HALF), g.mul(across, -1.0))
+    edge = g.saturate(g.mul(g.add(g.add(inside, ragged), -0.35), -4.0))
+    loose = g.mul(g.mask(g.sample(gd, guv), "rgb"), g.const(PATH_EDGE))
+    colour = g.lerp(colour, loose, g.mul(edge, 0.8))
+    normal = g.lerp(normal, g.mask(g.sample(gn, guv, "normal"), "rgb"), edge)
+    rough = g.lerp(rough, g.const(1.0), edge)
+    g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 

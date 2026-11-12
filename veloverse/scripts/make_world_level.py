@@ -34,6 +34,9 @@ import road_mesh
 # A two-lane bike path, 3.5 m across (11 Nov: the island's 6.4 m read as a road for cars). Set
 # before anything reads it: carve, clear_road, the verge and the trees all keep clear of it.
 mi.ROAD_HALF = 1.75
+# The remote country's dirt path, m from the middle: narrower than the asphalt, its pieces cut to
+# it (an opaque edge; a masked one crashes the shader compiler on Nanite).
+PATH_HALF = 1.2
 
 PLAN = "/workspace/ue/world_gen/world"
 OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/ride")
@@ -491,7 +494,8 @@ def main():
         # Each run of a surface on its own, a point past its end so the pieces meet; the last
         # wraps to the ring's first point.
         run = [centre[k % len(centre)] for k in range(a, b + 1)]
-        for piece in road_mesh.road_pieces(run, mi.ROAD_HALF * 100, False, PIECE):
+        half = (PATH_HALF if surface == "path" else mi.ROAD_HALF) * 100
+        for piece in road_mesh.road_pieces(run, half, False, PIECE):
             piece.write(f"{OUT}/road_{surface}_{count[surface]:03d}.gltf")
             count[surface] += 1
     print(f"road pieces {count}", flush=True)
