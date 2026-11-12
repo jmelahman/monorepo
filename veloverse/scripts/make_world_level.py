@@ -56,11 +56,9 @@ OUT = os.environ.get("OC_RIDE_OUT", "/workspace/ue/world_gen/" + ("ride_hub" if 
 RES = int(os.environ.get("OC_RES", "4065"))
 EXTENT = CHAIN["extent_m"] if CHAIN else mw.EXTENT
 SPACING = EXTENT / (RES - 1)  # 7 m for the chain, 14 for the island
-# The ground flat beside the road, and the bare verge (Dirt: no grass) on it. At 14 m a sample
-# the climb's 3 m shoulder and 0.9 m verge fall between samples, so the bank rose over the road
-# and the Grass layer's blades grew through it (11 Nov). Both take at least a sample's width.
+# The ground flat beside the road. At 14 m a sample the climb's 3 m shoulder fell between
+# samples, so the bank rose over the road (11 Nov): it takes at least a sample's width.
 FLAT = max(mi.SHOULDER, SPACING * 1.1)
-VERGE = max(0.9, SPACING)
 # The island's layers and Verge, the bare sand beside the road in the desert and on the beaches:
 # a layer of its own because Desert and Sand grow plants (paint_band).
 LAYERS = {**mi.LAYERS, "Verge": (215, 180, 130)}
@@ -353,6 +351,49 @@ def clear_road(h, line, below=0.1, rounds=8):
     print(f"road cleared: ground at most {over.max():.2f} m over the tarmac", flush=True)
 
 
+# The road distance map (road_dist.png, read by oc_climb._road_hide): each sample's offset to the
+# nearest road centre within DIST_NEAR m, which the plants' vertex shader reads at each plant's
+# base to drop any plant standing on the tarmac. The grass map has a sample (7 m) per texel, so
+# the paint alone can't stop grass at the road's edge: a verge wide enough to keep blades off the
+# tarmac left 14..21 m of bare turf beside the road (12 Nov stills). Offsets, not distances,
+# because they interpolate linearly across the road, so the bilinear sample is right to a few cm.
+# They are stored premultiplied by a near flag (B), so a sample past DIST_NEAR doesn't drag its
+# near neighbours' offsets: (R, G) = (flag * offset / DIST_NEAR + 1) / 2.
+DIST_NEAR = 16.0
+DIST_SIZE = 4096  # the texture, RES padded to a power of two; the padding is far
+
+
+def road_distance(lines):
+    """Writes OUT/road_dist.png from every route's centre line."""
+    pts = []
+    for line, _bridge in lines.values():
+        p = line[:, :2]
+        seg = np.roll(p, -1, axis=0) - p
+        pts += [p + seg * t for t in (0.0, 0.25, 0.5, 0.75)]  # 0.25 m apart
+    tree = cKDTree(np.vstack(pts))
+    out = np.zeros((DIST_SIZE, DIST_SIZE, 3), np.uint8)
+    out[..., :2] = 128
+    cols = coords(np.arange(RES))
+    near = 0
+    for r0 in range(0, RES, BAND):
+        r1 = min(r0 + BAND, RES)
+        y, x = np.meshgrid(coords(np.arange(r0, r1)), cols, indexing="ij")
+        here = np.column_stack([x.ravel(), y.ravel()]).astype(np.float64)
+        dist, idx = tree.query(here, distance_upper_bound=DIST_NEAR, workers=-1)
+        hit = np.isfinite(dist)
+        v = np.zeros_like(here)
+        v[hit] = tree.data[idx[hit]] - here[hit]
+        enc = np.clip(np.round((v / DIST_NEAR + 1) / 2 * 255), 0, 255).astype(np.uint8)
+        enc[~hit] = 128
+        block = out[r0:r1, :RES]
+        block[..., 0] = enc[:, 0].reshape(x.shape)
+        block[..., 1] = enc[:, 1].reshape(x.shape)
+        block[..., 2] = np.where(hit, 255, 0).reshape(x.shape)
+        near += int(hit.sum())
+    Image.fromarray(out, "RGB").save(f"{OUT}/road_dist.png")
+    print(f"road distance: {near} samples within {DIST_NEAR:.0f} m", flush=True)
+
+
 def paint_band(x, y, h, slope, d, w, inland):
     """Each layer's weight, 0..1, for one band."""
     n = lambda s, seed, octaves=3: mi.fbm(x, y, s, octaves, SEED + seed)  # noqa: E731
@@ -370,14 +411,11 @@ def paint_band(x, y, h, slope, d, w, inland):
     beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(150, 60, inland)
     beach = np.maximum(beach, h < 0.5)
     desert = w["desert"]
-    # The verge reaches a whole sample past the road, as any sample nearer feeds the road's grass
-    # (11 Nov: at 85% Dirt the Grass layer's last 15% still grew tufts through the tarmac). In
-    # the green stretches it is Dirt, turf with no blades (biomes "world"); in the desert and on
-    # the beaches it is Verge, bare sand: Desert and Sand grow shrubs, cacti, boulders and marram,
-    # and with the narrow verge they kept, those stood on the tarmac.
-    verge = np.maximum(shoulder, mi.smoothstep(mi.ROAD_HALF + VERGE * 1.6, mi.ROAD_HALF + VERGE, d))
+    # The verge is only the road's own shoulder: the plants' shaders drop whatever stands on the
+    # tarmac (road_distance). Until 12 Nov it reached a whole sample past the road, to keep the
+    # blades off the tarmac, and left 14..21 m of bare turf beside it. Dirt in the green
+    # stretches, Verge (bare sand) in the desert and on the beaches.
     dry = np.clip(beach + desert, 0, 1)
-    shoulder = verge
     # Woods: the forest's and the mountain's below the treeline, copses in the meadows, with
     # clearings; open grass in the meadows, the town, the heath and above the trees.
     alpine = mi.smoothstep(TREELINE - 30, TREELINE + 15, h + 40 * (n(90, 3) - 0.5))
@@ -676,6 +714,7 @@ def main():
         dist = d if dist is None else np.minimum(dist, d)
     for key in cover:
         clear_road(h, lines[key][0])
+    road_distance(lines)
     stems, small = paint_and_trees(plan, h, dist)
     del dist
     q = np.clip(np.round(32768 + h * 100 * 128 / mi.Z_SCALE), 0, 65535).astype("<u2")

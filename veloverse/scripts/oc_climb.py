@@ -176,6 +176,10 @@ STEEP = {
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
+# The colour a layer's grass reads as from past its blades' cull (Ground.layer), faded in from
+# "<layer> canopy start" cm over "<layer> canopy span": about M_Blade's root and tip colours,
+# averaged as a far meadow shows them. Try values with `look --ground-param`.
+CANOPY = {"Grass": (0.085, 0.16, 0.03)}
 # Grass per layer: (biome, slug, instances per 100 m^2, cull start, cull end in cm[, (min, max)
 # scale, 0.6 to 1.4 if left out]). The density is per mesh: a scan with six variants draws six
 # times it (fern at 2.0 was 12 per 100 m^2), and `look --grass` multiplies it again. Scans whose
@@ -325,6 +329,7 @@ class Ground:
         g.link(camera, distance, "B")
         # 0 within 15 m, 1 past 60 m.
         self.far = g.saturate(g.mul(g.add(distance, -1500.0), 1 / 4500))
+        self.distance = distance
         self.height = g.mask(world, "b")
         self.macro = g.world_noise(0.0004, 0.82, 1.12, 4)
         # Over a few hundred metres the ground drifts between drier, warmer and lusher, cooler
@@ -424,6 +429,20 @@ class Ground:
                 g.const((1.0, 1.0, 1.0)), g.param(f"{name} steep", STEEP[name]), self.steep
             )
             base["colour"] = g.mul(base["colour"], shade)
+        if name in CANOPY:
+            # Past the blades' cull the layer takes the blades' own colour, mottled over a few
+            # metres as a meadow is, so the far ground reads as grass and not as paint.
+            mottle = g.world_noise(1.0 / 300, 0.7, 1.25, 2)
+            canopy = g.mul(g.mask(g.param(f"{name} canopy", CANOPY[name]), "rgb"), mottle)
+            start = g.param(f"{name} canopy start", 4000.0)
+            fade = g.op(
+                unreal.MaterialExpressionDivide,
+                g.op(unreal.MaterialExpressionSubtract, self.distance, start),
+                g.param(f"{name} canopy span", 3000.0),
+            )
+            fade = g.mul(g.saturate(fade), g.param(f"{name} canopy share", 1.0))
+            base["colour"] = g.lerp(base["colour"], canopy, fade)
+            base["rough"] = g.lerp(base["rough"], g.const(0.95), fade)
         return base
 
     def build(self, grass_types):
@@ -539,6 +558,92 @@ def _master_texture(g, param, kind, default):
     return node
 
 
+# The world's road distance map (make_world_level.road_distance): a plant whose base is within
+# "Road clear" m of a road's centre is folded into its base in the vertex shader, so the grass
+# grows to the tarmac's edge and never through it. The grass map has a sample (7 m) a texel, so
+# the paint alone left 14..21 m of bare verge (12 Nov). Only for a build whose source has the
+# map; elsewhere nothing is hidden. "Road clear" is the road's half width plus the plant's reach.
+ROAD_DIST = f"{SRC}/road_dist.png"
+ROAD_DIST_NEAR, ROAD_DIST_SIZE = 16.0, 4096  # m, texels: as make_world_level.py writes it
+ROAD_REACH = {"blade": 0.35, "plant": 0.6, "prop": 1.5}
+
+
+def _road_texture():
+    """The source's road distance map, imported afresh (None without one): linear 8-bit RGB, no
+    mips and never streamed, as the vertex shader reads its top mip."""
+    if not os.path.exists(ROAD_DIST):
+        return None
+    folder = f"{FOLDER}/Road"
+    tex = unreal.load_asset(f"{folder}/road_dist")
+    if tex is None or not getattr(unreal, "_oc_road_dist", False):
+        tex = next(a for a in lib.import_file(ROAD_DIST, folder) if isinstance(a, unreal.Texture))
+        tex.set_editor_property(
+            "compression_settings", unreal.TextureCompressionSettings.TC_VECTOR_DISPLACEMENTMAP
+        )
+        tex.set_editor_property("srgb", False)
+        tex.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+        tex.set_editor_property("never_stream", True)
+        tex.set_editor_property("filter", unreal.TextureFilter.TF_BILINEAR)
+        assets.save_loaded_asset(tex, False)
+        unreal._oc_road_dist = True  # once per editor session: each master reads the same one
+    return tex
+
+
+def _road_fold(g, kind, offset=None):
+    """The world position offset for `kind`'s master ("blade", "plant" or "prop"): `offset` (or
+    none), turned into a fold to the plant's base where its base is on a road."""
+    tex = _road_texture()
+    if tex is None:
+        return offset
+    with open(f"{SRC}/info.json") as f:
+        info = json.load(f)
+    spacing, half = info["spacing"], (info["size"] - 1) / 2
+    base = g.node(
+        unreal.MaterialExpressionTransformPosition,
+        transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL,
+        transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
+    )
+    g.link(g.const((0.0, 0.0, 0.0)), base, "Input")
+    texel = (half + 0.5) / ROAD_DIST_SIZE
+    shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
+    uv = g.add(g.mul(g.mask(base, "rg"), 1.0 / (spacing * ROAD_DIST_SIZE)), shift)
+    sample = g.sample(tex, uv, "linear")
+    sample.set_editor_property(
+        "sampler_source", unreal.SamplerSourceMode.SSM_CLAMP_WORLD_GROUP_SETTINGS
+    )
+    sample.set_editor_property("mip_value_mode", unreal.TextureMipValueMode.TMVM_MIP_LEVEL)
+    sample.set_editor_property("const_mip_value", 0)
+    near = g.mask(sample, "b")
+    pre = g.add(g.mul(g.mask(sample, "rg"), 2.0), -1.0)
+    v = g.op(
+        unreal.MaterialExpressionDivide,
+        pre,
+        g.op(unreal.MaterialExpressionMax, near, g.const(0.02)),
+    )
+    length = g.link(
+        g.op(unreal.MaterialExpressionDotProduct, v, v),
+        g.node(unreal.MaterialExpressionSquareRoot),
+    )
+    # Past the map's reach (B 0) a plant is far from any road.
+    far = g.mul(
+        g.link(g.saturate(g.mul(near, 4.0)), g.node(unreal.MaterialExpressionOneMinus)), 100.0
+    )
+    metres = g.add(g.mul(length, ROAD_DIST_NEAR), far)
+    clear = g.param("Road clear", info["road_half"] + ROAD_REACH[kind])
+    hide = g.saturate(g.mul(g.add(clear, g.mul(metres, -1.0)), 4.0))
+    fold = g.op(
+        unreal.MaterialExpressionSubtract, base, g.node(unreal.MaterialExpressionWorldPosition)
+    )
+    return g.mul(fold, hide) if offset is None else g.lerp(offset, fold, hide)
+
+
+def _wire_wpo(name, offset):
+    if offset is not None and not lib.edit.connect_material_property(
+        offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET
+    ):
+        raise RuntimeError(f"{name}: could not wire the world position offset")
+
+
 def _prop_master():
     """M_MS_Prop rebuilt in place, as megascans.py builds it plus a moss cap: faces turned up
     are blended toward "Moss" (times the scan's own brightness, so it keeps the stone's grain),
@@ -563,6 +668,7 @@ def _prop_master():
     rough = g.saturate(g.mul(g.mask(m, "g"), g.param("Roughness", 1.0)))
     rough = g.lerp(rough, g.const(1.0), moss)
     g.output(colour, g.mask(n, "rgb"), rough, ao=g.mask(m, "r"))
+    _wire_wpo(name, _road_fold(g, "prop"))
     material = g.material
     material.set_editor_property("used_with_instanced_static_meshes", True)
     material.set_editor_property("used_with_nanite", True)
@@ -621,6 +727,7 @@ def _plant_master():
         subsurface=g.mul(sss, root),
         ao=g.mul(g.mask(m, "r"), root),
     )
+    _wire_wpo(name, _road_fold(g, "plant"))
     material = g.material
     material.set_editor_property("tangent_space_normal", False)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
@@ -795,10 +902,7 @@ def _blade_master():
     push = g.add(g.add(g.mul(gust, 0.6), g.mul(flutter, 0.4)), 0.4)
     sway = g.mul(g.mul(push, g.mul(rise, rise)), g.param("Wind", 5.0))
     offset = g.mul(g.const((0.8, 0.6, -0.12)), sway)
-    if not lib.edit.connect_material_property(
-        offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET
-    ):
-        raise RuntimeError("M_Blade: could not wire the wind")
+    _wire_wpo("M_Blade", _road_fold(g, "blade", offset))
     material = g.material
     material.set_editor_property("tangent_space_normal", False)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_OPAQUE)
