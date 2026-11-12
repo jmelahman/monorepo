@@ -21,11 +21,9 @@ twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
 
 ## Open problems (from the latest stills)
 
-- **Grass on the tarmac** at `ride_05_the coast`, even though the road fold clears the other
-  views. Check the road map and the fold there first.
-- **The Moor:** blades stand on the sandy path, and the path reads too bright.
+- **The Moor:** the path reads too bright.
 - **Greenwood:** no grass or plants under the trees, though the Forest layer is painted there.
-- **The coast:** a lime strip along both road edges; the far fields are flat texture with no
+- **The coast:** a lime strip along both road edges (the ground paint, not blades); the far fields are flat texture with no
   blades.
 - **The quay:** the sand reads as cracked mud.
 - **Vael:** the slopes wash out in the sun.
