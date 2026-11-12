@@ -597,7 +597,9 @@ def _road_look(kind):
     with open(f"{SRC}/info.json") as f:
         clear = json.load(f)["road_half"] + ROAD_REACH[kind]
     debug = {"Road debug": 0.0, "Road debug sample": 0.0, "Road debug uv": 0.0}
-    return {"Road clear": clear, **debug} if kind == "blade" else {"Road clear": clear}
+    debug |= {"Road debug uv scale": 8.0}
+    clear = {"Road clear": clear, "Road base vertex": 0.0, "Road base object": 0.0}
+    return {**clear, **debug} if kind == "blade" else clear
 
 
 def _road_fold(g, kind, offset=None):
@@ -615,6 +617,14 @@ def _road_fold(g, kind, offset=None):
         transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
     )
     g.link(g.const((0.0, 0.0, 0.0)), base)
+    # Trial bases while the fold is diagnosed (12 Nov: the transform above read the map's centre
+    # on every blade): "Road base vertex" uses each vertex's own world position, "Road base
+    # object" the primitive's.
+    vertex = g.node(unreal.MaterialExpressionWorldPosition)
+    base = g.lerp(base, vertex, g.param("Road base vertex", 0.0))
+    base = g.lerp(
+        base, g.node(unreal.MaterialExpressionObjectPositionWS), g.param("Road base object", 0.0)
+    )
     texel = (half + 0.5) / ROAD_DIST_SIZE
     shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
     uv = g.add(g.mul(g.mask(base, "rg"), 1.0 / (spacing * ROAD_DIST_SIZE)), shift)
@@ -926,7 +936,8 @@ def _blade_master():
         # "Road debug sample" shows the map's texel as read; "Road debug uv" the UV, banded every
         # 1/8 of the map (red u, green v).
         colour = g.lerp(colour, g.mask(g.road_sample, "rgb"), g.param("Road debug sample", 0.0))
-        tiles = g.link(g.mul(g.road_uv, 8.0), g.node(unreal.MaterialExpressionFrac))
+        scale = g.param("Road debug uv scale", 8.0)
+        tiles = g.link(g.mul(g.road_uv, scale), g.node(unreal.MaterialExpressionFrac))
         uv_colour = g.op(unreal.MaterialExpressionAppendVector, tiles, g.const(0.0))
         colour = g.lerp(colour, uv_colour, g.param("Road debug uv", 0.0))
     g.output(
