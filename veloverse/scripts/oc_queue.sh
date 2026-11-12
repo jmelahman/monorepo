@@ -4,7 +4,7 @@
 # on) that sets its own level env and calls oc.py, ride_test.sh, package.sh and so on; add steps
 # while it runs (`oc_queue.sh add NAME <<'EOF' ... EOF`). A finished step moves to queue/done, a
 # failed one to queue/failed, each with its log beside it; a failure doesn't stop the steps after it,
-# so put steps that depend on each other in one file. Exits when the queue is empty, printing a
+# unless a later step says "# needs: NAME" (it's then skipped). Exits when the queue is empty, printing a
 # summary of what ran.
 #
 #     scripts/oc_queue.sh add 20_world_rides < steps.sh   # queue a step (name sets the order)
@@ -46,6 +46,15 @@ run)
 	summary=()
 	while step=$(steps "$Q" | head -1) && [ -n "$step" ]; do
 		name="${step%.sh}"
+		# "# needs: NAME" in a step: skip it when that step failed (or was skipped).
+		need=$(sed -n 's/^# needs: *//p' "$Q/$step" | head -1)
+		if [ -n "$need" ] && [ ! -e "$Q/done/$need.sh" ]; then
+			mkdir -p "$Q/skipped"
+			mv "$Q/$step" "$Q/skipped/$step"
+			summary+=("skipped $name: $need didn't finish")
+			echo "${summary[-1]}"
+			continue
+		fi
 		mv "$Q/$step" "$Q/$name.active"
 		start=$(date +%s)
 		echo "== $name ($(date +%H:%M))"

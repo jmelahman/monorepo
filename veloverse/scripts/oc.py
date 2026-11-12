@@ -147,7 +147,7 @@ def supervisor_running():
 # The level a run works on. The supervisor keeps the environment it was started with, so these
 # reach the editor through a file it sources before each start: set them on the command that
 # restarts (`OC_SRC=... oc.py restart`), and a restart without them goes back to the hero.
-LEVEL_ENV = ("OC_SRC", "OC_LEVEL", "OC_STILLS")
+LEVEL_ENV = ("OC_SRC", "OC_LEVEL", "OC_STILLS", "OC_PATH")
 
 
 def write_level_env():
