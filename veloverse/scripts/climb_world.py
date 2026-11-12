@@ -343,7 +343,11 @@ def roads(material, path=None):
         nanite.set_editor_property("enabled", True)
         mesh.set_editor_property("nanite_settings", nanite)
         assets.save_loaded_asset(mesh, False)
-        lib.mesh_actor(mesh, label=name[:-5], folder="Road", materials={0: surface})
+        actor = lib.mesh_actor(mesh, label=name[:-5], folder="Road", materials={0: surface})
+        if path is not None:
+            # The world's road stands on an earth bank (road_mesh.section): cast, the low sun
+            # laid the tarmac's shadow down the bank's far side as a dark stripe.
+            actor.static_mesh_component.set_editor_property("cast_shadow", False)
         count += 1
     log(f"roads: {count} pieces")
 
@@ -735,6 +739,9 @@ def path_material():
     worn = g.saturate(g.mul(g.add(g.add(across, wander), -0.55), -2.5))
     colour = g.lerp(colour, g.mul(colour, 0.86), g.mul(worn, 0.8))
     colour = g.mul(colour, g.param("tint", PATH_TINT))
+    # A dirt path is the country's own earth: part of its colour is the ground's here, from the
+    # world's ground RVT, so it's grey on the heath and tan in the desert, not one bright sand.
+    colour = g.lerp(colour, g.mul(_rvt_colour(g), 0.82), g.param("ground share", 0.45))
     rough = g.lerp(g.const(0.95), g.const(0.88), worn)
     # The last 20-50 cm, raggedly: loose gravel, darker, rougher, so the edge isn't a clean line.
     ragged = g.add(g.world_noise(0.02, -0.15, 0.15, 2), g.world_noise(0.15, -0.08, 0.08, 2))
