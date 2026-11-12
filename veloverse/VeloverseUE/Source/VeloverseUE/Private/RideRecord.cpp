@@ -5,6 +5,9 @@
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
+#include "HAL/PlatformMisc.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -107,13 +110,22 @@ FString FRideProfile::Folder()
 {
 	static const FString Path = []
 	{
+#if PLATFORM_LINUX
+		// UserSettingsDir is ~/.config/Epic on Linux, so go by the XDG rule ourselves.
+		FString Config = FPlatformMisc::GetEnvironmentVariable(TEXT("XDG_CONFIG_HOME"));
+		if (Config.IsEmpty()) Config = FPaths::Combine(FPlatformProcess::UserHomeDir(), TEXT(".config"));
+		const FString Mine = FPaths::Combine(Config, TEXT("Veloverse"));
+#else
 		const FString Mine = FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("Veloverse"));
+#endif
 		const FString Old = FPaths::ProjectSavedDir() / TEXT("Veloverse");
 		IFileManager& Files = IFileManager::Get();
 		if (!Files.DirectoryExists(*Mine) && Files.DirectoryExists(*Old))
 		{
 			Files.MakeDirectory(*FPaths::GetPath(Mine), true);
-			if (!Files.Move(*Mine, *Old))
+			// A rename fails across filesystems; a copy doesn't, and the old folder stays as a backup.
+			if (!Files.Move(*Mine, *Old, true, true, false, true)
+				&& !FPlatformFileManager::Get().GetPlatformFile().CopyDirectoryTree(*Mine, *Old, false))
 			{
 				UE_LOG(LogTemp, Warning, TEXT("RIDE couldn't move %s to %s"), *Old, *Mine);
 				return Old;
