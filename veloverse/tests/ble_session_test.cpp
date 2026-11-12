@@ -78,6 +78,27 @@ int main()
 	Reading = Session.Read(Now + 10.0);
 	Check(Reading.Watts == 0.0 && Reading.PowerSource.empty(), "silence reads as no power", Reading.Watts);
 
+	// ERG: a workout's target reaches the trainer and holds whatever the grade; small moves aren't resent.
+	Session.SetTargetPower(250.0);
+	for (int I = 0; I < 8; ++I) Step(0.08, 0.25);
+	Check(Bike.TargetWatts && *Bike.TargetWatts == 250.0, "ERG: the trainer holds the target",
+	      Bike.TargetWatts.value_or(-1));
+	int Erg = Writes;
+	Session.SetTargetPower(250.4);
+	for (int I = 0; I < 12; ++I) Step(0.02 + I * 0.01, 0.25);
+	Check(Writes == Erg, "ERG: grade changes and sub-watt moves send nothing", Writes - Erg);
+	Session.SetTargetPower(320.0);
+	for (int I = 0; I < 4; ++I) Step(0.02, 0.25);
+	Check(Bike.TargetWatts && *Bike.TargetWatts == 320.0, "ERG: a new step's target within a second",
+	      Bike.TargetWatts.value_or(-1));
+	Erg = Writes;
+	for (int I = 0; I < 24; ++I) Step(0.02, 0.25);
+	Check(Writes - Erg == 1, "ERG: the target is resent every few seconds", Writes - Erg);
+	// Ending the workout hands the trainer back to the road.
+	Session.SetTargetPower(std::nullopt);
+	for (int I = 0; I < 8; ++I) Step(0.035, 0.25);
+	Check(!Bike.TargetWatts && std::abs(Bike.Grade - 0.035) < 1e-9, "ERG off: the grade again", Bike.Grade * 100);
+
 	// A trainer that refuses control is left alone.
 	FSession Locked;
 	Locked.SetTrainer(true);

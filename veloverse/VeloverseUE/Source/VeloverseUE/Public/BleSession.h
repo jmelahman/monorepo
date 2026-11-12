@@ -29,6 +29,7 @@ public:
 	double MinInterval = 1.0;
 	double Resend = 5.0; // and again this often, in case a write was lost
 	double ReplyTimeout = 2.0; // a write with no reply by then is given up on
+	double PowerStep = 1.0;    // ERG: a target that moves less than this many watts isn't resent
 
 	// A notification from any device, by characteristic UUID, received at Now (seconds).
 	void Notify(uint16_t Characteristic, const Bytes& Value, double Now)
@@ -81,6 +82,19 @@ public:
 		if (!HasTrainer || Waiting || State == EState::Refused) return std::nullopt;
 		if (State == EState::Idle) return Send(Command::RequestControl(), Now);
 		if (State == EState::Controlled) return Send(Command::Start(), Now);
+		if (Target)
+		{
+			// ERG: the trainer holds the power whatever the grade or cadence.
+			const bool Changed = !SentTarget || std::abs(*Target - *SentTarget) >= PowerStep;
+			if ((Changed && Now - SentAt >= MinInterval) || Now - SentAt >= Resend)
+			{
+				SentTarget = Target;
+				SentGrade = 1e9; // the grade goes again when ERG ends
+				return Send(Command::TargetPower(*Target), Now);
+			}
+			return std::nullopt;
+		}
+		SentTarget.reset();
 		const bool Moved = std::abs(Grade - SentGrade) >= GradeStep && Now - SentAt >= MinInterval;
 		if (Moved || Now - SentAt >= Resend)
 		{
@@ -90,12 +104,18 @@ public:
 		return std::nullopt;
 	}
 
+	// ERG mode: a power for the trainer to hold, as a workout asks; nullopt to ride the road again.
+	void SetTargetPower(std::optional<double> Watts) { Target = Watts ? std::optional(std::max(*Watts, 0.0)) : std::nullopt; }
+	std::optional<double> TargetPower() const { return Target; }
+
 	// Whether a controllable trainer is connected; until then Tick writes nothing.
 	void SetTrainer(bool Connected)
 	{
 		HasTrainer = Connected;
 		State = EState::Idle;
 		Waiting = false;
+		SentGrade = 1e9;
+		SentTarget.reset();
 	}
 
 	FReading Read(double Now) const
@@ -151,5 +171,6 @@ private:
 	EState State = EState::Idle;
 	double SentGrade = 1e9;
 	double SentAt = -1e9;
+	std::optional<double> Target, SentTarget;
 };
 } // namespace Veloverse::Ble
