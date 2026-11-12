@@ -589,6 +589,16 @@ def _road_texture():
     return tex
 
 
+def _road_look(kind):
+    """The road parameters' built values for `kind`, which every look sets again first, so a
+    trial "Road clear" or "Road debug" lasts one look ({} without a road map)."""
+    if not os.path.exists(ROAD_DIST):
+        return {}
+    with open(f"{SRC}/info.json") as f:
+        clear = json.load(f)["road_half"] + ROAD_REACH[kind]
+    return {"Road clear": clear, "Road debug": 0.0} if kind == "blade" else {"Road clear": clear}
+
+
 def _road_fold(g, kind, offset=None):
     """The world position offset for `kind`'s master ("blade", "plant" or "prop"): `offset` (or
     none), turned into a fold to the plant's base where its base is on a road."""
@@ -836,7 +846,7 @@ def _blade_instances(material=None, params=None):
                 trial[key[6:]] = value
             elif not key.startswith("heath:") and prefix == "blade":
                 trial[key] = value
-        _set_params(mi, {**BLADE_LOOK, **look, **trial})
+        _set_params(mi, {**_road_look("blade"), **BLADE_LOOK, **look, **trial})
         out[prefix] = mi
     return out
 
@@ -2058,7 +2068,7 @@ def op_look(
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
     compiles. PLANT_LOOK and PROP_LOOK are applied too, so a false-colour look is undone by the
     next look, and trying a prop's tint needs only a restart."""
-    _plant_params(PLANT_LOOK)
+    _plant_params({**_road_look("plant"), **PLANT_LOOK})
     _plant_params(PLANT_SLUG_LOOK)
     _prop_params(PROP_LOOK)
     _blade_instances(params=blade_params)
