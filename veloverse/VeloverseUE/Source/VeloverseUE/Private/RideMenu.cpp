@@ -610,6 +610,17 @@ void URideMenu::ShowSummary()
 	{
 		Best += FString::Printf(TEXT("%s %s %s"), I ? TEXT(" ·") : TEXT(""), Names[I], *Watts(S.Best[I]));
 	}
+	// This ride's segments: each one's time, and a PR or its place among past rides.
+	for (const FSegmentResult& R : Pawn->Segments.Results())
+	{
+		const int32 Sec = FMath::RoundToInt32(R.Effort.Seconds);
+		FString Place = R.Ranking.Rank == 1 && R.Ranking.PreviousBest
+			? FString::Printf(TEXT("PR, %.0f s faster"), *R.Ranking.PreviousBest - R.Effort.Seconds)
+			: R.Ranking.Of == 1 ? FString(TEXT("first time"))
+								: FString::Printf(TEXT("%d of %d"), R.Ranking.Rank, R.Ranking.Of);
+		Best += FString::Printf(TEXT("\n%s  %d:%02d at %s, %s"), *R.Name, Sec / 60, Sec % 60,
+		                        *Watts(R.Effort.AverageWatts), *Place);
+	}
 	SummaryBest->SetText(FText::FromString(Best));
 	SummarySaved->SetText(FText::FromString(
 		!Pawn->SavedRide.IsEmpty()

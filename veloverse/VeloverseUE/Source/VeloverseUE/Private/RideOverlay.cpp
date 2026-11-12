@@ -744,5 +744,75 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			X += Widths[I] + 28.f;
 		}
 	}
+
+	// ---- Under the ride: the segment -------------------------------------------------------------
+	// A climb coming up, the effort on it against the best (the ghost), or for a while after the top,
+	// how it went.
+	{
+		const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
+		const FSlateFontInfo Name = P.Font("Bold", 16.f);
+		const FSlateFontInfo Soft = P.Font("Medium", 13.f);
+		const FLinearColor Ahead = Hex(0x3CCB7F), Behind = Hex(0xF0503C), Gold = Hex(0xF7D046);
+		const float Wide = 420.f, Tall = 50.f, X = (W - Wide) * 0.5f, Y = 82.f;
+		const TArray<FSegmentResult>& Results = Pawn->Segments.Results();
+		const FSegmentResult* Recent =
+			Results.Num() && Pawn->Elapsed - Results.Last().FinishedAt < 10.0 ? &Results.Last() : nullptr;
+		const TOptional<FRideSegments::FLive> Live = Pawn->Segments.Live(Pawn->Distance / 100.0);
+		auto Time = [](double Seconds)
+		{
+			const int32 S = FMath::FloorToInt32(Seconds);
+			return S >= 3600 ? Clock(static_cast<float>(Seconds)) : FString::Printf(TEXT("%d:%02d"), S / 60, S % 60);
+		};
+		if (Recent)
+		{
+			P.Panel(X, Y, Wide, Tall, 12.f);
+			const bool bPr = Recent->Ranking.Rank == 1;
+			P.Text(X + 16.f, Y + 19.f, bPr ? TEXT("NEW BEST") : TEXT("SEGMENT DONE"), Label, bPr ? Gold : Dim);
+			P.Text(X + 16.f, Y + 41.f, Recent->Name, Name, Ink);
+			FString Line = FString::Printf(TEXT("%s · %.0f W"), *Time(Recent->Effort.Seconds), Recent->Effort.AverageWatts);
+			if (bPr && Recent->Ranking.PreviousBest)
+			{
+				Line += FString::Printf(TEXT(" · %.0f s faster"), *Recent->Ranking.PreviousBest - Recent->Effort.Seconds);
+			}
+			else if (!bPr)
+			{
+				Line += FString::Printf(TEXT(" · %d of %d"), Recent->Ranking.Rank, Recent->Ranking.Of);
+			}
+			P.Text(X + Wide - 16.f, Y + 41.f, Line, Soft, bPr ? Gold : Ink, EAlign::Right);
+		}
+		else if (Live && Live->bOn)
+		{
+			P.Panel(X, Y, Wide, Tall, 12.f);
+			P.Text(X + 16.f, Y + 19.f, FString::Printf(TEXT("%s · %s TO GO"), *Live->Name.ToUpper(), *Km(static_cast<float>(Live->ToGo)).ToUpper()),
+			       Label, Dim);
+			P.Text(X + 16.f, Y + 41.f, Time(Live->Elapsed), Name, Ink);
+			if (Live->Gap)
+			{
+				const double Gap = *Live->Gap;
+				const FString Text = FString::Printf(TEXT("%s%s vs best"), Gap <= 0.0 ? TEXT("-") : TEXT("+"),
+				                                     *Time(FMath::Abs(Gap)));
+				P.Text(X + Wide - 16.f, Y + 41.f, Text, Name, Gap <= 0.0 ? Ahead : Behind, EAlign::Right);
+			}
+			else
+			{
+				P.Text(X + Wide - 16.f, Y + 41.f, TEXT("first time up"), Soft, Dim, EAlign::Right);
+			}
+			// How far up, a bar along the foot.
+			const float Done = FMath::Clamp(static_cast<float>(1.0 - Live->ToGo / FMath::Max(Live->Length, 1.0)), 0.f, 1.f);
+			P.Round(X + 12.f, Y + Tall - 5.f, (Wide - 24.f) * Done, 3.f, 1.5f, Hex(0xF4F1EA, 0.6f));
+		}
+		else if (Live)
+		{
+			P.Panel(X, Y, Wide, Tall, 12.f);
+			P.Text(X + 16.f, Y + 19.f, FString::Printf(TEXT("SEGMENT IN %s"), *Km(static_cast<float>(Live->ToGo)).ToUpper()), Label, Dim);
+			P.Text(X + 16.f, Y + 41.f, Live->Name, Name, Ink);
+			FString Line = FString::Printf(TEXT("%s at %.1f%%"), *Km(static_cast<float>(Live->Length)), Live->Grade * 100.0);
+			if (Live->Best)
+			{
+				Line += FString::Printf(TEXT(" · best %s"), *Time(*Live->Best));
+			}
+			P.Text(X + Wide - 16.f, Y + 41.f, Line, Soft, Dim, EAlign::Right);
+		}
+	}
 	return P.Layer;
 }

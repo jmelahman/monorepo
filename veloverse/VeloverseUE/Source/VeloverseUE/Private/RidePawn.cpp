@@ -156,6 +156,7 @@ void ARidePawn::BeginPlay()
 		}
 	}
 	Distance = StartMetres * 100.0;
+	Segments.Reset();
 	FindWeather();
 	ApplyWeather();
 	Place();
@@ -215,6 +216,7 @@ void ARidePawn::UseStart(int32 Index)
 	StartMetres = All[Index].Metres;
 	ChosenStart = StartMetres;
 	Distance = StartMetres * 100.0;
+	Segments.Reset();
 	bHeadSet = false;
 	ApplyWeather();
 	Place();
@@ -249,6 +251,7 @@ void ARidePawn::UseRoute(int32 Index)
 		ChosenStart = -1.f;
 	}
 	Distance = StartMetres * 100.0;
+	Segments.Reset();
 	if (Track->RainShell)
 	{
 		Rain->SetStaticMesh(Track->RainShell);
@@ -304,6 +307,7 @@ FString ARidePawn::EndRide()
 		FRideProfile Used = Profile;
 		Used.Ftp = Ftp;
 		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used);
+		Segments.Save(FDateTime::Now().ToIso8601());
 		UE_LOG(LogTemp, Display, TEXT("RIDE saved %s (%d samples)"),
 		       SavedRide.IsEmpty() ? TEXT("nothing: too short") : *SavedRide, static_cast<int32>(Recorder.Samples().size()));
 	}
@@ -604,6 +608,11 @@ void ARidePawn::Ride(float Dt)
 		Distance += static_cast<double>(Speed) * 100.0 * H;
 	}
 	Elapsed += Dt;
+	if (!Segments.UsesTrack(Track))
+	{
+		Segments.Use(*Track);
+	}
+	Segments.Tick(Distance / 100.0, Elapsed, Reading.Watts);
 	ClimbedMetres += FMath::Max(0.f, Track->Height(Track->Wrap(static_cast<float>(Distance))) - Before) / 100.f;
 	Joules += Reading.Watts * Dt;
 	ZoneSeconds[Zone(Reading.Watts)] += Dt;

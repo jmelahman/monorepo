@@ -8,6 +8,7 @@
 #include "RidePhysics.h"
 #include "RideRecord.h"
 #include "Trainer.h"
+#include "RideSegments.h"
 #include "Workout.h"
 #include "RidePawn.generated.h"
 
@@ -92,6 +93,9 @@ public:
 	FString SavedRide;
 	bool bRideSaved = false;
 	float TrackLength() const;
+
+	// The route's climbs, timed against the rider's best; saved with the ride.
+	FRideSegments Segments;
 
 	// A structured workout, if one is on: each step's target goes to the trainer in ERG mode (or, with
 	// ERG off, is only shown). StartWorkout replaces any running one; Bias is the rider's own
