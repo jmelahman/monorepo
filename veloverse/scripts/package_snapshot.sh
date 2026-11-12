@@ -6,7 +6,9 @@
 set -eu
 snap=/workspace/ue/snap/VeloverseUE
 rm -rf "$snap" && install -d -o ue4 -g ue4 "$snap"
-tar -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCache -cf - . |
+# -h: Source, Config and the .uproject are links into the repo, and a copied link would build
+# whatever the source is when the compile reaches it, edits in progress and all.
+tar -h -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCache -cf - . |
 	sudo -u ue4 tar -C "$snap" -xf -
 echo "snapshot $(du -sh "$snap" | cut -f1) at $(date +%H:%M)"
 OC_PKG_PROJECT=$snap OC_PKG_OUT=/workspace/ue/out/package_snap OC_PKG_LOG=/workspace/ue/package_snap.log \
