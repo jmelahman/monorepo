@@ -821,10 +821,10 @@ void ARidePawn::Place()
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
-	// A stretch of woods, a way into it, on whichever route passes through it. -RideBackdropIn=NAME
+	// The red pines near the top of the Vael climb (the design board's backdrop), on whichever route passes through it. -RideBackdropIn=NAME
 	// and -RideBackdrop=METRES move it.
-	FString In = TEXT("Greenwood");
-	float Into = 8000.f;
+	FString In = TEXT("Vael");
+	float Into = 6300.f;
 	FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), In);
 	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
 	TArray<const URideTrack*> Order = {Track.Get()};
