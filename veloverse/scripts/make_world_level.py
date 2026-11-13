@@ -44,6 +44,9 @@ mi.ROAD_HALF = 1.75
 # The remote country's dirt path, m from the middle: narrower than the asphalt, its pieces cut to
 # it (an opaque edge; a masked one crashes the shader compiler on Nanite).
 PATH_HALF = 1.2
+# m right of the centre line the rider and the stills ride: the middle of the asphalt's right
+# lane (ROAD_HALF / 2), 35 cm inside the dirt path's edge.
+RIDE_LANE = 0.85
 
 PLAN = os.environ.get("OC_PLAN", "/workspace/ue/world_gen/hub")
 # make_chain.py's world.json, or None for make_world.py's single island.
@@ -641,16 +644,22 @@ def surfaces(runs, points):
 
 def views(line, runs):
     """Stills along the ride, [name, eye, target] in m: a rider's eye halfway along each
-    stretch looking 30 m up the road, and one from 120 m up over the first mountain stretch."""
+    stretch in the right lane looking 30 m up the road, and one from 120 m up over the first
+    mountain stretch."""
     out, start = [], 0.0
     for i, (name, metres) in enumerate(runs):
         k = int(start + metres / 2) % len(line)
         ahead = line[(k + 30) % len(line)]
+        # Eye and target moved by the same step to the right of the line between them, so the
+        # view keeps pointing straight up the road (RideTrack::Point: +lateral is right).
+        dx, dy = ahead[0] - line[k, 0], ahead[1] - line[k, 1]
+        n = max(float(np.hypot(dx, dy)), 1e-6)
+        rx, ry = -dy / n * RIDE_LANE, dx / n * RIDE_LANE
         out.append(
             [
                 f"ride_{i:02d}_{name.lower()}",
-                [float(line[k, 0]), float(line[k, 1]), float(line[k, 2] + 1.6)],
-                [float(ahead[0]), float(ahead[1]), float(ahead[2] + 1.2)],
+                [float(line[k, 0] + rx), float(line[k, 1] + ry), float(line[k, 2] + 1.6)],
+                [float(ahead[0] + rx), float(ahead[1] + ry), float(ahead[2] + 1.2)],
             ]
         )
         if name in ("Mountain", "Vael") and not any(v[0] == "above" for v in out):
@@ -759,8 +768,8 @@ def main():
         # "ground blend" 0: the rim faded into the ground RVT's colour, a lime strip along both
         # edges where the RVT lagged the ground's look (12 Nov). The soil fray edges it alone.
         "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 0.0},
-        # The rider half a metre left of centre: on the 2.4 m path and inside the asphalt's lane.
-        "keep_left": 50.0,
+        # The rider in the right lane (the user, 13 Nov), negative being right of centre.
+        "keep_left": -RIDE_LANE * 100,
         # The default ride, and every ride (climb_world.track writes each as a track).
         "ride": rides[0],
         "rides": rides,
