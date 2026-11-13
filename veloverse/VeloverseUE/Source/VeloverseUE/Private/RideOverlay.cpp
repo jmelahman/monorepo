@@ -5,6 +5,7 @@
 #include "RidePawn.h"
 #include "RideTrack.h"
 #include "SlatePainter.h"
+#include "Units.h"
 
 using namespace VeloversePaint;
 
@@ -60,14 +61,15 @@ FString Clock(float Seconds)
 	return FString::Printf(TEXT("%d:%02d:%02d"), S / 3600, S / 60 % 60, S % 60);
 }
 
-// Far off in kilometres, close in metres rounded to 50.
+// Far off in kilometres (or miles), close in metres (or feet) rounded to 50.
 FString Km(float Metres)
 {
-	if (Metres >= 950.f)
+	if (Metres >= (Veloverse::Units::bImperial ? 160.f : 950.f))
 	{
-		return FString::Printf(TEXT("%.1f km"), Metres / 1000.f);
+		return Veloverse::Units::Distance(Metres);
 	}
-	return FString::Printf(TEXT("%.0f m"), FMath::Max(50.f, FMath::RoundToFloat(Metres / 50.f) * 50.f));
+	const double Close = FMath::Max(50.0, FMath::RoundToDouble(Veloverse::Units::Height(Metres) / 50.0) * 50.0);
+	return Veloverse::Units::Number(Close, 0) + TEXT(" ") + Veloverse::Units::HeightUnit();
 }
 
 // The weather's icon in a 22 px square at X, Y, drawn on the canvas's 24-unit grid.
@@ -387,8 +389,8 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 				const float TopX = XOf(Peak);
 				if (TopX > PX + 20.f && TopX < PX + PW - 20.f)
 				{
-					const FString Mark = bClimbing ? FString::Printf(TEXT("%.0f m to go"), HeightAt(Peak) - HeightAt(Here))
-					                               : FString::Printf(TEXT("+%.0f m"), Climb->Rise);
+					const FString Mark = bClimbing ? Veloverse::Units::Rise(HeightAt(Peak) - HeightAt(Here)) + TEXT(" to go")
+					                               : TEXT("+") + Veloverse::Units::Rise(Climb->Rise);
 					const FSlateFontInfo MarkFont = P.Font("Bold", 11.f);
 					const float Half = P.Width(Mark, MarkFont) * 0.5f;
 					P.Text(FMath::Clamp(TopX, PX + Half, PX + PW - Half), FMath::Max(YOf(HeightAt(Peak)) - 6.f, PY + 9.f), Mark, MarkFont,
@@ -584,7 +586,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			FString Value, Unit;
 		};
 		TArray<FItem> Items = {
-			{TEXT("SPEED"), FString::Printf(TEXT("%.1f"), Pawn->Speed * 3.6f), TEXT("km/h")},
+			{TEXT("SPEED"), Veloverse::Units::Number(Veloverse::Units::Speed(Pawn->Speed), 1), Veloverse::Units::SpeedUnit()},
 			{TEXT("CADENCE"), FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), TEXT("rpm")},
 		};
 		if (Pawn->Reading.HeartRateBpm > 0.0)
@@ -592,8 +594,10 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			Items.Add({TEXT("HEART"), FString::Printf(TEXT("%.0f"), Pawn->Reading.HeartRateBpm), TEXT("bpm")});
 		}
 		Items.Add({TEXT("TIME"), Clock(Pawn->Elapsed), TEXT("")});
-		Items.Add({TEXT("DISTANCE"), FString::Printf(TEXT("%.1f"), Pawn->Ridden() / 100000.0), TEXT("km")});
-		Items.Add({TEXT("CLIMBED"), FString::Printf(TEXT("%.0f"), Pawn->ClimbedMetres), TEXT("m")});
+		Items.Add({TEXT("DISTANCE"), Veloverse::Units::Number(Veloverse::Units::Long(Pawn->Ridden() / 100.0), 1),
+		           Veloverse::Units::LongUnit()});
+		Items.Add({TEXT("CLIMBED"), Veloverse::Units::Number(Veloverse::Units::Height(Pawn->ClimbedMetres), 0),
+		           Veloverse::Units::HeightUnit()});
 		const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
 		const FSlateFontInfo Value = P.Font("Bold", 20.f);
 		const FSlateFontInfo Unit = P.Font("Medium", 13.f);

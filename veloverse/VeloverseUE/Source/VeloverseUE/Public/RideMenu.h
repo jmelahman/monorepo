@@ -36,7 +36,10 @@ enum class ERideSettingsTab : uint8
 {
 	Graphics,
 	Detail,
+	World,
+	Ride,
 	Rider,
+	Count,
 };
 
 UCLASS()

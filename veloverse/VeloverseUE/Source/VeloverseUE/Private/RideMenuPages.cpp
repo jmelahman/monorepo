@@ -11,8 +11,10 @@
 #include "RidePlayerController.h"
 #include "RideTrack.h"
 #include "Trainer.h"
+#include "Units.h"
 
 using namespace VeloverseMenu;
+namespace U = Veloverse::Units;
 
 namespace
 {
@@ -195,7 +197,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	}
 
 	// The title.
-	P.Icon(Icons::Rider, 120.f, 104.f, 24.f, C.Accent);
+	P.Icon(Icons::Bike, 120.f, 104.f, 24.f, C.Accent);
 	P.Text(156.f, Mid(116.f, 15.f), TEXT("RIDE THE ISLES"), P.Font("Bold", 15.f, 0.24f), C.Accent);
 	P.Text(114.f, 238.f, TEXT("Veloverse"), P.Serif(104.f), Ink);
 	P.Text(120.f, 286.f, FString::Printf(TEXT("%d routes across five islands, from the harbour"), Surveys.Num()),
@@ -211,7 +213,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		if (Route)
 		{
 			P.Text(150.f, 398.f,
-			       P.Fit(FString::Printf(TEXT("Continue: %s · %.1f km"), *Route->Title, Route->Km),
+			       P.Fit(FString::Printf(TEXT("Continue: %s · %s"), *Route->Title, *U::Distance(Route->Km * 1000.0)),
 			             P.Font("Medium", 16.f), 430.f),
 			       P.Font("Medium", 16.f), WithAlpha(C.OnAccent, 0.8f));
 		}
@@ -246,7 +248,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	const TArray<FItem> Items = {
 		{TEXT("routes"), Icons::Map, TEXT("Choose a route"), Route ? Route->Title : FString(),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
-		{TEXT("stats"), Icons::Stats, TEXT("Stats"), FString::Printf(TEXT("%.0f km this week"), Totals[0].Km),
+		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
 		{TEXT("workout"), Icons::Workout, TEXT("Workout"), WorkoutText, [M] { M->StepWorkout(1); }, true},
 		{TEXT("sensors"), Icons::Signal, TEXT("Trainer and sensors"), TrainerStatus(Pawn, bLive),
@@ -297,7 +299,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		P.Text(X + 28.f, Top + 84.f, P.Fit(E.Route.IsEmpty() ? FString(TEXT("Ride")) : E.Route, P.Serif(28.f), 364.f),
 		       P.Serif(28.f), Ink);
 		P.Text(X + 28.f, Top + 120.f,
-		       FString::Printf(TEXT("%.1f km · %s · %s"), E.Summary.Metres / 1000.0, *Clock(E.Summary.Seconds, false),
+		       FString::Printf(TEXT("%s · %s · %s"), *U::Distance(E.Summary.Metres), *Clock(E.Summary.Seconds, false),
 		                       *Watts(E.Summary.AverageWatts)),
 		       P.Font("Medium", 17.f), Soft);
 		P.Text(X + 28.f, Top + 156.f, TEXT("Review the ride"), P.Font("Bold", 16.f), C.Accent);
@@ -348,7 +350,8 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		P.Border(64.f, Y, 600.f, 88.f, 14.f, bOn ? WithAlpha(C.Accent, 0.7f) : InkA(bHot ? 0.24f : 0.1f));
 		P.Text(88.f, Y + 38.f, P.Fit(S->Title, P.Font("Bold", 22.f), 340.f), P.Font("Bold", 22.f), Ink);
 		P.Text(88.f, Y + 66.f,
-		       FString::Printf(TEXT("%.1f km · %s m climbing%s"), S->Km, *Thousands(S->Climb),
+		       FString::Printf(TEXT("%s · %s %s climbing%s"), *U::Distance(S->Km * 1000.0), *Thousands(U::Height(S->Climb)),
+		                       U::HeightUnit(),
 		                       S->bClosed ? TEXT("") : TEXT(" · one way")),
 		       P.Font("Medium", 16.f), Muted);
 		if (S->Heights.Num() > 1)
@@ -484,8 +487,9 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			P.Disc(At.X, At.Y, 6.5f, C.Accent);
 		}
 		// A scale.
-		float Km = 5.f;
-		float Bar = Km * 100000.f * MapScale * K;
+		float Km = 5.f; // or miles
+		const float PerUnit = U::bImperial ? static_cast<float>(U::MetresPerMile) * 100.f : 100000.f;
+		float Bar = Km * PerUnit * MapScale * K;
 		if (Bar > 200.f)
 		{
 			Km = 1.f;
@@ -494,14 +498,14 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		const float Bx = MapX + 24.f, By = MapY + Mh - 28.f;
 		P.Lines({FVector2f(Bx, By - 6.f), FVector2f(Bx, By), FVector2f(Bx + Bar, By), FVector2f(Bx + Bar, By - 6.f)}, Ink,
 		        1.6f);
-		P.Text(Bx + Bar + 10.f, Mid(By - 3.f, 13.f), FString::Printf(TEXT("%.0f km"), Km), P.Font("Bold", 13.f), Ink);
+		P.Text(Bx + Bar + 10.f, Mid(By - 3.f, 13.f), U::Number(Km, 0) + TEXT(" ") + U::LongUnit(), P.Font("Bold", 13.f), Ink);
 	}
 
 	// Beside the map: the numbers, the islands, where to start and the way in.
 	const float Dx = 1327.f, Dw = FMath::Max(RightEdge - Dx, 300.f);
-	Stat(P, Dx, 372.f, FString::Printf(TEXT("%.1f"), S->Km), TEXT("km"), TEXT("Distance"), 44.f);
-	Stat(P, Dx + Dw / 3.f, 372.f, Thousands(S->Climb), TEXT("m"), TEXT("Climbing"), 44.f);
-	Stat(P, Dx + 2.f * Dw / 3.f, 372.f, Thousands(S->Highest), TEXT("m"), TEXT("Highest"), 44.f);
+	Stat(P, Dx, 372.f, U::Number(U::Long(S->Km * 1000.0), 1), U::LongUnit(), TEXT("Distance"), 44.f);
+	Stat(P, Dx + Dw / 3.f, 372.f, Thousands(U::Height(S->Climb)), U::HeightUnit(), TEXT("Climbing"), 44.f);
+	Stat(P, Dx + 2.f * Dw / 3.f, 372.f, Thousands(U::Height(S->Highest)), U::HeightUnit(), TEXT("Highest"), 44.f);
 	Label(P, Dx, 452.f, TEXT("Islands"));
 	float Bx = Dx;
 	for (const TPair<FString, float>& Share : Shares)
@@ -531,7 +535,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		P.Icon(Icons::Chevron, Dx + Dw - 38.f, 656.f, 24.f, Ink);
 		const ARidePawn::FStart& Start = Starts[FMath::Clamp(StartAt, 0, Starts.Num() - 1)];
 		P.Text(Dx + Dw * 0.5f, Mid(668.f, 18.f),
-		       P.Fit(FString::Printf(TEXT("%s · %.1f km"), *Start.Name, Start.Metres / 1000.f), P.Font("Bold", 18.f),
+		       P.Fit(FString::Printf(TEXT("%s · %s"), *Start.Name, *U::Distance(Start.Metres)), P.Font("Bold", 18.f),
 		             Dw - 100.f),
 		       P.Font("Bold", 18.f), Ink, EAlign::Centre);
 		auto Step = [M](int32 By)
@@ -577,13 +581,13 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		}
 		P.Lines(Plot(S->Heights, N, Ex, Ey, Ew, Eh, Lo, Hi), Ink, 2.f);
 		P.Lines({FVector2f(Ex, Ey + Eh), FVector2f(Ex + Ew, Ey + Eh)}, InkA(0.2f), 1.f);
-		P.Text(Ex - 14.f, Mid(Ey, 13.f), FString::Printf(TEXT("%.0f m"), Hi), P.Font("Medium", 13.f), Muted,
+		P.Text(Ex - 14.f, Mid(Ey, 13.f), U::Rise(Hi), P.Font("Medium", 13.f), Muted,
 		       EAlign::Right);
-		P.Text(Ex - 14.f, Mid(Ey + Eh, 13.f), FString::Printf(TEXT("%.0f m"), Lo), P.Font("Medium", 13.f), Muted,
+		P.Text(Ex - 14.f, Mid(Ey + Eh, 13.f), U::Rise(Lo), P.Font("Medium", 13.f), Muted,
 		       EAlign::Right);
 		for (int32 Q = 0; Q <= 4; ++Q)
 		{
-			P.Text(Ex + Ew * Q / 4.f, Ey + Eh + 28.f, FString::Printf(TEXT("%.0f km"), S->Km * Q / 4.f),
+			P.Text(Ex + Ew * Q / 4.f, Ey + Eh + 28.f, U::Distance(S->Km * 1000.0 * Q / 4.0, 0),
 			       P.Font("Medium", 13.f), Muted, Q == 0 ? EAlign::Left : Q == 4 ? EAlign::Right : EAlign::Centre);
 		}
 		const float Length = Pawn->Track ? Pawn->Track->Length() : 0.f;
@@ -753,10 +757,11 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 
 	// The tabs.
 	C.Panel(64.f, 150.f, 320.f, 866.f);
-	const TCHAR* Names[3] = {TEXT("Graphics"), TEXT("Detail"), TEXT("Rider")};
-	const TCHAR* TabIcons[3] = {Icons::Screen, Icons::Layers, Icons::Rider};
+	constexpr int32 Tabs = static_cast<int32>(ERideSettingsTab::Count);
+	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Rider")};
+	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Layers, Icons::Globe, Icons::Bike, Icons::Rider};
 	const FLinearColor TabInk = FMath::Lerp(C.Accent, FLinearColor::White, 0.45f);
-	for (int32 I = 0; I < 3; ++I)
+	for (int32 I = 0; I < Tabs; ++I)
 	{
 		const FString Key = FString::Printf(TEXT("tab%d"), I);
 		const float Y = 166.f + I * 64.f;
@@ -776,8 +781,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 	const float Sx = 416.f, Sw = C.W - 64.f - Sx;
 	C.Panel(Sx, 150.f, Sw, 866.f);
 	const float Left = Sx + 48.f, Right = Sx + Sw - 48.f;
-	const FString Titles[3] = {TEXT("Graphics"), TEXT("Detail"), TEXT("Rider")};
-	P.Text(Left, 222.f, Titles[static_cast<int32>(Tab)], P.Serif(36.f), Ink);
+	P.Text(Left, 222.f, Names[static_cast<int32>(Tab)], P.Serif(36.f), Ink);
 	float Y = 250.f;
 	auto Row = [&](const FString& Name, const FString& Hint)
 	{
@@ -795,6 +799,30 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		C.Segmented(Key, Right - Wd, Cy - 26.f, Options, Chosen, MoveTemp(Pick), 42.f, 15.f, 96.f);
 	};
 	UGameUserSettings* V = Video();
+	// A change to the rider's profile, saved and ridden with at once.
+	auto Edit = [M](auto Change)
+	{
+		if (ARidePawn* R = M->Rider())
+		{
+			FRideProfile Changed = R->Profile;
+			Change(Changed);
+			R->SetProfile(Changed);
+		}
+	};
+	// A slider over one of the profile's numbers, Lo..Hi in Step, shown with Unit.
+	auto Slide = [&](const FString& Key, float Cy, float FRideProfile::*Field, float Lo, float Hi, float Step,
+	                 const TCHAR* Unit)
+	{
+		const float Value = Pawn->Profile.*Field;
+		auto Write = [Edit, Field, Lo, Hi, Step](float NewValue)
+		{
+			NewValue = FMath::Clamp(FMath::RoundToFloat(NewValue / Step) * Step, Lo, Hi);
+			Edit([Field, NewValue](FRideProfile& Pr) { Pr.*Field = NewValue; });
+		};
+		C.Slider(Key, Right - 560.f, Cy, 560.f, (Value - Lo) / (Hi - Lo), FString::Printf(TEXT("%.0f%s"), Value, Unit),
+		         [Write, Lo, Hi](float Share) { Write(FMath::Lerp(Lo, Hi, Share)); },
+		         [Write, Value, Step](int32 By) { Write(Value + By * Step); });
+	};
 
 	if (Tab == ERideSettingsTab::Graphics && V)
 	{
@@ -806,21 +834,19 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			       Video()->SetOverallScalabilityLevel(I);
 			       Apply();
 		       });
-		static const int32 Scales[5] = {50, 67, 75, 85, 100};
+		// TSR's presets: the share of the screen's pixels it renders before sharpening them back up.
+		static const int32 Scales[4] = {100, 75, 67, 50};
 		float Normalized = 1.f, Percent = 100.f, Min = 0.f, Max = 100.f;
 		V->GetResolutionScaleInformationEx(Normalized, Percent, Min, Max);
 		int32 ScaleAt = 0;
-		TArray<FString> ScaleNames;
-		for (int32 I = 0; I < 5; ++I)
+		for (int32 I = 0; I < 4; ++I)
 		{
-			ScaleNames.Add(FString::Printf(TEXT("%d%%"), Scales[I]));
-			if (FMath::Abs(Percent - Scales[I]) < FMath::Abs(Percent - Scales[ScaleAt]))
-			{
-				ScaleAt = I;
-			}
+			ScaleAt = FMath::Abs(Percent - Scales[I]) < FMath::Abs(Percent - Scales[ScaleAt]) ? I : ScaleAt;
 		}
-		Choice(TEXT("scale"), Row(TEXT("Resolution"), TEXT("Fewer pixels, scaled up: faster and softer")), ScaleNames,
-		       ScaleAt,
+		Choice(TEXT("scale"),
+		       Row(TEXT("Upscaling"), FString::Printf(TEXT("Renders %d%% of the pixels and TSR sharpens them back up"),
+		                                              Scales[ScaleAt])),
+		       {TEXT("Off"), TEXT("Quality"), TEXT("Balanced"), TEXT("Performance")}, ScaleAt,
 		       [](int32 I)
 		       {
 			       Video()->SetResolutionScaleValueEx(Scales[I]);
@@ -893,6 +919,36 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 				       Apply();
 			       });
 		}
+		if (Pawn)
+		{
+			Slide(TEXT("grass"), Row(TEXT("Grass reach"), TEXT("How far the blades grow before the ground takes over")),
+			      &FRideProfile::Grass, 25.f, 200.f, 5.f, TEXT("%"));
+		}
+	}
+	else if (Tab == ERideSettingsTab::World && Pawn)
+	{
+		const int32 Weather = Pawn->Profile.Weather;
+		Choice(TEXT("weather"),
+		       Row(TEXT("Weather"), TEXT("The route's own clears, clouds over and rains as you ride")),
+		       {TEXT("Route's own"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")}, Weather,
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.Weather = I; }); });
+		Choice(TEXT("time"), Row(TEXT("Time of day"), TEXT("Where the sun sits while you ride")),
+		       {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")}, Pawn->Profile.TimeOfDay,
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.TimeOfDay = I; }); });
+	}
+	else if (Tab == ERideSettingsTab::Ride && Pawn)
+	{
+		Choice(TEXT("units"), Row(TEXT("Units"), TEXT("Distance, speed and climbing")),
+		       {TEXT("Metric"), TEXT("Imperial")}, U::bImperial ? 1 : 0,
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bImperial = I == 1; }); });
+		Slide(TEXT("difficulty"),
+		      Row(TEXT("Climb difficulty"), TEXT("The share of the road's gradient the trainer gives you")),
+		      &FRideProfile::Difficulty, 0.f, 100.f, 5.f, TEXT("%"));
+		Choice(TEXT("erg"), Row(TEXT("ERG in workouts"), TEXT("The trainer holds each step's power for you (E)")),
+		       {TEXT("On"), TEXT("Off")}, Pawn->bErg ? 0 : 1,
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bErg = I == 0; }); });
+		Slide(TEXT("fov"), Row(TEXT("Field of view"), TEXT("Wider feels faster; 61° frames like a 20 mm lens")),
+		      &FRideProfile::Fov, 45.f, 100.f, 1.f, TEXT("°"));
 	}
 	else if (Tab == ERideSettingsTab::Rider && Pawn)
 	{
@@ -904,15 +960,6 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			       P.Font("Medium", 17.f), C.Accent, 2);
 			Y += 56.f;
 		}
-		auto Edit = [M](auto Change)
-		{
-			if (ARidePawn* R = M->Rider())
-			{
-				FRideProfile Changed = R->Profile;
-				Change(Changed);
-				R->SetProfile(Changed);
-			}
-		};
 		struct FSlide
 		{
 			const TCHAR* Key;
@@ -1045,9 +1092,9 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	const FTotals& T = Totals[FMath::Clamp(Period, 0, 3)];
 	const float Cw = (RightEdge - 64.f) / 6.f;
 	Stat(P, 64.f, 196.f, FString::FromInt(T.Rides), FString(), T.Rides == 1 ? TEXT("Ride") : TEXT("Rides"), 48.f);
-	Stat(P, 64.f + Cw, 196.f, FString::Printf(TEXT("%.1f"), T.Km), TEXT("km"), TEXT("Distance"), 48.f);
+	Stat(P, 64.f + Cw, 196.f, U::Number(U::Long(T.Km * 1000.0), 1), U::LongUnit(), TEXT("Distance"), 48.f);
 	Stat(P, 64.f + 2.f * Cw, 196.f, Hours(T.Seconds), FString(), TEXT("Riding time"), 48.f);
-	Stat(P, 64.f + 3.f * Cw, 196.f, Thousands(T.Climbed), TEXT("m"), TEXT("Climbing"), 48.f);
+	Stat(P, 64.f + 3.f * Cw, 196.f, Thousands(U::Height(T.Climbed)), U::HeightUnit(), TEXT("Climbing"), 48.f);
 	Stat(P, 64.f + 4.f * Cw, 196.f, Thousands(T.Kj), TEXT("kJ"), TEXT("Energy"), 48.f);
 	Stat(P, 64.f + 5.f * Cw, 196.f, Thousands(T.Tss), FString(), TEXT("Training stress"), 48.f);
 
@@ -1056,7 +1103,7 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	P.Text(88.f, 306.f, TEXT("Distance by week"), P.Font("Bold", 18.f), Ink);
 	if (WeekKm.Num() == 12)
 	{
-		P.Text(952.f, 306.f, FString::Printf(TEXT("%.0f km this week"), WeekKm.Last()), P.Font("Medium", 15.f), Muted,
+		P.Text(952.f, 306.f, U::Distance(WeekKm.Last() * 1000.0, 0) + TEXT(" this week"), P.Font("Medium", 15.f), Muted,
 		       EAlign::Right);
 		double Most = 10.0;
 		for (const double Km : WeekKm)
@@ -1211,8 +1258,7 @@ void URideMenu::PaintStats(FPaintContext& C) const
 		P.Round(970.f, Iy - 4.f, 180.f, 8.f, 4.f, InkA(0.08f));
 		P.Round(970.f, Iy - 4.f, FMath::Max(180.f * static_cast<float>(IslandKm[I].Value / IslandMost), 8.f), 8.f, 4.f,
 		        Colour);
-		P.Text(1232.f, Mid(Iy, 15.f), IslandKm[I].Value < 9.95 ? FString::Printf(TEXT("%.1f km"), IslandKm[I].Value)
-		                                            : FString::Printf(TEXT("%.0f km"), IslandKm[I].Value), P.Font("Medium", 15.f), Soft,
+		P.Text(1232.f, Mid(Iy, 15.f), U::Distance(IslandKm[I].Value * 1000.0, U::Long(IslandKm[I].Value * 1000.0) < 9.95 ? 1 : 0), P.Font("Medium", 15.f), Soft,
 		       EAlign::Right);
 	}
 
@@ -1268,8 +1314,9 @@ void URideMenu::PaintPause(FPaintContext& C) const
 		const float Route = Pawn->Track ? Pawn->Track->Length() / 100000.f : 0.f;
 		const float Kmh = Pawn->Elapsed > 0.f ? Km / (Pawn->Elapsed / 3600.f) : 0.f;
 		P.Wrap(X + 40.f, Y + 126.f, Wd - 80.f, 24.f,
-		       FString::Printf(TEXT("%.2f of %.1f km in %s, averaging %.1f km/h"), Km, Route,
-		                       *Clock(Pawn->Elapsed, false), Kmh),
+		       FString::Printf(TEXT("%s of %s in %s, averaging %s %s"), *U::Number(U::Long(Km * 1000.0), 2),
+		                       *U::Distance(Route * 1000.0), *Clock(Pawn->Elapsed, false),
+		                       *U::Number(U::Speed(Kmh / 3.6), 1), U::SpeedUnit()),
 		       P.Font("Medium", 18.f), Soft, 2);
 	}
 	float By = Y + 180.f;
@@ -1325,8 +1372,8 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		P.Text(76.f, Ry + 28.f, RideDay(E.Started), P.Font("Bold", 16.f),
 		       bOn ? FMath::Lerp(C.Accent, FLinearColor::White, 0.45f) : Ink);
 		P.Text(76.f, Ry + 52.f,
-		       P.Fit(FString::Printf(TEXT("%s · %.1f km"), E.Route.IsEmpty() ? TEXT("Ride") : *E.Route,
-		                             E.Summary.Metres / 1000.0),
+		       P.Fit(FString::Printf(TEXT("%s · %s"), E.Route.IsEmpty() ? TEXT("Ride") : *E.Route,
+		                             *U::Distance(E.Summary.Metres)),
 		             P.Font("Medium", 14.f), 248.f),
 		       P.Font("Medium", 14.f), Muted);
 		C.Ring(Key, 60.f, Ry, 276.f, 66.f, 10.f);
@@ -1404,10 +1451,10 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		const TCHAR* Name;
 	};
 	const FTotal Row[8] = {
-		{FString::Printf(TEXT("%.2f"), S.Metres / 1000.0), TEXT("km"), TEXT("Distance")},
+		{U::Number(U::Long(S.Metres), 2), U::LongUnit(), TEXT("Distance")},
 		{Clock(S.Seconds, false), FString(), TEXT("Time")},
-		{FString::Printf(TEXT("%.1f"), S.AverageSpeed * 3.6), TEXT("km/h"), TEXT("Average speed")},
-		{Thousands(S.Climbed), TEXT("m"), TEXT("Climbing")},
+		{U::Number(U::Speed(S.AverageSpeed), 1), U::SpeedUnit(), TEXT("Average speed")},
+		{Thousands(U::Height(S.Climbed)), U::HeightUnit(), TEXT("Climbing")},
 		{S.AverageWatts > 0.0 ? FString::Printf(TEXT("%.0f"), S.AverageWatts) : FString(TEXT("–")), TEXT("W"),
 		 TEXT("Average power")},
 		{S.NormalizedWatts > 0.0 ? FString::Printf(TEXT("%.0f"), S.NormalizedWatts) : FString(TEXT("–")), TEXT("W"),
@@ -1439,7 +1486,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		{TEXT("Power"), &Tr.Watts, C.Accent, 304.f, 96.f, TEXT("W"), S.AverageWatts, S.MaxWatts},
 		{TEXT("Heart rate"), &Tr.HeartRate, Heart, 412.f, 88.f, TEXT("bpm"), S.AverageHeartRate, S.MaxHeartRate},
 		{TEXT("Cadence"), &Tr.Cadence, Sky, 512.f, 88.f, TEXT("rpm"), S.AverageCadence, 0.0},
-		{TEXT("Elevation"), &Tr.Elevation, Soft, 612.f, 64.f, TEXT("m"), 0.0, 0.0},
+		{TEXT("Elevation"), &Tr.Elevation, Soft, 612.f, 64.f, U::HeightUnit(), 0.0, 0.0},
 	};
 	for (int32 I = 0; I < 4; ++I)
 	{
@@ -1452,8 +1499,8 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		if (I == 3)
 		{
 			const double Climbed = S.Climbed;
-			P.Text(Tx + 24.f, T.Top + 52.f, FString::Printf(TEXT("%.0f to %.0f m"), Lo, Hi), P.Font("Bold", 20.f), Ink);
-			P.Text(Tx + 24.f, T.Top + 72.f, FString::Printf(TEXT("%s m up"), *Thousands(Climbed)),
+			P.Text(Tx + 24.f, T.Top + 52.f, U::Number(U::Height(Lo), 0) + TEXT(" to ") + U::Rise(Hi), P.Font("Bold", 20.f), Ink);
+			P.Text(Tx + 24.f, T.Top + 72.f, FString::Printf(TEXT("%s %s up"), *Thousands(U::Height(Climbed)), U::HeightUnit()),
 			       P.Font("Medium", 13.f), Muted);
 		}
 		else if (T.Average > 0.0)
@@ -1519,7 +1566,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 			P.Dashed({FVector2f(Gx, Ay), FVector2f(Gx + Gw, Ay)}, InkA(0.4f), 1.f, 5.f, 5.f);
 		}
 	}
-	P.Text(Gx + Gw, 690.f, FString::Printf(TEXT("%.1f km"), Tr.Metres / 1000.0), P.Font("Medium", 12.f), Muted,
+	P.Text(Gx + Gw, 690.f, U::Distance(Tr.Metres), P.Font("Medium", 12.f), Muted,
 	       EAlign::Right);
 
 	// Time in each power zone.

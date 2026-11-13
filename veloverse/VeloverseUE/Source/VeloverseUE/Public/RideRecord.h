@@ -18,6 +18,15 @@ struct FRideProfile
 	FString Theme = TEXT("Ember"); // the HUD colour, one of the unlocked Progress.h themes
 	int32 MaxHeartRate = 190;      // bpm, for heart-rate zones (RideReview.h)
 
+	// The settings that ride with the rider (the screen's own are in GameUserSettings.ini).
+	bool bImperial = false;    // miles, mph and feet (Units.h)
+	float Fov = 61.f;          // the view's width, degrees: a 20 mm lens
+	float Difficulty = 100.f;  // the share of the road's gradient the trainer gives, %
+	bool bErg = true;          // a workout's targets go to the trainer
+	int32 Weather = 0;         // 0 the route's own, 1 clear, 2 overcast, 3 rain
+	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening
+	float Grass = 100.f;       // how far the grass reaches, % of its own distance
+
 	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
 	FLinearColor Accent() const;
 

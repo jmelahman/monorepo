@@ -168,6 +168,28 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.MaxHeartRate = FMath::Clamp(static_cast<int32>(Value), 120, 230);
 		}
+		O->TryGetBoolField(TEXT("imperial"), Profile.bImperial);
+		O->TryGetBoolField(TEXT("erg"), Profile.bErg);
+		if (O->TryGetNumberField(TEXT("fov"), Value))
+		{
+			Profile.Fov = FMath::Clamp(static_cast<float>(Value), 45.f, 100.f);
+		}
+		if (O->TryGetNumberField(TEXT("difficulty"), Value))
+		{
+			Profile.Difficulty = FMath::Clamp(static_cast<float>(Value), 0.f, 100.f);
+		}
+		if (O->TryGetNumberField(TEXT("weather"), Value))
+		{
+			Profile.Weather = FMath::Clamp(static_cast<int32>(Value), 0, 3);
+		}
+		if (O->TryGetNumberField(TEXT("time_of_day"), Value))
+		{
+			Profile.TimeOfDay = FMath::Clamp(static_cast<int32>(Value), 0, 3);
+		}
+		if (O->TryGetNumberField(TEXT("grass"), Value))
+		{
+			Profile.Grass = FMath::Clamp(static_cast<float>(Value), 25.f, 200.f);
+		}
 	}
 	return Profile;
 }
@@ -182,6 +204,13 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("xp"), static_cast<double>(Xp));
 	O->SetStringField(TEXT("theme"), Theme);
 	O->SetNumberField(TEXT("max_bpm"), MaxHeartRate);
+	O->SetBoolField(TEXT("imperial"), bImperial);
+	O->SetBoolField(TEXT("erg"), bErg);
+	O->SetNumberField(TEXT("fov"), Fov);
+	O->SetNumberField(TEXT("difficulty"), Difficulty);
+	O->SetNumberField(TEXT("weather"), Weather);
+	O->SetNumberField(TEXT("time_of_day"), TimeOfDay);
+	O->SetNumberField(TEXT("grass"), Grass);
 	WriteJson(ProfileFile(), O);
 }
 

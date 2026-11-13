@@ -18,6 +18,7 @@
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "HAL/FileManager.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
@@ -26,11 +27,46 @@
 #include "RHI.h"
 #include "RideTrack.h"
 #include "UnrealClient.h"
+#include "Units.h"
 
 namespace
 {
 constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
+
+// The rider's weather and time of day in place of the route's, as the coast route's rows set them:
+// clear sun, the overcast before its shower, and the shower itself.
+void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
+{
+	if (TimeOfDay > 0)
+	{
+		static constexpr float Heights[3] = {15.f, 48.f, 8.f};
+		static constexpr float Turns[3] = {-70.f, 0.f, 70.f}; // degrees round from the route's own sun
+		W.Elevation = Heights[TimeOfDay - 1];
+		Azimuth += Turns[TimeOfDay - 1];
+	}
+	if (Weather == 1)
+	{
+		W.Lux = W.Elevation < 12.f ? 70000.f : 90000.f;
+		W.Sky = 1.f;
+		W.Fog = 0.006f;
+		W.Rain = W.Wet = 0.f;
+	}
+	else if (Weather == 2)
+	{
+		W.Lux = 25000.f;
+		W.Sky = 0.8f;
+		W.Fog = 0.025f;
+		W.Rain = W.Wet = 0.f;
+	}
+	else if (Weather == 3)
+	{
+		W.Lux = 4000.f;
+		W.Sky = 0.55f;
+		W.Fog = 0.08f;
+		W.Rain = W.Wet = 1.f;
+	}
+}
 constexpr float SensorWidth = 23.76f;
 constexpr float FocalLength = 20.f; // mm: a 61° view; the stills' 16 mm (73°) made the ride look fast
 constexpr float PhysicsStep = 1.f / 120.f;
@@ -370,6 +406,24 @@ void ARidePawn::SetProfile(const FRideProfile& Changed)
 	Profile.Save();
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
+	UseSettings();
+	ApplyWeather();
+}
+
+void ARidePawn::UseSettings()
+{
+	Veloverse::Units::bImperial = Profile.bImperial || FParse::Param(FCommandLine::Get(), TEXT("RideImperial"));
+	bErg = Profile.bErg;
+	// The automated rides and stills keep the lens and the grass they were framed with.
+	if (Automated())
+	{
+		return;
+	}
+	Camera->SetFieldOfView(Profile.Fov);
+	if (IConsoleVariable* Reach = IConsoleManager::Get().FindConsoleVariable(TEXT("grass.CullDistanceScale")))
+	{
+		Reach->Set(Profile.Grass / 100.f, ECVF_SetByCode);
+	}
 }
 
 void ARidePawn::ReadCommandLine()
@@ -394,6 +448,7 @@ void ARidePawn::ReadCommandLine()
 	Profile = FRideProfile::Load();
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
+	UseSettings();
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
 	bSway = FParse::Param(Line, TEXT("RideSway"));
 	Ftp = FMath::Max(Ftp, 50.f);
@@ -600,6 +655,8 @@ void ARidePawn::ReadKeys()
 		if (Player->WasInputKeyJustPressed(EKeys::E))
 		{
 			bErg = !bErg;
+			Profile.bErg = bErg;
+			Profile.Save();
 		}
 	}
 	const bool bMenuKey = Player->WasInputKeyJustPressed(EKeys::Escape) || Player->WasInputKeyJustPressed(EKeys::P) ||
@@ -649,7 +706,7 @@ void ARidePawn::Ride(float Dt)
 	Trainer->Tick(Dt);
 	Reading = Trainer->Read();
 	Grade = Track->Grade(Track->Wrap(static_cast<float>(Distance)));
-	Trainer->SetGrade(Grade);
+	Trainer->SetGrade(Grade * Profile.Difficulty / 100.f);
 	if (Workout.Active())
 	{
 		Workout.Tick(Dt);
@@ -775,11 +832,17 @@ void ARidePawn::FindWeather()
 
 void ARidePawn::ApplyWeather()
 {
-	if (!Track || Track->Weather.Num() == 0)
+	const bool bOwn = Automated() || (Profile.Weather == 0 && Profile.TimeOfDay == 0);
+	if (!Track || (Track->Weather.Num() == 0 && bOwn))
 	{
 		return;
 	}
-	const FRideWeather W = Track->WeatherAt(Track->Wrap(static_cast<float>(Distance)) / 100.f);
+	FRideWeather W = Track->WeatherAt(Track->Wrap(static_cast<float>(Distance)) / 100.f);
+	float Azimuth = Track->SunAzimuth;
+	if (!bOwn)
+	{
+		Overrule(W, Azimuth, Profile.Weather, Profile.TimeOfDay);
+	}
 	if (Track->Collection)
 	{
 		if (UMaterialParameterCollectionInstance* Values = GetWorld()->GetParameterCollectionInstance(Track->Collection))
@@ -793,7 +856,7 @@ void ARidePawn::ApplyWeather()
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
-		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Track->SunAzimuth, 0.f));
+		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Azimuth, 0.f));
 	}
 	if (SkyLight.IsValid())
 	{

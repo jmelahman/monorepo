@@ -187,4 +187,6 @@ private:
 	void Place();
 	void FindWeather();
 	void ApplyWeather();
+	// The profile's settings: the units, the view, ERG and the grass's reach.
+	void UseSettings();
 };

@@ -71,7 +71,9 @@ inline const TCHAR* Check = TEXT("M5 12l5 5 9-10");
 inline const TCHAR* Download = TEXT("M12 4v11M7 10l5 5 5-5M5 20h14");
 inline const TCHAR* Screen = TEXT("M3 5h18v12H3zM8 21h8M12 17v4");
 inline const TCHAR* Layers = TEXT("M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5");
-inline const TCHAR* Rider = TEXT("M5 17a3 3 0 100 .1M19 17a3 3 0 100 .1M5 17l4-8h6l4 8M9 9l3 8");
+inline const TCHAR* Bike = TEXT("M5 17a3 3 0 100 .1M19 17a3 3 0 100 .1M5 17l4-8h6l4 8M9 9l3 8");
+inline const TCHAR* Rider = TEXT("M12 4a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 20a7 7 0 0114 0");
+inline const TCHAR* Globe = TEXT("M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18");
 inline const TCHAR* Lock = TEXT("M6 11h12v9H6zM9 11V8a3 3 0 016 0v3");
 } // namespace Icons
 

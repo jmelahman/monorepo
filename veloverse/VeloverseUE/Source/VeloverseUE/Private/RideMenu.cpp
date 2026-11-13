@@ -156,7 +156,7 @@ FString URideMenu::DefaultFocus() const
 	case ERideMenuPage::Routes: return TEXT("start");
 	case ERideMenuPage::Sensors: return TEXT("routes");
 	case ERideMenuPage::Settings:
-		return Tab == ERideSettingsTab::Graphics ? TEXT("tab0") : Tab == ERideSettingsTab::Detail ? TEXT("tab1") : TEXT("tab2");
+		return FString::Printf(TEXT("tab%d"), static_cast<int32>(Tab));
 	case ERideMenuPage::Stats: return TEXT("back");
 	case ERideMenuPage::Pause:
 	{
