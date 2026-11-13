@@ -635,19 +635,94 @@ def stretches(plan, line):
     return [(names.get(k, k.title()), round(m)) for k, m in runs]
 
 
-def surfaces(runs, points):
-    """[(surface, first point, end point)] round the ring: runs of stretches on one surface."""
-    out, start = [], 0
+# The town's bike trail (the user, 13 Nov, after Chicago's Bloomingdale Trail): the road out of
+# the start and home again, while it is within TRAIL_REACH of the harbour, is a pale concrete
+# trail with blue-grey rubber shoulders and a yellow dashed line, railed both sides, with
+# swan-neck lamps along one (climb_world.trail_dressing, from trail.json).
+TRAIL_REACH = 1500.0  # m from the harbour
+TRAIL_START = 300.0  # m from the start, wherever the harbour is
+TRAIL_RAIL_OUT = 0.35  # m outside the deck's edge
+TRAIL_POST_EVERY = 2.5  # m
+TRAIL_LAMP_OUT = 0.75  # m outside the deck's edge, behind the rail
+TRAIL_LAMP_EVERY = 36  # m
+
+
+def trail_mask(plan, line):
+    """Which points of the ring `line` ((n, 3) m, a metre apart) are the town's trail: the
+    stretch out of the start and the stretch home, while they are near the harbour."""
+    hx, hy = plan.harbour
+    near = np.hypot(line[:, 0] - hx, line[:, 1] - hy) < TRAIL_REACH
+    near |= np.hypot(line[:, 0] - line[0, 0], line[:, 1] - line[0, 1]) < TRAIL_START
+    out = np.zeros(len(line), bool)
+    if near.all():
+        return ~out
+    if not near[0]:
+        return out
+    a, b = int(np.argmax(~near)), len(line) - int(np.argmax(~near[::-1]))
+    out[:a] = True
+    out[b:] = True
+    return out
+
+
+def surfaces(runs, points, trail=None):
+    """[(surface, first point, end point)] round the ring: runs of stretches on one surface, the
+    asphalt of `trail`'s points (a mask, see trail_mask) the trail's."""
+    each = np.empty(points, object)
+    start = 0
     for name, metres in runs:
-        surface = "path" if name in REMOTE else "asphalt"
         end = min(start + round(metres), points)
-        if out and out[-1][0] == surface:
-            out[-1][2] = end
-        else:
-            out.append([surface, start, end])
+        each[start:end] = "path" if name in REMOTE else "asphalt"
         start = end
-    out[-1][2] = points
+    each[start:] = each[start - 1] if start else "asphalt"
+    if trail is not None:
+        each[trail & (each == "asphalt")] = "trail"
+    out = []
+    for k, surface in enumerate(each):
+        if out and out[-1][0] == surface:
+            out[-1][2] = k + 1
+        else:
+            out.append([surface, k, k + 1])
     return [tuple(r) for r in out]
+
+
+def trail_dressing(line, trail, bridges):
+    """trail.json: the trail's rail posts, the spans between them and its lamps, in cm, from the
+    ring `line` (m) where `trail` (a mask) holds and no bridge is."""
+    n = len(line)
+    on = trail.copy()
+    for a, b in bridges:
+        on[np.arange(a, b + 1) % n] = False
+    if not on.any():
+        return {"posts": [], "spans": [], "lamps": []}
+    # The trail as one run of indices, through the ring's start when it wraps.
+    first = int(np.argmax(~on)) if not on.all() else 0
+    order = np.roll(np.arange(n), -first)
+    order = order[on[order]]
+    ahead = line[(order + 2) % n, :2] - line[(order - 2) % n, :2]
+    ahead /= np.maximum(np.hypot(ahead[:, 0], ahead[:, 1]), 1e-6)[:, None]
+    left = np.stack([ahead[:, 1], -ahead[:, 0]], 1)  # road_mesh's left of travel
+    half = mi.ROAD_HALF
+    posts, spans, lamps = [], [], []
+    # A break in the run (a bridge, or the two ends of the trail): no span across it.
+    gap = np.r_[False, np.diff(order) % n != 1]
+    every = np.round(np.arange(0, len(order), TRAIL_POST_EVERY)).astype(int)
+    every = every[every < len(order)]
+    for sign in (1.0, -1.0):
+        prev = None
+        for i in every:
+            x, y = line[order[i], :2] + sign * left[i] * (half + TRAIL_RAIL_OUT)
+            here = [float(x * 100), float(y * 100), float(line[order[i], 2] * 100)]
+            yaw = math.degrees(math.atan2(ahead[i, 1], ahead[i, 0]))
+            posts.append([*here, yaw])
+            if prev is not None and not gap[prev[1] + 1 : i + 1].any():
+                spans.append([*prev[0], *here])
+            prev = (here, i)
+    for i in range(TRAIL_LAMP_EVERY // 2, len(order), TRAIL_LAMP_EVERY):
+        x, y = line[order[i], :2] + left[i] * (half + TRAIL_LAMP_OUT)
+        # The arm reaches over the trail: toward its middle, to the right of the lamp.
+        yaw = math.degrees(math.atan2(-left[i, 1], -left[i, 0]))
+        lamps.append([float(x * 100), float(y * 100), float(line[order[i], 2] * 100), yaw])
+    return {"posts": posts, "spans": spans, "lamps": lamps}
 
 
 def views(line, runs, plan):
@@ -695,22 +770,28 @@ def views(line, runs, plan):
             )
         start += metres
     out += cliff_views(line, plan, coast)
-    # The best-kept road (road_wear), nearest the harbour: a rider's eye as above.
-    wear = road_wear(plan, line)
+    # The best-kept road (road_wear) off the trail, nearest the harbour, and 250 m into the
+    # town's trail: a rider's eye as above.
+    trail = trail_mask(plan, line)
+    if trail[250 % len(line)]:
+        out.append(["trail", *lane_eye(line, 250)])
+    wear = road_wear(plan, line) + trail
     hx, hy = plan.harbour
     k = int(np.argmin(wear + 1e-5 * np.hypot(line[:, 0] - hx, line[:, 1] - hy)))
+    out.append(["road_kept", *lane_eye(line, k)])
+    return out
+
+
+def lane_eye(line, k):
+    """[eye, target] m: a rider's eye in the right lane at line[k], looking 30 m up the road."""
     ahead = line[(k + 30) % len(line)]
     dx, dy = ahead[0] - line[k, 0], ahead[1] - line[k, 1]
     n = max(float(np.hypot(dx, dy)), 1e-6)
     rx, ry = -dy / n * RIDE_LANE, dx / n * RIDE_LANE
-    out.append(
-        [
-            "road_kept",
-            [float(line[k, 0] + rx), float(line[k, 1] + ry), float(line[k, 2] + 1.6)],
-            [float(ahead[0] + rx), float(ahead[1] + ry), float(ahead[2] + 1.2)],
-        ]
+    return (
+        [float(line[k, 0] + rx), float(line[k, 1] + ry), float(line[k, 2] + 1.6)],
+        [float(ahead[0] + rx), float(ahead[1] + ry), float(ahead[2] + 1.2)],
     )
-    return out
 
 
 def cliff_views(line, plan, coast):
@@ -886,7 +967,7 @@ def main():
     for name in os.listdir(OUT):
         if name.startswith(("road_", "far_")) and name.endswith(".gltf"):
             os.remove(f"{OUT}/{name}")
-    count = {"asphalt": 0, "path": 0, "bridge": 0}
+    count = {"asphalt": 0, "path": 0, "bridge": 0, "trail": 0}
     # The first covering route whole; each later one only where it leaves the earlier.
     extra, done = [], None
     for key in cover:
@@ -895,12 +976,15 @@ def main():
         centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in here]
         spans = bridge_spans(here_bridge)
         wear = road_wear(plan, here)
+        trail = trail_mask(plan, here)
         if done is None:
-            for surface, a, b in surfaces(ride["stretches"], len(centre)):
+            for surface, a, b in surfaces(ride["stretches"], len(centre), trail):
                 mesh_run(centre, a, b, surface, spans, count, wear=wear)
+            with open(f"{OUT}/trail.json", "w") as f:
+                json.dump(trail_dressing(here, trail, spans), f)
             done = here
             continue
-        kinds = surfaces(ride["stretches"], len(centre))
+        kinds = surfaces(ride["stretches"], len(centre), trail)
         for a, b in extra_runs(here, done):
             # Its surface where the run starts; the coast road's is asphalt all round.
             surface = next(s for s, c, d in kinds if c <= a % len(centre) < d)

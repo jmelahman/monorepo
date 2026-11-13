@@ -318,15 +318,18 @@ def road_instance(parent):
     return lib.instance(ROAD_INSTANCE, parent, GROUND, scalars=scalars, vectors=vectors)
 
 
-def roads(material, path=None):
-    """The road pieces: road_path_*.gltf in `path` (the remote country's dirt path), the rest in
-    the level's road instance of `material`."""
+def roads(material, path=None, trail=None):
+    """The road pieces: road_path_*.gltf in `path` (the remote country's dirt path),
+    road_trail_*.gltf in `trail` (the town's bike trail), the rest in the level's road instance
+    of `material`."""
     material = road_instance(material)
     count = 0
     for name in sorted(os.listdir(SRC)):
         if not (name.startswith("road_") and name.endswith(".gltf")):
             continue
         surface = path if (path is not None and name.startswith("road_path_")) else material
+        if trail is not None and name.startswith("road_trail_"):
+            surface = trail
         task = unreal.AssetImportTask()
         task.filename = f"{SRC}/{name}"
         task.destination_path = f"{FOLDER}/Road"
@@ -792,7 +795,146 @@ def path_material():
     return g.finish()
 
 
+# The town's bike trail, after Chicago's Bloomingdale Trail (the 606): pale broom-finished
+# concrete in 3 m slabs, blue-grey rubber running shoulders, a yellow dashed centre line.
+TRAIL_CONCRETE = (0.34, 0.33, 0.31)
+TRAIL_RUBBER = (0.07, 0.09, 0.115)
+TRAIL_SHOULDER = 0.45  # m, each side
+TRAIL_YELLOW = (0.62, 0.4, 0.03)
+TRAIL_SLAB = 3.0  # m between saw-cut joints
+TRAIL_DASH = (1.0, 4.0)  # m of yellow, m between dash starts
+# Galvanised steel for its posts, rails and swan-neck lamps.
+TRAIL_STEEL = (0.4, 0.41, 0.42)
+
+
+def _has_trail():
+    """Whether the source has the town's trail (make_world_level.trail_dressing)."""
+    return any(n.startswith("road_trail_") and n.endswith(".gltf") for n in os.listdir(SRC))
+
+
+def trail_materials():
+    """(deck, steel, mesh), built before the level loads like every other material."""
+    return trail_material(), steel_material(), fence_mesh_material()
+
+
+def trail_material():
+    """The trail's deck: U is metres across, V metres along (road_mesh)."""
+    with open(f"{SRC}/info.json") as f:
+        half = float(json.load(f).get("road_half", ROAD_HALF))
+    g = lib.Graph("M_Trail", f"{FOLDER}/Road")
+    coord = g.node(unreal.MaterialExpressionTextureCoordinate)
+    across = g.link(g.mask(coord, "r"), g.node(unreal.MaterialExpressionAbs))
+    along = g.mask(coord, "g")
+    # Concrete: mottled over metres, a fine broom grain, slabs a shade apart.
+    colour = g.mul(g.const(TRAIL_CONCRETE), g.world_noise(0.002, 0.9, 1.08, 3))
+    colour = g.mul(colour, g.world_noise(0.08, 0.94, 1.05, 2))
+    slab = g.link(g.mul(along, 1 / TRAIL_SLAB), g.node(unreal.MaterialExpressionFloor))
+    # Each slab a shade apart: a sine hash of its index.
+    hashed = g.link(g.mul(slab, 12.9898), g.node(unreal.MaterialExpressionSine))
+    hashed = g.link(g.mul(hashed, 43.758), g.node(unreal.MaterialExpressionFrac))
+    shade = g.add(g.mul(hashed, 0.1), 0.95)
+    colour = g.mul(colour, shade)
+    # Saw-cut joints across the slab ends, a centimetre and a half wide.
+    frac = g.link(g.mul(along, 1 / TRAIL_SLAB), g.node(unreal.MaterialExpressionFrac))
+    near = g.op(unreal.MaterialExpressionMin, frac, g.add(g.mul(frac, -1.0), 1.0))
+    joint = g.saturate(g.mul(g.add(g.mul(near, TRAIL_SLAB), -0.008), -200.0))
+    colour = g.lerp(colour, g.mul(colour, 0.55), joint)
+    # The rubber shoulders, with a soft grain.
+    edge = g.saturate(g.mul(g.add(across, -(half - TRAIL_SHOULDER)), 60.0))
+    rubber = g.mul(g.const(TRAIL_RUBBER), g.world_noise(0.3, 0.9, 1.1, 1))
+    colour = g.lerp(colour, rubber, edge)
+    rough = g.lerp(g.const(0.82), g.const(0.95), edge)
+    # The yellow dashed line down the middle, 10 cm wide.
+    dash = g.link(g.mul(along, 1 / TRAIL_DASH[1]), g.node(unreal.MaterialExpressionFrac))
+    dash = g.saturate(g.mul(g.add(dash, -TRAIL_DASH[0] / TRAIL_DASH[1]), -40.0))
+    stripe = g.saturate(g.mul(g.add(across, -0.05), -60.0))
+    paint = g.mul(stripe, dash)
+    colour = g.lerp(colour, g.const(TRAIL_YELLOW), paint)
+    rough = g.lerp(rough, g.const(0.6), paint)
+    g.output(colour, rough=rough, specular=0.4, metallic=0.0)
+    g.material.set_editor_property("used_with_nanite", True)
+    return g.finish()
+
+
+def steel_material():
+    """Galvanised steel, a little mottled."""
+    g = lib.Graph("M_TrailSteel", f"{FOLDER}/Props")
+    colour = g.mul(g.const(TRAIL_STEEL), g.world_noise(0.02, 0.88, 1.08, 2))
+    g.output(colour, rough=0.45, specular=0.5, metallic=0.85)
+    g.material.set_editor_property("used_with_instanced_static_meshes", True)
+    return g.finish()
+
+
+def fence_mesh_material():
+    """The rail's welded mesh panels: steel, see-through. Seen from a bike the wires are a haze, so
+    a dithered mask (temporal AA resolves it), not wires that would shimmer."""
+    g = lib.Graph("M_TrailMesh", f"{FOLDER}/Props")
+    g.output(g.const(TRAIL_STEEL), rough=0.5, specular=0.5, metallic=0.85, opacity_mask=0.35)
+    g.material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+    g.material.set_editor_property("dither_opacity_mask", True)
+    g.material.set_editor_property("two_sided", True)
+    g.material.set_editor_property("used_with_instanced_static_meshes", True)
+    return g.finish()
+
+
+# Its rail, cm: posts 4 cm round to 110 cm over the deck (60 cm into the ground), a 5 cm top rail
+# at 105, mesh from 10 to 100. Swan-neck lamps: a 14 cm pole to 520 cm, an arm curving over
+# the trail on a 90 cm radius, a flat head at its end.
+TRAIL_POST = (4.0, 110.0, 60.0)
+TRAIL_LAMP = (14.0, 520.0, 90.0)
+
+
+def trail_dressing(steel, mesh):
+    """trail.json's rail and lamps, from the engine's shapes."""
+    with open(f"{SRC}/trail.json") as f:
+        trail = json.load(f)
+    cube, cylinder = unreal.load_asset(CUBE), unreal.load_asset(CYLINDER)
+    sphere = unreal.load_asset(SPHERE)
+    rigid, panels = lib.Instances("Trail"), lib.Instances("Trail/Mesh")
+    width, top, under = TRAIL_POST
+    for x, y, z, _yaw in trail["posts"]:
+        tall = top + under
+        rigid.add(cylinder, (x, y, z + top - tall / 2), 0.0, (width / 100, width / 100, tall / 100))
+    for x0, y0, z0, x1, y1, z1 in trail["spans"]:
+        span = math.hypot(x1 - x0, y1 - y0)
+        if span < 1.0:
+            continue
+        yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
+        pitch = math.degrees(math.atan2(z1 - z0, span))
+        mx, my, mz = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2
+        rigid.add(cube, (mx, my, mz + top - 5), yaw, (span / 100, 0.05, 0.05), pitch=pitch)
+        panels.add(cube, (mx, my, mz + 55), yaw, (span / 100, 0.01, 0.9), pitch=pitch)
+    thick, pole, radius = TRAIL_LAMP
+    for x, y, z, yaw in trail["lamps"]:
+        rigid.add(
+            cylinder, (x, y, z + pole / 2 - 30), 0.0, (thick / 100, thick / 100, (pole + 60) / 100)
+        )
+        ux, uy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        cx, cy, cz = x + ux * radius, y + uy * radius, z + pole
+        # The arm: a chain of spheres round a semicircle from the pole's top, over and down.
+        steps = int(math.pi * radius / 3)
+        for k in range(steps + 1):
+            phi = math.pi * (1 - 0.9 * k / steps)
+            rigid.add(
+                sphere,
+                (
+                    cx + ux * radius * math.cos(phi),
+                    cy + uy * radius * math.cos(phi),
+                    cz + radius * math.sin(phi),
+                ),
+                0.0,
+                0.09,
+            )
+        phi = math.pi * 0.1
+        hx, hy = cx + ux * radius * math.cos(phi), cy + uy * radius * math.cos(phi)
+        rigid.add(cylinder, (hx, hy, cz + radius * math.sin(phi) - 8), 0.0, (0.42, 0.42, 0.1))
+    rigid.commit(materials={p.get_path_name(): {0: steel} for p in (cube, cylinder, sphere)})
+    panels.commit(materials={cube.get_path_name(): {0: mesh}}, shadows=False)
+    log(f"trail: {len(trail['posts'])} posts, {len(trail['lamps'])} lamps")
+
+
 CUBE = "/Engine/BasicShapes/Cube"  # 100 cm, centred
+SPHERE = "/Engine/BasicShapes/Sphere"  # 100 cm across, centred
 CYLINDER = "/Engine/BasicShapes/Cylinder"  # 100 cm across and tall, centred, along Z
 
 
@@ -1195,6 +1337,7 @@ def main():
         path = path_material() if _has_paths() else None
         if os.environ.get("OC_PATH") == "road":  # bisecting: the path pieces in the road's look
             path = None
+        trail = trail_materials() if _has_trail() else None
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
@@ -1204,6 +1347,7 @@ def main():
     else:
         ground, road = materials()
         path = path_material() if _has_paths() else None
+        trail = trail_materials() if _has_trail() else None
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
@@ -1215,7 +1359,7 @@ def main():
     if STAGE == "ground":
         return
     yield
-    roads(road, path)
+    roads(road, path, trail[0] if trail else None)
     if _has_paths():  # the world: its ground writes the RVT the road edges read
         rvt_volume()
     timber, posts, logs = dressing
@@ -1223,6 +1367,8 @@ def main():
         rails(timber, posts)
     if logs is not None:
         props(timber, logs)
+    if trail is not None and _listed("trail.json"):
+        trail_dressing(trail[1], trail[2])
     track()
     sea(water)
     if horizon is not None:
