@@ -72,10 +72,9 @@ constexpr float FocalLength = 20.f; // mm: a 61° view; the stills' 16 mm (73°)
 constexpr float PhysicsStep = 1.f / 120.f;
 } // namespace
 
-// The design board's Vael still: where its camera stood and what it looked at, in cm (the world's
-// "ride_02_vael" view, from make_world_level.py's info.json).
+// The design board's Vael still: where its camera stood, in cm (the world's "ride_02_vael" view
+// in v43, from make_world_level.py's info.json). The start screen rides the nearest road to it.
 static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0);
-static const FVector BoardTarget(-6000.43 * 100.0, -6171.28 * 100.0, 445.36 * 100.0);
 
 // A camera's look rather than a renderer's: a little over-exposed, highlights that roll off and
 // lose colour as film and sensors do, shadows lifted a touch and cooled, light warmed, a soft
@@ -805,10 +804,11 @@ void ARidePawn::Place()
 	float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
 	if (bBackdrop && bBoardView)
 	{
-		// The board's still exactly: its camera's aim (30 m up the road, 40 cm lower) and lens.
-		const FVector To = BoardTarget - BoardEye;
-		Yaw = FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X));
-		Pitch = FMath::RadiansToDegrees(FMath::Atan2(To.Z, To.Size2D()));
+		// The board's still: straight up the road, as its camera was (30 m ahead, 40 cm lower). The
+		// road's own heading, not the board's fixed bearing: the v45 roads bend round the land, and
+		// the old bearing pointed the start screen off the tarmac.
+		const double Run = FVector::Dist2D(Ahead, Eye);
+		Pitch = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Z - Eye.Z - 40.0 * Run / 3000.0, Run));
 	}
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	FVector Lift = FVector::ZeroVector;
