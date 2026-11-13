@@ -103,6 +103,11 @@ PEAK = 1150.0  # m: Vael's summit, seen from the other islands (13 Nov, the AAA 
 BRIDGE_CLEAR = 9.0  # m: a bridge's deck over the sea, at least
 LANDFALL = 260.0  # m inland of a petal's shore where its bridge's road meets the island's
 COAST_IN = 200.0  # m: the hub's coast road in from the shore
+# The hub's cliffed shore (13 Nov, the AAA review: "the coast has no coast"): about half its
+# seaward edge, away from the harbour, rises in SEA_CLIFF m to a 15-40 m top, with the coast road
+# CLIFF_IN m back from the edge so the sea is in frame.
+SEA_CLIFF = (35.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
+CLIFF_IN = (45.0, 70.0)  # m: the coast road from a cliff's edge, least and most
 # m: how far either side of the line from the hub to a petal its two bridges may run; each takes
 # the narrowest crossing in that range.
 BRIDGE_APART = (600.0, 2800.0)
@@ -331,6 +336,17 @@ def terrain():
     fall = 700 + (110 - 700) * cliff
     beach = 2.5 + 1.5 * mi.fbm(x, y, 400, 2, SEED + 62)
     h = beach + (np.maximum(h, 4) - beach) * mi.smoothstep(0, 1, inland / fall)
+    # The hub's sea cliffs: in stretches a few km long, none near the harbour; the top held out to
+    # 400 m inland and eased back into the hills by 900.
+    (bx, by), _ = HARBOUR_BAY
+    run, low, high = SEA_CLIFF
+    patchy = mi.smoothstep(0.46, 0.54, mi.fbm(x, y, 2600, 2, SEED + 63))
+    away = mi.smoothstep(TOWN_REACH * 0.9, TOWN_REACH * 1.4, np.hypot(x - bx, y - by))
+    sea_cliff = (which == HUB) * land * patchy * away
+    top = low + (high - low) * mi.fbm(x, y, 900, 2, SEED + 64)
+    raised = np.maximum(h, top * mi.smoothstep(0, run, inland) ** 0.6)
+    h = h + (raised - h) * sea_cliff * mi.smoothstep(900, 400, inland)
+    cliff = np.maximum(cliff, sea_cliff)
     # Erosion: hardest on the mountain, least round the harbour; the shore and the sea untouched.
     bite = {"town": 0.35, "forest": 0.6, "heath": 0.7, "mountain": 1.0, "desert": 0.5}
     k = np.array([bite[isl[4]] for isl in ISLANDS], np.float32)[which]
@@ -442,9 +458,10 @@ def catmull(points, step):
     return mi.catmull([p / 1000 for p in points], True, step=step)
 
 
-def coast_road(inland, which):
-    """Harbour Isle's coast road, closed, COAST_IN from the shore, starting at the harbour quay
-    and running clockwise (toward +angle, Y being south): [x, y] every STEP m."""
+def coast_road(inland, which, cliff):
+    """Harbour Isle's coast road, closed, COAST_IN from the shore (CLIFF_IN where it is cliffed),
+    starting at the harbour quay and running clockwise (toward +angle, Y being south): [x, y]
+    every STEP m."""
     rng = np.random.default_rng(SEED + 5)
     (bx, by), (_, bry) = HARBOUR_BAY
     quay = np.array([bx, by - bry - 450.0])
@@ -452,12 +469,38 @@ def coast_road(inland, which):
     points = [quay]
     count = 30
     for k in range(1, count):
-        p = ellipse_point(HUB, a0 + 2 * math.pi * k / count, 1.1)
-        p = onshore(p, HUB, inland, COAST_IN + rng.uniform(-40, 140), which)
+        out = ellipse_point(HUB, a0 + 2 * math.pi * k / count, 1.1)
+        p = onshore(out, HUB, inland, COAST_IN + rng.uniform(-40, 140), which)
         last = k == count - 1 and np.linalg.norm(p - quay) <= 450
         if np.linalg.norm(p - points[-1]) > 450 and not last:
             points.append(p)
-    return even(catmull(points, STEP), True)
+    return hug(even(catmull(points, STEP), True), inland, cliff)
+
+
+def hug(ring, inland, cliff, rounds=40):
+    """The closed coast road pulled, where the shore is cliffed, to CLIFF_IN m from the edge:
+    each round every point moves down the distance-to-shore field's slope by a share of its
+    miss, the moves smoothed along the road (the cliff's share easing them in and out), and
+    bends under 60 m eased out."""
+    gy, gx = np.gradient(inland, SPACING)
+    want = (CLIFF_IN[0] + CLIFF_IN[1]) / 2
+    for _ in range(rounds):
+        on = ndimage.gaussian_filter1d(sample(cliff, ring), 300 / STEP, mode="wrap")
+        miss = sample(inland, ring) - want
+        g = np.stack([sample(gx, ring), sample(gy, ring)], 1)
+        g /= np.linalg.norm(g, axis=1, keepdims=True) + 1e-9
+        step = np.clip(miss, -30, 30) * 0.5 * np.clip(on * 2 - 0.5, 0, 1)
+        step = ndimage.gaussian_filter1d(step, 60 / STEP, mode="wrap")
+        ring = ring - g * step[:, None]
+        ring = even(relax_closed(ring), True)
+    return ring
+
+
+def relax_closed(xy, least=60.0, rounds=100):
+    """relax() for a closed line."""
+    pad = int(60 / STEP)
+    loop = np.vstack([xy[-pad:], xy, xy[:pad]])
+    return relax(loop, least, rounds)[pad:-pad]
 
 
 def usable(site, land):
@@ -502,10 +545,14 @@ class Spur:
         curve = contour(curve, h, land, inland)
         there, back = out_in, out_back[::-1]
         self.xy = np.vstack([ring[self.enter], there[1:], curve[1:-1], back[:-1], ring[self.leave]])
-        a = 1 + int(LEAD / STEP)
+        # The decks start LEAD m from the coast road, or at the hub's shore if that is nearer:
+        # where the road runs along a sea cliff it is.
+        lead_in = min(LEAD, np.linalg.norm(shore_in[0] - there[0]) - STEP)
+        lead_back = min(LEAD, np.linalg.norm(shore_back[0] - back[-1]) - STEP)
+        a = 1 + max(int(lead_in / STEP), 0)
         b = len(there) - 1
         c = b + len(curve) - 1
-        d = len(self.xy) - 1 - int(LEAD / STEP)
+        d = len(self.xy) - 1 - max(int(lead_back / STEP), 0)
         self.bridges = [(a, b), (c, d)]
 
     @staticmethod
@@ -533,9 +580,9 @@ class Spur:
         return j, line, [hub_shore, petal_shore]
 
 
-def lay_network(h, land, which, inland):
+def lay_network(h, land, which, inland, cliff):
     """The coast road and every petal's spur."""
-    ring = coast_road(inland, which)
+    ring = coast_road(inland, which, cliff)
     rng = np.random.default_rng(SEED)
     spurs = {
         ISLANDS[p][0]: Spur(p, ring, h, land, which, inland, rng) for p in range(1, len(ISLANDS))
@@ -720,8 +767,11 @@ def keep_land(land, roads):
         for a, b in bridges:
             on[a : b + 1] = False
         rc = np.round(xy[on][:, ::-1] / SPACING + (RES - 1) / 2).astype(int)
-        mark[rc[:, 0], rc[:, 1]] = True
-    near = ndimage.binary_dilation(mark, iterations=int(140 / SPACING))
+        # Only where the road is over the sea: a dilation round every point grew a shelf of beach
+        # in front of the sea cliffs, whose road runs within CLIFF_IN of the edge.
+        wet = ~land[rc[:, 0], rc[:, 1]]
+        mark[rc[wet, 0], rc[wet, 1]] = True
+    near = ndimage.binary_dilation(mark, iterations=int(50 / SPACING))
     added = near & ~land
     print(f"land kept under the road: {added.sum()} samples added", flush=True)
     return added
@@ -779,9 +829,15 @@ def profile_stats(xy, z):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    h, land, which, weights, _cliff, inland = terrain()
+    h, land, which, weights, cliff, inland = terrain()
     print(f"terrain: {h.min():.0f}..{h.max():.0f} m, land {land.mean() * 100:.0f}%", flush=True)
-    ring, spurs = lay_network(h, land, which, inland)
+    ring, spurs = lay_network(h, land, which, inland, cliff)
+    edge = sample(inland, ring)[sample(cliff, ring) > 0.5]
+    print(
+        f"coast road: {len(edge) * STEP / 1000:.1f} km on the cliffs, "
+        f"{np.median(edge) if len(edge) else 0:.0f} m from the edge",
+        flush=True,
+    )
     h = landings(h, land, [q for sp in spurs.values() for q in sp.shores])
     added = keep_land(land, [(ring, [])] + [(sp.xy, sp.bridges) for sp in spurs.values()])
     if added.any():

@@ -597,6 +597,15 @@ CLIFFS = {
     ),
 }
 CLIFF_REACH = 1800.0  # m from the road: past it, no one sees a face's detail
+# Sea stacks off the cliffed shores (make_chain's SEA_CLIFF on the hub, the Moor's and Vael's
+# cliffs): (mesh, size m, scale range); how far out (m); how high the shore must stand within
+# STACK_TOP[1] m; most of them; and rocks heaped at the cliff's foot.
+STACKS = [(ms("coast", "huge_beach_rock_formation"), 12.8, (1.4, 2.8))]
+STACK_FOOT = [(ms("coast", "nordic_beach_rock_formation"), 7.1, (1.0, 2.0))]
+STACK_OUT = (30.0, 250.0)
+STACK_TOP = (12.0, 150.0)
+STACK_MOST = 90
+STACK_BIOMES = ("meadow", "heath", "mountain")  # not "town": the harbour stays clear
 CLIFF_STEP = 3  # ground samples (7 m) between candidates
 
 
@@ -686,6 +695,55 @@ def cliffs(out, g, bio, road, rng, taken):
                 mark=(120, 115, 110),
             )
     print(f"cliffs: {counts}", flush=True)
+
+
+def sea_stacks(out, g, bio, road, rng):
+    """Stacks standing in the sea off the cliffed shores, within sight of the road, and rocks
+    heaped at those cliffs' feet."""
+    out.group("Stacks", cull=0)
+    top = ndimage.maximum_filter(g.h, int(2 * STACK_TOP[1] / g.spacing) + 1)
+    s = 4
+    idx = (np.arange(0, g.n, s) - (g.n - 1) / 2) * g.spacing
+    y, x = np.meshgrid(idx, idx, indexing="ij")
+    sea, high = g.sea[::s, ::s], top[::s, ::s]
+    pick = (sea > STACK_OUT[0]) & (sea < STACK_OUT[1]) & (high > STACK_TOP[0])
+    foot = (g.inland[::s, ::s] > 0) & (g.inland[::s, ::s] < 12) & (high > STACK_TOP[0])
+    placed = []
+    counts = {"stacks": 0, "foot": 0}
+    for kind, mask, meshes, most, sink in (
+        ("stacks", pick, STACKS, STACK_MOST, 0.25),
+        ("foot", foot, STACK_FOOT, STACK_MOST * 3, 0.3),
+    ):
+        px, py = x[mask], y[mask]
+        keep = road.dist(px, py) < CLIFF_REACH
+        keep &= np.isin(bio.best(px, py), STACK_BIOMES)
+        px, py = px[keep], py[keep]
+        for k in rng.permutation(len(px)):
+            if counts[kind] >= most:
+                break
+            mesh, size, (s0, s1) = meshes[rng.integers(len(meshes))]
+            scale = rng.uniform(s0, s1)
+            r = size * scale * 0.5
+            if road.dist(px[k : k + 1], py[k : k + 1])[0] < r + 15:
+                continue
+            if any(math.hypot(px[k] - qx, py[k] - qy) < 1.2 * (r + qr) for qx, qy, qr in placed):
+                continue
+            placed.append((px[k], py[k], r))
+            counts[kind] += 1
+            out.add(
+                "Stacks",
+                mesh,
+                px[k],
+                py[k],
+                g.z(px[k], py[k]) - size * scale * sink,
+                rng.uniform(0, 360),
+                scale,
+                rng.uniform(-4, 4),
+                rng.uniform(-4, 4),
+                mark=(150, 145, 140),
+            )
+    print(f"sea stacks: {counts}", flush=True)
+    return placed
 
 
 def turbines(out, g, bio, road, rng, taken):
@@ -1096,6 +1154,7 @@ def main():
     # world"); power_line() stays for a later setting that wants them.
     taken = taken + rocks(out, g, bio, road, rng)
     cliffs(out, g, bio, road, rng, taken)
+    sea_stacks(out, g, bio, road, rng)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
         json.dump(
