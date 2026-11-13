@@ -595,7 +595,7 @@ void URideMenu::SurveyRoutes()
 		}
 		if (S.bClosed && S.Map.Num() > 0)
 		{
-			S.Map.Add(S.Map[0]);
+			S.Map.Add(FVector2f(S.Map[0])); // a copy: Add() may move the array it reads from
 		}
 	}
 	// The routes' order, as the pawn lists them.
