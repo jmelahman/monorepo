@@ -763,6 +763,13 @@ void ARidePawn::Place()
 	{
 		bOnBackdrop = bBackdrop;
 		bHeadSet = false;
+		// The board's backdrop is the shaded valley of a still, darker than the game's exposure
+		// makes it, so the start screen's view is stopped down. -RideBackdropEv= sets by how much.
+		float Ev = -2.f;
+		FParse::Value(FCommandLine::Get(), TEXT("RideBackdropEv="), Ev);
+		FPostProcessSettings Plain;
+		CameraLook(Plain);
+		Camera->PostProcessSettings.AutoExposureBias = Plain.AutoExposureBias + (bBackdrop ? Ev : 0.f);
 	}
 	const float S = On->Wrap(static_cast<float>(At));
 	const FVector Eye = On->Point(S, -On->KeepLeft, EyeHeight);
@@ -821,16 +828,35 @@ void ARidePawn::Place()
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
-	// The red pines near the top of the Vael climb (the design board's backdrop), on whichever route passes through it. -RideBackdropIn=NAME
-	// and -RideBackdrop=METRES move it.
-	FString In = TEXT("Vael");
-	float Into = 6300.f;
-	FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), In);
-	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
+	// The design board's backdrop: the pine valley near the top of Vael, where its camera stood
+	// (the world's "ride_02_vael" view, in metres), on whichever route passes within 50 m of it.
+	// -RideBackdropIn=NAME and -RideBackdrop=METRES look from a way into a named stretch instead.
 	TArray<const URideTrack*> Order = {Track.Get()};
 	for (const URideTrack* Each : Routes)
 	{
 		Order.AddUnique(Each);
+	}
+	FString In;
+	float Into = 0.f;
+	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
+	if (!FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), In))
+	{
+		const FVector Where(-6022.73 * 100.0, -6151.28 * 100.0, 0.0);
+		for (const URideTrack* Each : Order)
+		{
+			if (!Each || Each->Length() <= 0.f)
+			{
+				continue;
+			}
+			const float S = Each->Nearest(Where);
+			if (FVector::Dist2D(Each->Point(S, 0.f), Where) < 5000.0)
+			{
+				On = Each;
+				At = S + Into * 100.0;
+				return true;
+			}
+		}
+		return false;
 	}
 	for (const URideTrack* Each : Order)
 	{
