@@ -797,8 +797,8 @@ def path_material():
 
 # The town's bike trail, after Chicago's Bloomingdale Trail (the 606): pale broom-finished
 # concrete in 3 m slabs, blue-grey rubber running shoulders, a yellow dashed centre line.
-TRAIL_CONCRETE = (0.24, 0.235, 0.22)  # 0.34 read as white under the hub sun (v50)
-TRAIL_RUBBER = (0.035, 0.05, 0.075)
+TRAIL_CONCRETE = (0.13, 0.127, 0.12)  # 0.34 and 0.24 read as white under the hub sun
+TRAIL_RUBBER = (0.014, 0.02, 0.032)  # 0.05 rendered mid grey (v51)
 TRAIL_SHOULDER = 0.45  # m, each side
 TRAIL_YELLOW = (0.62, 0.4, 0.03)
 TRAIL_SLAB = 3.0  # m between saw-cut joints
@@ -851,7 +851,7 @@ def trail_material():
     paint = g.mul(stripe, dash)
     colour = g.lerp(colour, g.const(TRAIL_YELLOW), paint)
     rough = g.lerp(rough, g.const(0.6), paint)
-    g.output(colour, rough=rough, specular=0.4, metallic=0.0)
+    g.output(colour, rough=rough, specular=0.25, metallic=0.0)
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
 
