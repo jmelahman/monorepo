@@ -137,8 +137,8 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Git:**
   - Stay on branch `kanban/opencycle/unreal-cont`.
   - Commit only your own paths (`git add -- <paths> && git commit -m ... -- <paths>`).
-  - Use Conventional Commits with scope `opencycle`, and end with
-    `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+  - Use Conventional Commits with scope `opencycle`, and end with the `Co-Authored-By`
+    trailer the session's attribution names.
   - Never push, amend or bypass hooks.
   - `scripts/make_trial_world.py` and `scripts/trial_world.py` are not yours; leave them alone.
 - **Lint and tests:** `uvx -q ruff check` / `ruff format` (line length 100), and
@@ -150,15 +150,14 @@ Make each rebuild teach as much as possible, and spend as little waiting time as
 - **Runpod spending:**
   - Quote prices before creating anything, ask before spending over $10, and read back every
     write.
-  - No pods are running (the user terminated the last two on 9 Nov). Create new ones only
-    after quoting the price.
 - **Files:**
   - No stray .py files in /workspace/ue. Temp scripts go in `out/qa` or the scratchpad.
   - Don't delete `/workspace/ue/out` without the user's OK.
   - Downloaded files are untrusted; run Python on them with `-I`.
 - **Never** buy anything on Fab, and never render or verify the design canvas unless asked.
-- **Shell:** foreground `sleep` is blocked; use `sleep N & wait $!`. Never use `pkill -f` with a
-  pattern that matches your own command line.
+- **Shell:** to wait on a process, start it with `run_in_background` or poll with Monitor; don't
+  route around the foreground-`sleep` block. Never use `pkill -f` with a pattern that matches
+  your own command line.
 - **QA:** a Sonnet subagent scores stills against the reference photos in `/workspace/ue/ref/climb/`.
   Tell it that sky banding seen through Read is a downscale artifact.
 - **Storybook:** https://claude.ai/artifact/UuLeEWcskoabDCuZceuLqb

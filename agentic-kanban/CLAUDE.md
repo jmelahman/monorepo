@@ -78,7 +78,7 @@ ad-hoc.
 - `web/` — Vite + React 19 + Tailwind 4 frontend.
 - `desktop/` — Linux Electron client for a running server; holds no server code.
 - `docs/` — VitePress site (`guide/`, `reference/{api,cli,mcp}.md`).
-- `.kanban.toml` — session image (`ghcr.io/jmelahman/devcontainer`, built from
+- `.config/kanban/config.toml` — session image (`ghcr.io/jmelahman/devcontainer`, built from
   the monorepo's `templates/fullstack-template/.devcontainer/`) and task
   label → container port map (host `13000–13099`).
 
