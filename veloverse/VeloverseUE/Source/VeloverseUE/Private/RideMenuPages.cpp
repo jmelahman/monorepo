@@ -264,7 +264,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		}
 		P.Icon(Item.Icon, 140.f, Y + 21.f, 22.f, bHot ? Ink : Soft);
 		P.Text(180.f, Mid(Y + 32.f, 20.f), Item.Label, P.Font("Bold", 20.f), Ink);
-		const float ValueRight = Item.bCycle ? 620.f : 656.f;
+		const float ValueRight = Item.bCycle ? 604.f : 656.f;
 		if (!Item.Value.IsEmpty())
 		{
 			const FSlateFontInfo F = P.Font("Medium", 16.f);
@@ -272,8 +272,8 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		}
 		if (Item.bCycle)
 		{
-			P.Icon(Icons::ChevronLeft, 624.f, Y + 22.f, 20.f, Muted);
-			P.Icon(Icons::Chevron, 648.f, Y + 22.f, 20.f, Muted);
+			P.Icon(Icons::ChevronLeft, 620.f, Y + 22.f, 20.f, Muted);
+			P.Icon(Icons::Chevron, 646.f, Y + 22.f, 20.f, Muted);
 		}
 		C.Ring(Item.Key, 120.f, Y, 560.f, 64.f, 12.f);
 		FHit& H = C.Hit(Item.Key, 120.f, Y, 560.f, 64.f);
@@ -698,7 +698,7 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 	}
 
 	// What's coming in now.
-	Y = FMath::Max(Y + 24.f, 560.f);
+	Y += 32.f;
 	Label(P, X, Y, TEXT("Live"));
 	Y += 16.f;
 	const FTrainerReading Reading = Pawn ? Pawn->Reading : FTrainerReading();
@@ -1435,9 +1435,9 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		double Average, Max;
 	};
 	const FTrace Traces[4] = {
-		{TEXT("Power"), &Tr.Watts, C.Accent, 304.f, 104.f, TEXT("W"), S.AverageWatts, S.MaxWatts},
-		{TEXT("Heart rate"), &Tr.HeartRate, Heart, 420.f, 96.f, TEXT("bpm"), S.AverageHeartRate, S.MaxHeartRate},
-		{TEXT("Cadence"), &Tr.Cadence, Sky, 528.f, 72.f, TEXT("rpm"), S.AverageCadence, 0.0},
+		{TEXT("Power"), &Tr.Watts, C.Accent, 304.f, 96.f, TEXT("W"), S.AverageWatts, S.MaxWatts},
+		{TEXT("Heart rate"), &Tr.HeartRate, Heart, 412.f, 88.f, TEXT("bpm"), S.AverageHeartRate, S.MaxHeartRate},
+		{TEXT("Cadence"), &Tr.Cadence, Sky, 512.f, 88.f, TEXT("rpm"), S.AverageCadence, 0.0},
 		{TEXT("Elevation"), &Tr.Elevation, Soft, 612.f, 64.f, TEXT("m"), 0.0, 0.0},
 	};
 	for (int32 I = 0; I < 4; ++I)
