@@ -600,8 +600,17 @@ CLIFF_REACH = 1800.0  # m from the road: past it, no one sees a face's detail
 # Sea stacks off the cliffed shores (make_chain's SEA_CLIFF on the hub, the Moor's and Vael's
 # cliffs): (mesh, size m, scale range); how far out (m); how high the shore must stand within
 # STACK_TOP[1] m; most of them; and rocks heaped at the cliff's foot.
-STACKS = [(ms("coast", "huge_beach_rock_formation"), 12.8, (1.4, 2.8))]
-STACK_FOOT = [(ms("coast", "nordic_beach_rock_formation"), 7.1, (1.0, 2.0))]
+# (mesh, size m, height m, scale range): heights from the FBX bounds (out/qa/probe/fbx_bounds.py),
+# as v45 sank each by a share of its length and buried the flat beach slabs it stood (13 Nov).
+STACKS = [(ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9, (2.5, 4.0))]
+STACK_FOOT = [
+    (ms("coast", "nordic_beach_rock_formation"), 7.1, 3.0, (1.0, 2.0)),
+    (ms("coast", "large_nordic_coastal_cliff"), 6.5, 2.2, (1.5, 3.0)),
+]
+# Rock on the sea cliffs' faces: the coastal cliff scaled to the face's height, base in the
+# water, facing the sea, packed along the shore; the most of them.
+SEA_FACE = (ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9)
+SEA_FACES_MOST = 1500
 STACK_OUT = (30.0, 250.0)
 STACK_TOP = (12.0, 150.0)
 STACK_MOST = 90
@@ -711,8 +720,8 @@ def sea_stacks(out, g, bio, road, rng):
     placed = []
     counts = {"stacks": 0, "foot": 0}
     for kind, mask, meshes, most, sink in (
-        ("stacks", pick, STACKS, STACK_MOST, 0.25),
-        ("foot", foot, STACK_FOOT, STACK_MOST * 3, 0.3),
+        ("stacks", pick, STACKS, STACK_MOST, 0.05),
+        ("foot", foot, STACK_FOOT, STACK_MOST * 3, 0.2),
     ):
         px, py = x[mask], y[mask]
         keep = road.dist(px, py) < CLIFF_REACH
@@ -721,7 +730,7 @@ def sea_stacks(out, g, bio, road, rng):
         for k in rng.permutation(len(px)):
             if counts[kind] >= most:
                 break
-            mesh, size, (s0, s1) = meshes[rng.integers(len(meshes))]
+            mesh, size, tall, (s0, s1) = meshes[rng.integers(len(meshes))]
             scale = rng.uniform(s0, s1)
             r = size * scale * 0.5
             if road.dist(px[k : k + 1], py[k : k + 1])[0] < r + 15:
@@ -735,7 +744,7 @@ def sea_stacks(out, g, bio, road, rng):
                 mesh,
                 px[k],
                 py[k],
-                g.z(px[k], py[k]) - size * scale * sink,
+                g.z(px[k], py[k]) - tall * scale * sink,
                 rng.uniform(0, 360),
                 scale,
                 rng.uniform(-4, 4),
@@ -743,6 +752,63 @@ def sea_stacks(out, g, bio, road, rng):
                 mark=(150, 145, 140),
             )
     print(f"sea stacks: {counts}", flush=True)
+    return placed + sea_faces(out, g, bio, road, rng, placed)
+
+
+def sea_faces(out, g, bio, road, rng, taken):
+    """Rock along the sea cliffs: where the ground within 40 m of the water is steep and stands
+    over 10 m, a coastal cliff scaled to that height, its base below the waterline, facing the
+    sea, each overlapping the last so they read as one wall."""
+    s = 2
+    mesh, size, tall = SEA_FACE
+    h = g.h[::s, ::s]
+    top = ndimage.maximum_filter(h, int(2 * 40 / (g.spacing * s)) + 1)
+    gy, gx = np.gradient(g.h, g.spacing)
+    gx, gy = gx[::s, ::s], gy[::s, ::s]
+    idx = (np.arange(h.shape[0]) * s - (g.n - 1) / 2) * g.spacing
+    y, x = np.meshgrid(idx, idx, indexing="ij")
+    inland = g.inland[::s, ::s]
+    pick = (inland > 0) & (inland < 25) & (top > 10) & (g.slope[::s, ::s] > 0.4)
+    x, y, top, gx, gy = (a[pick] for a in (x, y, top, gx, gy))
+    keep = (road.dist(x, y) < CLIFF_REACH) & np.isin(bio.best(x, y), STACK_BIOMES)
+    x, y, top, gx, gy = (a[keep] for a in (x, y, top, gx, gy))
+    cell = 12.0
+    grid = {}
+    for tx, ty, tr in taken:
+        grid.setdefault((int(tx // cell), int(ty // cell)), []).append((tx, ty, tr))
+    placed = []
+    for k in rng.permutation(len(x)):
+        if len(placed) >= SEA_FACES_MOST:
+            break
+        scale = float(np.clip(top[k] / tall * rng.uniform(1.0, 1.25), 1.5, 5.0))
+        r = size * scale * 0.5
+        if road.dist(x[k : k + 1], y[k : k + 1])[0] < r + 6:
+            continue
+        cx, cy = int(x[k] // cell), int(y[k] // cell)
+        span = int(r // cell) + 3
+        if any(
+            math.hypot(x[k] - qx, y[k] - qy) < 0.6 * (r + qr)
+            for i in range(cx - span, cx + span + 1)
+            for j in range(cy - span, cy + span + 1)
+            for qx, qy, qr in grid.get((i, j), ())
+        ):
+            continue
+        grid.setdefault((cx, cy), []).append((x[k], y[k], r))
+        placed.append((x[k], y[k], r))
+        down = math.degrees(math.atan2(-gy[k], -gx[k]))
+        out.add(
+            "Stacks",
+            mesh,
+            x[k],
+            y[k],
+            min(float(g.z(x[k], y[k])), 0.0) - 2.0,
+            down + rng.uniform(-25, 25),
+            scale,
+            rng.uniform(-4, 4),
+            rng.uniform(-4, 4),
+            mark=(160, 150, 140),
+        )
+    print(f"sea faces: {len(placed)}", flush=True)
     return placed
 
 

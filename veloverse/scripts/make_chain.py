@@ -104,10 +104,14 @@ BRIDGE_CLEAR = 9.0  # m: a bridge's deck over the sea, at least
 LANDFALL = 260.0  # m inland of a petal's shore where its bridge's road meets the island's
 COAST_IN = 200.0  # m: the hub's coast road in from the shore
 # The hub's cliffed shore (13 Nov, the AAA review: "the coast has no coast"): about half its
-# seaward edge, away from the harbour, rises in SEA_CLIFF m to a 15-40 m top, with the coast road
-# CLIFF_IN m back from the edge so the sea is in frame.
-SEA_CLIFF = (35.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
-CLIFF_IN = (45.0, 70.0)  # m: the coast road from a cliff's edge, least and most
+# seaward edge, away from the harbour and facing open sea (not a strait), rises in SEA_CLIFF m to
+# a 15-40 m top that then climbs CLIFF_TILT inland, so the edge is the lowest of the top and the
+# sea is in frame from the coast road CLIFF_IN m back. v45's top was the old hills raised, and
+# crests between road and edge hid the sea (13 Nov stills).
+SEA_CLIFF = (20.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
+CLIFF_TILT = 0.03  # the top's rise inland, from the edge
+CLIFF_OPEN = (1200.0, 2000.0)  # m to another island's shore: no cliffs to 1200, full past 2000
+CLIFF_IN = (20.0, 30.0)  # m: the coast road from a cliff's edge, least and most
 # m: how far either side of the line from the hub to a petal its two bridges may run; each takes
 # the narrowest crossing in that range.
 BRIDGE_APART = (600.0, 2800.0)
@@ -342,10 +346,12 @@ def terrain():
     run, low, high = SEA_CLIFF
     patchy = mi.smoothstep(0.46, 0.54, mi.fbm(x, y, 2600, 2, SEED + 63))
     away = mi.smoothstep(TOWN_REACH * 0.9, TOWN_REACH * 1.4, np.hypot(x - bx, y - by))
-    sea_cliff = (which == HUB) * land * patchy * away
+    others = land & (which != HUB)
+    open_sea = mi.smoothstep(*CLIFF_OPEN, ndimage.distance_transform_edt(~others) * SPACING)
+    sea_cliff = (which == HUB) * land * patchy * away * open_sea
     top = low + (high - low) * mi.fbm(x, y, 900, 2, SEED + 64)
-    raised = np.maximum(h, top * mi.smoothstep(0, run, inland) ** 0.6)
-    h = h + (raised - h) * sea_cliff * mi.smoothstep(900, 400, inland)
+    shaped = top * mi.smoothstep(0, run, inland) ** 0.6 + CLIFF_TILT * np.maximum(inland - run, 0)
+    h = h + (shaped - h) * sea_cliff * mi.smoothstep(900, 400, inland)
     cliff = np.maximum(cliff, sea_cliff)
     # Erosion: hardest on the mountain, least round the harbour; the shore and the sea untouched.
     bite = {"town": 0.35, "forest": 0.6, "heath": 0.7, "mountain": 1.0, "desert": 0.5}

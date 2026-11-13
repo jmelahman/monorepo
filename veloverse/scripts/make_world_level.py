@@ -425,6 +425,9 @@ def paint_band(x, y, h, slope, d, w, inland):
     rock = mi.smoothstep(0.75, 1.05, slope) * mi.smoothstep(10.0, 25.0, d)
     high = w["mountain"] + w["heath"]
     rock = np.maximum(rock, high * mi.smoothstep(0.45, 0.7, slope) * mi.smoothstep(15, 30, d))
+    # The sea cliffs: their faces read as turf at 0.75 (v45 stills), so rock from 0.35 near water.
+    sea = mi.smoothstep(80.0, 30.0, inland) * (h > 6)
+    rock = np.maximum(rock, sea * mi.smoothstep(0.35, 0.6, slope) * mi.smoothstep(10, 25, d))
     snow = mi.smoothstep(SNOWLINE - 40, SNOWLINE + 40, h + 90 * (n(70, 1) - 0.5))
     snow *= 1 - mi.smoothstep(0.7, 1.1, slope)
     rock *= 1 - snow
