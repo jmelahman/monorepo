@@ -1238,6 +1238,8 @@ def _ensure_level():
             road is not None
             and isinstance(actor, unreal.StaticMeshActor)
             and str(actor.get_folder_path()) == "Road"
+            # The dirt path's and the town trail's pieces keep their own materials.
+            and not actor.get_actor_label().startswith(("road_path_", "road_trail_"))
         ):
             mesh = actor.static_mesh_component
             if mesh.get_material(0) != road:
