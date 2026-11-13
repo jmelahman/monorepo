@@ -223,31 +223,30 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		TFunction<void()> Click;
 	};
 	const TArray<FItem> Items = {
-		{TEXT("routes"), Icons::Map, TEXT("Choose a route"), Route ? Route->Title : FString(),
+		{TEXT("routes"), Icons::Map, TEXT("Choose a route"),
+		 Route ? FString::Printf(TEXT("Now: %s"), *Route->Title) : FString(TEXT("Nine loops from the harbour")),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
-		{TEXT("settings"), Icons::Gear, TEXT("Settings"), FString(), [M] { M->Show(ERideMenuPage::Settings); }},
-		{TEXT("quit"), Icons::Leave, TEXT("Quit"), FString(), [M] { M->Controller()->Quit(); }},
+		{TEXT("settings"), Icons::Gear, TEXT("Settings"), TEXT("Rider, graphics, units"),
+		 [M] { M->Show(ERideMenuPage::Settings); }},
+		{TEXT("quit"), Icons::Leave, TEXT("Quit"), TEXT("Back to the desktop"), [M] { M->Controller()->Quit(); }},
 	};
 	float Y = 408.f;
 	for (const FItem& Item : Items)
 	{
+		// A card each, as the board has them: the icon, the name with a line under it, a chevron.
 		const bool bHot = C.Hot(Item.Key);
-		if (bHot)
-		{
-			P.Round(120.f, Y, 560.f, 64.f, 12.f, InkA(0.08f));
-		}
-		P.Icon(Item.Icon, 140.f, Y + 21.f, 22.f, C.Accent);
-		P.Text(180.f, Mid(Y + 32.f, 20.f), Item.Label, P.Font("Bold", 20.f), Ink);
-		if (!Item.Value.IsEmpty())
-		{
-			const FSlateFontInfo F = P.Font("Medium", 16.f);
-			P.Text(656.f, Mid(Y + 32.f, 16.f), P.Fit(Item.Value, F, 250.f), F, Muted, EAlign::Right);
-		}
-		C.Ring(Item.Key, 120.f, Y, 560.f, 64.f, 12.f);
-		C.Hit(Item.Key, 120.f, Y, 560.f, 64.f).OnClick = Item.Click;
-		Y += 70.f;
+		P.Round(120.f, Y, 560.f, 72.f, 12.f, WithAlpha(Night, bHot ? 0.62f : 0.42f));
+		P.Border(120.f, Y, 560.f, 72.f, 12.f, InkA(bHot ? 0.2f : 0.1f));
+		P.Icon(Item.Icon, 144.f, Y + 22.f, 28.f, C.Accent, 1.8f);
+		P.Text(192.f, Mid(Y + 27.f, 21.f), Item.Label, P.Font("Medium", 21.f), Ink);
+		const FSlateFontInfo F = P.Font("Medium", 14.f);
+		P.Text(192.f, Mid(Y + 51.f, 14.f), P.Fit(Item.Value, F, 400.f), F, Soft);
+		P.Icon(Icons::Chevron, 680.f - 24.f - 20.f, Y + 26.f, 20.f, InkA(bHot ? 1.f : 0.4f), 2.f);
+		C.Ring(Item.Key, 120.f, Y, 560.f, 72.f, 12.f);
+		C.Hit(Item.Key, 120.f, Y, 560.f, 72.f).OnClick = Item.Click;
+		Y += 84.f;
 	}
 
 	// The last ride, to look back at: its name and three numbers, as the board has it.
