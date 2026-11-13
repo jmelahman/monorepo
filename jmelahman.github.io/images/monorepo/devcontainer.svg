@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" width="720" height="420" role="img" aria-labelledby="t">
+  <title id="t">Each agentic-kanban ticket gets its own worktree and firewalled container from one image, and all containers share named cache volumes</title>
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; fill: #2c2c2c; font-size: 12px; }
+    .m, .m text { font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 10.5px; }
+    .mu { fill: #8a8878; }
+    .inv { fill: #fbfaef; }
+    .ac { fill: #8c0000; }
+    .cap { font-size: 10.5px; letter-spacing: .08em; fill: #8a8878; font-weight: 700; }
+    .panel { fill: #efeee0; stroke: #d9d6c3; stroke-width: 1.5; }
+    .ctr { fill: #fbfaef; stroke: #8c0000; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .chip { fill: #efeee0; }
+    .vol { fill: #fbfaef; stroke: #d9d6c3; stroke-width: 1.5; }
+    .wire { stroke: #b9b6a3; stroke-width: 1.5; fill: none; }
+  </style>
+
+  <!-- Board -->
+  <rect x="20" y="20" width="680" height="50" rx="8" fill="#2c2c2c"/>
+  <text class="inv" x="36" y="41" font-weight="700">agentic-kanban</text>
+  <text class="inv" x="36" y="58" font-size="11">one ticket → one git worktree → one container</text>
+  <text class="m inv" x="684" y="41" text-anchor="end">ghcr.io/jmelahman/devcontainer</text>
+  <text class="inv" x="684" y="58" text-anchor="end" font-size="11">same image for every ticket (docker-bake.hcl)</text>
+
+  <path class="wire" d="M125,70 L125,96"/>
+  <path class="wire" d="M360,70 L360,96"/>
+  <path class="wire" d="M595,70 L595,96"/>
+
+  <!-- Containers -->
+  <g>
+    <rect class="ctr" x="20" y="96" width="210" height="150" rx="8"/>
+    <text x="34" y="118" font-weight="700">#41 fix mirror race</text>
+    <text class="m mu" x="34" y="136">worktree: wt/fix-mirror-race</text>
+    <rect class="chip" x="34" y="148" width="182" height="24" rx="4"/>
+    <text x="44" y="164" font-size="11">Claude Code session</text>
+    <text class="mu" x="34" y="194" font-size="11">own branch, own diff, own PR</text>
+    <text class="ac" x="34" y="232" font-size="10.5" font-weight="700">egress firewall · allowlist</text>
+
+    <rect class="ctr" x="255" y="96" width="210" height="150" rx="8"/>
+    <text x="269" y="118" font-weight="700">#42 monorepo blog post</text>
+    <text class="m mu" x="269" y="136">worktree: wt/monorepo-blog</text>
+    <rect class="chip" x="269" y="148" width="182" height="24" rx="4"/>
+    <text x="279" y="164" font-size="11">Claude Code session</text>
+    <text class="mu" x="269" y="194" font-size="11">task “Preview” → :8000</text>
+    <text class="ac" x="269" y="232" font-size="10.5" font-weight="700">egress firewall · allowlist</text>
+
+    <rect class="ctr" x="490" y="96" width="210" height="150" rx="8"/>
+    <text x="504" y="118" font-weight="700">#43 bump golangci-lint</text>
+    <text class="m mu" x="504" y="136">worktree: wt/golangci-v2.6</text>
+    <rect class="chip" x="504" y="148" width="182" height="24" rx="4"/>
+    <text x="514" y="164" font-size="11">Claude Code session</text>
+    <text class="mu" x="504" y="194" font-size="11">git orchard sync, then prek</text>
+    <text class="ac" x="504" y="232" font-size="10.5" font-weight="700">egress firewall · allowlist</text>
+  </g>
+
+  <!-- Mounts -->
+  <g class="wire">
+    <path d="M125,246 L125,290"/>
+    <path d="M360,246 L360,290"/>
+    <path d="M595,246 L595,290"/>
+  </g>
+  <text class="mu" x="133" y="274" font-size="10.5">mounts</text>
+  <text class="mu" x="368" y="274" font-size="10.5">mounts</text>
+  <text class="mu" x="603" y="274" font-size="10.5">mounts</text>
+
+  <!-- Shared volumes -->
+  <rect class="panel" x="20" y="290" width="680" height="116" rx="8"/>
+  <text class="cap" x="36" y="312">SHARED BY EVERY CONTAINER · WARM FROM THE FIRST COMMAND</text>
+
+  <rect class="vol" x="36" y="324" width="122" height="66" rx="6"/>
+  <text class="m ac" x="46" y="344" font-weight="700">~/go/pkg/mod</text>
+  <text x="46" y="362" font-size="10.5">Go modules</text>
+  <text class="mu" x="46" y="378" font-size="10">docker volume</text>
+
+  <rect class="vol" x="168" y="324" width="122" height="66" rx="6"/>
+  <text class="m ac" x="178" y="344" font-weight="700">~/.cache</text>
+  <text x="178" y="362" font-size="10">go build · uv · prek</text>
+  <text class="mu" x="178" y="378" font-size="10">docker volume</text>
+
+  <rect class="vol" x="300" y="324" width="122" height="66" rx="6"/>
+  <text class="m ac" x="310" y="344" font-weight="700">~/.local</text>
+  <text x="310" y="362" font-size="10.5">installed tools</text>
+  <text class="mu" x="310" y="378" font-size="10">docker volume</text>
+
+  <rect class="vol" x="432" y="324" width="122" height="66" rx="6"/>
+  <text class="m ac" x="442" y="344" font-weight="700">~/.bun/…/cache</text>
+  <text x="442" y="362" font-size="10.5">JS packages</text>
+  <text class="mu" x="442" y="378" font-size="10">docker volume</text>
+
+  <rect class="vol" x="564" y="324" width="122" height="66" rx="6"/>
+  <text class="m ac" x="574" y="344" font-weight="700">.git/objects</text>
+  <text x="574" y="362" font-size="10.5">one object store</text>
+  <text class="mu" x="574" y="378" font-size="10">worktrees share it</text>
+</svg>

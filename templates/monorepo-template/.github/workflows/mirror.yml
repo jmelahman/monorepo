@@ -1,0 +1,32 @@
+name: Mirror
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      # `*` does not match `/` in GitHub filters; `**` covers nested prefixes.
+      - "**/v*"
+
+permissions: {}
+
+# No concurrency group: each run publishes the splits of its own commit, and
+# pushes never force, so an older run finishing last is rejected rather than
+# rolling an upstream back. Queueing instead would let GitHub drop a pending
+# run, and with it the only --changed-since range covering its commits.
+jobs:
+  mirror:
+    # Skipped until `git orchard github-app` has stored the App's credentials.
+    if: vars.ORCHARD_APP_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Mirror subtrees
+        uses: jmelahman/git-orchard@4a1798a61f23ef424974e3383778b8bae791aea1
+        with:
+          app-client-id: ${{ vars.ORCHARD_APP_CLIENT_ID }}
+          app-private-key: ${{ secrets.ORCHARD_APP_PRIVATE_KEY }}

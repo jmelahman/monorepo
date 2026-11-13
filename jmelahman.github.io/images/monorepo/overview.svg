@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" width="720" height="440" role="img" aria-labelledby="t">
+  <title id="t">One monorepo is split into 28 standalone GitHub repositories by mirror.yml on every push</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8878"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; fill: #2c2c2c; font-size: 12px; }
+    .m, .m text { font-family: "JetBrains Mono", Menlo, Consolas, monospace; }
+    .mu { fill: #8a8878; }
+    .inv { fill: #fbfaef; }
+    .ac { fill: #8c0000; }
+    .cap { font-size: 10.5px; letter-spacing: .08em; fill: #8a8878; font-weight: 700; }
+    .panel { fill: #efeee0; stroke: #d9d6c3; stroke-width: 1.5; }
+    .card { fill: #fbfaef; stroke: #d9d6c3; stroke-width: 1.5; }
+    .wire { stroke: #b9b6a3; stroke-width: 1.5; fill: none; }
+    .ok { fill: #538d4e; }
+  </style>
+
+  <text class="cap" x="20" y="18">DEVELOP HERE</text>
+  <text class="cap" x="450" y="18">PUBLISH HERE</text>
+
+  <!-- Monorepo -->
+  <rect class="panel" x="20" y="28" width="242" height="400" rx="8"/>
+  <text class="m ac" x="36" y="52" font-weight="700">jmelahman/monorepo</text>
+  <g class="m">
+    <text x="36" y="84">agentic-kanban/</text>
+    <text x="36" y="134">connections/</text>
+    <text x="36" y="184">git-orchard/</text>
+    <text x="36" y="234">tag/</text>
+    <text x="36" y="284">work/</text>
+    <text x="36" y="334">templates/golang-template/</text>
+  </g>
+  <text class="mu" x="36" y="364">… and 22 more subtrees</text>
+  <line x1="36" y1="378" x2="246" y2="378" stroke="#d9d6c3"/>
+  <text class="m mu" x="36" y="398" font-size="10.5">.pre-commit-config.yaml</text>
+  <text class="m mu" x="36" y="415" font-size="10.5">.config/git-orchard/</text>
+
+  <!-- Wires in -->
+  <g class="wire">
+    <path d="M250,80 C285,80 280,205 310,205"/>
+    <path d="M250,130 C285,130 280,205 310,205"/>
+    <path d="M250,180 C285,180 280,205 310,205"/>
+    <path d="M250,230 C285,230 280,205 310,205"/>
+    <path d="M250,280 C285,280 280,205 310,205"/>
+    <path d="M250,330 C285,330 280,205 310,205"/>
+  </g>
+
+  <!-- Action -->
+  <rect x="310" y="178" width="92" height="54" rx="8" fill="#8c0000"/>
+  <text class="m inv" x="356" y="200" text-anchor="middle" font-weight="700">mirror.yml</text>
+  <text class="inv" x="356" y="219" text-anchor="middle"  font-size="11">~30s per push</text>
+  <text class="mu" x="356" y="252" text-anchor="middle" font-size="10.5">git subtree split</text>
+  <text class="mu" x="356" y="266" text-anchor="middle" font-size="10.5">fast-forward only</text>
+
+  <!-- Wires out -->
+  <g class="wire">
+    <path d="M402,205 C430,205 420,80 448,80" marker-end="url(#arrow)"/>
+    <path d="M402,205 C430,205 420,130 448,130" marker-end="url(#arrow)"/>
+    <path d="M402,205 C430,205 420,180 448,180" marker-end="url(#arrow)"/>
+    <path d="M402,205 C430,205 420,230 448,230" marker-end="url(#arrow)"/>
+    <path d="M402,205 C430,205 420,280 448,280" marker-end="url(#arrow)"/>
+    <path d="M402,205 C430,205 420,330 448,330" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Mirrors -->
+  <g>
+    <rect class="card" x="450" y="60" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="77">jmelahman/agentic-kanban</text>
+    <text x="462" y="93" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> release  <tspan class="ok">✓</tspan> prek</text>
+
+    <rect class="card" x="450" y="110" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="127">jmelahman/connections</text>
+    <text x="462" y="143" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> release  <tspan class="ok">✓</tspan> prek</text>
+
+    <rect class="card" x="450" y="160" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="177">jmelahman/git-orchard</text>
+    <text x="462" y="193" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> release  <tspan class="ok">✓</tspan> prek</text>
+
+    <rect class="card" x="450" y="210" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="227">jmelahman/tag</text>
+    <text x="462" y="243" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> release  <tspan class="ok">✓</tspan> prek</text>
+
+    <rect class="card" x="450" y="260" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="277">jmelahman/work</text>
+    <text x="462" y="293" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> release  <tspan class="ok">✓</tspan> prek</text>
+
+    <rect class="card" x="450" y="310" width="250" height="40" rx="6"/>
+    <text class="m" x="462" y="327">jmelahman/golang-template</text>
+    <text x="462" y="343" font-size="10.5"><tspan class="ok">✓</tspan> tests  <tspan class="ok">✓</tspan> “Use this template”</text>
+  </g>
+  <text class="mu" x="462" y="376">+ 22 more standalone repos</text>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 350" width="720" height="350" role="img" aria-labelledby="t">
+  <title id="t">A pull request touching three files runs project hooks for two projects and skips the other eighteen</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8878"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; fill: #2c2c2c; font-size: 12px; }
+    .m, .m text { font-family: "JetBrains Mono", Menlo, Consolas, monospace; }
+    .mu { fill: #8a8878; }
+    .inv { fill: #fbfaef; }
+    .ac { fill: #8c0000; }
+    .cap { font-size: 10.5px; letter-spacing: .08em; fill: #8a8878; font-weight: 700; }
+    .panel { fill: #efeee0; stroke: #d9d6c3; stroke-width: 1.5; }
+    .run { fill: #8c0000; }
+    .root { fill: #efeee0; stroke: #8c0000; stroke-width: 1.5; }
+    .skip { fill: none; stroke: #e3e1cf; stroke-width: 1.5; }
+    .tn { font-family: "JetBrains Mono", Menlo, Consolas, monospace; font-size: 9.5px; text-anchor: middle; }
+    .ts { font-size: 9px; text-anchor: middle; }
+  </style>
+
+  <!-- Pull request -->
+  <text class="cap" x="20" y="18">PULL REQUEST</text>
+  <rect class="panel" x="20" y="28" width="260" height="106" rx="8"/>
+  <text x="34" y="50" font-weight="700">3 files changed</text>
+  <g class="m" font-size="11">
+    <text x="34" y="74"><tspan fill="#8c0000">M</tspan> agentic-kanban/board.go</text>
+    <text x="34" y="94"><tspan fill="#8c0000">M</tspan> tag/main.go</text>
+    <text x="34" y="114"><tspan fill="#8c0000">M</tspan> jmelahman.github.io/blog/3.md</text>
+  </g>
+
+  <text class="cap" x="20" y="166">CI RUNS</text>
+  <rect x="20" y="176" width="260" height="46" rx="6" fill="#2c2c2c"/>
+  <text class="m inv" x="32" y="196" font-size="10.5">prek run --from-ref $BASE</text>
+  <text class="m inv" x="32" y="212" font-size="10.5" xml:space="preserve">         --to-ref   $HEAD</text>
+  <text class="mu" x="20" y="244" font-size="11">Same command as the local git hook.</text>
+  <text class="mu" x="20" y="260" font-size="11">No build graph, no affected-targets script.</text>
+
+  <path d="M282,130 C300,130 300,70 316,70" fill="none" stroke="#b9b6a3" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M282,130 C300,130 300,150 316,150" fill="none" stroke="#b9b6a3" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Root config -->
+  <text class="cap" x="320" y="18">ROOT CONFIG · FILE-SCOPED</text>
+  <rect class="root" x="320" y="28" width="380" height="80" rx="8"/>
+  <text x="334" y="50" font-weight="700">Runs on the 3 changed files only</text>
+  <text class="m" x="334" y="72" font-size="10.5">gofmt · ruff · shellcheck · actionlint · zizmor</text>
+  <text class="m" x="334" y="90" font-size="10.5">ripsecrets · git-orchard-sync · …</text>
+
+  <!-- Project configs -->
+  <text class="cap" x="320" y="134">PROJECT CONFIGS · MODULE-SCOPED</text>
+  <g>
+    <rect class="skip" x="320" y="144" width="92" height="34" rx="5"/><text class="tn mu" x="366" y="159">5-wild</text><text class="ts mu" x="366" y="171">skipped</text>
+    <rect class="run" x="416" y="144" width="92" height="34" rx="5"/><text class="tn inv" x="462" y="159" font-weight="700">agentic-kanban</text><text class="ts inv" x="462" y="171">vet · test · lint</text>
+    <rect class="skip" x="512" y="144" width="92" height="34" rx="5"/><text class="tn mu" x="558" y="159">agilecbt</text><text class="ts mu" x="558" y="171">skipped</text>
+    <rect class="skip" x="608" y="144" width="92" height="34" rx="5"/><text class="tn mu" x="654" y="159">check-symlinks</text><text class="ts mu" x="654" y="171">skipped</text>
+
+    <rect class="skip" x="320" y="182" width="92" height="34" rx="5"/><text class="tn mu" x="366" y="197">connections</text><text class="ts mu" x="366" y="209">skipped</text>
+    <rect class="skip" x="416" y="182" width="92" height="34" rx="5"/><text class="tn mu" x="462" y="197">connections-ssh</text><text class="ts mu" x="462" y="209">skipped</text>
+    <rect class="skip" x="512" y="182" width="92" height="34" rx="5"/><text class="tn mu" x="558" y="197">cycle-cli</text><text class="ts mu" x="558" y="209">skipped</text>
+    <rect class="skip" x="608" y="182" width="92" height="34" rx="5"/><text class="tn mu" x="654" y="197">docker-status</text><text class="ts mu" x="654" y="209">skipped</text>
+
+    <rect class="skip" x="320" y="220" width="92" height="34" rx="5"/><text class="tn mu" x="366" y="235">git-orchard</text><text class="ts mu" x="366" y="247">skipped</text>
+    <rect class="skip" x="416" y="220" width="92" height="34" rx="5"/><text class="tn mu" x="462" y="235">go-bin</text><text class="ts mu" x="462" y="247">skipped</text>
+    <rect class="skip" x="512" y="220" width="92" height="34" rx="5"/><text class="tn mu" x="558" y="235">jview</text><text class="ts mu" x="558" y="247">skipped</text>
+    <rect class="skip" x="608" y="220" width="92" height="34" rx="5"/><text class="tn mu" x="654" y="235">local-preview</text><text class="ts mu" x="654" y="247">skipped</text>
+
+    <rect class="skip" x="320" y="258" width="92" height="34" rx="5"/><text class="tn mu" x="366" y="273">manygo</text><text class="ts mu" x="366" y="285">skipped</text>
+    <rect class="skip" x="416" y="258" width="92" height="34" rx="5"/><text class="tn mu" x="462" y="273">nature-sounds</text><text class="ts mu" x="462" y="285">skipped</text>
+    <rect class="skip" x="512" y="258" width="92" height="34" rx="5"/><text class="tn mu" x="558" y="273">pkglint</text><text class="ts mu" x="558" y="285">skipped</text>
+    <rect class="skip" x="608" y="258" width="92" height="34" rx="5"/><text class="tn mu" x="654" y="273">smart-lights</text><text class="ts mu" x="654" y="285">skipped</text>
+
+    <rect class="run" x="320" y="296" width="92" height="34" rx="5"/><text class="tn inv" x="366" y="311" font-weight="700">tag</text><text class="ts inv" x="366" y="323">vet · test · lint</text>
+    <rect class="skip" x="416" y="296" width="92" height="34" rx="5"/><text class="tn mu" x="462" y="311">typesafe-sdk-go</text><text class="ts mu" x="462" y="323">skipped</text>
+    <rect class="skip" x="512" y="296" width="92" height="34" rx="5"/><text class="tn mu" x="558" y="311">undot</text><text class="ts mu" x="558" y="323">skipped</text>
+    <rect class="skip" x="608" y="296" width="92" height="34" rx="5"/><text class="tn mu" x="654" y="311">work</text><text class="ts mu" x="654" y="323">skipped</text>
+  </g>
+
+  <!-- Legend -->
+  <rect class="run" x="20" y="296" width="12" height="12" rx="3"/>
+  <text x="38" y="306" font-size="11">project hooks run</text>
+  <rect class="skip" x="20" y="316" width="12" height="12" rx="3"/>
+  <text x="38" y="326" font-size="11">no changes, skipped</text>
+</svg>
