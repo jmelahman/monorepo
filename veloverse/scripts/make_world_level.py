@@ -69,9 +69,9 @@ REACH = math.ceil(SPACING * 1.5)  # road points either side of a cell's one, for
 HALF = (RES - 1) / 2
 BAND = 512  # rows per band
 SEED = 41
-# The chain's mountain, Vael, tops out at 760 m: its trees stop and the snow starts lower.
-TREELINE = 560.0 if CHAIN else 820.0
-SNOWLINE = 640.0 if CHAIN else 900.0
+# Vael tops out at 1150 m since 13 Nov (760 before), the old island's 900 m-odd: one treeline.
+TREELINE = 820.0
+SNOWLINE = 900.0
 WOODS = 160.0  # m from the ring: trees stand this far out
 # Past WOODS, to FAR_WOODS, a sparse far forest every FAR_STEP m (trees_far.json): it casts no
 # shadow and is only seen from a distance, so the hills to the horizon aren't bare.
@@ -146,6 +146,23 @@ def weights(plan, x, y):
     return mi.region_weights(x / mw.K, y / mw.K)
 
 
+# Rock benches (13 Nov, the AAA review: "terraces steep ground into benches so rock reads as
+# strata"): STRATA m between ledges, on ground steeper than STEEP_ROCK in rocky country.
+STRATA = 24.0
+STEEP_ROCK = (0.55, 1.0)
+
+
+def benches(x, y, base, slope, rocky):
+    """How far (m, at most 0) to lower the ground so steep rocky slopes step down in ledges: a
+    flat-ish bench, then a riser, the layers tilted by a broad noise so they aren't contours."""
+    tilt = (mi.fbm(x, y, 900, 2, SEED + 31) - 0.5) * 2 * STRATA * 1.5
+    hb = base + tilt
+    f = hb / STRATA - np.floor(hb / STRATA)
+    step = (mi.smoothstep(0.55, 0.95, f) - f) * STRATA  # -0.55..0 strata: the bench cut back
+    where = mi.smoothstep(*STEEP_ROCK, slope) * rocky
+    return np.minimum(step, 0.0) * 0.75 * where
+
+
 def detail(x, y, base, slope):
     """Relief the 28 m plan can't hold: gullies, swells and crags on the steep and high
     ground. Nothing finer than the landscape's grid."""
@@ -170,6 +187,10 @@ def ground(plan):
         base = plan.at(plan.h, x, y, order=3)
         slope = plan.at(plan.slope, x, y)
         h[rows] = base + detail(x, y, base, slope)
+        if plan.w:
+            rocky = plan.at(plan.w["mountain"], x, y) + plan.at(plan.w["desert"], x, y)
+            rocky = rocky + 0.6 * plan.at(plan.w["heath"], x, y)
+            h[rows] += benches(x, y, base, slope, np.clip(rocky, 0, 1))
     return h
 
 
@@ -465,7 +486,7 @@ def trees_band(rng, x, y, h, slope, d, forest, desert):
     px, py, zz = px[keep], py[keep], zz[keep] - 0.4
     line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
     spruce = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
-    stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 30, TREELINE + 20, zz)
+    stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     out = []
     for xm, ym, zm, s, small in zip(px, py, zz, spruce, stunt, strict=True):
         roll = rng.random()
@@ -512,7 +533,7 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert):
     line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
     spruce = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
     size = rng.uniform(0.9, 1.35, len(zz)) * (
-        1 - 0.5 * mi.smoothstep(TREELINE - 30, TREELINE + 20, zz)
+        1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     )
     yaw = rng.uniform(0, 360, len(zz))
     return [

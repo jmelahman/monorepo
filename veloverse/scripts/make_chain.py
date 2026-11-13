@@ -99,7 +99,7 @@ COLOURS = {
 # round it (radius m).
 HARBOUR_BAY = ((200, 2600), (1100, 850))
 TOWN_REACH = 2200.0
-PEAK = 760.0  # m: Vael's summit
+PEAK = 1150.0  # m: Vael's summit, seen from the other islands (13 Nov, the AAA review)
 BRIDGE_CLEAR = 9.0  # m: a bridge's deck over the sea, at least
 LANDFALL = 260.0  # m inland of a petal's shore where its bridge's road meets the island's
 COAST_IN = 200.0  # m: the hub's coast road in from the shore
@@ -132,7 +132,9 @@ ROUTES = [
     ("east", "Heath and Sand", "The moor, then the desert.", ("The Moor", "Red Sands")),
 ]
 # The road's sideways waves on an island: wavelength, m.
-WANDER = ((420, 22), (900, 40), (1700, 60))
+# 13 Nov: the two short waves give bends at eye level (the AAA review: "a dead-straight ribbon");
+# the tightest they make together is about 60 m in radius.
+WANDER = ((170, 7), (300, 14), (420, 22), (900, 40), (1700, 60))
 
 
 def grid():
@@ -229,6 +231,79 @@ def mesas(x, y, i):
     return out
 
 
+def erode(h, strength, seed=SEED + 77, drops=1_600_000, batch=200_000, steps=48):
+    """Hydraulic erosion (13 Nov, the AAA review: "smooth fbm lumps, no erosion"): droplets
+    rain on the land, run downhill picking up ground where they speed up and dropping it where
+    they slow, so slopes gain gullies, spurs and fans. `strength` (0..1 per sample) scales what
+    a droplet may cut there; 0 leaves the ground alone. Vectorised: a batch of droplets moves a
+    step at a time. Heights are worked in grid cells (m / SPACING), so slopes are plain ratios."""
+    rng = np.random.default_rng(seed)
+    g = (h / SPACING).astype(np.float64)
+    k = strength.astype(np.float64)
+    n = g.shape[0]
+    inertia, capacity, min_slope = 0.05, 6.0, 0.004
+    deposit, cut, evaporate, gravity = 0.3, 0.35, 0.02, 4.0
+    # Rain only where it may cut, weighted by it.
+    w = k.ravel() / k.sum()
+    for _ in range(drops // batch):
+        cell = rng.choice(n * n, batch, p=w)
+        px = (cell % n + rng.random(batch)).clip(0, n - 2.001)
+        py = (cell // n + rng.random(batch)).clip(0, n - 2.001)
+        dx, dy = np.zeros(batch), np.zeros(batch)
+        speed, water, load = np.ones(batch), np.ones(batch), np.zeros(batch)
+        alive = np.ones(batch, bool)
+        for _ in range(steps):
+            ix, iy = px.astype(np.int64), py.astype(np.int64)
+            fx, fy = px - ix, py - iy
+            i00 = iy * n + ix
+            flat = g.ravel()
+            h00, h10, h01, h11 = flat[i00], flat[i00 + 1], flat[i00 + n], flat[i00 + n + 1]
+            gx = (h10 - h00) * (1 - fy) + (h11 - h01) * fy
+            gy = (h01 - h00) * (1 - fx) + (h11 - h10) * fx
+            here = h00 * (1 - fx) * (1 - fy) + h10 * fx * (1 - fy) + h01 * (1 - fx) * fy
+            here = here + h11 * fx * fy
+            dx = dx * inertia - gx * (1 - inertia)
+            dy = dy * inertia - gy * (1 - inertia)
+            norm = np.hypot(dx, dy)
+            alive &= norm > 1e-9
+            dx, dy = dx / np.maximum(norm, 1e-9), dy / np.maximum(norm, 1e-9)
+            nx, ny = px + dx, py + dy
+            alive &= (nx >= 0) & (nx < n - 2.001) & (ny >= 0) & (ny < n - 2.001)
+            nx, ny = nx.clip(0, n - 2.001), ny.clip(0, n - 2.001)
+            jx, jy = nx.astype(np.int64), ny.astype(np.int64)
+            gx2, gy2 = nx - jx, ny - jy
+            j00 = jy * n + jx
+            there = (
+                flat[j00] * (1 - gx2) * (1 - gy2)
+                + flat[j00 + 1] * gx2 * (1 - gy2)
+                + flat[j00 + n] * (1 - gx2) * gy2
+                + flat[j00 + n + 1] * gx2 * gy2
+            )
+            dh = there - here
+            cap = np.maximum(-dh, min_slope) * speed * water * capacity
+            kk = k.ravel()[i00]
+            # Uphill or over capacity: drop some load (all that fills the pit when uphill).
+            drop = np.where(dh > 0, np.minimum(dh, load), (load - cap) * deposit)
+            drop = np.where((load > cap) | (dh > 0), drop, 0.0)
+            take = np.where((load <= cap) & (dh <= 0), np.minimum((cap - load) * cut * kk, -dh), 0)
+            change = np.clip(drop - take, -0.25, 0.25) * alive  # at most 3.5 m a step
+            load = load - change
+            corners = (i00, i00 + 1, i00 + n, i00 + n + 1)
+            shares = ((1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy)
+            for c, s in zip(corners, shares, strict=True):
+                np.add.at(flat, c, change * s)
+            speed = np.sqrt(np.clip(speed * speed - dh * gravity, 0.0, 16.0))
+            water = water * (1 - evaporate)
+            px, py = nx, ny
+            if not alive.any():
+                break
+    # Soften the single-cell pits and spikes the droplets leave.
+    out = ndimage.gaussian_filter(g, 0.6) * SPACING
+    moved = out - h
+    print(f"erosion: cut {-moved.min():.0f} m, filled {moved.max():.0f} m at most", flush=True)
+    return h + moved * (strength > 0)
+
+
 def terrain():
     """Heights, land, the biome weights and each sample's island (-1 at sea)."""
     x, y = grid()
@@ -251,6 +326,13 @@ def terrain():
     fall = 700 + (110 - 700) * cliff
     beach = 2.5 + 1.5 * mi.fbm(x, y, 400, 2, SEED + 62)
     h = beach + (np.maximum(h, 4) - beach) * mi.smoothstep(0, 1, inland / fall)
+    # Erosion: hardest on the mountain, least round the harbour; the shore and the sea untouched.
+    bite = {"town": 0.35, "forest": 0.6, "heath": 0.7, "mountain": 1.0, "desert": 0.5}
+    k = np.array([bite[isl[4]] for isl in ISLANDS], np.float32)[which]
+    (bx, by), _ = HARBOUR_BAY
+    k = k * mi.smoothstep(TOWN_REACH * 0.5, TOWN_REACH, np.hypot(x - bx, y - by)) ** 0.5
+    k = k * land * mi.smoothstep(150, 700, inland)
+    h = np.where(land, np.maximum(erode(h, k), 2.5), h)
     sea = -1.0 - 30 * mi.smoothstep(0, 1500, offshore)
     h = np.where(land, h, sea).astype(np.float32)
     weights = {b: np.zeros_like(x) for b in BIOMES}

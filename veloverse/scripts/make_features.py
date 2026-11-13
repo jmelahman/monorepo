@@ -557,6 +557,137 @@ def rocks(out, g, bio, road, rng):
     return taken
 
 
+# Cliffs on the steep ground (13 Nov, the AAA review: "place Nanite cliff meshes along slope
+# contours, sunk 30% and yawed to the aspect, and scree on the talus below"): per biome, the
+# slope they need, how many at most, the faces (key, size m, scale range) and the scree.
+CLIFFS = {
+    "mountain": (
+        0.7,
+        1400,
+        [
+            (ms("mountain", "sharp_cliff"), 18.9, (0.9, 1.7)),
+            (ms("mountain", "huge_icelandic_volcanic_cliff"), 15.6, (1.0, 2.0)),
+            (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.6, 1.1)),
+        ],
+        [
+            (ms("mountain", "volcanic_scree"), 2.2, (2.0, 4.0)),
+            (ms("mountain", "limestone_rubble"), 2.9, (1.5, 3.0)),
+        ],
+    ),
+    "desert": (
+        0.6,
+        700,
+        [
+            (ms("desert", "desert_western_cliff_layered_xl_14"), 25.7, (0.8, 1.5)),
+            (ms("desert", "desert_western_ledge_rock_layered_xl_01"), 22.6, (0.8, 1.4)),
+        ],
+        [(ms("desert", "desert_western_cluster_rock_medium_05"), 3.0, (1.0, 2.2))],
+    ),
+    "heath": (
+        0.75,
+        200,
+        [(ms("mountain", "icelandic_rock_plates"), 6.4, (1.5, 2.8))],
+        [(ms("mountain", "tundra_boulder"), 2.9, (0.8, 1.6))],
+    ),
+    "forest": (
+        0.85,
+        250,
+        [(ms("forest", "nordic_forest_cliff_large"), 13.3, (0.9, 1.6))],
+        [(ms("forest", "mossy_rocks"), 3.0, (1.0, 2.0))],
+    ),
+}
+CLIFF_REACH = 1800.0  # m from the road: past it, no one sees a face's detail
+CLIFF_STEP = 3  # ground samples (7 m) between candidates
+
+
+def cliffs(out, g, bio, road, rng, taken):
+    """Rock faces where the ground is steep, packed along the slope so they read as one wall,
+    each with scree spilled below it; none within reach of the road's edge."""
+    out.group("Cliffs", cull=0)
+    s = CLIFF_STEP
+    h, slope = g.h[::s, ::s], g.slope[::s, ::s]
+    gy, gx = np.gradient(g.h, g.spacing)
+    gx, gy = gx[::s, ::s], gy[::s, ::s]
+    idx = (np.arange(h.shape[0]) * s - (g.n - 1) / 2) * g.spacing
+    y, x = np.meshgrid(idx, idx, indexing="ij")
+    pick = (slope > 0.55) & (h > 6) & (g.inland[::s, ::s] > 40)
+    x, y, h, slope, gx, gy = (a[pick] for a in (x, y, h, slope, gx, gy))
+    near = road.dist(x, y)
+    keep = near < CLIFF_REACH
+    x, y, slope, gx, gy, near = (a[keep] for a in (x, y, slope, gx, gy, near))
+    kinds = bio.best(x, y)
+    cell = 12.0  # m: the spatial hash's cell for the spacing test
+    grid = {}
+
+    def free(px, py, r):
+        cx, cy = int(px // cell), int(py // cell)
+        span = int(r // cell) + 3
+        for i in range(cx - span, cx + span + 1):
+            for j in range(cy - span, cy + span + 1):
+                for qx, qy, qr in grid.get((i, j), ()):
+                    if math.hypot(px - qx, py - qy) < 0.55 * (r + qr):
+                        return False
+        return True
+
+    def claim(px, py, r):
+        grid.setdefault((int(px // cell), int(py // cell)), []).append((px, py, r))
+
+    for tx, ty, tr in taken:
+        claim(tx, ty, tr)
+    counts = {}
+    for k in rng.permutation(len(x)):
+        biome = str(kinds[k])
+        if biome not in CLIFFS:
+            continue
+        need, most, faces, scree = CLIFFS[biome]
+        if slope[k] < need or counts.get(biome, 0) >= most:
+            continue
+        mesh, size, (s0, s1) = faces[rng.integers(len(faces))]
+        scale = rng.uniform(s0, s1) * (1 + 0.4 * min(slope[k] - need, 1))
+        r = size * scale * 0.5
+        if near[k] < r + 14 or not free(x[k], y[k], r):
+            continue
+        claim(x[k], y[k], r)
+        counts[biome] = counts.get(biome, 0) + 1
+        # Facing downhill (the aspect), give or take; sunk by about a third into the slope.
+        down = math.degrees(math.atan2(-gy[k], -gx[k]))
+        base = float(min(g.z(x[k] + dx, y[k] + dy) for dx in (-r, r) for dy in (-r, r)))
+        out.add(
+            "Cliffs",
+            mesh,
+            x[k],
+            y[k],
+            base - size * scale * 0.3,
+            down + rng.uniform(-30, 30),
+            scale,
+            rng.uniform(-6, 6),
+            rng.uniform(-6, 6),
+            mark=(170, 160, 150),
+        )
+        # Scree: two to four heaps down the fall line from the face's foot.
+        fall = np.array([-gx[k], -gy[k]]) / max(math.hypot(gx[k], gy[k]), 1e-6)
+        for _ in range(rng.integers(2, 5)):
+            smesh, ssize, (t0, t1) = scree[rng.integers(len(scree))]
+            d = r * rng.uniform(0.7, 1.6)
+            side = rng.uniform(-0.8, 0.8) * r
+            sx = x[k] + fall[0] * d - fall[1] * side
+            sy = y[k] + fall[1] * d + fall[0] * side
+            if road.dist(sx, sy) < 10:
+                continue
+            ss = rng.uniform(t0, t1)
+            out.add(
+                "Cliffs",
+                smesh,
+                sx,
+                sy,
+                g.z(sx, sy) - ssize * ss * 0.15,
+                rng.uniform(0, 360),
+                ss,
+                mark=(120, 115, 110),
+            )
+    print(f"cliffs: {counts}", flush=True)
+
+
 def turbines(out, g, bio, road, rng, taken):
     """A wind farm on The Moor's high ground, a few hundred metres off the road, all facing the
     westerly."""
@@ -961,22 +1092,10 @@ def main():
     taken = []  # (x, y, radius m) of what stands, so nothing is placed through it
     harbour(out, g, bio, road, rng, taken)
     farm = turbines(out, g, bio, road, rng, taken)
-    out.group("Pylons", cull=0)
-    out.group("Cables", cull=0, shadows=False)
-    out.gltf("pylon", pylon())
-    n = len(road.line)
-    # Lines: inland of Harbour Isle's coast road from the town; out of The Moor's wind farm;
-    # along Greenwood.
-    stretch_at = _stretch_starts()
-    if road.hub is not None:
-        start = _stretch_starts("harbour")["The Coast"][0] + 1500
-        power_line(out, g, road, rng, taken, "harbour", start, start + 6000, 160, road.hub)
-    for name, (start, length, side) in {
-        "moor": (stretch_at["The Moor"][0] + 2500, 9000, -220),
-        "greenwood": (stretch_at["Greenwood"][0] + 4000, 7000, 140),
-    }.items():
-        power_line(out, g, road, rng, taken, name, int(start) % n, int(start) % n + length, side)
-    rocks(out, g, bio, road, rng)
+    # No pylons or power lines since 13 Nov (the AAA review: "out of register with a fantasy
+    # world"); power_line() stays for a later setting that wants them.
+    taken = taken + rocks(out, g, bio, road, rng)
+    cliffs(out, g, bio, road, rng, taken)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
         json.dump(
