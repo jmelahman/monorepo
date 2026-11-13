@@ -821,8 +821,8 @@ void ARidePawn::Place()
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
-	// Greenwood's woods, a way in from the bridge, on whichever route passes through them.
-	float Into = 3000.f;
+	// Greenwood's woods, 6 km in, past the bridge and the fields, on whichever route passes through them.
+	float Into = 6000.f;
 	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
 	TArray<const URideTrack*> Order = {Track.Get()};
 	for (const URideTrack* Each : Routes)
