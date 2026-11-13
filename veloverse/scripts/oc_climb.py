@@ -209,6 +209,8 @@ GRASS = {
         ("shared", "field_poppy", 0.15, 3000, 4500),
         ("shared", "common_hemp_nettle", 0.15, 3000, 4500),
         ("shared", "goldenrods", 0.08, 3500, 5000),
+        # 12 Nov Fab wave 2: low tufts that break up the blade carpet's even top.
+        ("shared", "tufted_grass", 1.0, 3000, 4500),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     # The woods' floor is two tables (v30). "Forest" grows only on the layer's grass patches (its
@@ -232,6 +234,7 @@ GRASS = {
         ("forest", "wood_sorrel", 3.0, 2000, 3500),
         ("shared", "herb_robert", 1.0, 2000, 3500),
         ("forest", "lily_of_the_valley", 1.0, 2000, 3500),
+        ("forest", "yellow_archangel", 0.3, 2000, 3500),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     "Forest floor": (
@@ -263,6 +266,16 @@ GRASS = {
         ("forest", "mossy_wood_stump", 0.05, 9000, 12000),
         ("forest", "fallen_log", 0.05, 12000, 15000),
         ("forest", "fallen_pine_tree", 0.025, 12000, 15000),
+        # 12 Nov Fab wave 2: leaf litter, bracken, twigs, stumps and a dead birch now and then.
+        ("forest", "dead_leaves", 1.0, 2000, 3500),
+        ("shared", "bracken_fern", 0.5, 4000, 6000),
+        ("forest", "wooden_sticks_and_twigs", 0.3, 2000, 3500),
+        ("forest", "scatter_mushroom_set", 0.2, 1500, 2500),
+        ("forest", "forest_wild_mushroom_set_01", 0.1, 1500, 2500),
+        ("forest", "lichen_stump", 0.03, 9000, 12000),
+        ("forest", "pine_tree_stump", 0.03, 9000, 12000),
+        ("forest", "mossy_rock_formation", 0.015, 12000, 15000),
+        ("climb", "dead_birch_snag_01", 0.004, 15000, 20000),
     ),
     # The soil of the cut banks: roots, stones, ferns and tufts, so a bank is never bare plaster.
     "Sand": (
@@ -307,6 +320,17 @@ GRASS = {
         ("forest", "nordic_forest_cluster_rock_medium", 0.15, 12000, 15000),
         ("mountain", "tundra_boulder", 0.08, 12000, 15000),
         ("forest", "mossy_rocks", 0.15, 9000, 12000),
+        # 12 Nov Fab wave 2: the tundra's own shrubs and sedge, after the treeline reference
+        # (here, not "Desert": the world's Desert table is Red Sands').
+        ("mountain", "crowberry", 1.2, 3000, 4500),
+        ("mountain", "dwarf_willow", 0.6, 3000, 4500),
+        ("mountain", "downy_willow", 0.2, 4000, 6000),
+        ("mountain", "cotton_grass", 0.6, 3000, 4500),
+        ("mountain", "limestone_rubble", 0.1, 9000, 12000),
+        ("mountain", "tundra_rocky_ground", 0.02, 12000, 15000),
+        # 12 Nov Fab wave 2: scree and old snow below the crags.
+        ("mountain", "volcanic_scree", 0.2, 9000, 12000),
+        ("mountain", "rocky_snow_pile", 0.02, 12000, 15000),
     ),
 }
 
