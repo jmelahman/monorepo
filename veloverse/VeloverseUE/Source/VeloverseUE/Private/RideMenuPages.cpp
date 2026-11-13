@@ -254,8 +254,8 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		H.OnRight = [M] { M->StepWorkout(1); };
 	}
 
-	// The list under it.
-	bool bLive = false;
+	// The list under it. The trainer and sensors open from the chip at the top right, which shows
+	// what's connected, so they aren't listed again here.
 	struct FItem
 	{
 		const TCHAR* Key;
@@ -268,8 +268,6 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		 [M] { M->Show(ERideMenuPage::Routes); }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
-		{TEXT("sensors"), Icons::Signal, TEXT("Trainer and sensors"), TrainerStatus(Pawn, bLive),
-		 [M] { M->Show(ERideMenuPage::Sensors); }},
 		{TEXT("settings"), Icons::Gear, TEXT("Settings"), FString(), [M] { M->Show(ERideMenuPage::Settings); }},
 		{TEXT("quit"), Icons::Leave, TEXT("Quit"), FString(), [M] { M->Controller()->Quit(); }},
 	};
