@@ -514,12 +514,12 @@ void URideMenu::ReadMap()
 	MapY0 = Meta->GetNumberField(TEXT("y0"));
 	if (const TSharedPtr<FJsonObject>* Labels; Meta->TryGetObjectField(TEXT("labels"), Labels))
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Label : (*Labels)->Values)
+		for (const auto& Label : (*Labels)->Values)
 		{
 			const TArray<TSharedPtr<FJsonValue>>& At = Label.Value->AsArray();
 			if (At.Num() == 2)
 			{
-				MapLabels.Add(Label.Key, FVector2f(static_cast<float>(At[0]->AsNumber()), static_cast<float>(At[1]->AsNumber())));
+				MapLabels.Add(FString(*Label.Key), FVector2f(static_cast<float>(At[0]->AsNumber()), static_cast<float>(At[1]->AsNumber())));
 			}
 		}
 	}
