@@ -647,6 +647,12 @@ def views(line, runs, plan):
     stretch in the right lane looking 30 m up the road, and one from 120 m up over the first
     mountain stretch."""
     out, start = [], 0.0
+    coast = np.zeros(len(line), bool)
+    for name, metres in runs:
+        if name == "The Coast":
+            coast[(int(start) + np.arange(int(metres))) % len(line)] = True
+        start += metres
+    start = 0.0
     for i, (name, metres) in enumerate(runs):
         k = int(start + metres / 2) % len(line)
         ahead = line[(k + 30) % len(line)]
@@ -680,7 +686,45 @@ def views(line, runs, plan):
                 ]
             )
         start += metres
+    out += cliff_views(line, plan, coast)
     return out
+
+
+def cliff_views(line, plan, coast):
+    """The coast road where it runs along a cliff top (high, near the sea): one view from the
+    saddle and one from 350 m out to sea, 30 m up, looking back at the cliff and its stacks."""
+    if plan.inland is None:
+        return []
+    inland = plan.at(plan.inland, line[:, 0], line[:, 1])
+    tops = np.flatnonzero(coast & (inland < 120) & (line[:, 2] > 20))
+    if not len(tops):
+        return []
+    k = int(tops[np.argmax(line[tops, 2] - 0.05 * inland[tops])])
+    ahead = line[(k + 30) % len(line)]
+    dx, dy = ahead[0] - line[k, 0], ahead[1] - line[k, 1]
+    n = max(float(np.hypot(dx, dy)), 1e-6)
+    rx, ry = -dy / n * RIDE_LANE, dx / n * RIDE_LANE
+    # Seaward: down the distance to the sea, measured 20 m either side.
+    x0, y0 = float(line[k, 0]), float(line[k, 1])
+    near = plan.at(
+        plan.inland, np.array([x0 + 20, x0 - 20, x0, x0]), np.array([y0, y0, y0 + 20, y0 - 20])
+    )
+    gx, gy = near[0] - near[1], near[2] - near[3]
+    g = max(float(np.hypot(gx, gy)), 1e-6)
+    sx, sy = -gx / g, -gy / g
+    out_to = 350.0 + float(inland[k])
+    return [
+        [
+            "ride_cliffs",
+            [float(line[k, 0] + rx), float(line[k, 1] + ry), float(line[k, 2] + 1.6)],
+            [float(ahead[0] + rx), float(ahead[1] + ry), float(ahead[2] + 1.2)],
+        ],
+        [
+            "sea_cliffs",
+            [float(line[k, 0] + sx * out_to), float(line[k, 1] + sy * out_to), 30.0],
+            [float(line[k, 0]), float(line[k, 1]), float(line[k, 2] * 0.5)],
+        ],
+    ]
 
 
 def bridge_spans(bridge):
