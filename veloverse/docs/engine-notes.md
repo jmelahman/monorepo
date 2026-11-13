@@ -89,6 +89,9 @@ Megascans with FBX meshes go in three steps, chained in one background run:
    even when the script fails, so grep each log for `Traceback` and `MEGASCANS failed` (an
    asset that wouldn't import; the rest go on) before going on. In a queue step write
    `if grep -q ...; then exit 1; fi`: `set -e` ignores a failing `! grep`.
+   The assign stage keeps the existing M_MS_Plant and M_MS_Prop, since `rebuild-ground` adds
+   the road fold and moss cap to them. Until 12 Nov it rebuilt them plain, and plants grew on
+   the road until the next `rebuild-ground`.
 3. Add rows to `GRASS` (`oc_climb.py`) or a preset (`biomes.py`), then
    `rebuild-ground --rebuild-grass` and a `look`.
 

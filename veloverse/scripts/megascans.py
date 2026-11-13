@@ -257,7 +257,15 @@ def main():
             except RuntimeError as e:
                 log(f"failed {folder_of(record)}: {e}")
     elif STAGE == "assign":
-        masters = {kind: master(kind) for kind in ("plant", "prop")}
+        # Build a master only if it's missing: oc.py rebuild-ground rebuilds both with the road
+        # fold and the moss cap, and a fresh one here dropped them (plants on the road, 12 Nov).
+        masters = {
+            kind: unreal.load_asset(path) if assets.does_asset_exist(path) else master(kind)
+            for kind, path in (
+                ("plant", f"{ROOT}/Materials/M_MS_Plant"),
+                ("prop", f"{ROOT}/Materials/M_MS_Prop"),
+            )
+        }
         for record in records:
             if record["kind"] != "surface":
                 assign_asset(record, masters)
