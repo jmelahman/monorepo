@@ -325,7 +325,8 @@ GRASS = {
         ("mountain", "dwarf_willow", 0.6, 3000, 4500),
         ("mountain", "downy_willow", 0.2, 4000, 6000),
         ("mountain", "cotton_grass", 0.6, 3000, 4500),
-        ("mountain", "limestone_rubble", 0.1, 9000, 12000),
+        # limestone_rubble (0.1, 9000, 12000) waits for a decimated import: its raw scan is one
+        # 232 MB FBX, hours on the importer's single thread (12 Nov).
         ("mountain", "tundra_rocky_ground", 0.02, 12000, 15000),
         # 12 Nov Fab wave 2: scree and old snow below the crags.
         ("mountain", "volcanic_scree", 0.2, 9000, 12000),
