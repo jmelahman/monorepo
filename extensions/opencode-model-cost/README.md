@@ -15,21 +15,30 @@ TUI part is needed. The price is present on every row, on the home screen and
 inside sessions, and model selection keeps working exactly as before.
 
 Prices are USD per million tokens, using the base (untiered) entry from the
-model catalog. Free models are left alone because the picker already labels
+model catalog. A model with only context-tier prices shows its lowest tier with
+the threshold, for example `$6/$22.5 (200K+)`. Free models are left alone because the picker already labels
 them `Free`.
 
 ## Enable
 
-This repository loads the plugin through `.opencode/opencode.json`:
+This repository loads the plugin through `.opencode/opencode.json`, with the
+price right-aligned and no separator (see [`padTo`](#padto)):
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["../extensions/opencode-model-cost"]
+  "plugins": [
+    {
+      "package": "../extensions/opencode-model-cost",
+      "options": { "separator": "", "padTo": 52 }
+    }
+  ]
 }
 ```
 
-To use it from any project, add the same entry to the global
+That renders rows like `Claude Sonnet 4.5                             $3/$15`.
+The bare string form uses the defaults (`Claude Sonnet 4.5 · $3/$15`). To use
+it from any project, add an entry to the global
 `~/.config/opencode/opencode.jsonc` with an absolute path:
 
 ```jsonc

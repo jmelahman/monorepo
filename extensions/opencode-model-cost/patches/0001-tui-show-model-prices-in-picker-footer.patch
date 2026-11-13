@@ -62,7 +62,7 @@ index 561526b..5854aae 100644
    const facts = () =>
      [
        props.model.capabilities.input.map(modality).join(", "),
-@@ -105,8 +110,11 @@
+@@ -105,9 +110,12 @@
  
 -function dollars(value: number) {
 -  return String(Number(value.toFixed(2)))

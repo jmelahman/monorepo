@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin"
-import { withModelCost } from "./cost.js"
+import { isValidPadTo, withModelCost } from "./cost.js"
 
 export interface Options {
   /** Inserted between the model name and its price. Defaults to `" · "`. */
@@ -11,6 +11,14 @@ export interface Options {
   readonly padTo?: number
 }
 
+/**
+ * The catalog name and the name this plugin produced, per model. Lets a later
+ * transform re-decorate from the original name instead of trusting
+ * `endsWith`, so changed options re-pad and look-alike names are not skipped.
+ * Module scope keeps it across `setup` calls on config reload.
+ */
+const decorated = new Map<string, { readonly original: string; readonly name: string }>()
+
 export default Plugin.define({
   id: "model-cost",
   async setup(context) {
@@ -20,7 +28,11 @@ export default Plugin.define({
     // price here puts it in the selector without replacing the built-in dialog.
     await context.model.transform((models) => {
       for (const model of models.list()) {
-        const name = withModelCost(model.name, model.cost, options)
+        const key = `${model.providerID}/${model.id}`
+        const previous = decorated.get(key)
+        const original = previous?.name === model.name ? previous.original : model.name
+        const name = withModelCost(original, model.cost, options)
+        decorated.set(key, { original, name })
         if (name === model.name) continue
         models.update(model.providerID, model.id, (draft) => {
           draft.name = name
@@ -30,15 +42,11 @@ export default Plugin.define({
   },
 })
 
-function readOptions(options: Readonly<Record<string, any>>): Options {
+function readOptions(options: Readonly<Record<string, any>> | undefined): Options {
+  const separator = options?.separator
+  const padTo = options?.padTo
   return {
-    separator: typeof options.separator === "string" ? options.separator : undefined,
-    padTo:
-      typeof options.padTo === "number" &&
-      Number.isSafeInteger(options.padTo) &&
-      options.padTo >= 0 &&
-      options.padTo <= 10_000
-        ? options.padTo
-        : undefined,
+    separator: typeof separator === "string" ? separator : undefined,
+    padTo: isValidPadTo(padTo) ? padTo : undefined,
   }
 }
