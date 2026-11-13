@@ -193,26 +193,24 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	P.Icon(Icons::Bike, 120.f, 104.f, 24.f, C.Accent);
 	P.Text(156.f, Mid(116.f, 15.f), TEXT("RIDE THE ISLES"), P.Font("Bold", 15.f, 0.24f), C.Accent);
 	P.Text(114.f, 238.f, TEXT("Veloverse"), P.Serif(104.f), Ink);
-	P.Text(120.f, 286.f, FString::Printf(TEXT("%d routes across five islands, from the harbour"), Surveys.Num()),
-	       P.Font("Medium", 20.f), Soft);
 
 	// Ride: the route as it's set, from where it starts.
 	const FRouteSurvey* Route = Pawn ? SurveyOf(Pawn->Track) : nullptr;
 	{
 		const FString Key = TEXT("ride");
 		const bool bHot = C.Hot(Key);
-		P.Round(120.f, 332.f, 560.f, 84.f, 14.f, bHot ? C.Accent * 1.12f : C.Accent);
-		P.Text(150.f, 370.f, TEXT("Ride"), P.Serif(30.f), C.OnAccent);
+		P.Round(120.f, 292.f, 560.f, 84.f, 14.f, bHot ? C.Accent * 1.12f : C.Accent);
+		P.Text(150.f, 330.f, TEXT("Ride"), P.Serif(30.f), C.OnAccent);
 		if (Route)
 		{
-			P.Text(150.f, 398.f,
+			P.Text(150.f, 358.f,
 			       P.Fit(FString::Printf(TEXT("Continue: %s · %s"), *Route->Title, *U::Distance(Route->Km * 1000.0)),
 			             P.Font("Medium", 16.f), 430.f),
 			       P.Font("Medium", 16.f), WithAlpha(C.OnAccent, 0.8f));
 		}
-		P.Icon(Icons::Arrow, 618.f, 358.f, 32.f, C.OnAccent, 2.4f);
-		C.Ring(Key, 120.f, 332.f, 560.f, 84.f, 14.f);
-		C.Hit(Key, 120.f, 332.f, 560.f, 84.f).OnClick = [M] { M->Controller()->Ride(); };
+		P.Icon(Icons::Arrow, 618.f, 318.f, 32.f, C.OnAccent, 2.4f);
+		C.Ring(Key, 120.f, 292.f, 560.f, 84.f, 14.f);
+		C.Hit(Key, 120.f, 292.f, 560.f, 84.f).OnClick = [M] { M->Controller()->Ride(); };
 	}
 
 	// The list under it. The trainer and sensors open from the chip at the top right, which shows
@@ -232,7 +230,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		{TEXT("settings"), Icons::Gear, TEXT("Settings"), FString(), [M] { M->Show(ERideMenuPage::Settings); }},
 		{TEXT("quit"), Icons::Leave, TEXT("Quit"), FString(), [M] { M->Controller()->Quit(); }},
 	};
-	float Y = 448.f;
+	float Y = 408.f;
 	for (const FItem& Item : Items)
 	{
 		const bool bHot = C.Hot(Item.Key);
