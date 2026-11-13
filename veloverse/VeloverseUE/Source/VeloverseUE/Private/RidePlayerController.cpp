@@ -52,6 +52,13 @@ void ARidePlayerController::Tour()
 		{
 			return;
 		}
+		// The start page waits for the world's light and textures to settle, as a rider would see it.
+		float Settle = 0.f;
+		FParse::Value(FCommandLine::Get(), TEXT("RideTourSettle="), Settle);
+		if (Page == 0 && GetWorld()->GetRealTimeSeconds() < Settle)
+		{
+			return;
+		}
 		++TourStep;
 		if (Page < UE_ARRAY_COUNT(Shots))
 		{
