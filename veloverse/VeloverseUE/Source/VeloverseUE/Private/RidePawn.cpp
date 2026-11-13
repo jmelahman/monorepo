@@ -304,19 +304,6 @@ void ARidePawn::Tick(float Dt)
 {
 	Super::Tick(Dt);
 	ReadKeys();
-	// For the first seconds after the level loads, exposure catches up at once. The light is still
-	// settling then, and at the usual pace the start menu opened on a washed-out, over-exposed world.
-	{
-		const bool bSettling = GetWorld() && GetWorld()->GetRealTimeSeconds() < 8.0;
-		FPostProcessSettings& Look = Camera->PostProcessSettings;
-		if (Look.bOverride_AutoExposureSpeedDown != bSettling)
-		{
-			Look.bOverride_AutoExposureSpeedUp = bSettling;
-			Look.bOverride_AutoExposureSpeedDown = bSettling;
-			Look.AutoExposureSpeedUp = 30.f;
-			Look.AutoExposureSpeedDown = 30.f;
-		}
-	}
 	if (!Track || Track->Length() <= 0.f)
 	{
 		return;
@@ -768,13 +755,22 @@ void ARidePawn::Place()
 	{
 		return; // a level without a ride track (the spikes): BeginPlay has logged it
 	}
-	const float S = Track->Wrap(static_cast<float>(Distance));
-	const FVector Eye = Track->Point(S, -Track->KeepLeft, EyeHeight);
+	// Before the ride the start screen looks out from the woods; riding, the camera is the rider's.
+	const URideTrack* On = Track;
+	double At = Distance;
+	const bool bBackdrop = !bStarted && Backdrop(On, At);
+	if (bBackdrop != bOnBackdrop)
+	{
+		bOnBackdrop = bBackdrop;
+		bHeadSet = false;
+	}
+	const float S = On->Wrap(static_cast<float>(At));
+	const FVector Eye = On->Point(S, -On->KeepLeft, EyeHeight);
 	// Along the rider's own line, not at the centreline: aiming there turned the view inward by
 	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead.
-	const FVector Ahead = Track->Point(Track->Wrap(S + LookAhead), -Track->KeepLeft, EyeHeight);
+	const FVector Ahead = On->Point(On->Wrap(S + LookAhead), -On->KeepLeft, EyeHeight);
 	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
-	const float Rise = Track->Height(Track->Wrap(S + GradeSpan)) - Track->Height(S);
+	const float Rise = On->Height(On->Wrap(S + GradeSpan)) - On->Height(S);
 	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	FVector Lift = FVector::ZeroVector;
@@ -798,8 +794,8 @@ void ARidePawn::Place()
 		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
 		FVector Unused2;
 		float Before, After;
-		Track->At(Track->Wrap(S - 300.f), Unused2, Before);
-		Track->At(Track->Wrap(S + 300.f), Unused2, After);
+		On->At(On->Wrap(S - 300.f), Unused2, Before);
+		On->At(On->Wrap(S + 300.f), Unused2, After);
 		const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f; // per metre
 		const float Want = bSway ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
@@ -821,6 +817,31 @@ void ARidePawn::Place()
 	// The mouse turns the head on top of all that, the road's frame first and the look in it.
 	const FQuat Body = (Head + FRotator(0.f, Turn, Roll + Lean)).Quaternion();
 	SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
+}
+
+bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
+{
+	// Greenwood's woods, a way in from the bridge, on whichever route passes through them.
+	float Into = 3000.f;
+	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
+	TArray<const URideTrack*> Order = {Track.Get()};
+	for (const URideTrack* Each : Routes)
+	{
+		Order.AddUnique(Each);
+	}
+	for (const URideTrack* Each : Order)
+	{
+		for (const FRideStretch& Stretch : Each ? Each->Stretches : TArray<FRideStretch>())
+		{
+			if (Stretch.Name.Equals(TEXT("Greenwood"), ESearchCase::IgnoreCase))
+			{
+				On = Each;
+				At = (Stretch.Metres + Into) * 100.0;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void ARidePawn::FindWeather()

@@ -73,6 +73,10 @@ public:
 	bool bPaused = false;
 	bool bFinished = false;
 	bool bStarted = false; // off the start screen
+	// The start screen's view: a spot in Greenwood's woods, whatever the route. False if no route
+	// reaches Greenwood, and the rider's own start serves.
+	bool Backdrop(const URideTrack*& On, double& At) const;
+	bool bOnBackdrop = false;
 	FTrainerReading Reading;
 	float ClimbedMetres = 0.f;
 	double Joules = 0.0;
