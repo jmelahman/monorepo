@@ -271,7 +271,6 @@ GRASS = {
         ("shared", "bracken_fern", 0.5, 4000, 6000),
         ("forest", "wooden_sticks_and_twigs", 0.3, 2000, 3500),
         ("forest", "scatter_mushroom_set", 0.2, 1500, 2500),
-        ("forest", "forest_wild_mushroom_set_01", 0.1, 1500, 2500),
         ("forest", "lichen_stump", 0.03, 9000, 12000),
         ("forest", "pine_tree_stump", 0.03, 9000, 12000),
         ("forest", "mossy_rock_formation", 0.015, 12000, 15000),

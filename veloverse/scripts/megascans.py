@@ -102,10 +102,6 @@ def import_asset(record):
         tex.set_editor_property("compression_settings", compression)
         assets.save_loaded_asset(tex, False)
     for mesh in record["meshes"]:
-        # "_Anim" is a skeletal copy of a static mesh beside it (the mushroom sets'); its bones
-        # fail to import ("Failed to add Bone control"), and the world uses static meshes.
-        if "_Anim" in mesh["file"]:
-            continue
         name = mesh_name(record, mesh["file"])
         if assets.does_asset_exist(f"{folder}/{name}") and not FORCE:
             continue
