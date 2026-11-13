@@ -1051,10 +1051,12 @@ KEPT_LOW = (60.0, 25.0)  # m up: the hub's low ground, not its hilltops
 KEPT_HUB = (5200.0, 4200.0)  # m from the hub's centre: the flat kept only on the hub
 KEPT_FLAT_SHARE = 0.75  # how kept the hub's flat road is, at most
 KEPT_EASE = 400  # m along the road the wear changes over
+KEPT_BRIDGE = 120  # m: a bridge's deck is like new, eased in over this much of each approach
 
 
-def road_wear(plan, line):
-    """Wear, 0 (like new) to 1 (old), at each point of `line` ((n, 3) m, a metre apart)."""
+def road_wear(plan, line, bridge=None):
+    """Wear, 0 (like new) to 1 (old), at each point of `line` ((n, 3) m, a metre apart). A
+    bridge's deck (`bridge`, a mask) is kept like new, eased in over its approaches."""
     x, y, z = line[:, 0], line[:, 1], line[:, 2]
     hx, hy = plan.harbour
     town = mi.smoothstep(*KEPT_TOWN, np.hypot(x - hx, y - hy))
@@ -1062,6 +1064,10 @@ def road_wear(plan, line):
     flat = mi.smoothstep(*KEPT_FLAT, grade) * mi.smoothstep(*KEPT_LOW, z)
     flat *= mi.smoothstep(*KEPT_HUB, np.hypot(x, y)) * KEPT_FLAT_SHARE
     kept = ndimage.uniform_filter1d(np.maximum(town, flat), KEPT_EASE, mode="wrap")
+    if bridge is not None and bridge.any():
+        # Grown by half the ease first, so the deck itself is wholly kept.
+        deck = ndimage.maximum_filter1d(bridge.astype(np.float32), KEPT_BRIDGE, mode="wrap")
+        kept = np.maximum(kept, ndimage.uniform_filter1d(deck, KEPT_BRIDGE, mode="wrap"))
     return np.clip(1.0 - kept, 0.0, 1.0).astype(np.float32)
 
 
@@ -1160,7 +1166,7 @@ def main():
         ride = next(r for r in rides if r["key"] == key)
         centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in here]
         spans = bridge_spans(here_bridge)
-        wear = road_wear(plan, here)
+        wear = road_wear(plan, here, here_bridge)
         trail = trail_mask(plan, here)
         if done is None:
             for surface, a, b in surfaces(ride["stretches"], len(centre), trail):
