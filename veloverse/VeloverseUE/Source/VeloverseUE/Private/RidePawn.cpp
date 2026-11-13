@@ -821,8 +821,11 @@ void ARidePawn::Place()
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
-	// Greenwood's woods, 8 km in, where the trees close over the road, on whichever route passes through them.
+	// A stretch of woods, a way into it, on whichever route passes through it. -RideBackdropIn=NAME
+	// and -RideBackdrop=METRES move it.
+	FString In = TEXT("Greenwood");
 	float Into = 8000.f;
+	FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), In);
 	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
 	TArray<const URideTrack*> Order = {Track.Get()};
 	for (const URideTrack* Each : Routes)
@@ -833,7 +836,7 @@ bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 	{
 		for (const FRideStretch& Stretch : Each ? Each->Stretches : TArray<FRideStretch>())
 		{
-			if (Stretch.Name.Equals(TEXT("Greenwood"), ESearchCase::IgnoreCase))
+			if (Stretch.Name.Equals(In, ESearchCase::IgnoreCase))
 			{
 				On = Each;
 				At = (Stretch.Metres + Into) * 100.0;
