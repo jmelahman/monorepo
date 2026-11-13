@@ -291,7 +291,7 @@ void URideMenu::MoveFocus(FVector2f Direction)
 	float BestScore = TNumericLimits<float>::Max();
 	for (const FHit& H : Hits)
 	{
-		if (H.Key == From->Key || !H.OnClick && !H.OnDrag)
+		if (H.Key == From->Key || (!H.OnClick && !H.OnDrag))
 		{
 			continue;
 		}
@@ -514,12 +514,12 @@ void URideMenu::ReadMap()
 	MapY0 = Meta->GetNumberField(TEXT("y0"));
 	if (const TSharedPtr<FJsonObject>* Labels; Meta->TryGetObjectField(TEXT("labels"), Labels))
 	{
-		for (const auto& [Name, Value] : (*Labels)->Values)
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Label : (*Labels)->Values)
 		{
-			const TArray<TSharedPtr<FJsonValue>>& At = Value->AsArray();
+			const TArray<TSharedPtr<FJsonValue>>& At = Label.Value->AsArray();
 			if (At.Num() == 2)
 			{
-				MapLabels.Add(Name, FVector2f(At[0]->AsNumber(), At[1]->AsNumber()));
+				MapLabels.Add(Label.Key, FVector2f(static_cast<float>(At[0]->AsNumber()), static_cast<float>(At[1]->AsNumber())));
 			}
 		}
 	}

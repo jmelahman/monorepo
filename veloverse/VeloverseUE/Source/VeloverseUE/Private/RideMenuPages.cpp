@@ -807,14 +807,14 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			       Apply();
 		       });
 		static const int32 Scales[5] = {50, 67, 75, 85, 100};
-		float Normalized = 1.f, Scale = 100.f, Min = 0.f, Max = 100.f;
-		V->GetResolutionScaleInformationEx(Normalized, Scale, Min, Max);
+		float Normalized = 1.f, Percent = 100.f, Min = 0.f, Max = 100.f;
+		V->GetResolutionScaleInformationEx(Normalized, Percent, Min, Max);
 		int32 ScaleAt = 0;
 		TArray<FString> ScaleNames;
 		for (int32 I = 0; I < 5; ++I)
 		{
 			ScaleNames.Add(FString::Printf(TEXT("%d%%"), Scales[I]));
-			if (FMath::Abs(Scale - Scales[I]) < FMath::Abs(Scale - Scales[ScaleAt]))
+			if (FMath::Abs(Percent - Scales[I]) < FMath::Abs(Percent - Scales[ScaleAt]))
 			{
 				ScaleAt = I;
 			}
@@ -920,17 +920,18 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			const TCHAR* Hint;
 			float Lo, Hi, Step;
 			float FRideProfile::*Field; // or nullptr: the max heart rate, an int
-			const TCHAR* Format;
+			bool bTenths; // shown to 0.1, else whole
+			const TCHAR* Unit;
 		};
 		static const FSlide Slides[4] = {
 			{TEXT("ftp"), TEXT("FTP"), TEXT("The power you can hold for an hour"), 100.f, 450.f, 5.f, &FRideProfile::Ftp,
-			 TEXT("%.0f W")},
+			 false, TEXT("W")},
 			{TEXT("weight"), TEXT("Weight"), TEXT("Yours: it sets how hard the climbs are"), 40.f, 150.f, 0.5f,
-			 &FRideProfile::WeightKg, TEXT("%.1f kg")},
+			 &FRideProfile::WeightKg, true, TEXT("kg")},
 			{TEXT("bike"), TEXT("Bike"), TEXT("The bike's weight"), 6.f, 20.f, 0.5f, &FRideProfile::BikeKg,
-			 TEXT("%.1f kg")},
+			 true, TEXT("kg")},
 			{TEXT("maxhr"), TEXT("Max heart rate"), TEXT("Sets the heart-rate zones"), 150.f, 215.f, 1.f, nullptr,
-			 TEXT("%.0f bpm")},
+			 false, TEXT("bpm")},
 		};
 		for (const FSlide& S : Slides)
 		{
@@ -953,7 +954,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 				     });
 			};
 			C.Slider(S.Key, Right - 560.f, Cy, 560.f, (Value - S.Lo) / (S.Hi - S.Lo),
-			         FString::Printf(S.Format, Value), [Write, Sp](float Share) { Write(FMath::Lerp(Sp->Lo, Sp->Hi, Share)); },
+			         S.bTenths ? FString::Printf(TEXT("%.1f %s"), Value, S.Unit) : FString::Printf(TEXT("%.0f %s"), Value, S.Unit), [Write, Sp](float Share) { Write(FMath::Lerp(Sp->Lo, Sp->Hi, Share)); },
 			         [Write, Sp, Value](int32 By) { Write(Value + By * Sp->Step); });
 		}
 		// The HUD's colour: the themes the rider's level has unlocked.
