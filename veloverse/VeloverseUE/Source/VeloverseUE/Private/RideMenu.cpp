@@ -138,10 +138,10 @@ void URideMenu::Show(ERideMenuPage Page)
 
 void URideMenu::SetTab(ERideSettingsTab Now)
 {
-	if (Tab == ERideSettingsTab::Rider && Now != Tab)
+	// A first run's profile is kept as the rider leaves its tab, so the welcome shows once.
+	if (ARidePawn* Pawn = Rider(); Pawn && Tab == ERideSettingsTab::Rider && Now != Tab && !FRideProfile::Saved())
 	{
-		LeaveRider();
-		Current = ERideMenuPage::Settings;
+		Pawn->SetProfile(Pawn->Profile);
 	}
 	Tab = Now;
 	Focus = DefaultFocus();
@@ -197,7 +197,7 @@ void URideMenu::GoBack()
 		{
 			Show(ERideMenuPage::Stats);
 		}
-		else if (Review.bJustRidden)
+		else if (const ARidePawn* Pawn = Rider(); Pawn && Pawn->bStarted)
 		{
 			Controller()->Restart();
 		}

@@ -40,13 +40,15 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 void ARidePlayerController::Tour()
 {
 	// Every other step screenshots the page, which lands a frame or two later, and the next moves on.
-	const TCHAR* Shots[] = {TEXT("start"), TEXT("profile"), TEXT("video"), TEXT("ride"), TEXT("pause"), TEXT("summary")};
+	const TCHAR* Shots[] = {TEXT("start"), TEXT("routes"), TEXT("sensors"), TEXT("graphics"), TEXT("rider"),
+		TEXT("stats"), TEXT("ride"), TEXT("pause"), TEXT("summary")};
+	constexpr int32 Riding = 6;
 	const int32 Page = TourStep / 2;
 	if (TourStep % 2 == 0)
 	{
 		// The ride is shot near its end, once there's some of it to summarize.
 		const ARidePawn* Pawn = Rider();
-		if (Page == 3 && Pawn && Pawn->Elapsed < TourRide)
+		if (Page == Riding && Pawn && Pawn->Elapsed < TourRide)
 		{
 			return;
 		}
@@ -62,11 +64,14 @@ void ARidePlayerController::Tour()
 	++TourStep;
 	switch (Page)
 	{
-	case 0: Open(ERideMenuPage::Profile); break;
-	case 1: Open(ERideMenuPage::Video); break;
-	case 2: Ride(); break;
-	case 3: ShowPause(); break;
-	case 4: EndRide(); break;
+	case 0: Open(ERideMenuPage::Routes); break;
+	case 1: Open(ERideMenuPage::Sensors); break;
+	case 2: Open(ERideMenuPage::Settings); Menu->SetTab(ERideSettingsTab::Graphics); break;
+	case 3: Menu->SetTab(ERideSettingsTab::Rider); break;
+	case 4: Open(ERideMenuPage::Stats); break;
+	case 5: Ride(); break;
+	case 6: ShowPause(); break;
+	case 7: EndRide(); break;
 	default: Quit(); break;
 	}
 }
