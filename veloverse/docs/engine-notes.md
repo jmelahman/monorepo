@@ -86,7 +86,9 @@ Megascans with FBX meshes go in three steps, chained in one background run:
 2. `scripts/oc.py stop`, then `OC_STAGE=import`, `assign` and `warm` in turn, each
    `bash scripts/ue_run.sh megascans.py LOG` with `OC_ONLY` set to the new `biome/slug` pairs.
    It's a second Unreal, so the oc server's editor must be stopped first. `ue_run.sh` exits 0
-   even when the script fails, so grep each log for `Traceback` before going on.
+   even when the script fails, so grep each log for `Traceback` and `MEGASCANS failed` (an
+   asset that wouldn't import; the rest go on) before going on. In a queue step write
+   `if grep -q ...; then exit 1; fi`: `set -e` ignores a failing `! grep`.
 3. Add rows to `GRASS` (`oc_climb.py`) or a preset (`biomes.py`), then
    `rebuild-ground --rebuild-grass` and a `look`.
 

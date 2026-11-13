@@ -102,6 +102,10 @@ def import_asset(record):
         tex.set_editor_property("compression_settings", compression)
         assets.save_loaded_asset(tex, False)
     for mesh in record["meshes"]:
+        # "_Anim" is a skeletal copy of a static mesh beside it (the mushroom sets'); its bones
+        # fail to import ("Failed to add Bone control"), and the world uses static meshes.
+        if "_Anim" in mesh["file"]:
+            continue
         name = mesh_name(record, mesh["file"])
         if assets.does_asset_exist(f"{folder}/{name}") and not FORCE:
             continue
@@ -250,8 +254,12 @@ def main():
         records = [r for r in json.load(f) if wanted(r)]
     log(f"{STAGE}: {len(records)} assets")
     if STAGE == "import":
+        # One bad asset is logged ("MEGASCANS failed") and skipped, not the rest of the batch.
         for record in records:
-            import_asset(record)
+            try:
+                import_asset(record)
+            except RuntimeError as e:
+                log(f"failed {folder_of(record)}: {e}")
     elif STAGE == "assign":
         masters = {kind: master(kind) for kind in ("plant", "prop")}
         for record in records:
