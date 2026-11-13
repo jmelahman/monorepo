@@ -135,6 +135,11 @@ ROUTES = [
 # 13 Nov: the two short waves give bends at eye level (the AAA review: "a dead-straight ribbon");
 # the tightest they make together is about 60 m in radius.
 WANDER = ((170, 7), (300, 14), (420, 22), (900, 40), (1700, 60))
+# The contour pass (contour()): each island leg nudged sideways, up to REACH m a round, toward
+# ground at the road's own level, so it bends round spurs and into side valleys the way a road
+# built to the land does, rather than cutting straight through. OFFSET_COST: m of height
+# mismatch a metre of sideways move is worth; HOLD: m at each end held still (the bridges).
+CONTOUR = {"rounds": 8, "reach": 80.0, "offset_cost": 0.1, "smooth_m": 120.0, "hold": 700.0}
 
 
 def grid():
@@ -472,7 +477,7 @@ class Spur:
     island, home over the other. `xy` runs from junction to junction, both on the coast road at
     ring indices `enter` and `leave`; `bridges` are (first, last) indices into xy."""
 
-    def __init__(self, p, ring, land, which, inland, rng):
+    def __init__(self, p, ring, h, land, which, inland, rng):
         self.p = p
         sites = [
             min(
@@ -494,6 +499,7 @@ class Spur:
         leg = island_leg(p, out_in[-1], out_back[-1], rng, inland)
         curve = mi.catmull([q / 1000 for q in leg], False, step=STEP)
         curve = wander(even(np.vstack([curve, leg[-1]]), False), land)
+        curve = contour(curve, h, land, inland)
         there, back = out_in, out_back[::-1]
         self.xy = np.vstack([ring[self.enter], there[1:], curve[1:-1], back[:-1], ring[self.leave]])
         a = 1 + int(LEAD / STEP)
@@ -527,11 +533,13 @@ class Spur:
         return j, line, [hub_shore, petal_shore]
 
 
-def lay_network(land, which, inland):
+def lay_network(h, land, which, inland):
     """The coast road and every petal's spur."""
     ring = coast_road(inland, which)
     rng = np.random.default_rng(SEED)
-    spurs = {ISLANDS[p][0]: Spur(p, ring, land, which, inland, rng) for p in range(1, len(ISLANDS))}
+    spurs = {
+        ISLANDS[p][0]: Spur(p, ring, h, land, which, inland, rng) for p in range(1, len(ISLANDS))
+    }
     return ring, spurs
 
 
@@ -570,6 +578,99 @@ def wander(xy, land):
     off = off * mi.smoothstep(0, 900, np.minimum(s, s[-1] - s))
     moved = xy + np.stack([-t[:, 1], t[:, 0]], axis=1) * off[:, None]
     return even(moved, False)
+
+
+def contour(xy, h, land, inland):
+    """The leg `xy` (STEP m apart, open) bent toward the contours: each round, every point looks
+    up to CONTOUR["reach"] m either side for ground nearest the road's smoothed level, the moves
+    are smoothed along the road, held at the ends and kept off the shore, and the line evened
+    out again. Prints the mean cut or fill before and after."""
+    soft = ndimage.gaussian_filter(h, 20 / SPACING)
+    level = ndimage.gaussian_filter(h, 40 / SPACING)
+    ok = (land & (inland > 150)).astype(np.float32)
+    c = CONTOUR
+    offs = np.arange(-c["reach"], c["reach"] + 1, 5.0)
+
+    def misfit(line):
+        g = sample(soft, line)
+        return g, mi.smooth(sample(level, line), 40, False)
+
+    g, z = misfit(xy)
+    before, start = float(np.abs(g - z).mean()), xy
+    for _ in range(c["rounds"]):
+        t = np.gradient(xy, axis=0)
+        t /= np.linalg.norm(t, axis=1, keepdims=True) + 1e-9
+        normal = np.stack([-t[:, 1], t[:, 0]], axis=1)
+        _, z = misfit(xy)
+        cost = np.empty((len(offs), len(xy)))
+        for j, o in enumerate(offs):
+            q = xy + normal * o
+            dry = sample(ok, q, order=0) > 0.5
+            cost[j] = (
+                (sample(soft, q) - z) ** 2 + (o * c["offset_cost"]) ** 2 + np.where(dry, 0, 1e6)
+            )
+        move = offs[np.argmin(cost, axis=0)]
+        move = ndimage.gaussian_filter1d(move, c["smooth_m"] / STEP, mode="nearest")
+        s = np.arange(len(xy)) * STEP
+        move *= mi.smoothstep(0, c["hold"], np.minimum(s, s[-1] - s))
+        # A move that would put a point off the land or onto the shore is dropped there, and the
+        # rest eased into the gap (undoing that point alone left a notch in the road).
+        dry = sample(ok, xy + normal * move[:, None], order=0) > 0.5
+        move = ndimage.gaussian_filter1d(np.where(dry, move, 0.0), 40 / STEP, mode="nearest")
+        # No more than a third of the bend's radius a round, so the inside of a curve can't fold.
+        move = np.clip(move, -radii(xy) / 3, radii(xy) / 3)
+        moved = relax(xy + normal * move[:, None])
+        xy = even(np.vstack([moved, xy[-1:]]), False)
+        if np.linalg.norm(xy[-1] - moved[-1]) > 1:
+            xy = np.vstack([xy, moved[-1:]])
+    g, z = misfit(xy)
+    print(
+        f"contour: mean cut/fill {before:.1f} -> {float(np.abs(g - z).mean()):.1f} m, "
+        f"tightest bend {tightest(start):.0f} -> {tightest(xy):.0f} m",
+        flush=True,
+    )
+    return xy
+
+
+def relax(xy, least=60.0, rounds=200):
+    """Bends tighter than `least` m eased out: each such point pulled toward its neighbours'
+    middle, again until none is left or `rounds` pass; the ends stay put."""
+    xy = xy.copy()
+    for _ in range(rounds):
+        r = radii(xy)
+        bad = np.flatnonzero(r < least)
+        bad = bad[(bad > 2) & (bad < len(xy) - 3)]
+        if not len(bad):
+            break
+        for k in (-3, -2, -1, 0, 1, 2, 3):
+            i = np.clip(bad + k, 1, len(xy) - 2)
+            xy[i] += 0.5 * ((xy[i - 1] + xy[i + 1]) / 2 - xy[i])
+    return xy
+
+
+def radii(xy):
+    """Each point's bend radius (m): the circle through it and the points 30 m either side, the
+    ends taking their neighbours'."""
+    k = int(30 / STEP)
+    r = np.full(len(xy), 1e6)
+    if len(xy) <= 2 * k:
+        return r
+    p0, p1, p2 = xy[: -2 * k], xy[k:-k], xy[2 * k :]
+    u, v = p1 - p0, p2 - p1
+    cross = np.abs(u[:, 0] * v[:, 1] - u[:, 1] * v[:, 0])
+    sides = (
+        np.linalg.norm(p1 - p0, axis=1)
+        * np.linalg.norm(p2 - p1, axis=1)
+        * np.linalg.norm(p2 - p0, axis=1)
+    )
+    r[k:-k] = sides / np.maximum(2 * cross, 1e-9)
+    r[:k], r[-k:] = r[k], r[-k - 1]
+    return r
+
+
+def tightest(xy):
+    """The tightest bend's radius (m)."""
+    return float(radii(xy).min())
 
 
 def heights(h, xy, bridges, closed, ends=None):
@@ -680,7 +781,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     h, land, which, weights, _cliff, inland = terrain()
     print(f"terrain: {h.min():.0f}..{h.max():.0f} m, land {land.mean() * 100:.0f}%", flush=True)
-    ring, spurs = lay_network(land, which, inland)
+    ring, spurs = lay_network(h, land, which, inland)
     h = landings(h, land, [q for sp in spurs.values() for q in sp.shores])
     added = keep_land(land, [(ring, [])] + [(sp.xy, sp.bridges) for sp in spurs.values()])
     if added.any():
