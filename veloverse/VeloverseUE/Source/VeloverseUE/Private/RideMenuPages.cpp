@@ -1189,7 +1189,7 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	{
 		const float Vw = P.Text(948.f, 308.f, U::Distance(WeekKm.Last() * 1000.0, 0), P.Font("Bold", 15.f), Ink,
 		                        EAlign::Right);
-		P.Text(944.f - Vw, 308.f, TEXT("Last 12 weeks · this week"), P.Font("Medium", 15.f), Muted, EAlign::Right);
+		P.Text(940.f - Vw, 308.f, TEXT("Last 12 weeks · this week"), P.Font("Medium", 15.f), Muted, EAlign::Right);
 		TArray<double> Shown;
 		double Most = 0.0;
 		for (const double Km : WeekKm)
@@ -1377,8 +1377,8 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	}
 	{
 		P.Rect(816.f, 966.f, 412.f, 1.f, InkA(0.08f));
-		const float Rw = P.Text(816.f, 996.f, TEXT("Routes ridden "), P.Font("Medium", 15.f), Ink);
-		P.Text(816.f + Rw, 996.f, FString::Printf(TEXT("%d of %d"), RoutesRidden, Surveys.Num()), P.Font("Bold", 15.f), Ink);
+		const float Rw = P.Text(816.f, 996.f, TEXT("Routes ridden"), P.Font("Medium", 15.f), Ink);
+		P.Text(822.f + Rw, 996.f, FString::Printf(TEXT("%d of %d"), RoutesRidden, Surveys.Num()), P.Font("Bold", 15.f), Ink);
 		float Dx = 1228.f - Surveys.Num() * 20.f + 6.f;
 		for (const FRouteSurvey& S : Surveys)
 		{
@@ -1714,10 +1714,11 @@ void URideMenu::PaintReview(FPaintContext& C) const
 			P.Dashed({FVector2f(Gx, Ay), FVector2f(Gx + Gw, Ay)}, InkA(0.4f), 1.f, 5.f, 5.f);
 		}
 	}
-	// The distance under the traces: the start, each quarter and the end.
+	// The distance under the traces: the start, each quarter and the end, finer on a short ride.
+	const int32 Places = U::Long(Tr.Metres) < 2.0 ? 2 : 1;
 	for (int32 Q = 0; Q <= 4; ++Q)
 	{
-		P.Text(Gx + Gw * Q / 4.f, 690.f, U::Distance(Tr.Metres * Q / 4.0, Q == 0 ? 0 : 1), P.Font("Medium", 12.f),
+		P.Text(Gx + Gw * Q / 4.f, 690.f, U::Distance(Tr.Metres * Q / 4.0, Q == 0 ? 0 : Places), P.Font("Medium", 12.f),
 		       Muted, Q == 0 ? EAlign::Left : Q == 4 ? EAlign::Right : EAlign::Centre);
 	}
 
