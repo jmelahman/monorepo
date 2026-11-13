@@ -556,7 +556,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	         [M] { M->Show(ERideMenuPage::Sensors); }, Icons::Signal, 16.f);
 
 	// The climb, along the route, under it in the islands' colours.
-	const float Ex = 796.f, Ew = RightEdge - Ex, Ey = 868.f, Eh = 134.f;
+	const float Ex = 796.f, Ew = RightEdge - Ex, Ey = 888.f, Eh = 118.f;
 	if (S->Heights.Num() > 1)
 	{
 		float Lo = TNumericLimits<float>::Max(), Hi = 0.f;
