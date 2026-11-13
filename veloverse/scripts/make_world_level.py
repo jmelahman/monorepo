@@ -808,14 +808,15 @@ def cliff_views(line, plan, coast):
     dx, dy = ahead[0] - line[k, 0], ahead[1] - line[k, 1]
     n = max(float(np.hypot(dx, dy)), 1e-6)
     rx, ry = -dy / n * RIDE_LANE, dx / n * RIDE_LANE
-    # Seaward: down the distance to the sea, measured 20 m either side.
+    # Seaward: the way round of 16 where the sea is nearest, 150 m out (a gradient measured 20 m
+    # either side came out flat on a cliff top, and put the sea view on the road, 13 Nov).
     x0, y0 = float(line[k, 0]), float(line[k, 1])
-    near = plan.at(
-        plan.inland, np.array([x0 + 20, x0 - 20, x0, x0]), np.array([y0, y0, y0 + 20, y0 - 20])
-    )
-    gx, gy = near[0] - near[1], near[2] - near[3]
-    g = max(float(np.hypot(gx, gy)), 1e-6)
-    sx, sy = -gx / g, -gy / g
+    turn = np.linspace(0, 2 * np.pi, 16, endpoint=False)
+    near = plan.at(plan.inland, x0 + 150 * np.cos(turn), y0 + 150 * np.sin(turn))
+    # With no lead, away from the island's middle.
+    flat = np.ptp(near) < 1e-3
+    best = float(np.arctan2(y0, x0) if flat else turn[int(np.argmin(near))])
+    sx, sy = float(np.cos(best)), float(np.sin(best))
     out_to = 350.0 + float(inland[k])
     return [
         [

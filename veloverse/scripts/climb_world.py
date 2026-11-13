@@ -797,8 +797,8 @@ def path_material():
 
 # The town's bike trail, after Chicago's Bloomingdale Trail (the 606): pale broom-finished
 # concrete in 3 m slabs, blue-grey rubber running shoulders, a yellow dashed centre line.
-TRAIL_CONCRETE = (0.34, 0.33, 0.31)
-TRAIL_RUBBER = (0.07, 0.09, 0.115)
+TRAIL_CONCRETE = (0.24, 0.235, 0.22)  # 0.34 read as white under the hub sun (v50)
+TRAIL_RUBBER = (0.035, 0.05, 0.075)
 TRAIL_SHOULDER = 0.45  # m, each side
 TRAIL_YELLOW = (0.62, 0.4, 0.03)
 TRAIL_SLAB = 3.0  # m between saw-cut joints
@@ -837,8 +837,8 @@ def trail_material():
     # Saw-cut joints across the slab ends, a centimetre and a half wide.
     frac = g.link(g.mul(along, 1 / TRAIL_SLAB), g.node(unreal.MaterialExpressionFrac))
     near = g.op(unreal.MaterialExpressionMin, frac, g.add(g.mul(frac, -1.0), 1.0))
-    joint = g.saturate(g.mul(g.add(g.mul(near, TRAIL_SLAB), -0.008), -200.0))
-    colour = g.lerp(colour, g.mul(colour, 0.55), joint)
+    joint = g.saturate(g.mul(g.add(g.mul(near, TRAIL_SLAB), -0.012), -150.0))
+    colour = g.lerp(colour, g.mul(colour, 0.4), joint)
     # The rubber shoulders, with a soft grain.
     edge = g.saturate(g.mul(g.add(across, -(half - TRAIL_SHOULDER)), 60.0))
     rubber = g.mul(g.const(TRAIL_RUBBER), g.world_noise(0.3, 0.9, 1.1, 1))
