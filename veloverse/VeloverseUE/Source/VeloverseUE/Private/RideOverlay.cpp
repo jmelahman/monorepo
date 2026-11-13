@@ -1,31 +1,17 @@
 #include "RideOverlay.h"
 
 #include "Blueprint/WidgetTree.h"
-#include "Brushes/SlateColorBrush.h"
-#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/CanvasPanel.h"
-#include "Fonts/FontMeasure.h"
-#include "Framework/Application/SlateApplication.h"
-#include "Rendering/DrawElements.h"
-#include "Rendering/SlateRenderer.h"
 #include "RidePawn.h"
 #include "RideTrack.h"
-#include "Styling/CoreStyle.h"
+#include "SlatePainter.h"
+
+using namespace VeloversePaint;
 
 namespace
 {
-// The canvas's colours, written as it wrote them: sRGB hex.
-FLinearColor Hex(uint32 Rgb, float Alpha = 1.f)
-{
-	FLinearColor C = FLinearColor::FromSRGBColor(FColor((Rgb >> 16) & 255, (Rgb >> 8) & 255, Rgb & 255));
-	C.A = Alpha;
-	return C;
-}
-
 const FLinearColor Ink = Hex(0xF4F1EA);
 const FLinearColor Dim = Hex(0xF4F1EA, 0.72f);
-const FLinearColor Fill = Hex(0x0E1012, 0.64f);
-const FLinearColor Edge(1.f, 1.f, 1.f, 0.08f);
 const FLinearColor BadgeText = Hex(0x121212);
 const FLinearColor Sky = Hex(0x7CD0FF);
 const FLinearColor SkyText = Hex(0xBDE6FF);
@@ -84,146 +70,47 @@ FString Km(float Metres)
 	return FString::Printf(TEXT("%.0f m"), FMath::Max(50.f, FMath::RoundToFloat(Metres / 50.f) * 50.f));
 }
 
-// Slate drops a run's leading space, so text that follows another run starts after this gap.
-constexpr float Space = 4.f;
-
-enum class EAlign : uint8
+// The weather's icon in a 22 px square at X, Y, drawn on the canvas's 24-unit grid.
+void Icon(const FPainter& P, float X, float Y, ESky Weather)
 {
-	Left,
-	Centre,
-	Right,
-};
-
-// Draws in the canvas's units: a 1280x720 frame scaled to the screen's height, so the panels keep
-// their size against the picture. Every draw goes on a layer of its own, so nothing is batched
-// out of order.
-struct FPainter
-{
-	const FGeometry& G;
-	FSlateWindowElementList& Out;
-	mutable int32 Layer;
-	float S;
-	TSharedRef<FSlateFontMeasure> Measure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-
-	// Inter's weights become Roboto's: 500 Medium, 600 and 700 Bold, 800 Black. Px is the CSS size;
-	// Slate sizes are points at 96 DPI.
-	FSlateFontInfo Font(FName Face, float Px, float Tracking = 0.f) const
+	const float K = 22.f / 24.f;
+	auto Place = [&](TArray<FVector2f> Points)
 	{
-		FSlateFontInfo F = FCoreStyle::GetDefaultFontStyle(Face, Px * 0.75f * S);
-		F.LetterSpacing = FMath::RoundToInt32(Tracking * 1000.f);
-		return F;
-	}
-
-	FPaintGeometry At(float X, float Y, float W, float H) const
-	{
-		return G.ToPaintGeometry(FVector2f(W * S, H * S), FSlateLayoutTransform(FVector2f(X * S, Y * S)));
-	}
-
-	void Rect(float X, float Y, float W, float H, const FLinearColor& Colour) const
-	{
-		const FSlateColorBrush Brush(FLinearColor::White);
-		FSlateDrawElement::MakeBox(Out, ++Layer, At(X, Y, W, H), &Brush, ESlateDrawEffect::None, Colour);
-	}
-
-	void Round(float X, float Y, float W, float H, float Radius, const FLinearColor& Colour,
-	           const FLinearColor& Outline = FLinearColor::Transparent, float OutlineWidth = 0.f) const
-	{
-		// Slate takes a box's colour from the draw's tint, not the brush's.
-		const FSlateRoundedBoxBrush Brush(FLinearColor::White, Radius * S, Outline, OutlineWidth * S);
-		FSlateDrawElement::MakeBox(Out, ++Layer, At(X, Y, W, H), &Brush, ESlateDrawEffect::None, Colour);
-	}
-
-	// The fill, then the edge over it as CSS draws a border. A brush's outline sits outside its fill,
-	// so an outline on the fill's own brush shows as a light ring on the scene.
-	void Panel(float X, float Y, float W, float H, float Radius) const
-	{
-		Round(X, Y, W, H, Radius, Fill);
-		// The tint fills the box and the brush's outline colour draws the edge, so a clear tint is edge only.
-		const FSlateRoundedBoxBrush Brush(FLinearColor::White, Radius * S, Edge, 1.f * S);
-		FSlateDrawElement::MakeBox(Out, ++Layer, At(X, Y, W, H), &Brush, ESlateDrawEffect::None, FLinearColor::Transparent);
-	}
-
-	float Width(const FString& Text, const FSlateFontInfo& F) const
-	{
-		return Measure->Measure(Text, F, 1.f).X / S;
-	}
-
-	// Writes Text with its baseline at Y, from X, round X, or back to X; returns its width.
-	float Text(float X, float Y, const FString& Text, const FSlateFontInfo& F, const FLinearColor& Colour,
-	           EAlign Align = EAlign::Left) const
-	{
-		const FVector2D Size = Measure->Measure(Text, F, 1.f);
-		const float W = Size.X / S;
-		const float Ascent = (Measure->GetMaxCharacterHeight(F) + Measure->GetBaseline(F)) / S;
-		const float Left = Align == EAlign::Left ? X : Align == EAlign::Centre ? X - W * 0.5f : X - W;
-		FSlateDrawElement::MakeText(Out, ++Layer, At(Left, Y - Ascent, W, Size.Y / S), Text, F, ESlateDrawEffect::None,
-		                            Colour);
-		return W;
-	}
-
-	void Lines(TArray<FVector2f> Points, const FLinearColor& Colour, float Thickness) const
-	{
-		for (FVector2f& P : Points)
+		for (FVector2f& Point : Points)
 		{
-			P *= S;
+			Point = FVector2f(X, Y) + Point * K;
 		}
-		FSlateDrawElement::MakeLines(Out, ++Layer, G.ToPaintGeometry(), MoveTemp(Points), ESlateDrawEffect::None,
-		                             Colour, true, Thickness * S);
-	}
-
-	// An arc round Centre, from A to B degrees, clockwise on screen (y down).
-	static void Arc(TArray<FVector2f>& Points, FVector2f Centre, float R, float A, float B)
+		P.Lines(MoveTemp(Points), Sky, 1.8f);
+	};
+	if (Weather == ESky::Clear)
 	{
-		const int32 Steps = FMath::Max(4, FMath::CeilToInt32((B - A) / 15.f));
-		for (int32 I = 0; I <= Steps; ++I)
+		TArray<FVector2f> Disc;
+		FPainter::Arc(Disc, FVector2f(12.f, 12.f), 4.f, 0.f, 360.f);
+		Place(Disc);
+		for (int32 I = 0; I < 8; ++I)
 		{
-			const float T = FMath::DegreesToRadians(FMath::Lerp(A, B, float(I) / Steps));
-			Points.Add(Centre + FVector2f(FMath::Cos(T), FMath::Sin(T)) * R);
+			const float T = FMath::DegreesToRadians(45.f * I);
+			const FVector2f D(FMath::Cos(T), FMath::Sin(T));
+			Place({FVector2f(12.f, 12.f) + D * 6.5f, FVector2f(12.f, 12.f) + D * 9.f});
+		}
+		return;
+	}
+	const float Up = Weather == ESky::Rain ? 0.f : 2.f;
+	TArray<FVector2f> Cloud;
+	FPainter::Arc(Cloud, FVector2f(7.5f, 12.f + Up), 3.5f, 90.f, 290.f);
+	FPainter::Arc(Cloud, FVector2f(12.5f, 10.f + Up), 4.5f, 200.f, 340.f);
+	FPainter::Arc(Cloud, FVector2f(17.f, 12.5f + Up), 3.5f, 250.f, 450.f);
+	const FVector2f First = Cloud[0];
+	Cloud.Add(First);
+	Place(Cloud);
+	if (Weather == ESky::Rain)
+	{
+		for (const float Drop : {9.f, 13.f, 17.f})
+		{
+			Place({FVector2f(Drop, 19.f), FVector2f(Drop - 1.f, 21.f)});
 		}
 	}
-
-	// The weather's icon in a 22 px square at X, Y, drawn on the canvas's 24-unit grid.
-	void Icon(float X, float Y, ESky Weather) const
-	{
-		const float K = 22.f / 24.f;
-		auto Place = [&](TArray<FVector2f> Points)
-		{
-			for (FVector2f& P : Points)
-			{
-				P = FVector2f(X, Y) + P * K;
-			}
-			Lines(MoveTemp(Points), Sky, 1.8f);
-		};
-		if (Weather == ESky::Clear)
-		{
-			TArray<FVector2f> Disc;
-			Arc(Disc, FVector2f(12.f, 12.f), 4.f, 0.f, 360.f);
-			Place(Disc);
-			for (int32 I = 0; I < 8; ++I)
-			{
-				const float T = FMath::DegreesToRadians(45.f * I);
-				const FVector2f D(FMath::Cos(T), FMath::Sin(T));
-				Place({FVector2f(12.f, 12.f) + D * 6.5f, FVector2f(12.f, 12.f) + D * 9.f});
-			}
-			return;
-		}
-		const float Up = Weather == ESky::Rain ? 0.f : 2.f;
-		TArray<FVector2f> Cloud;
-		Arc(Cloud, FVector2f(7.5f, 12.f + Up), 3.5f, 90.f, 290.f);
-		Arc(Cloud, FVector2f(12.5f, 10.f + Up), 4.5f, 200.f, 340.f);
-		Arc(Cloud, FVector2f(17.f, 12.5f + Up), 3.5f, 250.f, 450.f);
-		const FVector2f First = Cloud[0];
-		Cloud.Add(First);
-		Place(Cloud);
-		if (Weather == ESky::Rain)
-		{
-			for (const float Drop : {9.f, 13.f, 17.f})
-			{
-				Place({FVector2f(Drop, 19.f), FVector2f(Drop - 1.f, 21.f)});
-			}
-		}
-	}
-};
+}
 } // namespace
 
 TSharedRef<SWidget> URideOverlay::RebuildWidget()
@@ -605,7 +492,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		                   (Change.IsEmpty() ? 0.f : 8.f + P.Width(Change, Small)) + 14.f;
 		const float X = W - 20.f - Wide, Y = WeatherTop;
 		P.Panel(X, Y, Wide, 36.f, 12.f);
-		P.Icon(X + 10.f, Y + 7.f, Now);
+		Icon(P, X + 10.f, Y + 7.f, Now);
 		const float NameW = P.Text(X + 40.f, Y + 23.f, Names[static_cast<int32>(Now)], Big, SkyText);
 		if (!Change.IsEmpty())
 		{
