@@ -642,7 +642,7 @@ def surfaces(runs, points):
     return [tuple(r) for r in out]
 
 
-def views(line, runs):
+def views(line, runs, plan):
     """Stills along the ride, [name, eye, target] in m: a rider's eye halfway along each
     stretch in the right lane looking 30 m up the road, and one from 120 m up over the first
     mountain stretch."""
@@ -665,10 +665,17 @@ def views(line, runs):
         if name in ("Mountain", "Vael") and not any(v[0] == "above" for v in out):
             far = line[(k + 400) % len(line)]
             back = line[(k - 200) % len(line)]
+            # Over the peaks, not 120 m up a gorge: since Vael was raised the ridges either side
+            # of the road stood above the old eye and filled the frame with a wall of rock.
+            t = np.linspace(0.0, 1.0, 64)
+            under = plan.at(
+                plan.h, back[0] + t * (far[0] - back[0]), back[1] + t * (far[1] - back[1])
+            )
+            lift = max(float(back[2] + 120), float(under.max()) + 80)
             out.append(
                 [
                     "above",
-                    [float(back[0]), float(back[1]), float(back[2] + 120)],
+                    [float(back[0]), float(back[1]), lift],
                     [float(far[0]), float(far[1]), float(far[2])],
                 ]
             )
@@ -773,7 +780,7 @@ def main():
         # The default ride, and every ride (climb_world.track writes each as a track).
         "ride": rides[0],
         "rides": rides,
-        "views": views(line, rides[0]["stretches"]),
+        "views": views(line, rides[0]["stretches"], plan),
     }
     with open(f"{OUT}/info.json", "w") as f:
         json.dump(info, f)
