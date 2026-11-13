@@ -22,10 +22,12 @@ def section(half, bank=0.0):
     return ((-half - out, -12.0 - bank), *inner, (half + out, -12.0 - bank))
 
 
-def road_pieces(centre, half, closed=False, piece=200, bank=0.0):
+def road_pieces(centre, half, closed=False, piece=200, bank=0.0, wear=None):
     """The road as meshes, one per `piece` centreline points (a metre apart), each in world
     coordinates. `centre` is (x, y, z) in cm; UVs are in metres, u across and v along, for
-    markings later. A closed road joins its end to its start."""
+    markings later. A closed road joins its end to its start. `wear`, 0 (kept like new) to 1
+    (old country tarmac), one per centre point, goes in the vertex colour for the road
+    material (climb_world.road_material); without it every vertex is 1, the old look."""
     across = section(half, bank)
     points = list(centre) + ([centre[0]] if closed else [])
     pieces = []
@@ -36,6 +38,7 @@ def road_pieces(centre, half, closed=False, piece=200, bank=0.0):
         rows = []
         for i, (x, y, z) in enumerate(chunk):
             k = start + i
+            w = 1.0 if wear is None else float(wear[k % len(centre)])
             a = points[k - 1] if k > 0 else (points[-2] if closed else points[0])
             b = points[k + 1] if k + 1 < len(points) else (points[1] if closed else points[-1])
             dx, dy = b[0] - a[0], b[1] - a[1]
@@ -48,6 +51,7 @@ def road_pieces(centre, half, closed=False, piece=200, bank=0.0):
                         (x + side[0] * off, y + side[1] * off, z + dz),
                         (0, 0, 1),
                         (off / 100.0, k * 1.0),
+                        (w, w, w, 1.0),
                     )
                     for off, dz in across
                 ]

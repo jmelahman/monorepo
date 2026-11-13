@@ -616,6 +616,8 @@ ROAD_EDGE_SOIL = (0.36, 0.3, 0.24)  # v25: its pebbles read as pale orange ovals
 ROAD_WARM = (1.03, 1.0, 0.86)
 # The world's centre line: old white paint, a little dirty.
 LINE_WHITE = (0.62, 0.61, 0.57)
+# A kept road's paint, fresh: whiter, not the scan's pure white (0.8 linear is still bright).
+LINE_FRESH = (0.72, 0.72, 0.7)
 # The road material's default half width, m: the climb's bike path (make_climb.py's ROAD_HALF).
 ROAD_HALF = 1.5
 
@@ -631,6 +633,10 @@ def road_material():
     colour = g.op(unreal.MaterialExpressionMin, colour, g.param("speck clamp", ROAD_SPECK_CLAMP))
     normal = g.mask(g.sample(n, uv, "normal"), "rgb")
     rough = g.op(unreal.MaterialExpressionMax, g.mask(masks, "g"), g.const(0.7))
+    # Upkeep (road_mesh's vertex colour, make_world_level.road_wear): 1 old country tarmac, every
+    # wear below at full; 0 kept like new by the harbour, black, clean, its paint fresh.
+    wear = g.mask(g.node(unreal.MaterialExpressionVertexColor), "r")
+    some = g.lerp(g.const(0.25), g.const(1.0), wear)
     # Wear: stretches of cracked old tarmac, darker patched repairs, soil and litter washed onto
     # the edges, and fallen leaves, most of them near the edges.
     ctile = island.tile_cm("shared", "cracked_asphalt")
@@ -639,6 +645,7 @@ def road_material():
     # Partly cracked, in patches a few metres across with soft edges: a hard mask at 8 m drew big
     # dark ellipses on the path.
     cracked = g.mul(g.saturate(g.mul(g.add(g.world_noise(0.004, -1.0, 2.0, 3), -0.4), 1.5)), 0.55)
+    cracked = g.mul(cracked, wear)
     colour = g.lerp(colour, g.mul(g.mask(g.sample(cd, cuv), "rgb"), 0.9), cracked)
     normal = g.lerp(normal, g.mask(g.sample(cn, cuv, "normal"), "rgb"), cracked)
     # Repairs are hard-edged blocks a metre or two across, not soft blots: noise sampled on a
@@ -655,10 +662,10 @@ def road_material():
     )
     g.link(cell, noise, "World Position")
     # On v15's darker tarmac a 0.72 repair read as a black block (QA): rarer, and only a shade off.
-    patch = g.saturate(g.mul(g.add(noise, -0.86), 40.0))
+    patch = g.mul(g.saturate(g.mul(g.add(noise, -0.86), 40.0)), g.saturate(g.mul(wear, 1.5)))
     colour = g.lerp(colour, g.mul(colour, 0.85), patch)
     # v21: wider, as QA read the tarmac as uniform grey: lighter worn and darker damp stretches.
-    colour = g.mul(colour, g.world_noise(0.001, 0.85, 1.12, 3))
+    colour = g.mul(colour, g.lerp(g.const(1.0), g.world_noise(0.001, 0.85, 1.12, 3), some))
     colour = g.mul(colour, g.world_noise(0.0003, 0.9, 1.08, 2))
     # v25: riders wear the middle of a bike path smooth and a shade darker, in a band that wanders
     # a little; QA read the tarmac as one flat grey.
@@ -668,10 +675,12 @@ def road_material():
         g.node(unreal.MaterialExpressionAbs),
     )
     worn = g.saturate(g.mul(g.add(g.add(centre, wander), -0.45), -3.0))
-    worn = g.mul(worn, g.world_noise(0.002, 0.5, 1.0, 2))
+    worn = g.mul(g.mul(worn, g.world_noise(0.002, 0.5, 1.0, 2)), wear)
     colour = g.lerp(colour, g.mul(colour, 0.82), worn)
     # 0.55 drew a wet, sky-bright stripe down the middle (v25): worn smooth, not polished.
     rough = g.lerp(rough, g.param("worn rough", 0.82), worn)
+    # New tarmac is blacker than old, greyed by sun and traffic.
+    colour = g.mul(colour, g.lerp(g.param("fresh", 1.0), g.const(1.0), wear))
     colour = g.mul(colour, g.param("darken", ROAD_DARKEN))
     colour = g.mul(colour, g.param("warm", ROAD_WARM))
     across = g.link(
@@ -689,13 +698,13 @@ def road_material():
     stile = island.tile_cm("forest", "soil_mud")
     soil = g.mask(g.sample(island.ms_texture("forest", "soil_mud", "D"), g.world_uv(stile)), "rgb")
     soil = g.mul(soil, g.const(ROAD_EDGE_SOIL))
-    colour = g.lerp(colour, soil, g.mul(edge, 0.85))
+    colour = g.lerp(colour, soil, g.mul(g.mul(edge, 0.85), some))
     # Where the world's ground RVT covers it ("ground blend" 1), the last few cm fade into the
     # ground's own colour, so the tarmac doesn't end on a line against sand or turf.
     rim = g.saturate(g.mul(g.add(inside, g.add(g.mul(ragged, 0.3), 0.12)), 8.0))
     colour = g.lerp(colour, _rvt_colour(g), g.mul(rim, g.param("ground blend", 0.0)))
     leaves = g.saturate(g.mul(g.add(g.world_noise(0.07, 0.0, 1.0, 2), -0.8), 7.0))
-    leaves = g.mul(leaves, g.lerp(g.const(0.2), g.const(1.0), edge))
+    leaves = g.mul(g.mul(leaves, g.lerp(g.const(0.2), g.const(1.0), edge)), some)
     # Once the road went dark, leaves at 0.11 read as pale ovals (v14): a shade off the tarmac, and
     # fewer of them (threshold 0.8, was 0.72).
     leaf_colour = g.mul(g.const((0.06, 0.04, 0.025)), g.world_noise(0.03, 0.6, 1.4, 2))
@@ -711,8 +720,15 @@ def road_material():
     dash = g.saturate(g.mul(g.add(dash, -0.5), -40.0))
     stripe = g.saturate(g.mul(g.add(across, -0.06), -60.0))
     paint = g.mul(g.mul(stripe, dash), g.param("line", 0.0))
-    paint = g.mul(paint, g.world_noise(0.05, 0.55, 1.0, 2))
-    colour = g.lerp(colour, g.const(LINE_WHITE), paint)
+    paint = g.mul(paint, g.lerp(g.const(1.0), g.world_noise(0.05, 0.55, 1.0, 2), some))
+    # A kept road's solid edge lines, 10 cm wide and 25 cm in from the tarmac's edge ("edge
+    # line" 0 on the climb's path): only where the wear is under about half.
+    lip = g.link(g.add(inside, 0.3), g.node(unreal.MaterialExpressionAbs))
+    side = g.saturate(g.mul(g.add(lip, -0.05), -60.0))
+    side = g.mul(side, g.saturate(g.mul(g.add(wear, -0.55), -4.0)))
+    paint = g.op(unreal.MaterialExpressionMax, paint, g.mul(side, g.param("edge line", 0.0)))
+    fresh_white = g.lerp(g.const(LINE_FRESH), g.const(LINE_WHITE), wear)
+    colour = g.lerp(colour, fresh_white, paint)
     rough = g.lerp(rough, g.const(0.7), paint)
     g.output(colour, normal, rough, specular=0.2, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)

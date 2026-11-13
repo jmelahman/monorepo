@@ -129,6 +129,11 @@ class Plan:
         gy, gx = np.gradient(self.h, self.spacing)
         self.slope = np.hypot(gx, gy).astype(np.float32)
         self.w = None
+        # The harbour, m (make_chain's landmark); the old single island's town is its centre.
+        self.harbour = (0.0, 0.0)
+        if os.path.exists(f"{PLAN}/world.json"):
+            with open(f"{PLAN}/world.json") as f:
+                self.harbour = tuple(json.load(f).get("landmarks", {}).get("harbour", (0, 0)))
         if CHAIN:
             with np.load(f"{PLAN}/weights.npz") as f:
                 self.w = {k: f[k].astype(np.float32) for k in f.files}
@@ -690,6 +695,21 @@ def views(line, runs, plan):
             )
         start += metres
     out += cliff_views(line, plan, coast)
+    # The best-kept road (road_wear), nearest the harbour: a rider's eye as above.
+    wear = road_wear(plan, line)
+    hx, hy = plan.harbour
+    k = int(np.argmin(wear + 1e-5 * np.hypot(line[:, 0] - hx, line[:, 1] - hy)))
+    ahead = line[(k + 30) % len(line)]
+    dx, dy = ahead[0] - line[k, 0], ahead[1] - line[k, 1]
+    n = max(float(np.hypot(dx, dy)), 1e-6)
+    rx, ry = -dy / n * RIDE_LANE, dx / n * RIDE_LANE
+    out.append(
+        [
+            "road_kept",
+            [float(line[k, 0] + rx), float(line[k, 1] + ry), float(line[k, 2] + 1.6)],
+            [float(ahead[0] + rx), float(ahead[1] + ry), float(ahead[2] + 1.2)],
+        ]
+    )
     return out
 
 
@@ -770,15 +790,39 @@ def ride_of(route, runs):
     }
 
 
-def mesh_run(centre, a, b, surface, spans, count, sink=0.0):
+# The road's upkeep (the user, 13 Nov: "the closer to civilization, the more maintained"): near
+# like new by the harbour, kept on the hub's flat low ground, old country tarmac out on the
+# islands and up the climbs. Wear 0..1 per metre of road, eased along it so it never steps.
+KEPT_TOWN = (3500.0, 1200.0)  # m from the harbour: worn past 3500, like new inside 1200
+KEPT_FLAT = (0.035, 0.015)  # grade over 200 m: a climb is worn, the flat is kept
+KEPT_LOW = (60.0, 25.0)  # m up: the hub's low ground, not its hilltops
+KEPT_HUB = (5200.0, 4200.0)  # m from the hub's centre: the flat kept only on the hub
+KEPT_FLAT_SHARE = 0.75  # how kept the hub's flat road is, at most
+KEPT_EASE = 400  # m along the road the wear changes over
+
+
+def road_wear(plan, line):
+    """Wear, 0 (like new) to 1 (old), at each point of `line` ((n, 3) m, a metre apart)."""
+    x, y, z = line[:, 0], line[:, 1], line[:, 2]
+    hx, hy = plan.harbour
+    town = mi.smoothstep(*KEPT_TOWN, np.hypot(x - hx, y - hy))
+    grade = np.abs(ndimage.uniform_filter1d(np.gradient(z), 200, mode="wrap"))
+    flat = mi.smoothstep(*KEPT_FLAT, grade) * mi.smoothstep(*KEPT_LOW, z)
+    flat *= mi.smoothstep(*KEPT_HUB, np.hypot(x, y)) * KEPT_FLAT_SHARE
+    kept = ndimage.uniform_filter1d(np.maximum(town, flat), KEPT_EASE, mode="wrap")
+    return np.clip(1.0 - kept, 0.0, 1.0).astype(np.float32)
+
+
+def mesh_run(centre, a, b, surface, spans, count, sink=0.0, wear=None):
     """Road pieces for centre[a..b] (wrapping), split where bridges are; `sink` cm lower."""
     n = len(centre)
     for kind, c, d in split_at_bridges(a, b, spans, n):
         here = "bridge" if kind else surface
         run = [(x, y, z - sink) for x, y, z in (centre[k % n] for k in range(c, d + 1))]
+        worn = None if wear is None else [wear[k % n] for k in range(c, d + 1)]
         half = (PATH_HALF if here == "path" else mi.ROAD_HALF) * 100
         bank = 0.0 if kind else BANK
-        for piece in road_mesh.road_pieces(run, half, False, PIECE, bank):
+        for piece in road_mesh.road_pieces(run, half, False, PIECE, bank, worn):
             piece.write(f"{OUT}/road_{here}_{count[here]:03d}.gltf")
             count[here] += 1
 
@@ -821,7 +865,15 @@ def main():
         # down the middle (climb_world.road_instance); the path's tarmac-free look is its own.
         # "ground blend" 0: the rim faded into the ground RVT's colour, a lime strip along both
         # edges where the RVT lagged the ground's look (12 Nov). The soil fray edges it alone.
-        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 0.0},
+        "road_look": {
+            "darken": 0.34,
+            "warm": [1.0, 1.0, 0.97],
+            "line": 1.0,
+            "ground blend": 0.0,
+            # The kept road by the harbour (road_wear 0): blacker, with solid edge lines.
+            "fresh": 0.78,
+            "edge line": 1.0,
+        },
         # The rider in the right lane (the user, 13 Nov), negative being right of centre.
         "keep_left": -RIDE_LANE * 100,
         # The default ride, and every ride (climb_world.track writes each as a track).
@@ -842,16 +894,17 @@ def main():
         ride = next(r for r in rides if r["key"] == key)
         centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in here]
         spans = bridge_spans(here_bridge)
+        wear = road_wear(plan, here)
         if done is None:
             for surface, a, b in surfaces(ride["stretches"], len(centre)):
-                mesh_run(centre, a, b, surface, spans, count)
+                mesh_run(centre, a, b, surface, spans, count, wear=wear)
             done = here
             continue
         kinds = surfaces(ride["stretches"], len(centre))
         for a, b in extra_runs(here, done):
             # Its surface where the run starts; the coast road's is asphalt all round.
             surface = next(s for s, c, d in kinds if c <= a % len(centre) < d)
-            mesh_run(centre, a, b, surface, spans, count, sink=UNDER)
+            mesh_run(centre, a, b, surface, spans, count, sink=UNDER, wear=wear)
             extra.append(here[np.arange(a, b + 1) % len(here)].round(2).tolist())
         done = np.vstack([done, here])
     print(f"road pieces {count}", flush=True)
