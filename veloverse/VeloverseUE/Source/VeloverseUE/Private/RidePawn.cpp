@@ -49,7 +49,7 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	{
 		W.Lux = W.Elevation < 12.f ? 70000.f : 90000.f;
 		W.Sky = 1.f;
-		W.Fog = 0.006f;
+		W.Fog = 0.012f; // a light haze that layers the far hills; 0.006 left them flat and sharp
 		W.Rain = W.Wet = 0.f;
 	}
 	else if (Weather == 2)
@@ -76,14 +76,16 @@ constexpr float PhysicsStep = 1.f / 120.f;
 // in v43, from make_world_level.py's info.json). The start screen rides the nearest road to it.
 static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0);
 
-// A camera's look rather than a renderer's: a little over-exposed, highlights that roll off and
-// lose colour as film and sensors do, shadows lifted a touch and cooled, light warmed, a soft
-// vignette and a trace of lens fringing. All of it is in the tonemapper's one pass, so it costs
+// A camera's look rather than a renderer's: exposed for the highlights, which roll off and lose
+// colour as film and sensors do, a touch less saturated than life so the world reads painted
+// rather than photographed, shadows lifted a touch and cooled, light warmed, a soft vignette and
+// a trace of lens fringing. All of it is in the tonemapper's one pass, so it costs
 // nothing a frame. scripts/make_coast_ride.py gives the stills' camera the same.
 void ARidePawn::CameraLook(FPostProcessSettings& Look)
 {
 	Look.bOverride_AutoExposureBias = true;
-	Look.AutoExposureBias = 0.55f; // the level's volume has 0.3
+	// 0.55 until 0.3.0 washed pale surfaces out to white (13 Nov); the level's volume has 0.3.
+	Look.AutoExposureBias = -0.1f;
 	Look.bOverride_BloomIntensity = true;
 	Look.BloomIntensity = 0.4f;
 	Look.bOverride_FilmSlope = true;
@@ -93,13 +95,13 @@ void ARidePawn::CameraLook(FPostProcessSettings& Look)
 	Look.bOverride_FilmShoulder = true;
 	Look.FilmShoulder = 0.34f;
 	Look.bOverride_ColorSaturationHighlights = true;
-	Look.ColorSaturationHighlights = FVector4(0.9f, 0.9f, 0.9f, 1.f);
+	Look.ColorSaturationHighlights = FVector4(0.85f, 0.85f, 0.85f, 1.f);
 	Look.bOverride_ColorGainHighlights = true;
-	Look.ColorGainHighlights = FVector4(1.03f, 1.01f, 0.96f, 1.f);
+	Look.ColorGainHighlights = FVector4(1.05f, 1.01f, 0.93f, 1.f);
 	Look.bOverride_ColorOffsetShadows = true;
 	Look.ColorOffsetShadows = FVector4(0.002f, 0.004f, 0.008f, 0.f);
 	Look.bOverride_ColorSaturation = true;
-	Look.ColorSaturation = FVector4(1.04f, 1.04f, 1.04f, 1.f);
+	Look.ColorSaturation = FVector4(0.94f, 0.94f, 0.94f, 1.f);
 	Look.bOverride_VignetteIntensity = true;
 	Look.VignetteIntensity = 0.36f;
 	Look.bOverride_SceneFringeIntensity = true;

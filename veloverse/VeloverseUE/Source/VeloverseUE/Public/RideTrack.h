@@ -16,7 +16,7 @@ struct FRideWeather
 	UPROPERTY(EditAnywhere) float Lux = 90000.f;     // the sun's intensity
 	UPROPERTY(EditAnywhere) float Elevation = 34.f;  // the sun's height, degrees
 	UPROPERTY(EditAnywhere) float Sky = 1.f;         // the sky light's intensity
-	UPROPERTY(EditAnywhere) float Fog = 0.006f;      // fog density
+	UPROPERTY(EditAnywhere) float Fog = 0.012f;      // fog density
 	UPROPERTY(EditAnywhere) float Rain = 0.f;        // 0 dry .. 1 full rain
 	UPROPERTY(EditAnywhere) float Wet = 0.f;         // the ground: the rain, drying after it stops
 };
