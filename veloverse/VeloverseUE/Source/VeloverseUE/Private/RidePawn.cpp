@@ -304,6 +304,19 @@ void ARidePawn::Tick(float Dt)
 {
 	Super::Tick(Dt);
 	ReadKeys();
+	// For the first seconds after the level loads, exposure catches up at once. The light is still
+	// settling then, and at the usual pace the start menu opened on a washed-out, over-exposed world.
+	{
+		const bool bSettling = GetWorld() && GetWorld()->GetRealTimeSeconds() < 8.0;
+		FPostProcessSettings& Look = Camera->PostProcessSettings;
+		if (Look.bOverride_AutoExposureSpeedDown != bSettling)
+		{
+			Look.bOverride_AutoExposureSpeedUp = bSettling;
+			Look.bOverride_AutoExposureSpeedDown = bSettling;
+			Look.AutoExposureSpeedUp = 30.f;
+			Look.AutoExposureSpeedDown = 30.f;
+		}
+	}
 	if (!Track || Track->Length() <= 0.f)
 	{
 		return;

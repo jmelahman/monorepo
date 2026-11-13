@@ -5,8 +5,9 @@ cropped to the land, and beside it how world positions land on it.
     Content/Menu/map.json   {"width", "height", "scale", "x0", "y0", "labels"}: a point at world
                             (x, y) cm is at (x * scale + x0, y * scale + y0) px, and each island's
                             name sits at its labels entry, in px
-    Content/Menu/Fraunces-SemiBold.ttf and OFL.txt
-                            the titles' serif and its licence, copied from VeloverseUE/Fonts
+    Content/Menu/Fraunces-SemiBold.ttf and OFL.txt, Inter-*.ttf and Inter-OFL.txt
+                            the titles' serif, the sans for everything else, and their
+                            licences, copied from VeloverseUE/Fonts
 
 The game reads both at run time (DirectoriesToAlwaysStageAsNonUFS in DefaultGame.ini packages
 them). Run with uv run --with numpy --with pillow python -I scripts/make_menu_map.py
@@ -91,7 +92,8 @@ def main():
     meta = {"width": WIDTH, "height": tall, "scale": scale, "x0": x0, "y0": y0, "labels": labels}
     with open(os.path.join(OUT, "map.json"), "w") as f:
         json.dump(meta, f, indent=1)
-    for name in ("Fraunces-SemiBold.ttf", "OFL.txt"):
+    sans = [f"Inter-{w}.ttf" for w in ("Regular", "Medium", "Bold", "Black")]
+    for name in ["Fraunces-SemiBold.ttf", "OFL.txt", *sans, "Inter-OFL.txt"]:
         shutil.copyfile(os.path.join(FONTS, name), os.path.join(OUT, name))
     print(f"wrote {OUT}/map.jpg ({WIDTH}x{tall}) and map.json, labels {sorted(labels)}")
 

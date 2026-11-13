@@ -20,8 +20,6 @@ namespace
 {
 using FStops = TArray<TPair<float, FLinearColor>>;
 
-FString Utf8(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }
-
 // A small capital label, as the boards letter their names.
 float Label(const FPainter& P, float X, float Y, const FString& Text, const FLinearColor& Colour = Muted,
             EAlign Align = EAlign::Left, float Px = 13.f)
@@ -75,11 +73,6 @@ void Range(const std::vector<double>& V, double& Lo, double& Hi)
 	{
 		Lo = 0.0;
 	}
-}
-
-FString WorkoutLabel(const Veloverse::FWorkout& W)
-{
-	return FString::Printf(TEXT("%s, %.0f min, TSS %.0f"), *Utf8(W.Name), W.Seconds() / 60.0, W.Tss());
 }
 
 // The trainer as the start page and pause dialog name it, and whether power is coming from it.
@@ -190,7 +183,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		Right -= Wd;
 		P.Round(Right, 48.f, Wd, 44.f, 22.f, WithAlpha(Night, C.Hot(TEXT("trainer")) ? 0.8f : 0.55f));
 		P.Border(Right, 48.f, Wd, 44.f, 22.f, InkA(0.16f));
-		P.Icon(Icons::Bluetooth, Right + 16.f, 60.f, 20.f, bLive ? Ok : Muted);
+		P.Icon(Icons::Bluetooth, Right + 16.f, 60.f, 20.f, bLive ? Sky : Muted);
 		P.Text(Right + 44.f, Mid(70.f, 16.f), Status, P.Font("Bold", 16.f), Ink);
 		C.Ring(TEXT("trainer"), Right, 48.f, Wd, 44.f, 22.f);
 		C.Hit(TEXT("trainer"), Right, 48.f, Wd, 44.f).OnClick = [M] { M->Show(ERideMenuPage::Sensors); };
@@ -222,40 +215,8 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		C.Hit(Key, 120.f, 332.f, 560.f, 84.f).OnClick = [M] { M->Controller()->Ride(); };
 	}
 
-	// The workout to ride it with, a choice stepped through under the button.
-	FString WorkoutText = TEXT("None, just ride");
-	if (Pawn && Pawn->Workout.Active())
-	{
-		const FString Name = Utf8(Pawn->Workout.Workout().Name);
-		WorkoutText = Name;
-		for (const Veloverse::FWorkout& W : Workouts)
-		{
-			if (Utf8(W.Name) == Name)
-			{
-				WorkoutText = WorkoutLabel(W);
-			}
-		}
-	}
-	{
-		const FString Key = TEXT("workout");
-		const float Wy = 428.f;
-		P.Round(120.f, Wy, 560.f, 52.f, 12.f, InkA(C.Hot(Key) ? 0.1f : 0.05f));
-		P.Border(120.f, Wy, 560.f, 52.f, 12.f, InkA(0.12f));
-		P.Icon(Icons::Workout, 140.f, Wy + 15.f, 22.f, Soft);
-		Label(P, 176.f, Mid(Wy + 26.f, 13.f), TEXT("Workout"));
-		const FSlateFontInfo F = P.Font("Medium", 16.f);
-		P.Text(604.f, Mid(Wy + 26.f, 16.f), P.Fit(WorkoutText, F, 330.f), F, Ink, EAlign::Right);
-		P.Icon(Icons::ChevronLeft, 618.f, Wy + 16.f, 20.f, Muted);
-		P.Icon(Icons::Chevron, 646.f, Wy + 16.f, 20.f, Muted);
-		C.Ring(Key, 120.f, Wy, 560.f, 52.f, 12.f);
-		FHit& H = C.Hit(Key, 120.f, Wy, 560.f, 52.f);
-		H.OnClick = [M] { M->StepWorkout(1); };
-		H.OnLeft = [M] { M->StepWorkout(-1); };
-		H.OnRight = [M] { M->StepWorkout(1); };
-	}
-
 	// The list under it. The trainer and sensors open from the chip at the top right, which shows
-	// what's connected, so they aren't listed again here.
+	// what's connected, so they aren't listed again here; workouts will have a page of their own.
 	struct FItem
 	{
 		const TCHAR* Key;
@@ -271,7 +232,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		{TEXT("settings"), Icons::Gear, TEXT("Settings"), FString(), [M] { M->Show(ERideMenuPage::Settings); }},
 		{TEXT("quit"), Icons::Leave, TEXT("Quit"), FString(), [M] { M->Controller()->Quit(); }},
 	};
-	float Y = 504.f;
+	float Y = 448.f;
 	for (const FItem& Item : Items)
 	{
 		const bool bHot = C.Hot(Item.Key);
@@ -279,7 +240,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		{
 			P.Round(120.f, Y, 560.f, 64.f, 12.f, InkA(0.08f));
 		}
-		P.Icon(Item.Icon, 140.f, Y + 21.f, 22.f, bHot ? Ink : Soft);
+		P.Icon(Item.Icon, 140.f, Y + 21.f, 22.f, C.Accent);
 		P.Text(180.f, Mid(Y + 32.f, 20.f), Item.Label, P.Font("Bold", 20.f), Ink);
 		if (!Item.Value.IsEmpty())
 		{
@@ -544,7 +505,8 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	for (const TPair<FString, float>& Share : Shares)
 	{
 		const float Wd = Dw * Share.Value;
-		P.Rect(Bx, 466.f, FMath::Max(Wd - 2.f, 1.f), 12.f, IslandColour(Share.Key));
+		const float Seg = FMath::Max(Wd - 3.f, 2.f);
+		P.Round(Bx, 466.f, Seg, 12.f, FMath::Min(6.f, Seg * 0.5f), IslandColour(Share.Key));
 		Bx += Wd;
 	}
 	for (int32 I = 0; I < Shares.Num(); ++I)
@@ -680,7 +642,7 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 	C.Panel(X, Y, Wd, Ph, 16.f);
 	{
 		const float Hy = Y + 24.f + 14.f;
-		P.Icon(Icons::Bluetooth, X + 32.f, Hy - 10.f, 20.f, Muted);
+		P.Icon(Icons::Bluetooth, X + 32.f, Hy - 10.f, 20.f, Sky);
 		const float Hw = P.Text(X + 64.f, Mid(Hy, 16.f), bKeyboard ? TEXT("Riding on the keyboard") : TEXT("Looking for devices"),
 		                        P.Font("Medium", 16.f), Muted);
 		if (!bKeyboard)
@@ -794,7 +756,7 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 	       P.Font("Medium", 14.f), Muted);
 	C.Button(TEXT("routes"), X + Wd - Bw, Y, Bw, 68.f, Cta, EButton::Primary,
 	         [M, bBefore] { bBefore ? M->Show(ERideMenuPage::Routes) : M->GoBack(); },
-	         bBefore ? Icons::Arrow : nullptr, 26.f, true, 14.f);
+	         bBefore ? Icons::Arrow : nullptr, 26.f, true, 14.f, true);
 }
 
 // ---- Settings ------------------------------------------------------------------------------------
@@ -1723,7 +1685,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	}
 
 	// Time in each power zone.
-	C.Panel(X0, 716.f, 520.f, 300.f);
+	C.Panel(X0, 716.f, 520.f, 316.f);
 	P.Text(X0 + 24.f, 752.f, TEXT("Power zones"), P.Font("Bold", 18.f), Ink);
 	P.Text(X0 + 496.f, 752.f, FString::Printf(TEXT("FTP %.0f W"), Review.Ftp), P.Font("Medium", 14.f), Muted,
 	       EAlign::Right);
@@ -1753,7 +1715,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 
 	// Heart-rate zones and cadence.
 	const float Hx = X0 + 540.f, Hw = 420.f;
-	C.Panel(Hx, 716.f, Hw, 300.f);
+	C.Panel(Hx, 716.f, Hw, 316.f);
 	P.Text(Hx + 24.f, 752.f, TEXT("Heart-rate zones"), P.Font("Bold", 18.f), Ink);
 	double HeartAll = 0.0;
 	for (const double Hs : Review.HeartSeconds)
@@ -1824,7 +1786,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 
 	// Best efforts and the climbs.
 	const float Ex = Hx + Hw + 20.f, Ew = RightEdge - Ex;
-	C.Panel(Ex, 716.f, Ew, 300.f);
+	C.Panel(Ex, 716.f, Ew, 316.f);
 	P.Text(Ex + 24.f, 752.f, TEXT("Best efforts"), P.Font("Bold", 18.f), Ink);
 	const TCHAR* Durations[5] = {TEXT("5 s"), TEXT("1 min"), TEXT("5 min"), TEXT("20 min"), TEXT("1 hr")};
 	for (int32 I = 0; I < 5; ++I)

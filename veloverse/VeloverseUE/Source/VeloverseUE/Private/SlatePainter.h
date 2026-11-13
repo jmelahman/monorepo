@@ -42,6 +42,19 @@ constexpr float Space = 4.f;
 
 // Fraunces SemiBold, the titles' serif, from Content/Menu (scripts/make_menu_map.py copies it there);
 // Roboto Bold when it isn't there.
+// Content/Menu/Inter-<Face>.ttf if it's there, else empty; looked up once a weight.
+inline FString SansFile(FName Face)
+{
+	static TMap<FName, FString> Files;
+	if (const FString* Known = Files.Find(Face))
+	{
+		return *Known;
+	}
+	const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() /
+	                                                       FString::Printf(TEXT("Menu/Inter-%s.ttf"), *Face.ToString()));
+	return Files.Add(Face, FPaths::FileExists(File) ? File : FString());
+}
+
 inline const FString& SerifFile()
 {
 	static const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Menu/Fraunces-SemiBold.ttf"));
@@ -62,9 +75,13 @@ struct FPainter
 
 	// Inter's weights become Roboto's: 500 Medium, 600 and 700 Bold, 800 Black. Px is the CSS size;
 	// Slate sizes are points at 96 DPI. Tracking is in ems.
+	// Inter, the design canvas's sans, in the weight named (Regular, Medium, Bold or Black), or the
+	// engine's Roboto if the file isn't there.
 	FSlateFontInfo Font(FName Face, float Px, float Tracking = 0.f) const
 	{
-		FSlateFontInfo F = FCoreStyle::GetDefaultFontStyle(Face, Px * 0.75f * S);
+		const FString File = SansFile(Face);
+		FSlateFontInfo F = File.IsEmpty() ? FCoreStyle::GetDefaultFontStyle(Face, Px * 0.75f * S)
+		                                  : FSlateFontInfo(File, Px * 0.75f * S);
 		F.LetterSpacing = FMath::RoundToInt32(Tracking * 1000.f);
 		return F;
 	}

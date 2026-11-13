@@ -63,8 +63,9 @@ inline const TCHAR* Leave = TEXT("M10 4H5v16h5M14 8l4 4-4 4M18 12H9");
 inline const TCHAR* Bluetooth = TEXT("M7 7l10 10-5 5V2l5 5L7 17");
 inline const TCHAR* Trainer = TEXT("M12 3a7 7 0 100 14 7 7 0 000-14zM12 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM8 16.5L6 "
                                    "21M16 16.5l2 4.5M4 21h16");
-inline const TCHAR* HeartIcon = TEXT("M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0112 7.2a4.2 4.2 0 017.5 2.6C19.5 15.4 12 20 12 "
-                                     "20z");
+// Two round lobes meeting in a point.
+inline const TCHAR* HeartIcon = TEXT("M12 20.5L4.6 13.2C2.4 11 2.4 7.4 4.6 5.3C6.7 3.2 10 3.4 12 5.8C14 3.4 17.3 3.2 "
+                                     "19.4 5.3C21.6 7.4 21.6 11 19.4 13.2z");
 inline const TCHAR* Bolt = TEXT("M13 2L4.5 13.5H11L10 22l8.5-11.5H12z");
 inline const TCHAR* Cadence = TEXT("M20 12a8 8 0 11-2.3-5.7M20 4v4h-4M12 12l3-2");
 inline const TCHAR* Check = TEXT("M5 12l5 5 9-10");
@@ -192,7 +193,7 @@ struct URideMenu::FPaintContext
 
 	void Button(const FString& Key, float X, float Y, float Wd, float H, const FString& Label,
 	            VeloverseMenu::EButton Style, TFunction<void()> Click, const TCHAR* Icon = nullptr, float Px = 19.f,
-	            bool bSerif = false, float R = 12.f) const
+	            bool bSerif = false, float R = 12.f, bool bIconAfter = false) const
 	{
 		using namespace VeloverseMenu;
 		const bool bHot = Hot(Key);
@@ -217,9 +218,10 @@ struct URideMenu::FPaintContext
 		const float Left = X + (Wd - TextW - IconW) * 0.5f;
 		if (Icon)
 		{
-			P.Icon(Icon, Left, Y + H * 0.5f - 11.f, 22.f, Fg, 2.2f);
+			// Before the words, or after them for a way on.
+			P.Icon(Icon, bIconAfter ? Left + TextW + 8.f : Left, Y + H * 0.5f - 11.f, 22.f, Fg, 2.2f);
 		}
-		P.Text(Left + IconW, Mid(Y + H * 0.5f, Px), Label, F, Fg);
+		P.Text(bIconAfter ? Left : Left + IconW, Mid(Y + H * 0.5f, Px), Label, F, Fg);
 		Ring(Key, X, Y, Wd, H, R);
 		Hit(Key, X, Y, Wd, H).OnClick = MoveTemp(Click);
 	}
