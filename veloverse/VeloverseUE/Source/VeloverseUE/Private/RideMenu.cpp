@@ -128,7 +128,6 @@ void URideMenu::Show(ERideMenuPage Page)
 	if (Blur)
 	{
 		const float Strength = Page == ERideMenuPage::Start    ? 0.f
-		                       : Page == ERideMenuPage::Routes ? 6.f
 		                       : Page == ERideMenuPage::Pause  ? 8.f
 		                                                       : 18.f;
 		Blur->SetBlurStrength(Strength);
