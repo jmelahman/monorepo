@@ -462,11 +462,11 @@ class Out:
             [
                 group,
                 key,
-                *(round(v * 100, 1) for v in (x, y, z)),
+                *(round(float(v) * 100, 1) for v in (x, y, z)),
                 round(float(yaw), 2),
                 [round(float(v), 3) for v in scale]
                 if isinstance(scale, tuple)
-                else round(scale, 3),
+                else round(float(scale), 3),
                 round(float(pitch), 2),
                 round(float(roll), 2),
             ]
