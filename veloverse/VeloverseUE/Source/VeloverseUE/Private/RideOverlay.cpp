@@ -324,7 +324,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		const FSlateFontInfo Strong = P.Font("Bold", 12.f);
 		const FSlateFontInfo Soft = P.Font("Medium", 12.f);
 		const float Grade = Pawn->Grade;
-		P.Text(X0, Top + 25.f, bClimbing ? TEXT("THIS CLIMB") : TEXT("NEXT 3 KM"), Label, Dim);
+		P.Text(X0, Top + 25.f, bClimbing ? TEXT("THIS CLIMB") : (Veloverse::Units::bImperial ? TEXT("NEXT 1.9 MI") : TEXT("NEXT 3 KM")), Label, Dim);
 		const FString Badge = FString::Printf(TEXT("%+.1f %%"), Grade * 100.f);
 		const float BadgeW = P.Width(Badge, Strong) + 14.f;
 		P.Round(Right - BadgeW, Top + 11.f, BadgeW, 18.f, 6.f, GradeColour(FMath::Max(Grade, 0.006f)));
