@@ -419,7 +419,14 @@ void ARidePawn::UseSettings()
 	{
 		return;
 	}
-	Camera->SetFieldOfView(Profile.Fov);
+	if (RiderFov > 0.f)
+	{
+		RiderFov = Profile.Fov; // on the start screen's view: the rider's lens comes back with the ride
+	}
+	else
+	{
+		Camera->SetFieldOfView(Profile.Fov);
+	}
 	if (IConsoleVariable* Reach = IConsoleManager::Get().FindConsoleVariable(TEXT("grass.CullDistanceScale")))
 	{
 		Reach->Set(Profile.Grass / 100.f, ECVF_SetByCode);
@@ -759,6 +766,8 @@ void ARidePawn::Place()
 	const URideTrack* On = Track;
 	double At = Distance;
 	const bool bBackdrop = !bStarted && Backdrop(On, At);
+	FString Named;
+	const bool bBoardView = !FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), Named);
 	if (bBackdrop != bOnBackdrop)
 	{
 		bOnBackdrop = bBackdrop;
@@ -770,15 +779,33 @@ void ARidePawn::Place()
 		FPostProcessSettings Plain;
 		CameraLook(Plain);
 		Camera->PostProcessSettings.AutoExposureBias = Plain.AutoExposureBias + (bBackdrop ? Ev : 0.f);
+		// The board's stills were taken with the editor's 90-degree lens; riding, the rider's own.
+		if (bBackdrop && bBoardView)
+		{
+			RiderFov = Camera->FieldOfView;
+			Camera->SetFieldOfView(90.f);
+		}
+		else if (RiderFov > 0.f)
+		{
+			Camera->SetFieldOfView(RiderFov);
+			RiderFov = 0.f;
+		}
 	}
 	const float S = On->Wrap(static_cast<float>(At));
 	const FVector Eye = On->Point(S, -On->KeepLeft, EyeHeight);
 	// Along the rider's own line, not at the centreline: aiming there turned the view inward by
 	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead.
 	const FVector Ahead = On->Point(On->Wrap(S + LookAhead), -On->KeepLeft, EyeHeight);
-	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
+	float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = On->Height(On->Wrap(S + GradeSpan)) - On->Height(S);
-	const float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
+	float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
+	if (bBackdrop && bBoardView)
+	{
+		// The board's still exactly: its camera's aim (30 m up the road, 40 cm lower) and lens.
+		const FVector To = BoardTarget - BoardEye;
+		Yaw = FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X));
+		Pitch = FMath::RadiansToDegrees(FMath::Atan2(To.Z, To.Size2D()));
+	}
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	FVector Lift = FVector::ZeroVector;
 	float Roll = 0.f;
@@ -826,6 +853,11 @@ void ARidePawn::Place()
 	SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
 }
 
+// The design board's Vael still: where its camera stood and what it looked at, in cm (the world's
+// "ride_02_vael" view, from make_world_level.py's info.json).
+static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0);
+static const FVector BoardTarget(-6000.43 * 100.0, -6171.28 * 100.0, 445.36 * 100.0);
+
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
 	// The design board's backdrop: the pine valley near the top of Vael, where its camera stood
@@ -841,7 +873,7 @@ bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 	FParse::Value(FCommandLine::Get(), TEXT("RideBackdrop="), Into);
 	if (!FParse::Value(FCommandLine::Get(), TEXT("RideBackdropIn="), In))
 	{
-		const FVector Where(-6022.73 * 100.0, -6151.28 * 100.0, 0.0);
+		const FVector Where(BoardEye.X, BoardEye.Y, 0.0);
 		for (const URideTrack* Each : Order)
 		{
 			if (!Each || Each->Length() <= 0.f)

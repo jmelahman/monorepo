@@ -77,6 +77,7 @@ public:
 	// reaches Greenwood, and the rider's own start serves.
 	bool Backdrop(const URideTrack*& On, double& At) const;
 	bool bOnBackdrop = false;
+	float RiderFov = 0.f; // the rider's lens while the start screen's view has the board's
 	FTrainerReading Reading;
 	float ClimbedMetres = 0.f;
 	double Joules = 0.0;
