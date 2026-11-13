@@ -72,6 +72,11 @@ constexpr float FocalLength = 20.f; // mm: a 61° view; the stills' 16 mm (73°)
 constexpr float PhysicsStep = 1.f / 120.f;
 } // namespace
 
+// The design board's Vael still: where its camera stood and what it looked at, in cm (the world's
+// "ride_02_vael" view, from make_world_level.py's info.json).
+static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0);
+static const FVector BoardTarget(-6000.43 * 100.0, -6171.28 * 100.0, 445.36 * 100.0);
+
 // A camera's look rather than a renderer's: a little over-exposed, highlights that roll off and
 // lose colour as film and sensors do, shadows lifted a touch and cooled, light warmed, a soft
 // vignette and a trace of lens fringing. All of it is in the tonemapper's one pass, so it costs
@@ -852,11 +857,6 @@ void ARidePawn::Place()
 	const FQuat Body = (Head + FRotator(0.f, Turn, Roll + Lean)).Quaternion();
 	SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
 }
-
-// The design board's Vael still: where its camera stood and what it looked at, in cm (the world's
-// "ride_02_vael" view, from make_world_level.py's info.json).
-static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0);
-static const FVector BoardTarget(-6000.43 * 100.0, -6171.28 * 100.0, 445.36 * 100.0);
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const
 {
