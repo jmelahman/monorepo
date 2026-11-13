@@ -664,6 +664,175 @@ def trail_mask(plan, line):
     return out
 
 
+# Roundabouts where a covering route leaves the road before it (the user, 13 Nov: "a roundabout
+# with a vigil in the middle"): every route through one is reshaped round its ring, which turns
+# the way right-hand traffic does, the island on the rider's left. The ring is meshed whole, so
+# its unridden side is road too, and climb_world dresses the island from roundabouts.json.
+ROUND_R = 15.0  # m: the ring's centre line from the island's middle
+ROUND_REACH = 42.0  # m from the middle where a route leaves its own line for the ring
+ROUND_DEFLECT = 0.42  # radians round the ring from where a leg points to where it joins it
+ROUND_APART = 900.0  # m between roundabouts at least
+ROUND_RUN = 300  # m: a route's own road shorter than this is the smoothing, not a branch
+ROUND_START = 600.0  # m from a ride's start
+ROUND_BRIDGE = 12.0  # m between a ring's legs and a bridge's end, at least
+ROUND_TRAIL = 300.0  # m from the town's trail
+ROUND_GRADE = 0.06  # the steepest ground across a junction that takes a ring
+
+
+def junctions(lines, trail_line, trail):
+    """[(x, y, z)] m: where any route leaves or rejoins another's road (on the hub, the coast
+    road at each end of each island's bridge), kept off bridges, the trail, the start and steep
+    ground, and well apart."""
+    found = []
+    for a, (la, _) in lines.items():
+        for b, (lb, _) in lines.items():
+            if a == b:
+                continue
+            for s, e in extra_runs(la, lb):
+                if ROUND_RUN <= e - s <= len(la) - ROUND_RUN:
+                    found += [la[(s - 4) % len(la)], la[(e + 4) % len(la)]]
+    keep = []
+    for c in found:
+        if any(np.hypot(*(c[:2] - q[:2])) < ROUND_APART for q in keep):
+            continue
+        clear = True
+        for line, bridge in lines.values():
+            d = np.hypot(line[:, 0] - c[0], line[:, 1] - c[1])
+            near = line[d < ROUND_REACH]
+            clear &= not (d[bridge] < ROUND_REACH + ROUND_BRIDGE).any()
+            clear &= np.hypot(*(line[0, :2] - c[:2])) > ROUND_START
+            clear &= not (len(near) > 2 and np.ptp(near[:, 2]) > ROUND_GRADE * 2 * ROUND_REACH)
+        d0 = np.hypot(trail_line[:, 0] - c[0], trail_line[:, 1] - c[1])
+        clear &= not (d0[trail] < ROUND_TRAIL).any()
+        if clear:
+            keep.append(c.copy())
+    return keep
+
+
+def _hermite(p0, t0, p1, t1, count):
+    """`count` points from p0 to p1 (both included) on a cubic leaving p0 along t0 and arriving
+    at p1 along t1, tangents scaled to the chord."""
+    u = np.linspace(0, 1, count)[:, None]
+    chord = float(np.hypot(*(p1 - p0)))
+    h00, h10 = 2 * u**3 - 3 * u**2 + 1, u**3 - 2 * u**2 + u
+    h01, h11 = -2 * u**3 + 3 * u**2, u**3 - u**2
+    return h00 * p0 + h10 * t0 * chord + h01 * p1 + h11 * t1 * chord
+
+
+def _arc_tangent(theta):
+    """The ring's way round at angle `theta`: the angle falling, which puts the island on the
+    left of travel as road_mesh has it ((dy, -dx))."""
+    return np.array([np.sin(theta), -np.cos(theta)])
+
+
+def round_through(line, bridge, centre):
+    """A closed route (1 m points) and its bridge mask with every pass within ROUND_REACH of
+    `centre` ((x, y, z) m) taken round the ring instead. Unchanged if it doesn't pass."""
+    c, zc = np.asarray(centre[:2]), float(centre[2])
+    d = np.hypot(line[:, 0] - c[0], line[:, 1] - c[1])
+    inside = d < ROUND_REACH
+    if d.min() > ROUND_R or inside.all() or inside[0]:
+        return line, bridge
+    pieces, flags, at = [], [], 0
+    k = 0
+    n = len(line)
+    while k < n:
+        if not inside[k]:
+            k += 1
+            continue
+        i0 = k
+        while k < n and inside[k]:
+            k += 1
+        i1 = k % n
+        if d[i0:k].min() > ROUND_R:  # grazes the circle without passing the middle
+            continue
+        p0, p1 = line[i0 - 1], line[i1]
+        t0 = p0[:2] - line[i0 - 3, :2]
+        t1 = line[(i1 + 2) % n, :2] - p1[:2]
+        t0, t1 = t0 / np.hypot(*t0), t1 / np.hypot(*t1)
+        a0 = math.atan2(p0[1] - c[1], p0[0] - c[0])
+        a1 = math.atan2(p1[1] - c[1], p1[0] - c[0])
+        sweep = (a0 - a1) % (2 * np.pi)  # round the falling way
+        deflect = min(ROUND_DEFLECT, max(sweep - 0.3, 0.0) / 2)
+        e0, e1 = a0 - deflect, a0 - sweep + deflect
+        on0 = c + ROUND_R * np.array([np.cos(e0), np.sin(e0)])
+        on1 = c + ROUND_R * np.array([np.cos(e1), np.sin(e1)])
+        leg = ROUND_REACH - ROUND_R
+        into = _hermite(p0[:2], t0, on0, _arc_tangent(e0), int(leg * 1.3))
+        angles = np.linspace(e0, e1, max(int((e0 - e1) * ROUND_R), 2))
+        arc = c + ROUND_R * np.column_stack([np.cos(angles), np.sin(angles)])
+        out = _hermite(on1, _arc_tangent(e1), p1[:2], t1, int(leg * 1.3))
+        xy = np.vstack([into[1:], arc[1:-1], out[:-1]])
+        seg = np.r_[0, np.cumsum(np.hypot(*np.diff(xy, axis=0).T))]
+        t = np.arange(0, seg[-1], 1.0)
+        xy = np.column_stack([np.interp(t, seg, xy[:, j]) for j in range(2)])
+        # Level round the ring, easing to the route's own height along each leg.
+        ease_in = mi.smoothstep(leg * 1.2, 0, t)
+        ease_out = mi.smoothstep(seg[-1] - leg * 1.2, seg[-1], t)
+        z = zc + (p0[2] - zc) * ease_in + (p1[2] - zc) * ease_out
+        pieces.append(line[at:i0])
+        flags.append(bridge[at:i0])
+        pieces.append(np.column_stack([xy, z]))
+        flags.append(np.zeros(len(xy), bool))
+        at = i1
+    if not pieces:
+        return line, bridge
+    pieces.append(line[at:])
+    flags.append(bridge[at:])
+    return np.vstack(pieces), np.concatenate(flags)
+
+
+def roundabouts(plan, centres):
+    """roundabouts.json: each island's middle (cm), its radius (cm) and what stands on it, the
+    vigil on the one nearest the harbour and planting on the rest."""
+    hx, hy = plan.harbour
+    order = sorted(
+        range(len(centres)), key=lambda i: np.hypot(centres[i][0] - hx, centres[i][1] - hy)
+    )
+    out = []
+    for i, c in enumerate(centres):
+        out.append(
+            {
+                "x": float(c[0] * 100),
+                "y": float(c[1] * 100),
+                "z": float(c[2] * 100),
+                "island": float((ROUND_R - mi.ROAD_HALF - 0.4) * 100),
+                "kind": "vigil" if order and i == order[0] else "planted",
+            }
+        )
+    return out
+
+
+def round_views(lines, centres, plan):
+    """A rider's view of the vigil's roundabout: 80 m up the first route that rides through it,
+    looking at the island's middle 4 m up."""
+    hx, hy = plan.harbour
+    if not centres:
+        return []
+    c = min(centres, key=lambda q: np.hypot(q[0] - hx, q[1] - hy))
+    for line, _ in lines.values():
+        d = np.hypot(line[:, 0] - c[0], line[:, 1] - c[1])
+        if d.min() > ROUND_R + 1:
+            continue
+        k = int(np.argmax(d < ROUND_REACH)) - 40
+        eye = lane_eye(line, k % len(line))[0]
+        return [["roundabout", eye, [float(c[0]), float(c[1]), float(c[2]) + 4.0]]]
+    return []
+
+
+def ring_road(centre):
+    """The ring itself, closed, a metre apart, level: (n, 3) m."""
+    count = int(2 * np.pi * ROUND_R)
+    a = np.linspace(0, -2 * np.pi, count, endpoint=False)
+    return np.column_stack(
+        [
+            centre[0] + ROUND_R * np.cos(a),
+            centre[1] + ROUND_R * np.sin(a),
+            np.full(count, float(centre[2])),
+        ]
+    )
+
+
 def surfaces(runs, points, trail=None):
     """[(surface, first point, end point)] round the ring: runs of stretches on one surface, the
     asphalt of `trail`'s points (a mask, see trail_mask) the trail's."""
@@ -918,13 +1087,23 @@ def main():
     lines = {r["key"]: ring(plan, h, r) for r in routes}
     cover = covering(lines)
     print(f"carved and meshed from {cover}", flush=True)
+    centres = junctions(lines, lines[cover[0]][0], trail_mask(plan, lines[cover[0]][0]))
+    for c in centres:
+        lines = {k: round_through(*v, c) for k, v in lines.items()}
+    rings = {f"ring{i}": ring_road(c) for i, c in enumerate(centres)}
+    rings = {k: (r, np.zeros(len(r), bool)) for k, r in rings.items()}
+    print(f"roundabouts: {[(round(c[0]), round(c[1])) for c in centres]}", flush=True)
     dist = None
     for key in cover:
         d = carve(h, *lines[key])
         dist = d if dist is None else np.minimum(dist, d)
+    for ring_line, flat in rings.values():
+        dist = np.minimum(dist, carve(h, ring_line, flat))
     for key in cover:
         clear_road(h, lines[key][0])
-    road_distance(lines)
+    for ring_line, _ in rings.values():
+        clear_road(h, ring_line)
+    road_distance({**lines, **rings})
     stems, small = paint_and_trees(plan, h, dist)
     del dist
     q = np.clip(np.round(32768 + h * 100 * 128 / mi.Z_SCALE), 0, 65535).astype("<u2")
@@ -963,6 +1142,7 @@ def main():
         "rides": rides,
         "views": views(line, rides[0]["stretches"], plan),
     }
+    info["views"] += round_views(lines, centres, plan)
     with open(f"{OUT}/info.json", "w") as f:
         json.dump(info, f)
     for name in os.listdir(OUT):
@@ -992,6 +1172,12 @@ def main():
             mesh_run(centre, a, b, surface, spans, count, sink=UNDER, wear=wear)
             extra.append(here[np.arange(a, b + 1) % len(here)].round(2).tolist())
         done = np.vstack([done, here])
+    for ring_line, _ in rings.values():
+        centre = [(a * 100, b * 100, c * 100 + 2) for a, b, c in ring_line]
+        mesh_run(centre, 0, len(centre), "asphalt", [], count, sink=UNDER)
+        extra.append(ring_line.round(2).tolist())
+    with open(f"{OUT}/roundabouts.json", "w") as f:
+        json.dump(roundabouts(plan, centres), f)
     print(f"road pieces {count}", flush=True)
     with open(f"{OUT}/routes.json", "w") as f:
         json.dump(

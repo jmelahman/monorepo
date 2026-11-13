@@ -933,6 +933,147 @@ def trail_dressing(steel, mesh):
     log(f"trail: {len(trail['posts'])} posts, {len(trail['lamps'])} lamps")
 
 
+# The roundabouts' islands (make_world_level.roundabouts): a raised kerb round a lawn, and on the
+# one nearest the harbour the vigil, a stepped limestone plinth and column carrying a bronze
+# bowl with an eternal flame, lanterns at its corners; on the rest, boxwood and tall grass.
+ROUND_STONE = (0.11, 0.104, 0.092)
+ROUND_BRONZE = (0.06, 0.04, 0.022)
+ROUND_FLAME = (9.0, 3.2, 0.7)
+ROUND_KERB = (0.12, 0.118, 0.112)
+ROUND_PLANTS = {
+    "/Game/Megascans/urban/boxwood/SM_boxwood_Var": "ABCDEFGHI",
+    "/Game/Megascans/shared/tall_grass/SM_tall_grass_Var": "ABC",
+    "/Game/Megascans/shared/goldenrods/SM_goldenrods_Var": "ABCDEFG",
+}
+
+
+def _has_roundabouts():
+    return _listed("roundabouts.json")
+
+
+def roundabout_materials():
+    """(stone, bronze, flame, kerb, lawn), built before the level loads."""
+    out = []
+    for name, colour, rough, metal in (
+        ("M_RoundStone", ROUND_STONE, 0.8, 0.0),
+        ("M_RoundBronze", ROUND_BRONZE, 0.38, 0.9),
+        ("M_RoundKerb", ROUND_KERB, 0.85, 0.0),
+    ):
+        g = lib.Graph(name, f"{FOLDER}/Props")
+        tone = g.mul(g.const(colour), g.world_noise(0.015, 0.82, 1.1, 3))
+        g.output(tone, rough=rough, specular=0.4, metallic=metal)
+        g.material.set_editor_property("used_with_instanced_static_meshes", True)
+        out.append(g.finish())
+    g = lib.Graph("M_RoundFlame", f"{FOLDER}/Props")
+    flicker = g.world_noise(0.05, 0.75, 1.15, 2)
+    g.output(
+        (0.0, 0.0, 0.0), rough=1.0, specular=0.0, emissive=g.mul(g.const(ROUND_FLAME), flicker)
+    )
+    g.material.set_editor_property("used_with_instanced_static_meshes", True)
+    out.insert(2, g.finish())
+    g = lib.Graph("M_RoundLawn", f"{FOLDER}/Props")
+    lawn = unreal.load_asset("/Game/Megascans/shared/lawn_grass/T_lawn_grass_D")
+    colour = (
+        g.mask(g.sample(lawn, g.world_uv(180.0)), "rgb") if lawn else g.const((0.05, 0.07, 0.03))
+    )
+    g.output(g.mul(colour, 0.7), rough=0.9, specular=0.3)
+    g.material.set_editor_property("used_with_instanced_static_meshes", True)
+    out.append(g.finish())
+    return tuple(out)
+
+
+def roundabouts(stone, bronze, flame, kerb, lawn):
+    """roundabouts.json's islands, from the engine's shapes and the Megascans plants."""
+    with open(f"{SRC}/roundabouts.json") as f:
+        islands = json.load(f)
+    cube, cylinder = unreal.load_asset(CUBE), unreal.load_asset(CYLINDER)
+    sphere = unreal.load_asset(SPHERE)
+    kerbs, tops = lib.Instances("Roundabout/Kerb"), lib.Instances("Roundabout/Lawn")
+    stones, bronzes = lib.Instances("Roundabout/Stone"), lib.Instances("Roundabout/Bronze")
+    flames, plants = lib.Instances("Roundabout/Flame"), lib.Instances("Roundabout/Plants")
+    variants = {}
+    for stem, letters in ROUND_PLANTS.items():
+        variants[stem] = [
+            unreal.load_asset(stem + v)
+            for v in letters
+            if unreal.EditorAssetLibrary.does_asset_exist(stem + v)
+        ]
+    rng = random.Random(7)
+    for isl in islands:
+        x, y, z, r = isl["x"], isl["y"], isl["z"], isl["island"]
+        # The kerb 18 cm proud of the road, 60 deep; the lawn just inside and above it.
+        kerbs.add(cylinder, (x, y, z + 18 - 30), 0.0, (2 * r / 100, 2 * r / 100, 0.6))
+        tops.add(cylinder, (x, y, z + 22 - 30), 0.0, (2 * (r - 25) / 100,) * 2 + (0.6,))
+        top = z + 22
+        box, grass, rods = (variants[s] for s in ROUND_PLANTS)
+        if isl["kind"] == "vigil":
+            yaw = rng.uniform(0, 90)
+            for side, tall in ((560, 40), (420, 40), (300, 220)):
+                stones.add(
+                    cube, (x, y, top + tall / 2 - 2), yaw, (side / 100, side / 100, tall / 100)
+                )
+                top += tall - 2
+            stones.add(cylinder, (x, y, top + 350), 0.0, (1.2, 1.2, 7.0))
+            top += 700
+            stones.add(cube, (x, y, top + 15), yaw, (1.7, 1.7, 0.3))
+            top += 30
+            bronzes.add(sphere, (x, y, top + 20), 0.0, (2.2, 2.2, 0.75))
+            bronzes.add(cylinder, (x, y, top + 4), 0.0, (0.9, 0.9, 0.1))
+            flames.add(sphere, (x, y, top + 75), rng.uniform(0, 360), (0.85, 0.85, 1.5))
+            flames.add(sphere, (x, y, top + 120), rng.uniform(0, 360), (0.45, 0.45, 0.9))
+            # Lanterns at the plinth's corners.
+            for q in range(4):
+                a = math.radians(yaw + 45 + 90 * q)
+                lx, ly = x + 380 * math.cos(a), y + 380 * math.sin(a)
+                bronzes.add(cylinder, (lx, ly, z + 22 + 60), 0.0, (0.1, 0.1, 1.2))
+                bronzes.add(cube, (lx, ly, z + 22 + 140), yaw, (0.28, 0.28, 0.04))
+                flames.add(cube, (lx, ly, z + 22 + 125), yaw, (0.18, 0.18, 0.26))
+            inner = 480
+        else:
+            inner = 0
+            for _ in range(3) if box else ():
+                a, d = rng.uniform(0, 2 * math.pi), rng.uniform(0, 140)
+                plants.add(
+                    rng.choice(box),
+                    (x + d * math.cos(a), y + d * math.sin(a), z + 20),
+                    rng.uniform(0, 360),
+                    rng.uniform(1.6, 2.2),
+                )
+        # A ring of boxwood inside the kerb, and tall grass and goldenrod between.
+        if box:
+            count = int(2 * math.pi * (r - 120) / 170)
+            for q in range(count):
+                a = 2 * math.pi * q / count
+                plants.add(
+                    rng.choice(box),
+                    (x + (r - 120) * math.cos(a), y + (r - 120) * math.sin(a), z + 20),
+                    rng.uniform(0, 360),
+                    rng.uniform(1.0, 1.3),
+                )
+        for _ in range(140):
+            pick = grass if rng.random() < 0.65 else rods
+            if not pick:
+                continue
+            a, d = (
+                rng.uniform(0, 2 * math.pi),
+                math.sqrt(rng.uniform((inner + 60) ** 2, (r - 230) ** 2)),
+            )
+            plants.add(
+                rng.choice(pick),
+                (x + d * math.cos(a), y + d * math.sin(a), z + 20),
+                rng.uniform(0, 360),
+                rng.uniform(0.8, 1.2),
+            )
+    shapes = (cube, cylinder, sphere)
+    kerbs.commit(materials={cylinder.get_path_name(): {0: kerb}})
+    tops.commit(materials={cylinder.get_path_name(): {0: lawn}}, shadows=False)
+    stones.commit(materials={p.get_path_name(): {0: stone} for p in shapes})
+    bronzes.commit(materials={p.get_path_name(): {0: bronze} for p in shapes})
+    flames.commit(materials={p.get_path_name(): {0: flame} for p in shapes}, shadows=False)
+    plants.commit(cull=40000)
+    log(f"roundabouts: {len(islands)}, {sum(i['kind'] == 'vigil' for i in islands)} vigil")
+
+
 CUBE = "/Engine/BasicShapes/Cube"  # 100 cm, centred
 SPHERE = "/Engine/BasicShapes/Sphere"  # 100 cm across, centred
 CYLINDER = "/Engine/BasicShapes/Cylinder"  # 100 cm across and tall, centred, along Z
@@ -1338,6 +1479,7 @@ def main():
         if os.environ.get("OC_PATH") == "road":  # bisecting: the path pieces in the road's look
             path = None
         trail = trail_materials() if _has_trail() else None
+        rounds = roundabout_materials() if _has_roundabouts() else None
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
@@ -1348,6 +1490,7 @@ def main():
         ground, road = materials()
         path = path_material() if _has_paths() else None
         trail = trail_materials() if _has_trail() else None
+        rounds = roundabout_materials() if _has_roundabouts() else None
         water = sea_material()
         horizon = far_material()
         dressing = dressing_materials()
@@ -1369,6 +1512,8 @@ def main():
         props(timber, logs)
     if trail is not None and _listed("trail.json"):
         trail_dressing(trail[1], trail[2])
+    if rounds is not None:
+        roundabouts(*rounds)
     track()
     sea(water)
     if horizon is not None:
