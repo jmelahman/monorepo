@@ -677,6 +677,7 @@ ROUND_START = 600.0  # m from a ride's start
 ROUND_BRIDGE = 12.0  # m between a ring's legs and a bridge's end, at least
 ROUND_TRAIL = 300.0  # m from the town's trail
 ROUND_GRADE = 0.06  # the steepest ground across a junction that takes a ring
+ROUND_COUNT = 1  # roundabouts kept, nearest the harbour first; the rest stay plain junctions
 
 
 def junctions(lines, trail_line, trail):
@@ -1088,6 +1089,9 @@ def main():
     cover = covering(lines)
     print(f"carved and meshed from {cover}", flush=True)
     centres = junctions(lines, lines[cover[0]][0], trail_mask(plan, lines[cover[0]][0]))
+    # One set-piece, not a ring at every junction: the one nearest the harbour.
+    hx, hy = plan.harbour
+    centres = sorted(centres, key=lambda c: np.hypot(c[0] - hx, c[1] - hy))[:ROUND_COUNT]
     for c in centres:
         lines = {k: round_through(*v, c) for k, v in lines.items()}
     rings = {f"ring{i}": ring_road(c) for i, c in enumerate(centres)}
