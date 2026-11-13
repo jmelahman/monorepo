@@ -110,7 +110,9 @@ COAST_IN = 200.0  # m: the hub's coast road in from the shore
 # crests between road and edge hid the sea (13 Nov stills).
 SEA_CLIFF = (20.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
 CLIFF_TILT = 0.03  # the top's rise inland, from the edge
-CLIFF_OPEN = (1200.0, 2000.0)  # m to another island's shore: no cliffs to 1200, full past 2000
+# m to another island's shore: no cliffs to 400, full past 800 (1200..2000 left no hub cliff
+# by the road: only 14% of its shore is that open, 13 Nov), and always cliffs past 1400.
+CLIFF_OPEN = (400.0, 800.0, 1400.0)
 CLIFF_IN = (20.0, 30.0)  # m: the coast road from a cliff's edge, least and most
 # m: how far either side of the line from the hub to a petal its two bridges may run; each takes
 # the narrowest crossing in that range.
@@ -347,7 +349,9 @@ def terrain():
     patchy = mi.smoothstep(0.46, 0.54, mi.fbm(x, y, 2600, 2, SEED + 63))
     away = mi.smoothstep(TOWN_REACH * 0.9, TOWN_REACH * 1.4, np.hypot(x - bx, y - by))
     others = land & (which != HUB)
-    open_sea = mi.smoothstep(*CLIFF_OPEN, ndimage.distance_transform_edt(~others) * SPACING)
+    gap = ndimage.distance_transform_edt(~others) * SPACING
+    open_sea = mi.smoothstep(*CLIFF_OPEN[:2], gap)
+    patchy = np.maximum(patchy, mi.smoothstep(CLIFF_OPEN[2] - 300, CLIFF_OPEN[2], gap))
     sea_cliff = (which == HUB) * land * patchy * away * open_sea
     top = low + (high - low) * mi.fbm(x, y, 900, 2, SEED + 64)
     shaped = top * mi.smoothstep(0, run, inland) ** 0.6 + CLIFF_TILT * np.maximum(inland - run, 0)
