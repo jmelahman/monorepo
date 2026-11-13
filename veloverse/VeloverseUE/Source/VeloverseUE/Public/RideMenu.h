@@ -128,8 +128,9 @@ private:
 	Veloverse::FCurve CurveAll = {}, Curve90 = {};
 	Veloverse::FLoad Load;  // a day at a time, the last 90 days
 	TArray<double> DayTss;  // and their load
-	TArray<TPair<FString, double>> IslandKm;
+	TArray<TPair<FString, double>> IslandKm; // the five islands, then "Elsewhere" for rides off the routes
 	int32 RoutesRidden = 0;
+	TSet<FString> RiddenRoutes; // by title
 	struct FClimbBest
 	{
 		FString Name;

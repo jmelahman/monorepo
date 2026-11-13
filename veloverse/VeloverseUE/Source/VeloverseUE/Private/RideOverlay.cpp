@@ -324,13 +324,13 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		const FSlateFontInfo Strong = P.Font("Bold", 12.f);
 		const FSlateFontInfo Soft = P.Font("Medium", 12.f);
 		const float Grade = Pawn->Grade;
-		P.Text(X0, Top + 25.f, bClimbing ? TEXT("THIS CLIMB") : (Veloverse::Units::bImperial ? TEXT("NEXT 1.9 MI") : TEXT("NEXT 3 KM")), Label, Dim);
+		P.Text(X0, Top + 25.f, bClimbing ? TEXT("THIS CLIMB") : (Veloverse::Units::bImperial ? TEXT("NEXT 2 MI") : TEXT("NEXT 3 KM")), Label, Dim);
 		const FString Badge = FString::Printf(TEXT("%+.1f %%"), Grade * 100.f);
 		const float BadgeW = P.Width(Badge, Strong) + 14.f;
 		P.Round(Right - BadgeW, Top + 11.f, BadgeW, 18.f, 6.f, GradeColour(FMath::Max(Grade, 0.006f)));
 		P.Text(Right - 7.f, Top + 25.f, Badge, Strong, BadgeText, EAlign::Right);
 
-		// The profile: a climb from its foot to past its top, or the next 3 km.
+		// The profile: a climb from its foot to past its top, or the next 3 km (2 miles).
 		float From, To;
 		if (bClimbing)
 		{
@@ -340,8 +340,10 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		}
 		else
 		{
-			From = Here - 150.f;
-			To = Here + 2850.f;
+			// 3 km, or 2 miles: the window the label names.
+			const float Window = Veloverse::Units::bImperial ? 2.f * static_cast<float>(Veloverse::Units::MetresPerMile) : 3000.f;
+			From = Here - 0.05f * Window;
+			To = From + Window;
 		}
 		if (!bClosed)
 		{
@@ -500,6 +502,15 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		{
 			P.Text(X + 48.f + NameW, Y + 23.f, Change, Small, Dim);
 		}
+	}
+
+	// ---- Bottom left: how to pause --------------------------------------------------------------
+	{
+		const FString Hint = TEXT("Esc · Pause");
+		const FSlateFontInfo Font = P.Font("Bold", 11.f);
+		const float Wide = P.Width(Hint, Font) + 28.f, Tall = 32.f, X = 20.f, Y = H - 20.f - Tall;
+		P.Panel(X, Y, Wide, Tall, 16.f);
+		P.Text(X + Wide * 0.5f, Y + 20.f, Hint, Font, Ink, EAlign::Centre);
 	}
 
 	// ---- Bottom middle: the workout ---------------------------------------------------------------

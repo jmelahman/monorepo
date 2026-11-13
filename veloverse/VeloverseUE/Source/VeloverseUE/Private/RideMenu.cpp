@@ -705,7 +705,18 @@ void URideMenu::WorkOutStats()
 	{
 		IslandKm.Add({Name, Islands.FindRef(Name)});
 	}
+	// What the routes don't account for, so the rows add up to the total.
+	double Shared = 0.0;
+	for (const TPair<FString, double>& I : IslandKm)
+	{
+		Shared += I.Value;
+	}
+	if (Totals[3].Km - Shared > 0.05)
+	{
+		IslandKm.Add({TEXT("Elsewhere"), Totals[3].Km - Shared});
+	}
 	RoutesRidden = Ridden.Num();
+	RiddenRoutes = Ridden;
 	Climbs.GenerateValueArray(ClimbBests);
 	ClimbBests.Sort([](const FClimbBest& A, const FClimbBest& B) { return A.Seconds > B.Seconds; });
 }

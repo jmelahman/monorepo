@@ -11,6 +11,7 @@ inline bool bImperial = false;
 
 constexpr double MetresPerMile = 1609.344;
 constexpr double FeetPerMetre = 3.28084;
+constexpr double PoundsPerKilo = 2.20462;
 
 // Kilometres or miles, from metres.
 inline double Long(double Metres) { return bImperial ? Metres / MetresPerMile : Metres / 1000.0; }
@@ -23,6 +24,11 @@ inline const TCHAR* SpeedUnit() { return bImperial ? TEXT("mph") : TEXT("km/h");
 // Metres or feet, from metres.
 inline double Height(double Metres) { return bImperial ? Metres * FeetPerMetre : Metres; }
 inline const TCHAR* HeightUnit() { return bImperial ? TEXT("ft") : TEXT("m"); }
+
+// Kilograms or pounds, from kilograms, and back.
+inline double Mass(double Kilos) { return bImperial ? Kilos * PoundsPerKilo : Kilos; }
+inline double Kilos(double Shown) { return bImperial ? Shown / PoundsPerKilo : Shown; }
+inline const TCHAR* MassUnit() { return bImperial ? TEXT("lb") : TEXT("kg"); }
 
 // A number to 0, 1 or 2 places (FString::Printf wants its format spelled out).
 inline FString Number(double Value, int32 Places)

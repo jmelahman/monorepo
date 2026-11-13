@@ -222,7 +222,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		C.Hit(Key, 120.f, 332.f, 560.f, 84.f).OnClick = [M] { M->Controller()->Ride(); };
 	}
 
-	// The list under it.
+	// The workout to ride it with, a choice stepped through under the button.
 	FString WorkoutText = TEXT("None, just ride");
 	if (Pawn && Pawn->Workout.Active())
 	{
@@ -236,6 +236,25 @@ void URideMenu::PaintStart(FPaintContext& C) const
 			}
 		}
 	}
+	{
+		const FString Key = TEXT("workout");
+		const float Wy = 428.f;
+		P.Round(120.f, Wy, 560.f, 52.f, 12.f, InkA(C.Hot(Key) ? 0.1f : 0.05f));
+		P.Border(120.f, Wy, 560.f, 52.f, 12.f, InkA(0.12f));
+		P.Icon(Icons::Workout, 140.f, Wy + 15.f, 22.f, Soft);
+		Label(P, 176.f, Mid(Wy + 26.f, 13.f), TEXT("Workout"));
+		const FSlateFontInfo F = P.Font("Medium", 16.f);
+		P.Text(604.f, Mid(Wy + 26.f, 16.f), P.Fit(WorkoutText, F, 330.f), F, Ink, EAlign::Right);
+		P.Icon(Icons::ChevronLeft, 618.f, Wy + 16.f, 20.f, Muted);
+		P.Icon(Icons::Chevron, 646.f, Wy + 16.f, 20.f, Muted);
+		C.Ring(Key, 120.f, Wy, 560.f, 52.f, 12.f);
+		FHit& H = C.Hit(Key, 120.f, Wy, 560.f, 52.f);
+		H.OnClick = [M] { M->StepWorkout(1); };
+		H.OnLeft = [M] { M->StepWorkout(-1); };
+		H.OnRight = [M] { M->StepWorkout(1); };
+	}
+
+	// The list under it.
 	bool bLive = false;
 	struct FItem
 	{
@@ -243,20 +262,18 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		const TCHAR* Icon;
 		FString Label, Value;
 		TFunction<void()> Click;
-		bool bCycle = false;
 	};
 	const TArray<FItem> Items = {
 		{TEXT("routes"), Icons::Map, TEXT("Choose a route"), Route ? Route->Title : FString(),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
-		{TEXT("workout"), Icons::Workout, TEXT("Workout"), WorkoutText, [M] { M->StepWorkout(1); }, true},
 		{TEXT("sensors"), Icons::Signal, TEXT("Trainer and sensors"), TrainerStatus(Pawn, bLive),
 		 [M] { M->Show(ERideMenuPage::Sensors); }},
 		{TEXT("settings"), Icons::Gear, TEXT("Settings"), FString(), [M] { M->Show(ERideMenuPage::Settings); }},
 		{TEXT("quit"), Icons::Leave, TEXT("Quit"), FString(), [M] { M->Controller()->Quit(); }},
 	};
-	float Y = 440.f;
+	float Y = 504.f;
 	for (const FItem& Item : Items)
 	{
 		const bool bHot = C.Hot(Item.Key);
@@ -266,47 +283,42 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		}
 		P.Icon(Item.Icon, 140.f, Y + 21.f, 22.f, bHot ? Ink : Soft);
 		P.Text(180.f, Mid(Y + 32.f, 20.f), Item.Label, P.Font("Bold", 20.f), Ink);
-		const float ValueRight = Item.bCycle ? 604.f : 656.f;
 		if (!Item.Value.IsEmpty())
 		{
 			const FSlateFontInfo F = P.Font("Medium", 16.f);
-			P.Text(ValueRight, Mid(Y + 32.f, 16.f), P.Fit(Item.Value, F, 250.f), F, Muted, EAlign::Right);
-		}
-		if (Item.bCycle)
-		{
-			P.Icon(Icons::ChevronLeft, 620.f, Y + 22.f, 20.f, Muted);
-			P.Icon(Icons::Chevron, 646.f, Y + 22.f, 20.f, Muted);
+			P.Text(656.f, Mid(Y + 32.f, 16.f), P.Fit(Item.Value, F, 250.f), F, Muted, EAlign::Right);
 		}
 		C.Ring(Item.Key, 120.f, Y, 560.f, 64.f, 12.f);
-		FHit& H = C.Hit(Item.Key, 120.f, Y, 560.f, 64.f);
-		H.OnClick = Item.Click;
-		if (Item.bCycle)
-		{
-			H.OnLeft = [M] { M->StepWorkout(-1); };
-			H.OnRight = [M] { M->StepWorkout(1); };
-		}
+		C.Hit(Item.Key, 120.f, Y, 560.f, 64.f).OnClick = Item.Click;
 		Y += 70.f;
 	}
 
-	// The last ride, to look back at.
+	// The last ride, to look back at: its name and three numbers, as the board has it.
 	if (History.Num() > 0)
 	{
 		const FRideEntry& E = History[0];
-		const float X = C.W - 64.f - 420.f, Top = 1080.f - 64.f - 180.f;
+		const float Wd = 420.f, Ht = 214.f, X = C.W - 64.f - Wd, Top = 1080.f - 64.f - Ht;
 		const FString Key = TEXT("last");
-		C.Panel(X, Top, 420.f, 180.f, 16.f, C.Hot(Key) ? 0.9f : 0.72f);
-		Label(P, X + 28.f, Top + 40.f, TEXT("Last ride · ") + RideDay(E.Started));
-		P.Text(X + 28.f, Top + 84.f, P.Fit(E.Route.IsEmpty() ? FString(TEXT("Ride")) : E.Route, P.Serif(28.f), 364.f),
+		C.Panel(X, Top, Wd, Ht, 16.f, C.Hot(Key) ? 0.9f : 0.78f);
+		Label(P, X + 28.f, Top + 38.f, TEXT("Last ride · ") + RideDay(E.Started));
+		P.Text(X + 28.f, Top + 80.f, P.Fit(E.Route.IsEmpty() ? FString(TEXT("Ride")) : E.Route, P.Serif(28.f), Wd - 56.f),
 		       P.Serif(28.f), Ink);
-		P.Text(X + 28.f, Top + 120.f,
-		       FString::Printf(TEXT("%s · %s · %s"), *U::Distance(E.Summary.Metres), *Clock(E.Summary.Seconds, false),
-		                       *Watts(E.Summary.AverageWatts)),
-		       P.Font("Medium", 17.f), Soft);
-		P.Text(X + 28.f, Top + 156.f, TEXT("Review the ride"), P.Font("Bold", 16.f), C.Accent);
-		P.Icon(Icons::Arrow, X + 28.f + P.Width(TEXT("Review the ride"), P.Font("Bold", 16.f)) + 8.f, Top + 141.f, 20.f,
+		const FString Values[3] = {U::Number(U::Long(E.Summary.Metres), 1), Clock(E.Summary.Seconds, false),
+		                           E.Summary.AverageWatts > 0.0 ? FString::Printf(TEXT("%.0f"), E.Summary.AverageWatts)
+		                                                        : FString(TEXT("–"))};
+		const FString Under[3] = {U::LongUnit(), TEXT("moving"), TEXT("avg W")};
+		const float Cw = (Wd - 56.f) / 3.f;
+		for (int32 I = 0; I < 3; ++I)
+		{
+			P.Text(X + 28.f + I * Cw, Top + 126.f, Values[I], P.Font("Bold", 24.f), Ink);
+			P.Text(X + 28.f + I * Cw, Top + 148.f, Under[I], P.Font("Medium", 13.f), Muted);
+		}
+		P.Rect(X + 28.f, Top + 166.f, Wd - 56.f, 1.f, InkA(0.08f));
+		P.Text(X + 28.f, Top + 194.f, TEXT("Review the ride"), P.Font("Bold", 16.f), C.Accent);
+		P.Icon(Icons::Arrow, X + 28.f + P.Width(TEXT("Review the ride"), P.Font("Bold", 16.f)) + 8.f, Top + 179.f, 20.f,
 		       C.Accent);
-		C.Ring(Key, X, Top, 420.f, 180.f, 16.f);
-		C.Hit(Key, X, Top, 420.f, 180.f).OnClick = [M]
+		C.Ring(Key, X, Top, Wd, Ht, 16.f);
+		C.Hit(Key, X, Top, Wd, Ht).OnClick = [M]
 		{
 			M->bFromStats = false;
 			M->ReviewRide(0);
@@ -401,15 +413,16 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			Shares.Emplace(Name, End - S->Islands[I].Key);
 		}
 	}
-	TArray<FString> Inland;
+	// Every route starts on Harbour Isle, the coast's island; then the islands it crosses.
+	TArray<FString> Crossed = {TEXT("Harbour Isle")};
 	for (const TPair<FString, float>& Share : Shares)
 	{
 		if (Share.Key != TEXT("The Coast"))
 		{
-			Inland.Add(Share.Key);
+			Crossed.Add(Share.Key);
 		}
 	}
-	const FString Kicker = Inland.Num() > 0 ? FString::Join(Inland, TEXT(" · ")) : FString(TEXT("The Coast"));
+	const FString Kicker = FString::Join(Crossed, TEXT(" · "));
 	P.Text(720.f, 170.f, Kicker.ToUpper(), P.Font("Bold", 15.f, 0.24f), C.Accent);
 	P.Text(716.f, 236.f, P.Fit(S->Title, P.Serif(64.f), RightEdge - 720.f), P.Serif(64.f), Ink);
 	P.Wrap(720.f, 280.f, FMath::Min(1100.f, RightEdge - 720.f), 26.f, S->Blurb, P.Font("Medium", 19.f), Soft, 1);
@@ -482,9 +495,31 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		if (Road.Num() > 0 && Length > 0.f)
 		{
 			const float Share = FMath::Clamp(Pawn->StartMetres * 100.f / Length, 0.f, 1.f);
-			const FVector2f At = Road[FMath::RoundToInt32(Share * (Road.Num() - 1))];
+			const int32 From = FMath::RoundToInt32(Share * (Road.Num() - 1));
+			const FVector2f At = Road[From];
+			// The way round: an arrowhead a little along the road from the start.
+			const int32 To = FMath::Min(From + FMath::Max(Road.Num() / 30, 2), Road.Num() - 1);
+			const FVector2f Along = (Road[To] - At).GetSafeNormal();
+			if (!Along.IsNearlyZero())
+			{
+				const FVector2f Side(-Along.Y, Along.X);
+				const FVector2f Tip = Road[To] + Along * 7.f;
+				const TArray<FVector2f> Head = {Tip - Along * 11.f + Side * 8.f, Tip, Tip - Along * 11.f - Side * 8.f};
+				P.Lines(Head, WithAlpha(Night, 0.85f), 6.f);
+				P.Lines(Head, Ink, 2.6f);
+			}
 			P.Disc(At.X, At.Y, 10.f, Ink);
 			P.Disc(At.X, At.Y, 6.5f, C.Accent);
+			const TArray<ARidePawn::FStart> Places = Pawn->Starts();
+			const FString Where = Places.IsValidIndex(Pawn->StartIndex()) ? Places[Pawn->StartIndex()].Name
+			                                                               : FString(TEXT("Harbour"));
+			const FString Text = (Where + TEXT(" · start")).ToUpper();
+			const FSlateFontInfo F = P.Font("Bold", 13.f, 0.14f);
+			const float Tw = P.Width(Text, F);
+			const bool bLeft = At.X + 22.f + Tw > MapX + Mw - 12.f;
+			const float Lx = bLeft ? At.X - 22.f - Tw : At.X + 22.f;
+			P.Round(Lx - 8.f, At.Y - 13.f, Tw + 16.f, 26.f, 6.f, WithAlpha(Night, 0.78f));
+			P.Text(Lx, Mid(At.Y, 13.f), Text, F, Ink);
 		}
 		// A scale.
 		float Km = 5.f; // or miles
@@ -569,8 +604,12 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			Lo = FMath::Min(Lo, H);
 			Hi = FMath::Max(Hi, H);
 		}
-		Lo = FMath::FloorToFloat(Lo / 50.f) * 50.f;
-		Hi = FMath::Max(FMath::CeilToFloat(Hi / 50.f) * 50.f, Lo + 50.f);
+		// Round the axis in the units it's labelled in: 50 m, or 100 ft.
+		const float Per = static_cast<float>(U::Height(1.0)), Round = U::bImperial ? 100.f : 50.f;
+		const float ShownLo = FMath::FloorToFloat(Lo * Per / Round) * Round;
+		const float ShownHi = FMath::Max(FMath::CeilToFloat(Hi * Per / Round) * Round, ShownLo + Round);
+		Lo = ShownLo / Per;
+		Hi = ShownHi / Per;
 		const int32 N = S->Heights.Num();
 		for (int32 I = 0; I < S->Islands.Num(); ++I)
 		{
@@ -581,10 +620,10 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		}
 		P.Lines(Plot(S->Heights, N, Ex, Ey, Ew, Eh, Lo, Hi), Ink, 2.f);
 		P.Lines({FVector2f(Ex, Ey + Eh), FVector2f(Ex + Ew, Ey + Eh)}, InkA(0.2f), 1.f);
-		P.Text(Ex - 14.f, Mid(Ey, 13.f), U::Rise(Hi), P.Font("Medium", 13.f), Muted,
+		P.Text(Ex - 14.f, Mid(Ey, 13.f), Thousands(ShownHi) + TEXT(" ") + U::HeightUnit(), P.Font("Medium", 13.f), Muted,
 		       EAlign::Right);
-		P.Text(Ex - 14.f, Mid(Ey + Eh, 13.f), U::Rise(Lo), P.Font("Medium", 13.f), Muted,
-		       EAlign::Right);
+		P.Text(Ex - 14.f, Mid(Ey + Eh, 13.f), Thousands(ShownLo) + TEXT(" ") + U::HeightUnit(), P.Font("Medium", 13.f),
+		       Muted, EAlign::Right);
 		for (int32 Q = 0; Q <= 4; ++Q)
 		{
 			P.Text(Ex + Ew * Q / 4.f, Ey + Eh + 28.f, U::Distance(S->Km * 1000.0 * Q / 4.0, 0),
@@ -634,60 +673,79 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 
 	const float Wd = 880.f, X = (C.W - Wd) * 0.5f;
 	float Y = 200.f;
-	Label(P, X, Y, TEXT("Bluetooth devices"));
-	P.Icon(Icons::Bluetooth, X + Wd - 22.f, Y - 16.f, 20.f, Sky);
-	Y += 20.f;
 	const TArray<FSensor> Sensors = T ? T->Sensors() : TArray<FSensor>();
-	if (Pawn && Pawn->TrainerSource == TEXT("keyboard"))
+	const bool bKeyboard = Pawn && Pawn->TrainerSource == TEXT("keyboard");
+
+	// The devices: one panel, a header that says it's looking, a row a device.
+	const int32 Rows = bKeyboard ? 1 : FMath::Max(FMath::Min(Sensors.Num(), 5), 1);
+	const float Ph = 24.f + 38.f + Rows * 76.f + 16.f;
+	C.Panel(X, Y, Wd, Ph, 16.f);
 	{
-		C.Panel(X, Y, Wd, 120.f, 14.f);
-		P.Icon(Icons::Trainer, X + 28.f, Y + 36.f, 44.f, Soft);
-		P.Text(X + 96.f, Y + 54.f, TEXT("Riding on the keyboard"), P.Font("Bold", 20.f), Ink);
-		P.Text(X + 96.f, Y + 84.f, TEXT("Hold W or Up to push harder, S or Down to ease off."), P.Font("Medium", 17.f),
+		const float Hy = Y + 24.f + 14.f;
+		P.Icon(Icons::Bluetooth, X + 32.f, Hy - 10.f, 20.f, Muted);
+		const float Hw = P.Text(X + 64.f, Mid(Hy, 16.f), bKeyboard ? TEXT("Riding on the keyboard") : TEXT("Looking for devices"),
+		                        P.Font("Medium", 16.f), Muted);
+		if (!bKeyboard)
+		{
+			// A ping: a dot and a ring growing out of it.
+			const float Phase = FMath::Fmod(static_cast<float>(C.Time) / 1.6f, 1.f);
+			const float Dx = X + 64.f + Hw + 16.f;
+			P.Disc(Dx, Hy, 4.f * (0.6f + 1.6f * Phase), WithAlpha(Sky, 0.9f * (1.f - Phase)));
+			P.Disc(Dx, Hy, 4.f, Sky);
+		}
+	}
+	float Ry = Y + 24.f + 38.f;
+	auto Tile = [&](const TCHAR* Icon, const FLinearColor& Colour)
+	{
+		P.Round(X + 32.f, Ry + 14.f, 48.f, 48.f, 12.f, InkA(0.07f));
+		P.Icon(Icon, X + 44.f, Ry + 26.f, 24.f, Colour);
+	};
+	if (bKeyboard)
+	{
+		P.Rect(X + 32.f, Ry, Wd - 64.f, 1.f, InkA(0.08f));
+		Tile(Icons::Trainer, Ink);
+		P.Text(X + 100.f, Ry + 34.f, TEXT("Keyboard"), P.Font("Bold", 19.f), Ink);
+		P.Text(X + 100.f, Ry + 56.f, TEXT("Hold W or Up to push harder, S or Down to ease off"), P.Font("Medium", 14.f),
 		       Muted);
-		Y += 136.f;
 	}
 	else if (Sensors.Num() == 0)
 	{
-		C.Panel(X, Y, Wd, 120.f, 14.f);
-		const float Pulse = 0.5f + 0.5f * FMath::Sin(static_cast<float>(C.Time) * 3.f);
-		P.Icon(Icons::Bluetooth, X + 32.f, Y + 38.f, 40.f, WithAlpha(Sky, 0.4f + 0.6f * Pulse));
-		P.Text(X + 96.f, Y + 54.f, TEXT("Looking for devices"), P.Font("Bold", 20.f), Ink);
-		P.Text(X + 96.f, Y + 84.f, TEXT("Wake your trainer by pedalling, and put your heart-rate strap on."),
-		       P.Font("Medium", 17.f), Muted);
-		Y += 136.f;
+		P.Rect(X + 32.f, Ry, Wd - 64.f, 1.f, InkA(0.08f));
+		Tile(Icons::Trainer, Muted);
+		P.Text(X + 100.f, Ry + 34.f, TEXT("Nothing found yet"), P.Font("Bold", 19.f), Ink);
+		P.Text(X + 100.f, Ry + 56.f, TEXT("Wake your trainer by pedalling, and put your heart-rate strap on"),
+		       P.Font("Medium", 14.f), Muted);
 	}
-	for (int32 I = 0; I < Sensors.Num() && Y < 640.f; ++I)
+	for (int32 I = 0; !bKeyboard && I < FMath::Min(Sensors.Num(), 5); ++I)
 	{
 		const FSensor& S = Sensors[I];
-		const TCHAR* Icon = S.Kind == FSensor::EKind::Heart ? Icons::HeartIcon
-			: S.Kind == FSensor::EKind::Power             ? Icons::Bolt
-			                                              : Icons::Trainer;
-		const TCHAR* Kind = S.Kind == FSensor::EKind::Heart ? TEXT("Heart-rate strap")
-			: S.Kind == FSensor::EKind::Power             ? TEXT("Power meter")
-			                                              : TEXT("Smart trainer");
-		C.Panel(X, Y, Wd, 76.f, 14.f, S.bInUse ? 0.9f : 0.7f);
-		if (S.bInUse)
+		const bool bStrap = S.Kind == FSensor::EKind::Heart;
+		const TCHAR* Icon = bStrap ? Icons::HeartIcon : S.Kind == FSensor::EKind::Power ? Icons::Bolt : Icons::Trainer;
+		const TCHAR* Kind = bStrap ? TEXT("Heart rate") : S.Kind == FSensor::EKind::Power ? TEXT("Power meter")
+		                                                                                    : TEXT("Smart trainer");
+		P.Rect(X + 32.f, Ry, Wd - 64.f, 1.f, InkA(0.08f));
+		Tile(Icon, S.bInUse ? Ink : Muted);
+		P.Text(X + 100.f, Ry + 34.f, P.Fit(S.Name, P.Font("Bold", 19.f), Wd - 300.f), P.Font("Bold", 19.f), Ink);
+		const float Kw = P.Text(X + 100.f, Ry + 56.f, Kind, P.Font("Medium", 14.f), Muted);
+		if (S.bInUse && !S.bConnected)
 		{
-			P.Border(X, Y, Wd, 76.f, 14.f, WithAlpha(C.Accent, 0.5f));
+			P.Text(X + 100.f + Kw, Ry + 56.f, TEXT(" · connecting"), P.Font("Medium", 14.f), Muted);
 		}
-		P.Icon(Icon, X + 24.f, Y + 24.f, 28.f, S.Kind == FSensor::EKind::Heart ? Heart : Soft);
-		P.Text(X + 72.f, Y + 34.f, P.Fit(S.Name, P.Font("Bold", 19.f), Wd - 300.f), P.Font("Bold", 19.f), Ink);
-		const FString Status = S.bConnected ? TEXT("Connected") : S.bInUse ? TEXT("Connecting") : TEXT("Found");
-		const float Kw = P.Text(X + 72.f, Y + 58.f, Kind, P.Font("Medium", 15.f), Muted);
-		P.Disc(X + 84.f + Kw, Y + 53.f, 4.f, S.bConnected ? Ok : Muted);
-		P.Text(X + 94.f + Kw, Y + 58.f, Status, P.Font("Medium", 15.f), S.bConnected ? Ok : Muted);
+		const float Bx = X + Wd - 32.f - 120.f, By = Ry + 16.f;
 		const FString Key = FString::Printf(TEXT("use%d"), I);
 		if (S.bInUse)
 		{
-			P.Icon(Icons::Check, X + Wd - 130.f, Y + 27.f, 22.f, Ok);
-			P.Text(X + Wd - 24.f, Mid(Y + 38.f, 16.f), TEXT("In use"), P.Font("Bold", 16.f), Ok, EAlign::Right);
+			// In use: an outline in green, a tick and the words.
+			const FSlateFontInfo F = P.Font("Bold", 16.f);
+			const float Lw = P.Width(TEXT("In use"), F) + 28.f;
+			P.Border(Bx, By, 120.f, 44.f, 10.f, WithAlpha(Ok, 0.5f));
+			P.Icon(Icons::Check, Bx + (120.f - Lw) * 0.5f, By + 12.f, 20.f, Ok);
+			P.Text(Bx + (120.f - Lw) * 0.5f + 28.f, Mid(By + 22.f, 16.f), TEXT("In use"), F, Ok);
 		}
 		else
 		{
 			const FString Name = S.Name;
-			const bool bStrap = S.Kind == FSensor::EKind::Heart;
-			C.Button(Key, X + Wd - 124.f, Y + 16.f, 104.f, 44.f, TEXT("Use"), EButton::Outline,
+			C.Button(Key, Bx, By, 120.f, 44.f, TEXT("Use"), EButton::Primary,
 			         [M, Name, bStrap]
 			         {
 				         ARidePawn* R = M->Rider();
@@ -696,15 +754,13 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 					         bStrap ? Tr->PickStrap(Name) : Tr->Pick(Name);
 				         }
 			         },
-			         nullptr, 16.f);
+			         nullptr, 16.f, false, 10.f);
 		}
-		Y += 84.f;
+		Ry += 76.f;
 	}
+	Y += Ph + 28.f;
 
-	// What's coming in now.
-	Y += 32.f;
-	Label(P, X, Y, TEXT("Live"));
-	Y += 16.f;
+	// What's coming in now: three cards side by side.
 	const FTrainerReading Reading = Pawn ? Pawn->Reading : FTrainerReading();
 	struct FCard
 	{
@@ -717,32 +773,30 @@ void URideMenu::PaintSensors(FPaintContext& C) const
 	const FCard Cards[3] = {{Icons::Bolt, TEXT("Power"), Reading.Watts, TEXT("W"), C.Accent},
 	                        {Icons::Cadence, TEXT("Cadence"), Reading.CadenceRpm, TEXT("rpm"), Sky},
 	                        {Icons::HeartIcon, TEXT("Heart rate"), Reading.HeartRateBpm, TEXT("bpm"), Heart}};
-	const float Cw = (Wd - 32.f) / 3.f;
+	const float Cw = (Wd - 24.f) / 3.f, Ch = 96.f;
 	for (int32 I = 0; I < 3; ++I)
 	{
-		const float Cx = X + I * (Cw + 16.f);
-		C.Panel(Cx, Y, Cw, 150.f, 14.f);
-		P.Icon(Cards[I].Icon, Cx + 24.f, Y + 22.f, 22.f, Cards[I].Colour);
-		Label(P, Cx + 56.f, Y + 39.f, Cards[I].Name);
-		const FString Value = Cards[I].Value > 0.0 ? FString::Printf(TEXT("%.0f"), Cards[I].Value) : FString(TEXT("–"));
-		const float Vw = P.Text(Cx + 24.f, Y + 116.f, Value, P.Font("Bold", 52.f), Ink);
-		P.Text(Cx + 32.f + Vw, Y + 116.f, Cards[I].Unit, P.Font("Medium", 20.f), Muted);
+		const float Cx = X + I * (Cw + 12.f);
+		const bool bOn = Cards[I].Value > 0.0;
+		C.Panel(Cx, Y, Cw, Ch, 16.f);
+		P.Disc(Cx + 48.f, Y + Ch * 0.5f, 24.f, InkA(bOn ? 0.08f : 0.04f));
+		P.Icon(Cards[I].Icon, Cx + 36.f, Y + Ch * 0.5f - 12.f, 24.f, bOn ? Cards[I].Colour : InkA(0.4f));
+		P.Text(Cx + 90.f, Y + 36.f, Cards[I].Name, P.Font("Medium", 14.f), Muted);
+		const FString Value = bOn ? FString::Printf(TEXT("%.0f"), Cards[I].Value) : FString(TEXT("–"));
+		const float Vw = P.Text(Cx + 90.f, Y + 76.f, Value, P.Font("Bold", 38.f), Ink);
+		P.Text(Cx + 96.f + Vw, Y + 76.f, Cards[I].Unit, P.Font("Medium", 16.f), Soft);
 	}
-	Y += 190.f;
-	P.Wrap(X, Y, Wd - 300.f, 24.f,
-	       TEXT("A smart trainer sets the resistance to the road's grade. Wake it by pedalling; it connects on its own "
-	            "next time."),
-	       P.Font("Medium", 16.f), Muted, 2);
-	if (Pawn && !Pawn->bStarted)
-	{
-		C.Button(TEXT("routes"), X + Wd - 260.f, Y - 30.f, 260.f, 60.f, TEXT("Choose a route"), EButton::Primary,
-		         [M] { M->Show(ERideMenuPage::Routes); }, Icons::Arrow, 19.f);
-	}
-	else
-	{
-		C.Button(TEXT("routes"), X + Wd - 260.f, Y - 30.f, 260.f, 60.f, TEXT("Back"), EButton::Primary,
-		         [M] { M->GoBack(); }, nullptr, 19.f);
-	}
+	Y += Ch + 28.f;
+
+	// What it works with, and the way on.
+	const bool bBefore = Pawn && !Pawn->bStarted;
+	const FString Cta = bBefore ? TEXT("Choose a route") : TEXT("Back");
+	const float Bw = C.ButtonWidth(Cta, 26.f, bBefore, 36.f) + 24.f;
+	P.Text(X, Mid(Y + 34.f, 14.f), TEXT("Smart trainers (FTMS), power meters and heart-rate straps."),
+	       P.Font("Medium", 14.f), Muted);
+	C.Button(TEXT("routes"), X + Wd - Bw, Y, Bw, 68.f, Cta, EButton::Primary,
+	         [M, bBefore] { bBefore ? M->Show(ERideMenuPage::Routes) : M->GoBack(); },
+	         bBefore ? Icons::Arrow : nullptr, 26.f, true, 14.f);
 }
 
 // ---- Settings ------------------------------------------------------------------------------------
@@ -844,8 +898,10 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			ScaleAt = FMath::Abs(Percent - Scales[I]) < FMath::Abs(Percent - Scales[ScaleAt]) ? I : ScaleAt;
 		}
 		Choice(TEXT("scale"),
-		       Row(TEXT("Upscaling"), FString::Printf(TEXT("Renders %d%% of the pixels and TSR sharpens them back up"),
-		                                              Scales[ScaleAt])),
+		       Row(TEXT("Upscaling"),
+		           ScaleAt == 0 ? FString(TEXT("Renders every pixel: the sharpest, and the slowest"))
+		                        : FString::Printf(TEXT("Renders %d%% of the pixels and TSR sharpens them back up"),
+		                                          Scales[ScaleAt])),
 		       {TEXT("Off"), TEXT("Quality"), TEXT("Balanced"), TEXT("Performance")}, ScaleAt,
 		       [](int32 I)
 		       {
@@ -944,10 +1000,10 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		Slide(TEXT("difficulty"),
 		      Row(TEXT("Climb difficulty"), TEXT("The share of the road's gradient the trainer gives you")),
 		      &FRideProfile::Difficulty, 0.f, 100.f, 5.f, TEXT("%"));
-		Choice(TEXT("erg"), Row(TEXT("ERG in workouts"), TEXT("The trainer holds each step's power for you (E)")),
+		Choice(TEXT("erg"), Row(TEXT("ERG in workouts"), TEXT("The trainer holds each step's power for you; E switches it mid-ride")),
 		       {TEXT("On"), TEXT("Off")}, Pawn->bErg ? 0 : 1,
 		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bErg = I == 0; }); });
-		Slide(TEXT("fov"), Row(TEXT("Field of view"), TEXT("Wider feels faster; 61° frames like a 20 mm lens")),
+		Slide(TEXT("fov"), Row(TEXT("Field of view"), TEXT("How much of the road you see across the screen; wider feels faster")),
 		      &FRideProfile::Fov, 45.f, 100.f, 1.f, TEXT("°"));
 	}
 	else if (Tab == ERideSettingsTab::Rider && Pawn)
@@ -969,25 +1025,30 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			float FRideProfile::*Field; // or nullptr: the max heart rate, an int
 			bool bTenths; // shown to 0.1, else whole
 			const TCHAR* Unit;
+			bool bMass; // kilograms, shown and stepped in pounds under imperial
 		};
 		static const FSlide Slides[4] = {
 			{TEXT("ftp"), TEXT("FTP"), TEXT("The power you can hold for an hour"), 100.f, 450.f, 5.f, &FRideProfile::Ftp,
-			 false, TEXT("W")},
+			 false, TEXT("W"), false},
 			{TEXT("weight"), TEXT("Weight"), TEXT("Yours: it sets how hard the climbs are"), 40.f, 150.f, 0.5f,
-			 &FRideProfile::WeightKg, true, TEXT("kg")},
+			 &FRideProfile::WeightKg, true, TEXT("kg"), true},
 			{TEXT("bike"), TEXT("Bike"), TEXT("The bike's weight"), 6.f, 20.f, 0.5f, &FRideProfile::BikeKg,
-			 true, TEXT("kg")},
+			 true, TEXT("kg"), true},
 			{TEXT("maxhr"), TEXT("Max heart rate"), TEXT("Sets the heart-rate zones"), 150.f, 215.f, 1.f, nullptr,
-			 false, TEXT("bpm")},
+			 false, TEXT("bpm"), false},
 		};
 		for (const FSlide& S : Slides)
 		{
 			const float Cy = Row(S.Name, S.Hint);
 			const float Value = S.Field ? Pawn->Profile.*(S.Field) : static_cast<float>(Pawn->Profile.MaxHeartRate);
 			const FSlide* Sp = &S;
-			auto Write = [Edit, Sp](float NewValue)
+			// Under imperial a weight steps by a pound and is kept in kilograms.
+			const bool bPounds = S.bMass && U::bImperial;
+			auto Write = [Edit, Sp, bPounds](float NewValue)
 			{
-				NewValue = FMath::Clamp(FMath::RoundToFloat(NewValue / Sp->Step) * Sp->Step, Sp->Lo, Sp->Hi);
+				NewValue = bPounds ? static_cast<float>(U::Kilos(FMath::RoundToFloat(static_cast<float>(U::Mass(NewValue)))))
+				                   : FMath::RoundToFloat(NewValue / Sp->Step) * Sp->Step;
+				NewValue = FMath::Clamp(NewValue, Sp->Lo, Sp->Hi);
 				Edit([Sp, NewValue](FRideProfile& Pr)
 				     {
 					     if (Sp->Field)
@@ -1001,8 +1062,12 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 				     });
 			};
 			C.Slider(S.Key, Right - 560.f, Cy, 560.f, (Value - S.Lo) / (S.Hi - S.Lo),
-			         S.bTenths ? FString::Printf(TEXT("%.1f %s"), Value, S.Unit) : FString::Printf(TEXT("%.0f %s"), Value, S.Unit), [Write, Sp](float Share) { Write(FMath::Lerp(Sp->Lo, Sp->Hi, Share)); },
-			         [Write, Sp, Value](int32 By) { Write(Value + By * Sp->Step); });
+			         bPounds     ? FString::Printf(TEXT("%.0f %s"), U::Mass(Value), U::MassUnit())
+			         : S.bTenths ? FString::Printf(TEXT("%.1f %s"), Value, S.Unit)
+			                     : FString::Printf(TEXT("%.0f %s"), Value, S.Unit),
+			         [Write, Sp](float Share) { Write(FMath::Lerp(Sp->Lo, Sp->Hi, Share)); },
+			         [Write, Sp, Value, bPounds](int32 By)
+			         { Write(bPounds ? static_cast<float>(U::Kilos(U::Mass(Value) + By)) : Value + By * Sp->Step); });
 		}
 		// The HUD's colour: the themes the rider's level has unlocked.
 		const float Cy = Row(TEXT("HUD colour"), TEXT("More unlock as you level up"));
@@ -1052,114 +1117,153 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	URideMenu* M = &C.Menu;
 	const ARidePawn* Pawn = C.Pawn;
 	Shade(P, C.W, 0.66f);
-	PaintHeader(C, TEXT("Your rides"));
+	PaintHeader(C, TEXT("Stats"));
 	const float RightEdge = C.W - 64.f;
 
-	// The period, every ride, and the rider's level.
+	// Beside the title the rider's level; at the right every ride and the period.
+	if (Pawn)
+	{
+		const Veloverse::FLevel Level = Veloverse::LevelFor(Pawn->Profile.Xp);
+		const float Lx = 140.f + P.Width(TEXT("Stats"), P.Serif(44.f)) + 32.f;
+		P.Text(Lx, 68.f, FString::Printf(TEXT("Level %d"), Level.Level), P.Font("Bold", 15.f), Ink);
+		P.Text(Lx + 260.f, 68.f,
+		       Level.Needed > 0 ? FString::Printf(TEXT("%s / %s XP"), *Thousands(Level.Into), *Thousands(Level.Needed))
+		                        : FString(TEXT("Top level")),
+		       P.Font("Medium", 15.f), Muted, EAlign::Right);
+		P.Round(Lx, 80.f, 260.f, 6.f, 3.f, InkA(0.14f));
+		P.Round(Lx, 80.f, FMath::Max(260.f * static_cast<float>(Level.Fraction()), 6.f), 6.f, 3.f, C.Accent);
+	}
 	const TArray<FString> Periods = {TEXT("Week"), TEXT("Month"), TEXT("Year"), TEXT("All time")};
-	const float Sw = C.SegmentedWidth(Periods, 15.f, 88.f);
-	C.Segmented(TEXT("period"), RightEdge - Sw, 48.f, Periods, Period, [M](int32 I) { M->Period = I; }, 42.f, 15.f,
+	const float Sw = C.SegmentedWidth(Periods, 16.f, 88.f);
+	C.Segmented(TEXT("period"), RightEdge - Sw, 48.f, Periods, Period, [M](int32 I) { M->Period = I; }, 44.f, 16.f,
 	            88.f);
-	float X = RightEdge - Sw - 16.f;
 	if (History.Num() > 0)
 	{
-		const float Bw = C.ButtonWidth(TEXT("Every ride"), 16.f, true, 20.f);
-		X -= Bw;
-		C.Button(TEXT("rides"), X, 52.f, Bw, 44.f, TEXT("Every ride"), EButton::Outline,
+		const float Bw = C.ButtonWidth(TEXT("Your rides"), 16.f, false, 20.f);
+		C.Button(TEXT("rides"), RightEdge - Sw - 16.f - Bw, 50.f, Bw, 52.f, TEXT("Your rides"), EButton::Outline,
 		         [M]
 		         {
 			         M->bFromStats = true;
 			         M->ReviewRide(0);
 			         M->Show(ERideMenuPage::Summary);
 		         },
-		         Icons::Stats, 16.f);
-		X -= 32.f;
+		         nullptr, 16.f);
 	}
-	if (Pawn)
+
+	// The period's totals, in a card of six.
 	{
-		const Veloverse::FLevel Level = Veloverse::LevelFor(Pawn->Profile.Xp);
-		X -= 220.f;
-		P.Text(X, 70.f, FString::Printf(TEXT("Level %d"), Level.Level), P.Font("Bold", 17.f), Ink);
-		P.Text(X + 220.f, 70.f,
-		       Level.Needed > 0 ? FString::Printf(TEXT("%s / %s XP"), *Thousands(Level.Into), *Thousands(Level.Needed))
-		                        : FString(TEXT("Top level")),
-		       P.Font("Medium", 14.f), Muted, EAlign::Right);
-		P.Round(X, 82.f, 220.f, 6.f, 3.f, InkA(0.14f));
-		P.Round(X, 82.f, FMath::Max(220.f * static_cast<float>(Level.Fraction()), 6.f), 6.f, 3.f, C.Accent);
+		const FTotals& T = Totals[FMath::Clamp(Period, 0, 3)];
+		const float Top = 132.f, Ht = 112.f, Cw = (RightEdge - 64.f) / 6.f;
+		C.Panel(64.f, Top, RightEdge - 64.f, Ht, 16.f);
+		struct FTotal
+		{
+			const TCHAR* Name;
+			FString Value, Unit;
+		};
+		const FTotal Row[6] = {
+			{T.Rides == 1 ? TEXT("Ride") : TEXT("Rides"), FString::FromInt(T.Rides), FString()},
+			{TEXT("Distance"), U::Number(U::Long(T.Km * 1000.0), 1), U::LongUnit()},
+			{TEXT("Riding time"), Hours(T.Seconds), FString()},
+			{TEXT("Climbing"), Thousands(U::Height(T.Climbed)), U::HeightUnit()},
+			{TEXT("Energy"), Thousands(T.Kj), TEXT("kJ")},
+			{TEXT("Training stress"), Thousands(T.Tss), TEXT("TSS")},
+		};
+		for (int32 I = 0; I < 6; ++I)
+		{
+			const float Cx = 64.f + I * Cw;
+			if (I > 0)
+			{
+				P.Rect(Cx, Top + 1.f, 1.f, Ht - 2.f, InkA(0.08f));
+			}
+			P.Text(Cx + 32.f, Top + 44.f, Row[I].Name, P.Font("Medium", 15.f), Muted);
+			const float Vw = P.Text(Cx + 32.f, Top + 88.f, Row[I].Value, P.Font("Bold", 38.f), Ink);
+			if (!Row[I].Unit.IsEmpty())
+			{
+				P.Text(Cx + 38.f + Vw, Top + 88.f, Row[I].Unit, P.Font("Medium", 17.f), Soft);
+			}
+		}
 	}
 
-	// The period's totals.
-	const FTotals& T = Totals[FMath::Clamp(Period, 0, 3)];
-	const float Cw = (RightEdge - 64.f) / 6.f;
-	Stat(P, 64.f, 196.f, FString::FromInt(T.Rides), FString(), T.Rides == 1 ? TEXT("Ride") : TEXT("Rides"), 48.f);
-	Stat(P, 64.f + Cw, 196.f, U::Number(U::Long(T.Km * 1000.0), 1), U::LongUnit(), TEXT("Distance"), 48.f);
-	Stat(P, 64.f + 2.f * Cw, 196.f, Hours(T.Seconds), FString(), TEXT("Riding time"), 48.f);
-	Stat(P, 64.f + 3.f * Cw, 196.f, Thousands(U::Height(T.Climbed)), U::HeightUnit(), TEXT("Climbing"), 48.f);
-	Stat(P, 64.f + 4.f * Cw, 196.f, Thousands(T.Kj), TEXT("kJ"), TEXT("Energy"), 48.f);
-	Stat(P, 64.f + 5.f * Cw, 196.f, Thousands(T.Tss), FString(), TEXT("Training stress"), 48.f);
-
-	// Twelve weeks of distance.
+	// Twelve weeks of distance, against an axis in round numbers.
 	C.Panel(64.f, 268.f, 912.f, 372.f);
-	P.Text(88.f, 306.f, TEXT("Distance by week"), P.Font("Bold", 18.f), Ink);
+	P.Text(92.f, 310.f, TEXT("Distance by week"), P.Font("Bold", 20.f), Ink);
 	if (WeekKm.Num() == 12)
 	{
-		P.Text(952.f, 306.f, U::Distance(WeekKm.Last() * 1000.0, 0) + TEXT(" this week"), P.Font("Medium", 15.f), Muted,
-		       EAlign::Right);
-		double Most = 10.0;
+		const float Vw = P.Text(948.f, 308.f, U::Distance(WeekKm.Last() * 1000.0, 0), P.Font("Bold", 15.f), Ink,
+		                        EAlign::Right);
+		P.Text(944.f - Vw, 308.f, TEXT("Last 12 weeks · this week"), P.Font("Medium", 15.f), Muted, EAlign::Right);
+		TArray<double> Shown;
+		double Most = 0.0;
 		for (const double Km : WeekKm)
 		{
-			Most = FMath::Max(Most, Km);
+			Shown.Add(U::Long(Km * 1000.0));
+			Most = FMath::Max(Most, Shown.Last());
 		}
-		const float Bw = 848.f / 12.f;
+		double Step = 5.0;
+		for (const double Nice : {5.0, 10.0, 20.0, 25.0, 50.0, 100.0, 200.0, 250.0, 500.0})
+		{
+			Step = Nice;
+			if (Nice * 3.0 >= Most)
+			{
+				break;
+			}
+		}
+		const double Top = Step * 3.0;
+		const float Gx = 148.f, Gw = 800.f, Base = 580.f, Ch = 200.f;
+		for (int32 G = 0; G <= 3; ++G)
+		{
+			const float Gy = Base - Ch * G / 3.f;
+			P.Rect(Gx, Gy, Gw, 1.f, InkA(G == 0 ? 0.2f : 0.07f));
+			P.Text(Gx - 12.f, Mid(Gy, 13.f), U::Number(Step * G, 0), P.Font("Medium", 13.f), Muted, EAlign::Right);
+		}
+		const float Gap = 14.f, Bw = (Gw - 11.f * Gap) / 12.f;
 		for (int32 I = 0; I < 12; ++I)
 		{
-			const float H = static_cast<float>(WeekKm[I] / Most) * 220.f;
-			const float Bx = 104.f + I * Bw;
-			P.Round(Bx, 588.f - FMath::Max(H, 3.f), Bw - 16.f, FMath::Max(H, 3.f), 4.f,
-			        I == 11 ? C.Accent : InkA(WeekKm[I] > 0.0 ? 0.32f : 0.1f));
-			if (WeekKm[I] > 0.0)
+			const float H = static_cast<float>(Shown[I] / Top) * Ch;
+			const float Bx = Gx + I * (Bw + Gap);
+			if (Shown[I] > 0.0)
 			{
-				P.Text(Bx + (Bw - 16.f) * 0.5f, 580.f - H, FString::Printf(TEXT("%.0f"), WeekKm[I]), P.Font("Bold", 13.f),
-				       Soft, EAlign::Centre);
+				P.Round(Bx, Base - FMath::Max(H, 3.f), Bw, FMath::Max(H, 3.f), 4.f, I == 11 ? C.Accent : InkA(0.32f));
+				P.Text(Bx + Bw * 0.5f, Base - H - 8.f, U::Number(Shown[I], 0), P.Font("Medium", 13.f), Soft,
+				       EAlign::Centre);
 			}
 			if (I % 2 == 1 && WeekStarts.IsValidIndex(I))
 			{
-				P.Text(Bx + (Bw - 16.f) * 0.5f, 616.f,
+				P.Text(Bx + Bw * 0.5f, Base + 28.f,
 				       FString::Printf(TEXT("%d %s"), WeekStarts[I].GetDay(), MonthName(WeekStarts[I].GetMonth())),
 				       P.Font("Medium", 13.f), Muted, EAlign::Centre);
 			}
 		}
 	}
 
-	// The power curve: the best of every ride, and of the last 90 days.
+	// The power curve: the last 90 days, and every ride dashed under it.
 	const float Px0 = 1000.f, Pw = RightEdge - Px0;
 	C.Panel(Px0, 268.f, Pw, 372.f);
-	P.Text(Px0 + 24.f, 306.f, TEXT("Power curve"), P.Font("Bold", 18.f), Ink);
+	P.Text(Px0 + 28.f, 310.f, TEXT("Power curve"), P.Font("Bold", 20.f), Ink);
 	{
-		const float Lw = P.Text(Px0 + Pw - 24.f, 306.f, TEXT("All time"), P.Font("Medium", 15.f), Muted, EAlign::Right);
-		P.Lines({FVector2f(Px0 + Pw - 56.f - Lw, 301.f), FVector2f(Px0 + Pw - 32.f - Lw, 301.f)}, InkA(0.5f), 2.f);
-		const float L2 = P.Width(TEXT("Last 90 days"), P.Font("Medium", 15.f));
-		const float L2x = Px0 + Pw - 80.f - Lw - L2;
-		P.Text(L2x, 306.f, TEXT("Last 90 days"), P.Font("Medium", 15.f), Muted);
-		P.Lines({FVector2f(L2x - 32.f, 301.f), FVector2f(L2x - 8.f, 301.f)}, C.Accent, 2.5f);
+		const FSlateFontInfo F = P.Font("Medium", 14.f);
+		const float Aw = P.Text(Px0 + Pw - 28.f, 308.f, TEXT("All time"), F, Soft, EAlign::Right);
+		const float Ax = Px0 + Pw - 28.f - Aw - 8.f;
+		P.Dashed({FVector2f(Ax - 18.f, 303.f), FVector2f(Ax, 303.f)}, Muted, 2.f, 4.f, 3.f);
+		const float Rw = P.Text(Ax - 38.f, 308.f, TEXT("Last 90 days"), F, Soft, EAlign::Right);
+		P.Rect(Ax - 38.f - Rw - 26.f, 302.f, 18.f, 3.f, C.Accent);
 	}
 	double Top = 100.0;
 	for (int32 I = 1; I <= 10; ++I)
 	{
 		Top = FMath::Max(Top, CurveAll[I]);
 	}
-	Top = FMath::CeilToDouble(Top / 100.0) * 100.0;
-	const float Cx0 = Px0 + 64.f, CwP = Pw - 144.f, Base = 584.f, Ch = 220.f;
+	Top = FMath::CeilToDouble(Top / 150.0) * 150.0;
+	const float Cx0 = Px0 + 84.f, CwP = Pw - 140.f, Base = 584.f, Ch = 220.f;
 	auto CurveX = [&](double Seconds)
 	{ return Cx0 + static_cast<float>(FMath::Loge(Seconds / 5.0) / FMath::Loge(720.0)) * CwP; };
-	for (int32 G = 1; G <= 2; ++G)
+	for (int32 G = 0; G <= 3; ++G)
 	{
-		const float Gy = Base - Ch * G / 2.f;
-		P.Rect(Cx0, Gy, CwP, 1.f, InkA(0.08f));
-		P.Text(Cx0 - 10.f, Mid(Gy, 13.f), FString::Printf(TEXT("%.0f"), Top * G / 2.0), P.Font("Medium", 13.f), Muted,
+		const float Gy = Base - Ch * G / 3.f;
+		P.Rect(Cx0, Gy, CwP, 1.f, InkA(G == 0 ? 0.2f : 0.08f));
+		P.Text(Cx0 - 10.f, Mid(Gy, 13.f), FString::Printf(TEXT("%.0f W"), Top * G / 3.0), P.Font("Medium", 13.f), Muted,
 		       EAlign::Right);
 	}
-	P.Rect(Cx0, Base, CwP, 1.f, InkA(0.2f));
 	const int32 Ticks[5] = {5, 60, 300, 1200, 3600};
 	const TCHAR* TickNames[5] = {TEXT("5 s"), TEXT("1 min"), TEXT("5 min"), TEXT("20 min"), TEXT("1 hr")};
 	for (int32 I = 0; I < 5; ++I)
@@ -1178,49 +1282,65 @@ void URideMenu::PaintStats(FPaintContext& C) const
 		}
 		return Out;
 	};
-	P.Lines(CurveLine(CurveAll), InkA(0.5f), 2.f);
+	P.Dashed(CurveLine(CurveAll), Muted, 2.f, 6.f, 4.f);
 	const TArray<FVector2f> Recent = CurveLine(Curve90);
 	P.Area(Recent, Base, WithAlpha(C.Accent, 0.12f));
 	P.Lines(Recent, C.Accent, 2.5f);
-	for (const FVector2f& Pt : Recent)
-	{
-		P.Disc(Pt.X, Pt.Y, 3.5f, C.Accent);
-	}
 	if (Pawn && Pawn->Ftp > 0.f)
 	{
-		const float Fy = Base - static_cast<float>(Pawn ? Pawn->Ftp / Top : 0.0) * Ch;
-		if (Pawn && Fy > Base - Ch)
+		const float Fy = Base - static_cast<float>(Pawn->Ftp / Top) * Ch;
+		if (Fy > Base - Ch)
 		{
-			P.Dashed({FVector2f(Cx0, Fy), FVector2f(Cx0 + CwP, Fy)}, InkA(0.35f), 1.f, 5.f, 5.f);
+			P.Dashed({FVector2f(Cx0, Fy), FVector2f(Cx0 + CwP, Fy)}, InkA(0.3f), 1.f, 5.f, 5.f);
 			P.Text(Cx0 + CwP + 8.f, Mid(Fy, 13.f), TEXT("FTP"), P.Font("Bold", 13.f), Muted);
 		}
 	}
+	// The twenty minutes picked out, as FTP is read from them.
+	if (Curve90[8] > 0.0)
+	{
+		const float Tx = CurveX(1200.0), Ty = Base - static_cast<float>(Curve90[8] / Top) * Ch;
+		P.Disc(Tx, Ty, 8.f, Night);
+		P.Disc(Tx, Ty, 5.5f, C.Accent);
+		P.Text(Tx + 14.f, Ty - 12.f, FString::Printf(TEXT("20 min · %.0f W"), Curve90[8]), P.Font("Bold", 15.f), Ink);
+	}
 
-	// Fitness and fatigue, a day at a time.
+	// Fitness, fatigue and form: the three numbers, then the 90 days.
 	C.Panel(64.f, 664.f, 700.f, 352.f);
-	P.Text(88.f, 702.f, TEXT("Fitness and fatigue"), P.Font("Bold", 18.f), Ink);
-	const double Form = Load.Form();
-	P.Text(740.f, 702.f, FString::Printf(TEXT("Form %+.0f, %s"), Form, UTF8_TO_TCHAR(Veloverse::FormWord(Form))),
-	       P.Font("Bold", 16.f), Form > 5.0 ? Ok : Form < -30.0 ? Heart : Soft, EAlign::Right);
+	P.Text(92.f, 706.f, TEXT("Fitness and form"), P.Font("Bold", 20.f), Ink);
+	P.Text(736.f, 704.f, TEXT("Last 90 days, from training load"), P.Font("Medium", 14.f), Muted, EAlign::Right);
 	if (Load.Fitness.size() > 1)
 	{
-		double Most = 20.0;
+		const double Form = Load.Form();
+		const FString Numbers[3] = {FString::Printf(TEXT("%.0f"), Load.Fitness.back()),
+		                            FString::Printf(TEXT("%.0f"), Load.Fatigue.back()), FString::Printf(TEXT("%+.0f"), Form)};
+		const FString Names[3] = {TEXT("Fitness"), TEXT("Fatigue"),
+		                          FString(TEXT("Form: ")) + UTF8_TO_TCHAR(Veloverse::FormWord(Form))};
+		const FLinearColor Colours[3] = {Sky, Fatigue, Ink};
+		float Nx = 92.f;
+		for (int32 I = 0; I < 3; ++I)
+		{
+			const float Vw = P.Text(Nx, 754.f, Numbers[I], P.Font("Bold", 30.f), Colours[I]);
+			const float Lw = P.Text(Nx, 776.f, Names[I], P.Font("Medium", 14.f), Muted);
+			Nx += FMath::Max(Vw, Lw) + 36.f;
+		}
+		double Most = 20.0, Busiest = 1.0;
 		for (size_t I = 0; I < Load.Fitness.size(); ++I)
 		{
 			Most = FMath::Max(Most, FMath::Max(Load.Fitness[I], Load.Fatigue[I]));
 		}
 		for (const double Tss : DayTss)
 		{
-			Most = FMath::Max(Most, Tss * 0.6);
+			Busiest = FMath::Max(Busiest, Tss);
 		}
 		Most *= 1.1;
-		const float Fx = 104.f, Fw = 620.f, Fy = 732.f, Fh = 220.f;
+		const float Fx = 92.f, Fw = 644.f, Fy = 796.f, Fh = 172.f;
+		// Each day's load as a bar on its own scale: the busiest day reaches halfway up.
 		const int32 N = DayTss.Num();
 		for (int32 I = 0; I < N; ++I)
 		{
 			if (DayTss[I] > 0.0)
 			{
-				const float H = FMath::Min(static_cast<float>(DayTss[I] / Most), 1.f) * Fh;
+				const float H = FMath::Max(static_cast<float>(DayTss[I] / Busiest) * Fh * 0.5f, 2.f);
 				P.Rect(Fx + Fw * I / FMath::Max(N - 1, 1) - 2.f, Fy + Fh - H, 4.f, H, InkA(0.16f));
 			}
 		}
@@ -1228,63 +1348,86 @@ void URideMenu::PaintStats(FPaintContext& C) const
 		P.Lines(Plot(Load.Fatigue, Days, Fx, Fy, Fw, Fh, 0.0, Most), Fatigue, 2.f);
 		P.Lines(Plot(Load.Fitness, Days, Fx, Fy, Fw, Fh, 0.0, Most), Sky, 2.6f);
 		P.Rect(Fx, Fy + Fh, Fw, 1.f, InkA(0.2f));
-		P.Text(Fx, Fy + Fh + 26.f, TEXT("90 days ago"), P.Font("Medium", 13.f), Muted);
-		P.Text(Fx + Fw, Fy + Fh + 26.f, TEXT("Today"), P.Font("Medium", 13.f), Muted, EAlign::Right);
-		const float Lx = Fx + Fw * 0.5f - 130.f;
-		P.Disc(Lx, Fy + Fh + 21.f, 5.f, Sky);
-		P.Text(Lx + 12.f, Fy + Fh + 26.f, FString::Printf(TEXT("Fitness %.0f"), Load.Fitness.back()),
-		       P.Font("Medium", 13.f), Soft);
-		P.Disc(Lx + 130.f, Fy + Fh + 21.f, 5.f, Fatigue);
-		P.Text(Lx + 142.f, Fy + Fh + 26.f, FString::Printf(TEXT("Fatigue %.0f"), Load.Fatigue.back()),
-		       P.Font("Medium", 13.f), Soft);
+		P.Text(Fx, Fy + Fh + 24.f, TEXT("90 days ago"), P.Font("Medium", 13.f), Muted);
+		P.Text(Fx + Fw, Fy + Fh + 24.f, TEXT("Today"), P.Font("Medium", 13.f), Muted, EAlign::Right);
 	}
 
-	// The islands ridden.
+	// The islands ridden, every ride's distance shared between them.
 	C.Panel(788.f, 664.f, 468.f, 352.f);
-	P.Text(812.f, 702.f, TEXT("Islands"), P.Font("Bold", 18.f), Ink);
-	P.Text(1232.f, 702.f, FString::Printf(TEXT("%d of %d routes ridden"), RoutesRidden, Surveys.Num()),
-	       P.Font("Medium", 15.f), Muted, EAlign::Right);
-	double IslandMost = 1.0;
+	P.Text(816.f, 706.f, TEXT("Islands ridden"), P.Font("Bold", 20.f), Ink);
+	double IslandMost = 1e-3;
 	for (const TPair<FString, double>& I : IslandKm)
 	{
 		IslandMost = FMath::Max(IslandMost, I.Value);
 	}
+	const float RowH = IslandKm.Num() > 5 ? 36.f : 42.f;
 	for (int32 I = 0; I < IslandKm.Num(); ++I)
 	{
-		const float Iy = 756.f + I * 50.f;
-		const FLinearColor Colour = IslandColour(IslandKm[I].Key);
-		P.Disc(818.f, Iy, 6.f, Colour);
-		P.Text(834.f, Mid(Iy, 16.f), IslandKm[I].Key, P.Font("Bold", 16.f), Ink);
-		P.Round(970.f, Iy - 4.f, 180.f, 8.f, 4.f, InkA(0.08f));
-		P.Round(970.f, Iy - 4.f, FMath::Max(180.f * static_cast<float>(IslandKm[I].Value / IslandMost), 8.f), 8.f, 4.f,
-		        Colour);
-		P.Text(1232.f, Mid(Iy, 15.f), U::Distance(IslandKm[I].Value * 1000.0, U::Long(IslandKm[I].Value * 1000.0) < 9.95 ? 1 : 0), P.Font("Medium", 15.f), Soft,
-		       EAlign::Right);
+		const float Iy = 738.f + I * RowH;
+		const bool bElsewhere = I >= 5;
+		const FLinearColor Colour = bElsewhere ? InkA(0.4f) : IslandColour(IslandKm[I].Key);
+		const double Shown = U::Long(IslandKm[I].Value * 1000.0);
+		P.Text(816.f, Iy, IslandKm[I].Key, P.Font("Medium", 15.f), bElsewhere ? Soft : Ink);
+		P.Text(1228.f, Iy, U::Number(Shown, Shown < 9.95 ? 1 : 0) + TEXT(" ") + U::LongUnit(), P.Font("Medium", 15.f),
+		       Soft, EAlign::Right);
+		P.Round(816.f, Iy + 8.f, 412.f, 8.f, 4.f, InkA(0.08f));
+		if (IslandKm[I].Value > 0.0)
+		{
+			P.Round(816.f, Iy + 8.f, FMath::Max(412.f * static_cast<float>(IslandKm[I].Value / IslandMost), 8.f), 8.f, 4.f,
+			        Colour);
+		}
+	}
+	{
+		P.Rect(816.f, 966.f, 412.f, 1.f, InkA(0.08f));
+		const float Rw = P.Text(816.f, 996.f, TEXT("Routes ridden "), P.Font("Medium", 15.f), Ink);
+		P.Text(816.f + Rw, 996.f, FString::Printf(TEXT("%d of %d"), RoutesRidden, Surveys.Num()), P.Font("Bold", 15.f), Ink);
+		float Dx = 1228.f - Surveys.Num() * 20.f + 6.f;
+		for (const FRouteSurvey& S : Surveys)
+		{
+			P.Disc(Dx + 7.f, 991.f, 7.f, RiddenRoutes.Contains(S.Title) ? C.Accent : InkA(0.14f));
+			Dx += 20.f;
+		}
 	}
 
-	// The climbs' best times.
-	const float Bx = 1280.f, Bw = RightEdge - Bx;
+	// The climbs' best times, as a table.
+	const float Bx = 1280.f, Bw = RightEdge - Bx, Br = RightEdge - 28.f;
 	C.Panel(Bx, 664.f, Bw, 352.f);
-	P.Text(Bx + 24.f, 702.f, TEXT("Climb bests"), P.Font("Bold", 18.f), Ink);
+	P.Text(Bx + 28.f, 706.f, TEXT("Climb bests"), P.Font("Bold", 20.f), Ink);
+	P.Text(Br, 704.f, TEXT("Timed climbs"), P.Font("Medium", 14.f), Muted, EAlign::Right);
+	const float ColTries = Br, ColW = Br - 70.f, ColBest = ColW - 76.f;
 	if (ClimbBests.Num() == 0)
 	{
-		P.Wrap(Bx + 24.f, 748.f, Bw - 48.f, 24.f, TEXT("Ride a route with a climb to set a time on it."),
+		P.Wrap(Bx + 28.f, 752.f, Bw - 56.f, 24.f, TEXT("Ride a route with a climb to set a time on it."),
 		       P.Font("Medium", 16.f), Muted);
+	}
+	else
+	{
+		const FSlateFontInfo Head = P.Font("Medium", 13.f);
+		P.Text(Bx + 28.f, 742.f, TEXT("Climb"), Head, Muted);
+		P.Text(ColBest, 742.f, TEXT("Best"), Head, Muted, EAlign::Right);
+		P.Text(ColW, 742.f, TEXT("W"), Head, Muted, EAlign::Right);
+		P.Text(ColTries, 742.f, TEXT("Tries"), Head, Muted, EAlign::Right);
 	}
 	for (int32 I = 0; I < FMath::Min(ClimbBests.Num(), 5); ++I)
 	{
 		const FClimbBest& B = ClimbBests[I];
-		const float Cy = 742.f + I * 54.f;
-		P.Text(Bx + 24.f, Cy + 14.f, P.Fit(B.Name, P.Font("Bold", 17.f), Bw - 200.f), P.Font("Bold", 17.f), Ink);
-		P.Text(Bx + 24.f, Cy + 36.f,
-		       FString::Printf(TEXT("%s · %d %s"), *Watts(B.Watts), B.Tries, B.Tries == 1 ? TEXT("try") : TEXT("tries")),
-		       P.Font("Medium", 14.f), Muted);
-		P.Text(Bx + Bw - 24.f, Cy + 22.f, Clock(B.Seconds, false), P.Font("Bold", 20.f), B.bRecent ? C.Accent : Ink,
-		       EAlign::Right);
+		const float Ry = 752.f + I * 46.f, Cy = Ry + 23.f;
+		P.Rect(Bx + 28.f, Ry, Bw - 56.f, 1.f, InkA(0.08f));
+		P.Round(Bx + 28.f, Cy - 5.f, 10.f, 10.f, 3.f, IslandColour(B.Name) == Muted ? C.Accent : IslandColour(B.Name));
+		const FSlateFontInfo F = P.Font("Medium", 16.f);
+		const FSlateFontInfo Badge = P.Font("Bold", 12.f);
+		const float BadgeW = B.bRecent ? P.Width(TEXT("New best"), Badge) + 14.f : 0.f;
+		const float Room = ColBest - 64.f - (Bx + 48.f) - (B.bRecent ? BadgeW + 10.f : 0.f);
+		const float Nw = P.Text(Bx + 48.f, Mid(Cy, 16.f), P.Fit(B.Name, F, Room), F, Ink);
 		if (B.bRecent)
 		{
-			Label(P, Bx + Bw - 24.f, Cy + 42.f, TEXT("PR this week"), C.Accent, EAlign::Right, 11.f);
+			P.Round(Bx + 58.f + Nw, Cy - 10.f, BadgeW, 20.f, 6.f, C.Accent);
+			P.Text(Bx + 65.f + Nw, Mid(Cy, 12.f), TEXT("New best"), Badge, C.OnAccent);
 		}
+		P.Text(ColBest, Mid(Cy, 16.f), Clock(B.Seconds, false), P.Font("Bold", 16.f), Ink, EAlign::Right);
+		P.Text(ColW, Mid(Cy, 16.f), B.Watts > 0.0 ? FString::Printf(TEXT("%.0f"), B.Watts) : FString(TEXT("–")), F,
+		       Soft, EAlign::Right);
+		P.Text(ColTries, Mid(Cy, 16.f), FString::FromInt(B.Tries), F, Soft, EAlign::Right);
 	}
 	if (History.Num() == 0)
 	{
@@ -1332,11 +1475,15 @@ void URideMenu::PaintPause(FPaintContext& C) const
 	else
 	{
 		Add(TEXT("resume"), TEXT("Resume"), EButton::Primary, [M] { M->Controller()->Resume(); }, nullptr);
-		Add(TEXT("end"), TEXT("End ride"), EButton::Outline, [M] { M->Controller()->EndRide(); }, nullptr);
+		Add(TEXT("end"), TEXT("End and save the ride"), EButton::Outline, [M] { M->Controller()->EndRide(); },
+		    Icons::Stats);
 	}
 	Add(TEXT("settings"), TEXT("Settings"), EButton::Outline, [M] { M->Show(ERideMenuPage::Settings); }, Icons::Gear);
-	Add(TEXT("home"), TEXT("Back to the start"), EButton::Outline, [M] { M->Controller()->Restart(); }, nullptr);
-	Add(TEXT("quit"), TEXT("Quit"), EButton::Quiet, [M] { M->Controller()->Quit(); }, Icons::Leave);
+	// Restarting reloads the level, so an unfinished ride is dropped: say so.
+	Add(TEXT("home"), bFinished ? TEXT("Back to the start") : TEXT("Leave without saving"), EButton::Outline,
+	    [M] { M->Controller()->Restart(); }, nullptr);
+	Add(TEXT("quit"), bFinished ? TEXT("Quit") : TEXT("Quit without saving"), EButton::Quiet,
+	    [M] { M->Controller()->Quit(); }, Icons::Leave);
 }
 
 // ---- A ride's review -----------------------------------------------------------------------------
@@ -1541,7 +1688,10 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		}
 		else
 		{
+			// From zero, and never so short a scale that an easy ride looks flat out: power reaches
+			// at least FTP, cadence at least 100 rpm.
 			Lo = 0.0;
+			Hi = FMath::Max(Hi, I == 0 ? static_cast<double>(Review.Ftp) : 100.0);
 		}
 		Hi *= I == 3 ? 1.0 : 1.05;
 		if (I == 3 && Review.IslandSpans.Num() > 0)
@@ -1566,8 +1716,12 @@ void URideMenu::PaintReview(FPaintContext& C) const
 			P.Dashed({FVector2f(Gx, Ay), FVector2f(Gx + Gw, Ay)}, InkA(0.4f), 1.f, 5.f, 5.f);
 		}
 	}
-	P.Text(Gx + Gw, 690.f, U::Distance(Tr.Metres), P.Font("Medium", 12.f), Muted,
-	       EAlign::Right);
+	// The distance under the traces: the start, each quarter and the end.
+	for (int32 Q = 0; Q <= 4; ++Q)
+	{
+		P.Text(Gx + Gw * Q / 4.f, 690.f, U::Distance(Tr.Metres * Q / 4.0, Q == 0 ? 0 : 1), P.Font("Medium", 12.f),
+		       Muted, Q == 0 ? EAlign::Left : Q == 4 ? EAlign::Right : EAlign::Centre);
+	}
 
 	// Time in each power zone.
 	C.Panel(X0, 716.f, 520.f, 300.f);
