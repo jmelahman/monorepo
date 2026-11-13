@@ -911,9 +911,15 @@ def _blade_instances(material=None, params=None):
     return out
 
 
+def _is_blade(biome, slug):
+    """The glTF grass blades in BLADES. Fab assets imported into the "climb" biome (the wave-2
+    dead birch) live in MS like every other biome's, so v43 found no meshes for them in BLADES."""
+    return biome == "climb" and not assets.does_directory_exist(f"{MS}/climb/{slug}")
+
+
 def _mesh_folder(biome, slug):
-    # glTF imports land in <slug>/<file>/StaticMeshes, so callers list "climb" folders recursively.
-    return f"{BLADES}/{slug}" if biome == "climb" else f"{MS}/{biome}/{slug}"
+    # glTF imports land in <slug>/<file>/StaticMeshes, so callers list blade folders recursively.
+    return f"{BLADES}/{slug}" if _is_blade(biome, slug) else f"{MS}/{biome}/{slug}"
 
 
 def _blade_master():
@@ -1131,11 +1137,11 @@ def _grass_type(layer):
         plants = {r["slug"] for r in json.load(f) if r["kind"] == "plant"}
     varieties = []
     for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
-        paths = assets.list_assets(_mesh_folder(biome, slug), biome == "climb")
+        paths = assets.list_assets(_mesh_folder(biome, slug), _is_blade(biome, slug))
         meshes = [a for a in map(unreal.load_asset, paths) if isinstance(a, unreal.StaticMesh)]
         if not meshes:
             raise RuntimeError(f"no meshes for {biome}/{slug}: run megascans.py first")
-        if biome != "climb":
+        if not _is_blade(biome, slug):
             _keep_alpha_coverage(biome, slug)
             _fill_empty_slots(biome, slug, meshes)
         for mesh in meshes:
@@ -1448,7 +1454,7 @@ def _warm_grass_meshes():
             if slug in seen:
                 continue
             seen.add(slug)
-            for path in assets.list_assets(_mesh_folder(biome, slug), biome == "climb"):
+            for path in assets.list_assets(_mesh_folder(biome, slug), _is_blade(biome, slug)):
                 mesh = unreal.load_asset(path)
                 if isinstance(mesh, unreal.StaticMesh):
                     unreal.EditorStaticMeshLibrary.get_number_verts(mesh, 0)  # waits for it
