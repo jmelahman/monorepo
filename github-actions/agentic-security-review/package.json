@@ -2,7 +2,7 @@
   "private": true,
   "description": "Claude Code and OpenCode for the security-review workflow.",
   "dependencies": {
-    "@anthropic-ai/claude-code": "2.1.312",
+    "@anthropic-ai/claude-code": "2.1.318",
     "@opencode/cli": "2.2.7"
   }
 }
