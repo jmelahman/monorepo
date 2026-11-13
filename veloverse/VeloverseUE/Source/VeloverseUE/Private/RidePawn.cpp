@@ -777,9 +777,8 @@ void ARidePawn::Place()
 	{
 		bOnBackdrop = bBackdrop;
 		bHeadSet = false;
-		// The board's backdrop is the shaded valley of a still, darker than the game's exposure
-		// makes it, so the start screen's view is stopped down. -RideBackdropEv= sets by how much.
-		float Ev = -2.f;
+		// The start screen's view keeps the game's exposure; -RideBackdropEv= stops it up or down.
+		float Ev = 0.f;
 		FParse::Value(FCommandLine::Get(), TEXT("RideBackdropEv="), Ev);
 		FPostProcessSettings Plain;
 		CameraLook(Plain);
