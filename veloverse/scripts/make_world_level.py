@@ -735,7 +735,9 @@ def main():
         "road_half": mi.ROAD_HALF,  # m: the road material's edge (climb_world.road_instance)
         # The world's asphalt: lighter and greyer than the woods' dark climb, with a dashed line
         # down the middle (climb_world.road_instance); the path's tarmac-free look is its own.
-        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 1.0},
+        # "ground blend" 0: the rim faded into the ground RVT's colour, a lime strip along both
+        # edges where the RVT lagged the ground's look (12 Nov). The soil fray edges it alone.
+        "road_look": {"darken": 0.34, "warm": [1.0, 1.0, 0.97], "line": 1.0, "ground blend": 0.0},
         # The rider half a metre left of centre: on the 2.4 m path and inside the asphalt's lane.
         "keep_left": 50.0,
         # The default ride, and every ride (climb_world.track writes each as a track).

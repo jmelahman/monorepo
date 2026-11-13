@@ -23,8 +23,8 @@ twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
 
 - **The Moor:** the path reads too bright.
 - **Greenwood:** no grass or plants under the trees, though the Forest layer is painted there.
-- **The coast:** a lime strip along both road edges (the ground paint, not blades); the far fields are flat texture with no
-  blades.
+- **The coast:** the far fields are flat texture with no blades. (The lime strip along the road
+  edges was the road rim's ground-RVT blend; off from v43.)
 - **The quay:** the sand reads as cracked mud.
 - **Vael:** the slopes wash out in the sun.
 
