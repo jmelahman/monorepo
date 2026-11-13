@@ -4,6 +4,21 @@
 
 #include "CoreMinimal.h"
 
+// A Bluetooth device the rider can use: a smart trainer, a power meter or a heart-rate strap.
+struct FSensor
+{
+	enum class EKind : uint8
+	{
+		Trainer,
+		Power,
+		Heart
+	};
+	FString Name;
+	EKind Kind = EKind::Trainer;
+	bool bInUse = false;     // the one the ride reads, of its kind
+	bool bConnected = false; // and connected now
+};
+
 struct FTrainerReading
 {
 	double Watts = 0.0;
@@ -27,6 +42,9 @@ public:
 	virtual TArray<FString> Devices() const { return {}; }
 	virtual FString Picked() const { return FString(); }
 	virtual void Pick(const FString& Device) {}
+	// Every device found, trainers and straps, and the strap picked ("" for the first).
+	virtual TArray<FSensor> Sensors() const { return {}; }
+	virtual void PickStrap(const FString& Device) {}
 
 protected:
 	TOptional<double> Target;

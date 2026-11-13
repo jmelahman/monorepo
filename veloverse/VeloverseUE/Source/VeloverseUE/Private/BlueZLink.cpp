@@ -167,6 +167,8 @@ struct FBlueZLink::FImpl : public FRunnable
 	FString Status = TEXT("starting");
 	TArray<FString> Found;
 	FString Choice; // the trainer picked, by name; empty for the first found
+	TArray<FSensor> Sensors;
+	FString StrapChoice; // the strap picked, likewise
 	TArray<TPair<uint16, Veloverse::Ble::Bytes>> Inbox;
 	TArray<Veloverse::Ble::Bytes> Outbox;
 
@@ -508,11 +510,12 @@ struct FBlueZLink::FImpl : public FRunnable
 				}
 			}
 		}
-		FString Want;
+		FString Want, WantStrap;
 		{
 			FScopeLock Guard(&Lock);
 			Found = Names;
 			Want = Choice;
+			WantStrap = StrapChoice;
 		}
 		const FDevice* Chosen = nullptr;
 		for (const FDevice* D : Trainers)
@@ -525,30 +528,40 @@ struct FBlueZLink::FImpl : public FRunnable
 		}
 		if (!Chosen)
 		{
-			SetStatus(Want.IsEmpty() ? FString(TEXT("looking for a trainer")) : FString::Printf(TEXT("looking for %s"), *Want));
 			LetGo(TrainerPath);
-			return;
 		}
-		if (Chosen->Path != TrainerPath)
+		else if (Chosen->Path != TrainerPath)
 		{
 			LetGo(TrainerPath); // another was picked
 			TrainerPath = Chosen->Path;
 		}
-		Join(*Chosen, Now);
-		// And a heart-rate strap, when there's one besides the trainer.
+		// And a heart-rate strap, when there's one besides the trainer: the one picked, or the first.
 		if (!StrapPath.empty() && !Device(StrapPath))
 		{
 			StrapPath.clear(); // gone
 		}
 		for (const FDevice& D : Known)
 		{
-			if (D.Offers(HeartRateService) && D.Path != TrainerPath && (StrapPath.empty() || StrapPath == D.Path))
+			const bool bWanted = WantStrap.IsEmpty() ? StrapPath.empty() || StrapPath == D.Path
+			                                         : WantStrap == UTF8_TO_TCHAR(D.Name.c_str());
+			if (D.Offers(HeartRateService) && D.Path != TrainerPath && bWanted)
 			{
-				StrapPath = D.Path;
+				if (StrapPath != D.Path)
+				{
+					LetGo(StrapPath);
+					StrapPath = D.Path;
+				}
 				Join(D, Now);
 				break;
 			}
 		}
+		PublishSensors(Trainers);
+		if (!Chosen)
+		{
+			SetStatus(Want.IsEmpty() ? FString(TEXT("looking for a trainer")) : FString::Printf(TEXT("looking for %s"), *Want));
+			return;
+		}
+		Join(*Chosen, Now);
 		const FString Name = UTF8_TO_TCHAR(Chosen->Name.c_str());
 		if (!Chosen->bConnected)
 		{
@@ -562,6 +575,28 @@ struct FBlueZLink::FImpl : public FRunnable
 		{
 			SetStatus(Name);
 		}
+	}
+
+	// Tells the game thread what's on offer: the trainers in the order Survey ranks them, then the
+	// straps.
+	void PublishSensors(const std::vector<const FDevice*>& Trainers)
+	{
+		using namespace Veloverse::Ble;
+		TArray<FSensor> List;
+		for (const FDevice* D : Trainers)
+		{
+			const FSensor::EKind Kind = D->Offers(FitnessMachineService) ? FSensor::EKind::Trainer : FSensor::EKind::Power;
+			List.Add({UTF8_TO_TCHAR(D->Name.c_str()), Kind, D->Path == TrainerPath, D->bConnected});
+		}
+		for (const FDevice& D : Known)
+		{
+			if (D.Offers(HeartRateService) && std::find(Trainers.begin(), Trainers.end(), &D) == Trainers.end())
+			{
+				List.Add({UTF8_TO_TCHAR(D.Name.c_str()), FSensor::EKind::Heart, D.Path == StrapPath, D.bConnected});
+			}
+		}
+		FScopeLock Guard(&Lock);
+		Sensors = MoveTemp(List);
 	}
 
 	// Connects a device and, once its services are known, subscribes to what's read from it.
@@ -754,4 +789,16 @@ void FBlueZLink::Pick(const FString& Device)
 {
 	FScopeLock Guard(&Impl->Lock);
 	Impl->Choice = Device;
+}
+
+TArray<FSensor> FBlueZLink::Sensors() const
+{
+	FScopeLock Guard(&Impl->Lock);
+	return Impl->Sensors;
+}
+
+void FBlueZLink::PickStrap(const FString& Device)
+{
+	FScopeLock Guard(&Impl->Lock);
+	Impl->StrapChoice = Device;
 }

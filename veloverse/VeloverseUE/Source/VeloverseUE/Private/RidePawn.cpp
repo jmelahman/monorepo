@@ -336,17 +336,22 @@ FString ARidePawn::EndRide()
 	{
 		FRideProfile Used = Profile;
 		Used.Ftp = Ftp;
-		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used);
+		// What the ride earned first, so its file keeps it for the review.
+		const Veloverse::FSummary S = Recorder.Summary(Ftp);
+		int32 Prs = 0;
+		TArray<FRideClimb> Climbs;
+		for (const FSegmentResult& R : Segments.Results())
+		{
+			const bool bPr = R.Ranking.Pr(R.Effort.Seconds);
+			Prs += bPr ? 1 : 0;
+			Climbs.Add({R.Name, R.Effort.Seconds, R.Effort.AverageWatts, R.Ranking.Rank, R.Ranking.Of, bPr});
+		}
+		const Veloverse::FRideXp Earned = Veloverse::RideXp(S.Metres, S.Climbed, Segments.Results().Num(), Prs, Workout.Done());
+		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used, Climbs, Earned.Total());
 		Segments.Save(FDateTime::Now().ToIso8601());
 		if (!SavedRide.IsEmpty())
 		{
-			const Veloverse::FSummary S = Recorder.Summary(Ftp);
-			int32 Prs = 0;
-			for (const FSegmentResult& R : Segments.Results())
-			{
-				Prs += R.Ranking.Pr(R.Effort.Seconds) ? 1 : 0;
-			}
-			EarnedXp = Veloverse::RideXp(S.Metres, S.Climbed, Segments.Results().Num(), Prs, Workout.Done());
+			EarnedXp = Earned;
 			XpBefore = Profile.Xp;
 			Profile.Xp += EarnedXp.Total();
 			Profile.Save();

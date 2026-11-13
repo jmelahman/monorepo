@@ -164,6 +164,10 @@ FRideProfile FRideProfile::Load()
 			Profile.Xp = FMath::Max(static_cast<int64>(Value), int64{0});
 		}
 		O->TryGetStringField(TEXT("theme"), Profile.Theme);
+		if (O->TryGetNumberField(TEXT("max_bpm"), Value))
+		{
+			Profile.MaxHeartRate = FMath::Clamp(static_cast<int32>(Value), 120, 230);
+		}
 	}
 	return Profile;
 }
@@ -177,6 +181,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("bike_kg"), BikeKg);
 	O->SetNumberField(TEXT("xp"), static_cast<double>(Xp));
 	O->SetStringField(TEXT("theme"), Theme);
+	O->SetNumberField(TEXT("max_bpm"), MaxHeartRate);
 	WriteJson(ProfileFile(), O);
 }
 
@@ -229,7 +234,8 @@ void FRideRecorder::Tick(float Dt, double Metres, double InWatts, double InCaden
 	}
 }
 
-FString FRideRecorder::Save(const FString& Route, float StartMetres, const FRideProfile& Profile) const
+FString FRideRecorder::Save(const FString& Route, float StartMetres, const FRideProfile& Profile,
+                           const TArray<FRideClimb>& Climbs, int32 Xp) const
 {
 	if (Recorded.empty() || Recorded.back().Seconds < MinSeconds)
 	{
@@ -243,7 +249,27 @@ FString FRideRecorder::Save(const FString& Route, float StartMetres, const FRide
 	O->SetNumberField(TEXT("start_m"), StartMetres);
 	O->SetNumberField(TEXT("ftp_w"), Profile.Ftp);
 	O->SetNumberField(TEXT("weight_kg"), Profile.WeightKg);
+	O->SetNumberField(TEXT("max_bpm"), Profile.MaxHeartRate);
+	O->SetNumberField(TEXT("xp"), Xp);
 	O->SetObjectField(TEXT("summary"), SummaryJson(Summary(Profile.Ftp)));
+	TArray<TSharedPtr<FJsonValue>> Curve, ClimbValues;
+	for (const double W : Veloverse::PowerCurve(Recorded))
+	{
+		Curve.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(W)));
+	}
+	O->SetArrayField(TEXT("curve_w"), Curve); // over RideReview.h's CurveDurations
+	for (const FRideClimb& C : Climbs)
+	{
+		TSharedRef<FJsonObject> Climb = MakeShared<FJsonObject>();
+		Climb->SetStringField(TEXT("name"), C.Name);
+		Climb->SetNumberField(TEXT("seconds"), FMath::RoundToDouble(C.Seconds * 10.0) / 10.0);
+		Climb->SetNumberField(TEXT("w"), FMath::RoundToDouble(C.Watts));
+		Climb->SetNumberField(TEXT("rank"), C.Rank);
+		Climb->SetNumberField(TEXT("of"), C.Of);
+		Climb->SetBoolField(TEXT("pr"), C.bPr);
+		ClimbValues.Add(MakeShared<FJsonValueObject>(Climb));
+	}
+	O->SetArrayField(TEXT("climbs"), ClimbValues);
 	// The samples as columns, one value a second.
 	TSharedRef<FJsonObject> Columns = MakeShared<FJsonObject>();
 	auto Column = [&](const TCHAR* Name, double Veloverse::FSample::*Field, double Scale)
@@ -299,7 +325,97 @@ TArray<FRideEntry> FRideRecorder::History()
 		Entry.Route = O->GetStringField(TEXT("route"));
 		Entry.Ftp = O->GetNumberField(TEXT("ftp_w"));
 		Entry.Summary = SummaryOf(**Summary);
+		double Number = 0.0;
+		if (O->TryGetNumberField(TEXT("max_bpm"), Number))
+		{
+			Entry.MaxHeartRate = static_cast<int32>(Number);
+		}
+		if (O->TryGetNumberField(TEXT("xp"), Number))
+		{
+			Entry.Xp = static_cast<int32>(Number);
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		if (O->TryGetArrayField(TEXT("curve_w"), Values))
+		{
+			for (int32 I = 0; I < FMath::Min(Values->Num(), static_cast<int32>(Entry.Curve.size())); ++I)
+			{
+				Entry.Curve[I] = (*Values)[I]->AsNumber();
+			}
+		}
+		else
+		{
+			// Before the curve was kept: the summary's bests sit at some of its durations.
+			for (std::size_t B = 0; B < Veloverse::BestDurations.size(); ++B)
+			{
+				for (std::size_t I = 0; I < Entry.Curve.size(); ++I)
+				{
+					if (Veloverse::CurveDurations[I] == Veloverse::BestDurations[B])
+					{
+						Entry.Curve[I] = Entry.Summary.Best[B];
+					}
+				}
+			}
+		}
+		if (O->TryGetArrayField(TEXT("climbs"), Values))
+		{
+			for (const TSharedPtr<FJsonValue>& V : *Values)
+			{
+				const TSharedPtr<FJsonObject>* C = nullptr;
+				if (V->TryGetObject(C))
+				{
+					FRideClimb Climb;
+					Climb.Name = (*C)->GetStringField(TEXT("name"));
+					Climb.Seconds = (*C)->GetNumberField(TEXT("seconds"));
+					Climb.Watts = (*C)->GetNumberField(TEXT("w"));
+					Climb.Rank = static_cast<int32>((*C)->GetNumberField(TEXT("rank")));
+					Climb.Of = static_cast<int32>((*C)->GetNumberField(TEXT("of")));
+					Climb.bPr = (*C)->GetBoolField(TEXT("pr"));
+					Entry.Climbs.Add(MoveTemp(Climb));
+				}
+			}
+		}
 		Out.Add(MoveTemp(Entry));
 	}
+	return Out;
+}
+
+std::vector<Veloverse::FSample> FRideRecorder::LoadSamples(const FString& File)
+{
+	std::vector<Veloverse::FSample> Out;
+	const TSharedPtr<FJsonObject> O = ReadJson(File);
+	const TSharedPtr<FJsonObject>* Columns = nullptr;
+	if (!O || !O->TryGetObjectField(TEXT("samples"), Columns))
+	{
+		return Out;
+	}
+	const TArray<TSharedPtr<FJsonValue>>* Metres = nullptr;
+	if (!(*Columns)->TryGetArrayField(TEXT("m"), Metres))
+	{
+		return Out;
+	}
+	Out.resize(Metres->Num());
+	for (int32 I = 0; I < Metres->Num(); ++I)
+	{
+		Out[I].Seconds = I + 1.0;
+	}
+	auto Column = [&](const TCHAR* Name, double Veloverse::FSample::*Field)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		if ((*Columns)->TryGetArrayField(Name, Values))
+		{
+			for (int32 I = 0; I < FMath::Min(Values->Num(), static_cast<int32>(Out.size())); ++I)
+			{
+				Out[I].*Field = (*Values)[I]->AsNumber();
+			}
+		}
+	};
+	Column(TEXT("m"), &Veloverse::FSample::Metres);
+	Column(TEXT("w"), &Veloverse::FSample::Watts);
+	Column(TEXT("rpm"), &Veloverse::FSample::Cadence);
+	Column(TEXT("bpm"), &Veloverse::FSample::HeartRate);
+	Column(TEXT("ms"), &Veloverse::FSample::Speed);
+	Column(TEXT("ele_m"), &Veloverse::FSample::Elevation);
+	Column(TEXT("east_m"), &Veloverse::FSample::East);
+	Column(TEXT("south_m"), &Veloverse::FSample::South);
 	return Out;
 }

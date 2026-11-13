@@ -4,6 +4,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RideReview.h"
 #include "RideStats.h"
 
 #include <vector>
@@ -15,6 +16,7 @@ struct FRideProfile
 	float BikeKg = 10.f;
 	int64 Xp = 0;                // points from every ride, toward levels (Progress.h)
 	FString Theme = TEXT("Ember"); // the HUD colour, one of the unlocked Progress.h themes
+	int32 MaxHeartRate = 190;      // bpm, for heart-rate zones (RideReview.h)
 
 	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
 	FLinearColor Accent() const;
@@ -25,6 +27,15 @@ struct FRideProfile
 	static FString Folder(); // ~/.config/Veloverse
 };
 
+// A climb timed on a ride, as the ride's file keeps it.
+struct FRideClimb
+{
+	FString Name;
+	double Seconds = 0.0, Watts = 0.0;
+	int32 Rank = 0, Of = 0; // among every try, this one included
+	bool bPr = false;
+};
+
 // One saved ride as the history lists it: its summary without the samples.
 struct FRideEntry
 {
@@ -32,7 +43,11 @@ struct FRideEntry
 	FDateTime Started;
 	FString Route;
 	float Ftp = 0.f;
+	int32 MaxHeartRate = 190;
+	int32 Xp = 0;
 	Veloverse::FSummary Summary;
+	Veloverse::FCurve Curve = {}; // over RideReview.h's CurveDurations; rides before it fill what Best has
+	TArray<FRideClimb> Climbs;
 };
 
 // Samples a ride once a second of riding and writes it out when it ends.
@@ -51,11 +66,15 @@ public:
 	// Writes the ride to ~/.config/Veloverse/Rides/<when>.json, and beside it <when>.fit for Strava and
 	// the like; returns the .json, or "" if it was too short to keep (under MinSeconds) or the write
 	// failed.
-	FString Save(const FString& Route, float StartMetres, const FRideProfile& Profile) const;
+	// Climbs and Xp are what the ride earned, kept for its review.
+	FString Save(const FString& Route, float StartMetres, const FRideProfile& Profile,
+	             const TArray<FRideClimb>& Climbs = {}, int32 Xp = 0) const;
 	static constexpr double MinSeconds = 30.0;
 
 	// The saved rides, newest first.
 	static TArray<FRideEntry> History();
+	// One saved ride's samples, a second apart; empty if it can't be read.
+	static std::vector<Veloverse::FSample> LoadSamples(const FString& File);
 	static FString RidesFolder(); // ~/.config/Veloverse/Rides
 
 private:

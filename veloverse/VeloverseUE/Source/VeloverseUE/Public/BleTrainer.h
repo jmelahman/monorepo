@@ -21,6 +21,8 @@ public:
 	virtual TArray<FString> Devices() const { return {}; }
 	virtual FString Picked() const { return FString(); }
 	virtual void Pick(const FString& Device) {}
+	virtual TArray<FSensor> Sensors() const { return {}; }
+	virtual void PickStrap(const FString& Device) {}
 };
 
 class FBleTrainer : public ITrainer
@@ -79,6 +81,8 @@ public:
 	virtual TArray<FString> Devices() const override { return Link->Devices(); }
 	virtual FString Picked() const override { return Link->Picked(); }
 	virtual void Pick(const FString& Device) override { Link->Pick(Device); }
+	virtual TArray<FSensor> Sensors() const override { return Link->Sensors(); }
+	virtual void PickStrap(const FString& Device) override { Link->PickStrap(Device); }
 
 	virtual void SetGrade(double InGrade) override { Grade = InGrade; }
 	virtual void SetTargetPower(TOptional<double> Watts) override
@@ -104,6 +108,10 @@ public:
 
 	virtual FString Name() const override { return TEXT("Simulated trainer"); }
 	virtual bool HasTrainer() const override { return true; }
+	virtual TArray<FSensor> Sensors() const override
+	{
+		return {{Name(), FSensor::EKind::Trainer, true, true}, {TEXT("Simulated strap"), FSensor::EKind::Heart, true, true}};
+	}
 
 	virtual void Poll(Veloverse::Ble::FSession& Session, double Now) override
 	{

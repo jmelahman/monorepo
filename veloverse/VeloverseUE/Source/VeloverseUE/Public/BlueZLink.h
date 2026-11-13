@@ -23,6 +23,8 @@ public:
 	virtual TArray<FString> Devices() const override;
 	virtual FString Picked() const override;
 	virtual void Pick(const FString& Device) override;
+	virtual TArray<FSensor> Sensors() const override;
+	virtual void PickStrap(const FString& Device) override;
 
 	struct FImpl; // the D-Bus side, in BlueZLink.cpp
 
