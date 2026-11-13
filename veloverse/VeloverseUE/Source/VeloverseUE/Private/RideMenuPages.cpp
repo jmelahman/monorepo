@@ -224,7 +224,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	};
 	const TArray<FItem> Items = {
 		{TEXT("routes"), Icons::Map, TEXT("Choose a route"),
-		 Route ? FString::Printf(TEXT("Now: %s"), *Route->Title) : FString(TEXT("Nine loops from the harbour")),
+		 Route ? FString::Printf(TEXT("Now: %s"), *Route->Title) : FString::Printf(TEXT("%d routes across the islands"), Surveys.Num()),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
@@ -293,8 +293,6 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	ARidePawn* Pawn = C.Pawn;
 	Shade(P, C.W, 0.62f);
 	PaintHeader(C, TEXT("Choose a route"));
-	P.Text(140.f + P.Width(TEXT("Choose a route"), P.Serif(44.f)) + 20.f, Mid(76.f, 17.f),
-	       TEXT("Every loop starts and ends at the harbour"), P.Font("Medium", 17.f), Muted);
 	if (!Pawn)
 	{
 		return;
