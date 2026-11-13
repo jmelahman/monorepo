@@ -37,6 +37,12 @@ inline FCurve Best(const FCurve& A, const FCurve& B)
 	{
 		Out[I] = std::max(A[I], B[I]);
 	}
+	// A best held for longer also stands for every shorter duration, which fills the gaps older
+	// rides leave (they kept only RideStats.h's BestDurations) so the curve never climbs again.
+	for (std::size_t I = Out.size() - 1; I-- > 0;)
+	{
+		Out[I] = std::max(Out[I], Out[I + 1]);
+	}
 	return Out;
 }
 

@@ -48,6 +48,12 @@ int main()
 	Other[10] = 180.0;
 	const FCurve Both = Best(Curve, Other);
 	Check(Both[0] == 400.0 && Both[10] == 180.0, "the best of two curves takes each duration's better", Both[10]);
+	FCurve Old = {};
+	Old[1] = 450.0; // 5 s
+	Old[4] = 450.0; // 1 min
+	const FCurve Mixed = Best(Old, Other);
+	Check(Mixed[2] == 450.0 && Mixed[3] == 450.0 && Mixed[9] == 180.0, "a longer best fills the shorter durations",
+	      Mixed[2]);
 
 	Check(HeartZone(100.0, 190.0) == 0, "100 of 190 bpm is zone 1", HeartZone(100.0, 190.0));
 	Check(HeartZone(140.0, 190.0) == 2, "140 of 190 bpm is zone 3", HeartZone(140.0, 190.0));

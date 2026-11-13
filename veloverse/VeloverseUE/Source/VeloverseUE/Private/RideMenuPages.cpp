@@ -1211,7 +1211,8 @@ void URideMenu::PaintStats(FPaintContext& C) const
 		P.Round(970.f, Iy - 4.f, 180.f, 8.f, 4.f, InkA(0.08f));
 		P.Round(970.f, Iy - 4.f, FMath::Max(180.f * static_cast<float>(IslandKm[I].Value / IslandMost), 8.f), 8.f, 4.f,
 		        Colour);
-		P.Text(1232.f, Mid(Iy, 15.f), FString::Printf(TEXT("%.0f km"), IslandKm[I].Value), P.Font("Medium", 15.f), Soft,
+		P.Text(1232.f, Mid(Iy, 15.f), IslandKm[I].Value < 9.95 ? FString::Printf(TEXT("%.1f km"), IslandKm[I].Value)
+		                                            : FString::Printf(TEXT("%.0f km"), IslandKm[I].Value), P.Font("Medium", 15.f), Soft,
 		       EAlign::Right);
 	}
 
