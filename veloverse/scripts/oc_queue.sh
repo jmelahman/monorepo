@@ -11,6 +11,7 @@
 #     scripts/oc_queue.sh run                              # work through the queue (background it)
 #     scripts/oc_queue.sh list                             # waiting, done and failed steps
 #     scripts/oc_queue.sh wait NAME                        # block till step NAME ends (background it)
+#     scripts/oc_queue.sh idle [SECONDS]                   # a line when idle, repeated every SECONDS (300)
 #
 # Keep the next step queued before the running one ends, so the editor never idles: review a
 # step's stills while the next one builds, with `wait NAME` as the per-step notification. Before
