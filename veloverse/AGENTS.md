@@ -32,7 +32,20 @@ it first.
 `plans/` holds the plans for upcoming work. It is gitignored, so it lives only in the main
 checkout (`/workspace/veloverse/plans`), not in worktrees. `plans/roadmap.md` is the one roadmap:
 what's left before the next release and to reach the AAA bar, in order, with gap numbers from
-Fable's review in `plans/aaa-gap-review.md`. Work from it, and mark items done there as they land.
+Fable's review in `plans/aaa-gap-review.md`. Work from it.
+
+**The roadmap is a living document: keep it current as you work, not in occasional catch-ups.**
+
+- Update it in the same sitting as the change: when an item lands (with its commit and package
+  or stills), when a trial settles or fails, when the user adds, drops or reorders work, and when
+  new work turns up (a bug, a follow-up, a user request). Re-date its title line.
+- "Where we are" and each item's status should read true today. Rewrite or remove what's stale
+  rather than appending dated notes under it, and move finished items to "Done" in one line
+  each. The history goes in the storybook and the commits.
+- Keep the order honest: the next thing you'll work on sits at the top of its section. Record
+  open questions for the user there too, so they aren't lost.
+- Before reporting status or picking the next task, read the roadmap; if it disagrees with the
+  git log or the queue, fix the roadmap first.
 
 `docs/archive/` holds the old plans (the alpine hero climb L_Hero and the 57 km ring). They're
 history, not instructions; don't work from them.
