@@ -36,10 +36,10 @@ remote=r2:$R2_BUCKET/ue
 # Same set as pod_sync.sh: sources, generated assets, textures and the imported Content, without
 # the caches and logs a machine rebuilds for itself.
 filters=(
-	--exclude 'VeloverseUE/Intermediate/**' --exclude 'VeloverseUE/Saved/**'
-	--exclude 'VeloverseUE/DerivedDataCache/**' --exclude '*.log' --exclude '__pycache__/**'
-	--include '/scripts/**' --include '/assets_gen/**' --include '/textures/**'
-	--include '/assets_ph/**' --include '/VeloverseUE/**' --exclude '*'
+	--filter '- /VeloverseUE/Intermediate/**' --filter '- /VeloverseUE/Saved/**'
+	--filter '- /VeloverseUE/DerivedDataCache/**' --filter '- *.log' --filter '- __pycache__/**'
+	--filter '+ /scripts/**' --filter '+ /assets_gen/**' --filter '+ /textures/**'
+	--filter '+ /assets_ph/**' --filter '+ /VeloverseUE/**' --filter '- *'
 )
 case ${1:-} in
 push)
