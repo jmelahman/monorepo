@@ -1038,8 +1038,8 @@ void ARidePawn::PlaceRain(float Dt)
 	// slide forward up their axis 10 sin(tilt) m, or the 14 m shell's top rim (15 m up) would come
 	// into view ahead (a sweep of the view's rays, 0-55 degrees).
 	const float T = FMath::DegreesToRadians(RainTilt);
-	const FRotator Lean(-RainTilt, Head.Yaw, 4.f);
-	Rain->SetWorldLocationAndRotation(Camera->GetComponentLocation() + Lean.RotateVector(FVector(0.f, 0.f, 1000.f * FMath::Sin(T))), Lean);
+	const FRotator Slant(-RainTilt, Head.Yaw, 4.f);
+	Rain->SetWorldLocationAndRotation(Camera->GetComponentLocation() + Slant.RotateVector(FVector(0.f, 0.f, 1000.f * FMath::Sin(T))), Slant);
 	Rain->SetWorldScale3D(FVector(1.f, 1.f, 1.f / FMath::Cos(T)));
 }
 
