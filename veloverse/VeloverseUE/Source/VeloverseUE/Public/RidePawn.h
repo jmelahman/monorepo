@@ -77,7 +77,8 @@ public:
 	// while the shoulders drop below the frame and the forearms reach in from its foot.
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderBody;
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderArms;
-	float ArmsTilt = 40.f;
+	// From stills of the aero rider at 25, 40 and 55: below 50 its shoulders show along the bottom.
+	float ArmsTilt = 55.f;
 	float RiderEffort = 1.f; // 0 Easy, 1 Pedal, 2 Hard, eased; -RideEffort= pins it for stills
 	float PinnedEffort = -1.f; // chosen from stills at 40, 57 and 75: past 50 the fingers stand up off the hoods
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
