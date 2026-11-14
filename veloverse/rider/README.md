@@ -1,6 +1,6 @@
 # Player rider: skinned cyclist on the hoods
 
-`build_rider.py` builds the rider, the gear and one looping pedal action headless. It works in
+`build_rider.py` builds the rider, the gear and three looping pedal actions (one per effort) headless. It works in
 Blender from the MPFB 2 base human. The tunable values are constants at the top of the script.
 The bike is loaded only as reference geometry: `../bike/bike.blend` if it exists. Otherwise
 `../bike/build_bike.py` builds it into `out/bike_ref/`. The bike is never exported or modified.
@@ -18,7 +18,8 @@ debugging. The script exits non-zero on any error.
 
 Outputs go to `out/`. They are regenerated and not committed:
 
-- `rider.fbx`: the armature, the one mesh and the `Pedal` action. No bike.
+- `rider.fbx`: the armature, the one mesh and the `Pedal_Easy`, `Pedal` and `Pedal_Hard`
+  actions. No bike.
 - `rider.blend`: the rider plus the bike for reference. The IK constraints are already removed.
 - `T_*.png`: textures, 2048² (1024² with `--quick`).
 - `render_*.png`: renders at 1600 px wide, with the bike.
@@ -77,18 +78,23 @@ The body is MPFB 2's base human, built with these settings:
 - **Hair and brows:** the hair is short and painted on the scalp in the body texture, under the
   helmet. The brows are thin strips. There's no particle hair.
 
-**Pose on the hoods**, measured at frame 0:
+**Pose on the hoods**, the default `Pedal` effort, measured at frame 0. It's an aero position:
+a low back with bent elbows.
 
 | Measure | Value |
 |---|---|
-| Back, hip joint to the base of the neck | 42.0° from horizontal |
-| Torso pitch | 48.7° |
-| Shoulder protraction | 16.6° |
-| Elbows | 17° short of straight |
+| Back, hip joint to the base of the neck | 34.0° from horizontal |
+| Torso pitch | 57.0° |
+| Shoulder protraction | −4.5° |
+| Elbows | 39.5° short of straight |
 | Sit bones | on the saddle top, sunk 3 mm into the pad |
 | Palms | on the hood bodies, 0.513 m forward of the BB, the horns in front of the knuckles |
 | Fingers | solved against the hoods (below) |
 | Head | its forward axis meets the road 10 m ahead |
+
+The hands are fixed on the hoods, so a lower back can only come from bending the elbows. The
+fit sets the back angle; the shoulders protract or retract (−5° to 20°) to keep the elbows
+at least 17° bent, and the arms take up the rest.
 
 **The grip** is fitted to the bike's hoods in two steps, once the proportions are settled.
 The hands are fixed in the world, so one solve holds for every frame, and Unreal only plays it.
@@ -139,9 +145,30 @@ Skinning:
 - The shoes take their weights from the foot underneath them.
 - The cleats are rigid to `foot_*`.
 
-## Animation: `Pedal`
+## Animation: three efforts
 
-There is one action, `Pedal`, the FBX take of the same name:
+There are three actions, one per effort. They share the crank timing, so they blend frame for
+frame:
+
+| Action | Back | Elbows | Pelvis roll | Head aims | Use for |
+|---|---|---|---|---|---|
+| `Pedal_Easy` | 42° | 19° | ±0.9° | 12 m ahead | recovery, low power |
+| `Pedal` (default) | 34° | 39.5° | ±1.5° | 10 m ahead | steady riding |
+| `Pedal_Hard` | 30° | 56° | ±2.7° | 8 m ahead | efforts, sprints, steep climbs |
+
+Each effort is a full fit: the same hands on the hoods, the same cleats on the pedals, and the
+back, shoulders and elbows solved again. `rider.blend` keeps `Pedal` on the armature, and the
+other two as fake-user actions. The FBX exports all three as takes named `Armature|<action>`.
+
+**Driving it from power in Unreal:** import the takes as three animation sequences and put
+them in a 1D blend space on W/kg, for example Easy at 1.5, Pedal at 3.0 and Hard at 5.0.
+Scale the play rate by cadence / 60, since one loop is one revolution at 60 rpm. Keep every
+sample's crank phase in sync (a sync group, or one shared time), as the blend assumes it.
+Blending halfway between two efforts moves the hands and feet off the bike by at most 5.1 mm
+(Easy to Pedal) and 1.4 mm (Pedal to Hard). That's too small to see; a two-bone IK on the
+hands in the Anim Blueprint would remove it if it ever shows.
+
+Every action:
 
 - **Frames:** 0–59 at 30 fps, one crank revolution, so 60 rpm at 30 fps. Frame 60 would equal
   frame 0, so it isn't included; loop 0–59. The crank angle is linear in time: 6° per frame.
@@ -156,17 +183,17 @@ There is one action, `Pedal`, the FBX take of the same name:
   0.1 mm on every frame, with the pedals level.
 - **Ankling:** pitch = 5° − 2° cos φ − 10° sin φ + 1° cos 2φ, with φ the crank angle from
   forward. The heel drops about 10° on the downstroke and the toe dips through the bottom.
-- **Knees:** from 70.0° at the top to 144.6° at the bottom of the stroke, the same on both legs.
-  They never lock.
+- **Knees:** from about 70° at the top to 144–145° at the bottom of the stroke, the same on both
+  legs, in every effort. They never lock.
 - **Upper body:**
   - The hands are fixed in the world.
-  - The pelvis rolls ±1.5° and drops 3 mm with each downstroke.
+  - The pelvis rolls (±0.9° to ±2.7°, by effort) and drops with each downstroke.
   - The upper torso counter-rolls only 0.25°, just enough to hold the shoulders still. The
-    upper arms then swing at most 2.7° in a stroke, and the forearms 2°.
-  - The head stays level on the road, 10 m ahead.
+    upper arms then swing at most 2.7° in a stroke in `Pedal`, and the forearms 2°.
+  - The head stays aimed at the road, 8–12 m ahead by effort.
 - **Loop seam:** every bone's step from frame 59 back to frame 0 is checked against the largest
-  step between consecutive frames. It's 18.1 mm and 2.3°, against 19.4 mm and 2.6°, so the
-  loop has no pop.
+  step between consecutive frames. In every effort it is 18.2 mm and 2.3°, against 19.5 mm and
+  2.6°, so the loop has no pop.
 
 ## Materials
 
@@ -237,5 +264,6 @@ physics simulation.
 - `render_chase.png`: about 3 m behind and 1.4 m up.
 - `render_side_drive.png` and `render_side_non_drive.png`.
 - `render_front.png`.
+- `render_efforts.png`: the drive side at frame 0 in each effort, side by side.
 - `render_contact.png`: the drive side at frames 0, 8, 15, 23, 30, 38, 45 and 53, each labelled
   with its crank angle.

@@ -13,6 +13,8 @@ Frame: Blender metres, +X forward, +Z up, the drive side at -Y. The armature's o
 Root bone sit on the ground under the bottom bracket, like the bike's "Bike" empty.
 """
 
+import copy
+import itertools
 import math
 import os
 import subprocess
@@ -85,11 +87,22 @@ CLEAT_BEHIND_BALL = 0.010  # m, cleat centre behind the ball joint
 # =============================================================================================
 FPS = 30
 FRAMES = 60  # one crank revolution, frames 0..59; frame 60 would be frame 0 again
-BACK_ANGLE = 42.0  # deg from horizontal, hip joint to shoulder joint
-GAZE_DISTANCE = 10.0  # m ahead, where the head's forward axis meets the road
+# Efforts: one looping action each, with the same crank timing, hands and feet, so a game can
+# blend them by power. Per action: the back (deg from horizontal, hip joints to the base of the
+# neck), the hip rock (x HIP_ROCK_*) and where the head's forward axis meets the road (m
+# ahead). The hands stay on the hoods, so a lower back brings the shoulders nearer them and
+# bends the elbows. "Pedal", the default, is the aero one: a low back on the hoods.
+EFFORTS = {
+    "Pedal_Easy": (42.0, 0.6, 12.0),
+    "Pedal": (34.0, 1.0, 10.0),
+    "Pedal_Hard": (30.0, 1.8, 8.0),
+}
+DEFAULT_EFFORT = "Pedal"
+# deg short of straight: the shoulders protract until the elbows bend this much, or, once they
+# are fully drawn back (a low back), the elbows bend more to take up the reach
+ELBOW_BEND = 17.0
 SADDLE_COMPRESSION = 0.003  # m of shorts and saddle-padding compression under the sit bones
 KNEE_AT_BDC = 145.0  # deg interior knee angle at the bottom of the stroke
-ELBOW_BEND = 17.0  # deg short of straight
 HIP_ROCK_ROLL = 1.5  # deg each way
 HIP_ROCK_DROP = 0.003  # m, over each downstroke
 # deg of upper-torso counter-roll: just enough to hold the shoulders still over the rocking
@@ -962,7 +975,12 @@ class Rider:
 # =============================================================================================
 # The fit
 # =============================================================================================
-def solve_fit(rider, bike, iters=8):
+def solve_fit(rider, bike, effort=DEFAULT_EFFORT, P0=None, iters=8):
+    """Fit the torso, the shoulders and the seat to an effort's back angle. From
+    scratch, the palms start at their first point on the hoods; from P0 (a solved fit) they stay
+    where it put them, with its grip, so every effort holds the bars the same way."""
+    if P0 is not None:
+        return _fit_loop(rider, copy.deepcopy(P0), effort, iters)
     hood = {}
     for s, side in SIDES:
         z, y = bike.hood_top(side, HOOD_CONTACT_X)
@@ -978,6 +996,11 @@ def solve_fit(rider, bike, iters=8):
         "rock": 0.0,
         "pole": {k: 0.0 for k in rider.targets},
     }
+    return _fit_loop(rider, P, effort, iters)
+
+
+def _fit_loop(rider, P, effort, iters):
+    back_target, _rock, gaze_m = EFFORTS[effort]
     rider.calibrate_poles(P)
 
     def bisect(key, lo, hi, f, n=14):
@@ -1019,11 +1042,12 @@ def solve_fit(rider, bike, iters=8):
         )
         if c is not None:
             P["sit_x"] = float(c[0])
-        P["gaze"] = math.degrees(math.atan2(eye.z, GAZE_DISTANCE))
-        if abs(back - BACK_ANGLE) < 0.2 and it > 0:
+        P["gaze"] = math.degrees(math.atan2(eye.z, gaze_m))
+        if abs(back - back_target) < 0.2 and it > 0:
             break
-        P["torso"] += back - BACK_ANGLE
+        P["torso"] += back - back_target
     rider.calibrate_poles(P)
+    P["effort"] = effort
     return P
 
 
@@ -1120,6 +1144,23 @@ def solve_proportions(bike, iters=8):
     P["props"] = {"leg": hist[-1][0]}
     place_hands(rider, P)
     return rider, P
+
+
+def solve_efforts(rider, bike, P):
+    """Fit every effort from the default one's fit: the same body, palms and grip."""
+    fits = {DEFAULT_EFFORT: P}
+    for name in EFFORTS:
+        if name != DEFAULT_EFFORT:
+            fits[name] = solve_fit(rider, bike, name, P0=P)
+    for name, Q in fits.items():
+        rider.pose(0, Q)
+        log(
+            f"effort {name}: back {rider.back_angle():.1f}, elbows"
+            f" {0.5 * (rider.elbow_bend('l') + rider.elbow_bend('r')):.1f},"
+            f" shoulders {Q['clav']:.1f}, knee at BDC {max_knee(rider, Q):.1f}"
+        )
+    rider.pose(0, P)
+    return fits
 
 
 def fit_report(rider, P):
@@ -2037,35 +2078,62 @@ def limit_influences(ob, limit):
 # =============================================================================================
 # Animation
 # =============================================================================================
-def bake_pedal(rider, P):
-    """Pose every frame through the IK, record the bones, then key them and drop the IK."""
-    rig = rider.rig
-    P = dict(P, rock=1.0)
+def record_pedal(rider, P):
+    """Pose every frame of an effort through the IK and record the bones (armature space)."""
+    P = dict(P, rock=EFFORTS[P["effort"]][1])
     rec = []
     for k in range(FRAMES):
         rider.pose(k, P)
-        rec.append({pb.name: pb.matrix.copy() for pb in rig.pose.bones})
+        rec.append({pb.name: pb.matrix.copy() for pb in rider.rig.pose.bones})
+    return rec
+
+
+def bake_efforts(rider, fits):
+    """Record every effort, drop the IK, and key one cyclic action per effort, ending with the
+    default effort's action assigned. Returns {action: recorded frames}."""
+    rig = rider.rig
+    recs = {name: record_pedal(rider, fits[name]) for name in EFFORTS}
     for pb in rig.pose.bones:
         for c in list(pb.constraints):
             pb.constraints.remove(c)
         pb.lock_ik_y = pb.lock_ik_z = False
     rider.dispose()
-    rest = {b.name: b.matrix_local for b in rig.data.bones}
-    par = {b.name: (b.parent.name if b.parent else None) for b in rig.data.bones}
     bpy.context.preferences.edit.keyframe_new_interpolation_type = "LINEAR"
     rig.animation_data_create()
-    action = bpy.data.actions.new("Pedal")
-    rig.animation_data.action = action
-    prev = {}
-    for k, M in enumerate(rec):
-        for pb in rig.pose.bones:
-            n = pb.name
+    for name in (*[n for n in EFFORTS if n != DEFAULT_EFFORT], DEFAULT_EFFORT):
+        key_action(rig, name, recs[name])
+    sc = bpy.context.scene
+    sc.frame_start, sc.frame_end = 0, FRAMES - 1
+    sc.render.fps = FPS
+    sc.frame_set(0)
+    return recs
+
+
+def local_poses(rig, rec):
+    """Each frame's bone transforms relative to their parents' (the pose basis)."""
+    rest = {b.name: b.matrix_local for b in rig.data.bones}
+    par = {b.name: (b.parent.name if b.parent else None) for b in rig.data.bones}
+    out = []
+    for M in rec:
+        f = {}
+        for n in M:
             p = par[n]
             if p:
-                basis = (rest[p].inverted() @ rest[n]).inverted() @ M[p].inverted() @ M[n]
+                f[n] = (rest[p].inverted() @ rest[n]).inverted() @ M[p].inverted() @ M[n]
             else:
-                basis = rest[n].inverted() @ M[n]
-            loc, q, _ = basis.decompose()
+                f[n] = rest[n].inverted() @ M[n]
+        out.append(f)
+    return out
+
+
+def key_action(rig, name, rec):
+    action = bpy.data.actions.new(name)
+    use_action(rig, action)
+    prev = {}
+    for k, L in enumerate(local_poses(rig, rec)):
+        for pb in rig.pose.bones:
+            n = pb.name
+            loc, q, _ = L[n].decompose()
             if n in prev and q.dot(prev[n]) < 0:
                 q.negate()
             prev[n] = q
@@ -2077,14 +2145,43 @@ def bake_pedal(rider, P):
     action.use_frame_range = True
     action.frame_start, action.frame_end = 0, FRAMES - 1
     action.use_cyclic = True
+    action.use_fake_user = True  # kept in the .blend while another action is assigned
     for fc in action_fcurves(action):
         for kp in fc.keyframe_points:
             kp.interpolation = "LINEAR"
-    sc = bpy.context.scene
-    sc.frame_start, sc.frame_end = 0, FRAMES - 1
-    sc.render.fps = FPS
-    sc.frame_set(0)
-    return rec
+    return action
+
+
+def use_action(rig, action):
+    ad = rig.animation_data or rig.animation_data_create()
+    ad.action = action
+    if hasattr(ad, "action_slot") and len(getattr(action, "slots", [])):
+        ad.action_slot = action.slots[0]
+    bpy.context.view_layer.update()
+
+
+def blend_drift(rig, rec_a, rec_b, t=0.5):
+    """How far the hands and feet move off the hoods and pedals when a game blends two efforts'
+    local bone transforms (as an animation blend does) at weight t: the largest distance over
+    the loop from where the first effort holds them (m)."""
+    par = {b.name: (b.parent.name if b.parent else None) for b in rig.data.bones}
+    rest = {b.name: b.matrix_local for b in rig.data.bones}
+    order = [b.name for b in rig.data.bones]  # parents come first
+    ends = [f"{e}_{s}" for e in ("hand", "foot") for s, _ in SIDES]
+    worst = 0.0
+    for ra, la, lb in zip(rec_a, local_poses(rig, rec_a), local_poses(rig, rec_b), strict=True):
+        M = {}
+        for n in order:
+            la_l, la_q, _ = la[n].decompose()
+            lb_l, lb_q, _ = lb[n].decompose()
+            if la_q.dot(lb_q) < 0:
+                lb_q.negate()
+            B = Matrix.Translation(la_l.lerp(lb_l, t)) @ la_q.slerp(lb_q, t).to_matrix().to_4x4()
+            p = par[n]
+            M[n] = (M[p] @ rest[p].inverted() @ rest[n] @ B) if p else rest[n] @ B
+        for e in ends:
+            worst = max(worst, (M[e].translation - ra[e].translation).length)
+    return worst
 
 
 def action_fcurves(action):
@@ -2173,7 +2270,7 @@ def penetration(rider_ob, bike, bike_objs, slot_of_vertex):
     ]
 
 
-def collect_stats(rider, P, rider_ob, bike, bike_objs, rec):
+def collect_stats(rider, fits, rider_ob, bike, bike_objs, recs):
     me = rider_ob.data
     mi = np.empty(len(me.polygons), np.int64)
     me.polygons.foreach_get("material_index", mi)
@@ -2182,6 +2279,47 @@ def collect_stats(rider, P, rider_ob, bike, bike_objs, rec):
     tris = {}
     for i, m in enumerate(me.materials):
         tris[m.name] = tris.get(m.name, 0) + int((lt[mi == i] - 2).sum())
+    # vertex -> slot name for the penetration report
+    slot = np.empty(len(me.vertices), object)
+    for p in me.polygons:
+        for v in p.vertices:
+            slot[v] = me.materials[p.material_index].name
+    efforts = {}
+    for name in EFFORTS:
+        use_action(rider.rig, bpy.data.actions[name])
+        efforts[name] = effort_stats(rider, fits[name], rider_ob, bike, bike_objs, recs[name], slot)
+    use_action(rider.rig, bpy.data.actions[DEFAULT_EFFORT])
+    names = list(EFFORTS)
+    drift = {
+        f"{a}/{b}": round(1000 * blend_drift(rider.rig, recs[a], recs[b]), 1)
+        for a, b in itertools.pairwise(names)
+    }
+    leg = rider.rig.data.bones
+    P = fits[DEFAULT_EFFORT]
+    return {
+        "triangles": {"per_slot": tris, "total": sum(tris.values())},
+        "bones": len(rider.rig.data.bones),
+        "max_influences": max(len(v.groups) for v in me.vertices),
+        "frames": FRAMES,
+        "fps": FPS,
+        "default_action": DEFAULT_EFFORT,
+        "eye_point_game_assumes": [0.18, None, 1.50],
+        "body": {
+            "leg_target_weight": round(P["props"]["leg"], 3),
+            "hip_joint_x": round(P["hip"][0], 4),
+            "thigh_m": round((leg["thigh_l"].tail_local - leg["thigh_l"].head_local).length, 4),
+            "calf_m": round((leg["calf_l"].tail_local - leg["calf_l"].head_local).length, 4),
+            "palm_points": {s: [round(c, 4) for c in rider.hood[s]] for s, _ in SIDES},
+        },
+        "efforts": efforts,
+        # a halfway blend of neighbouring efforts' local transforms: the hands' and feet's
+        # largest move off the hoods and pedals, in mm
+        "blend_drift_mm": drift,
+    }
+
+
+def effort_stats(rider, P, rider_ob, bike, bike_objs, rec, slot):
+    """The checks for the action assigned now."""
     sc = bpy.context.scene
     cleat, hood, knee = 0.0, 0.0, {"l": [], "r": []}
     for k in range(FRAMES):
@@ -2192,20 +2330,13 @@ def collect_stats(rider, P, rider_ob, bike, bike_objs, rec):
             knee[s].append(rider.knee_angle(s))
     sc.frame_set(0)
     eye = rider.eye_point()
-    # vertex -> slot name for the penetration report
-    slot = np.empty(len(me.vertices), object)
-    for p in me.polygons:
-        for v in p.vertices:
-            slot[v] = me.materials[p.material_index].name
-    pen = penetration(rider_ob, bike, bike_objs, slot)
-    infl = max(len(v.groups) for v in me.vertices)
-    leg = rider.rig.data.bones
-    return {
-        "triangles": {"per_slot": tris, "total": sum(tris.values())},
-        "bones": len(rider.rig.data.bones),
-        "max_influences": infl,
-        "frames": FRAMES,
-        "fps": FPS,
+    out = {
+        "back_deg_hip_to_neck_base": round(rider.back_angle(), 1),
+        "elbow_bend_deg": round(0.5 * (rider.elbow_bend("l") + rider.elbow_bend("r")), 1),
+        "torso_pitch_deg": round(P["torso"], 2),
+        "clavicle_protraction_deg": round(P["clav"], 2),
+        "hip_joint_z": round(P["hip"][1], 4),
+        "hip_rock_roll_deg": round(HIP_ROCK_ROLL * EFFORTS[P["effort"]][1], 2),
         "max_cleat_to_pedal_axle_mm": round(1000 * cleat, 2),
         "knee_deg": {
             ("drive_r" if s == "r" else "non_drive_l"): {
@@ -2215,26 +2346,12 @@ def collect_stats(rider, P, rider_ob, bike, bike_objs, rec):
             for s, v in knee.items()
         },
         "max_hand_to_hood_mm": round(1000 * hood, 2),
-        "interpenetration_over_5mm": pen,
+        "interpenetration_over_5mm": penetration(rider_ob, bike, bike_objs, slot),
         "eye_point_frame0": [round(c, 4) for c in eye],
-        "eye_point_game_assumes": [0.18, None, 1.50],
-        "eye_point_delta_xz_m": [round(eye.x - 0.18, 3), round(eye.z - 1.50, 3)],
-        "fit": {
-            "leg_target_weight": round(P["props"]["leg"], 3),
-            "back_deg_hip_to_neck_base": round(rider_back(rider), 1),
-            "torso_pitch_deg": round(P["torso"], 2),
-            "clavicle_protraction_deg": round(P["clav"], 2),
-            "hip_joint_xz": [round(P["hip"][0], 4), round(P["hip"][1], 4)],
-            "thigh_m": round((leg["thigh_l"].tail_local - leg["thigh_l"].head_local).length, 4),
-            "calf_m": round((leg["calf_l"].tail_local - leg["calf_l"].head_local).length, 4),
-        },
         "loop_seam": seam_check(rec),
     }
-
-
-def rider_back(rider):
-    bpy.context.scene.frame_set(0)
-    return rider.back_angle()
+    log(f"{P['effort']}: " + ", ".join(f"{k} {v}" for k, v in out.items()))
+    return out
 
 
 # =============================================================================================
@@ -2245,7 +2362,6 @@ def export_fbx(rig, rider_ob, path):
     rig.select_set(True)
     rider_ob.select_set(True)
     bpy.context.view_layer.objects.active = rig
-    bpy.context.scene.name = "Pedal"  # the FBX take's name
     bpy.ops.export_scene.fbx(
         filepath=path,
         use_selection=True,
@@ -2264,7 +2380,7 @@ def export_fbx(rig, rider_ob, path):
         bake_anim=True,
         bake_anim_use_all_bones=True,
         bake_anim_use_nla_strips=False,
-        bake_anim_use_all_actions=False,
+        bake_anim_use_all_actions=True,  # one take per effort, "<armature>|<action>"
         bake_anim_force_startend_keying=True,
         bake_anim_step=1.0,
         bake_anim_simplify_factor=0.0,
@@ -2318,7 +2434,7 @@ def aim(cam, loc, target, lens):
     cam.data.lens = lens
 
 
-def render_all(out, quick, bike_objs):
+def render_all(out, quick, bike_objs, rig):
     sc = bpy.context.scene
     cam, _ = bike_mod().setup_render_scene(quick)
     sc.frame_set(0)
@@ -2369,6 +2485,29 @@ def render_all(out, quick, bike_objs):
         rep = 1600 // sheet.shape[1]
         sheet = sheet.repeat(rep, 0).repeat(rep, 1)
     save_png(os.path.join(out, "render_contact.png"), sheet, "sRGB")
+    # efforts: the drive side at frame 0 in each action, easy to hard
+    sc.render.resolution_x, sc.render.resolution_y = 800, 620
+    sc.frame_set(0)
+    pose_bike(bike_objs, 0)
+    aim(cam, (0.05, -3.4, 1.0), (0.05, 0.0, 0.95), 50)
+    tob.location = (-1.0, -0.4, 1.72)
+    tiles = []
+    for name, (back, _rock, _gaze) in EFFORTS.items():
+        use_action(rig, bpy.data.actions[name])
+        sc.frame_set(0)
+        tcu.body = f"{name}   back {back:.0f} deg"
+        path = os.path.join(out, "debug", f"effort_{name}.png")
+        sc.render.filepath = path
+        bpy.ops.render.render(write_still=True)
+        img = bpy.data.images.load(path)
+        w, h = img.size
+        tiles.append(np.array(img.pixels[:], np.float32).reshape(h, w, 4)[::-1, :, :3])
+        bpy.data.images.remove(img)
+    use_action(rig, bpy.data.actions[DEFAULT_EFFORT])
+    sheet = np.concatenate(tiles, 1)
+    if quick:
+        sheet = sheet.repeat(2, 0).repeat(2, 1)
+    save_png(os.path.join(out, "render_efforts.png"), sheet, "sRGB")
     sc.frame_set(0)
     pose_bike(bike_objs, 0)
 
@@ -2434,6 +2573,7 @@ def stage_all(opts):
     bike = BikeRef(bike_objs)
     rider, P = solve_proportions(bike)
     fit_report(rider, P)
+    fits = solve_efforts(rider, bike, P)
     # gear, built on the rest pose and skinned to the rig
     mats = make_materials(out)
     gear = Gear(rider, mats)
@@ -2455,8 +2595,8 @@ def stage_all(opts):
     rider_ob = join_rider(rider, parts)
     rider.mesh = rider_ob
     log(f"gear and textures done, {time.time() - t0:.0f}s")
-    rec = bake_pedal(rider, P)
-    stats = collect_stats(rider, P, rider_ob, bike, bike_objs, rec)
+    recs = bake_efforts(rider, fits)
+    stats = collect_stats(rider, fits, rider_ob, bike, bike_objs, recs)
     log(json.dumps(stats, indent=1, default=str))
     fbx = os.path.join(out, "rider.fbx")
     export_fbx(rider.rig, rider_ob, fbx)
@@ -2466,7 +2606,7 @@ def stage_all(opts):
         os.remove(blend + "1")  # Blender's backup of the previous build
     if opts["render"]:
         os.makedirs(os.path.join(out, "debug"), exist_ok=True)
-        render_all(out, opts["quick"], bike_objs)
+        render_all(out, opts["quick"], bike_objs, rider.rig)
     stats["fbx_reimport"] = check_fbx(fbx)
     stats["build_seconds"] = round(time.time() - t0)
     with open(os.path.join(out, "stats.json"), "w") as f:
