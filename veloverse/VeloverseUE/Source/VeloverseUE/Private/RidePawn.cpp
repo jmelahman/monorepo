@@ -38,12 +38,14 @@ namespace
 {
 constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
-// Behind the bike: the camera this far back along the look from a point ChaseAim over the road
-// (the bike's middle, with no rider on it yet), tipped down so the bike sits low of centre.
-// 3.3 m and 12 degrees down sat too close and steep (the user, 14 Nov).
-constexpr float ChaseBack = 420.f;
-constexpr float ChaseAim = 95.f;
-constexpr float ChaseTilt = -9.f;
+// Behind the bike: the camera this far back along the look from a point ChaseAim over the road,
+// tipped down. Matched to Zwift's camera 1 (14 Nov): about 3 m behind at 1.8 m, 10 degrees
+// down, aimed at a rider's chest, so the rider would sit big and central with the road above.
+// Before: 4.2 m back aimed at the bike's middle (95 cm), 9 degrees down; 3.3 m and 12 degrees
+// aimed at the bike's middle sat too close and steep (the user, 14 Nov).
+constexpr float ChaseBack = 305.f;
+constexpr float ChaseAim = 127.f;
+constexpr float ChaseTilt = -10.f;
 constexpr float ChaseGrade = 0.35f; // the share of the road's pitch the camera follows (was 0.5)
 constexpr float ChaseGrassReach = 1.3f; // the grass reach from behind, times the rider's setting
 const TCHAR* const GrassCollection = TEXT("/Game/Climb/Grass/MPC_Grass.MPC_Grass");
