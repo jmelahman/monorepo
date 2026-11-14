@@ -234,4 +234,6 @@ private:
 	void ApplyWeather();
 	// The profile's settings: the units, the view, ERG and the grass's reach.
 	void UseSettings();
+	void UseGrassReach(); // grass.CullDistanceScale from the Grass setting, net of r.ViewDistanceScale
+	float GrassViewScale = -1.f; // the r.ViewDistanceScale it was set against
 };

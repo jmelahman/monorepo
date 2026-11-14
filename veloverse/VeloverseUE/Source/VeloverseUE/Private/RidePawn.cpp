@@ -367,6 +367,11 @@ void ARidePawn::Tick(float Dt)
 {
 	Super::Tick(Dt);
 	ReadKeys();
+	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
+	if (!Automated() && ViewScale && GrassViewScale != FMath::Max(ViewScale->GetFloat(), 0.1f))
+	{
+		UseGrassReach(); // the view distance changed on the graphics page
+	}
 	if (!Track || Track->Length() <= 0.f)
 	{
 		return;
@@ -491,10 +496,24 @@ void ARidePawn::UseSettings()
 	{
 		Camera->SetFieldOfView(Profile.Fov);
 	}
-	if (IConsoleVariable* Reach = IConsoleManager::Get().FindConsoleVariable(TEXT("grass.CullDistanceScale")))
+	UseGrassReach();
+}
+
+void ARidePawn::UseGrassReach()
+{
+	// The lower view-distance qualities (r.ViewDistanceScale 0.4 on Low) pull every instance's cull
+	// in, grass too, but the grass material's fade still shrinks it towards its full reach: so on Low
+	// it vanished at full size, a hard edge close to the bike. Undo that scale for the grass, so its
+	// reach is the rider's Grass setting alone and it fades out before it's culled; Low thins it by
+	// density instead (DefaultScalability.ini).
+	static IConsoleVariable* View = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
+	static IConsoleVariable* Reach = IConsoleManager::Get().FindConsoleVariable(TEXT("grass.CullDistanceScale"));
+	if (!View || !Reach)
 	{
-		Reach->Set(Profile.Grass / 100.f, ECVF_SetByCode);
+		return;
 	}
+	GrassViewScale = FMath::Max(View->GetFloat(), 0.1f);
+	Reach->Set(Profile.Grass / 100.f / GrassViewScale, ECVF_SetByCode);
 }
 
 void ARidePawn::ReadCommandLine()
@@ -1063,7 +1082,7 @@ void ARidePawn::Docking(APlayerController& Player)
 	}
 	MouseAt = bOnScreen ? Now : FVector2f(-1.f, -1.f);
 	const Veloverse::FDockLayout L =
-		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Profile.bGraphs, Dock.Shown);
+		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Dock.Shown);
 	DockHover = bOnScreen ? L.Hit(Now.X, Now.Y) : -1;
 	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
 	if (Player.WasInputKeyJustPressed(EKeys::LeftMouseButton) || Player.WasInputKeyJustPressed(EKeys::RightMouseButton))
