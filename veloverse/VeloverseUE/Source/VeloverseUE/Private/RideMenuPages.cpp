@@ -1026,8 +1026,8 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			         [Write, Sp, Value, bPounds](int32 By)
 			         { Write(bPounds ? static_cast<float>(U::Kilos(U::Mass(Value) + By)) : Value + By * Sp->Step); });
 		}
-		// The HUD's colour: the themes the rider's level has unlocked.
-		const float Cy = Row(TEXT("HUD colour"), TEXT("More unlock as you level up"));
+		// The HUD's colour: any of them, from the start.
+		const float Cy = Row(TEXT("HUD colour"), TEXT("The accent across the HUD and menus"));
 		const auto& Themes = Veloverse::Themes();
 		float X = Right - Themes.size() * 52.f + 8.f;
 		for (const Veloverse::FTheme& Theme : Themes)

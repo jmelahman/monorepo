@@ -1,5 +1,5 @@
 // Points and levels: a ride earns XP for its distance and climbing, its segments and PRs, and a
-// finished workout; XP adds up to levels, and levels unlock HUD colours. Plain C++, tested in
+// finished workout; XP adds up to levels. Every HUD colour is open from the start. Plain C++, tested in
 // tests/progress_test.cpp.
 #pragma once
 
@@ -92,5 +92,7 @@ inline std::vector<FTheme> Unlocked(long long Before, long long After)
 	return Out;
 }
 
-inline bool IsUnlocked(const FTheme& T, long long Xp) { return LevelFor(Xp).Level >= T.Level; }
+// Every colour is open from the start (13 Nov QA): a rider picks the HUD's accent freely. Each
+// theme's Level is kept for when unlocks return, as something other than the accent.
+inline bool IsUnlocked(const FTheme&, long long) { return true; }
 } // namespace Veloverse

@@ -33,7 +33,7 @@ int main()
 	Check(New.size() == 1 && std::string(New[0].Name) == "Surf", "level 3 unlocks Surf",
 	      static_cast<double>(New.size()));
 	Check(Unlocked(0, 100).empty(), "no new level, no unlock");
-	Check(IsUnlocked(Themes()[0], 0), "Ember from the start");
+	Check(IsUnlocked(Themes()[0], 0) && IsUnlocked(Themes().back(), 0), "every colour from the start");
 	bool Ordered = true;
 	for (std::size_t I = 1; I < Themes().size(); ++I)
 	{

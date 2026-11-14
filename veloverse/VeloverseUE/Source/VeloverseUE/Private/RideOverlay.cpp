@@ -283,7 +283,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	const float W = Local.X / P.S; // the frame's width in canvas units: 1280 at 16:9
 	const float H = 720.f;
 	const float Here = Track.Wrap(static_cast<float>(Pawn->Distance)) / 100.f;
-	// The rider's HUD colour, unlocked with levels and picked on the profile page.
+	// The rider's HUD colour, picked on the profile page.
 	const FLinearColor Accent = Pawn->Profile.Accent();
 
 	// ---- Top left: power ------------------------------------------------------------------------
