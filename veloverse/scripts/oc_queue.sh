@@ -38,6 +38,34 @@ add)
 	cat >"$Q/$name.sh"
 	echo "queued $name"
 	;;
+idle)
+	# A line whenever the machine sits idle, and again every EVERY seconds (default 300) while it
+	# stays that way: the queue empty, or steps waiting with no runner to start them (it exits when
+	# the queue empties, so steps added after that wait for nothing). For an agent's monitor.
+	every="${2:-300}"
+	since=0 last=0
+	while true; do
+		waiting=$(steps "$Q" | wc -l)
+		active=("$Q"/*.active)
+		state=""
+		if [ ${#active[@]} -eq 0 ] && [ "$waiting" -eq 0 ]; then
+			state="queue empty"
+		elif ! pgrep -f 'oc_queue.sh run' >/dev/null; then
+			state="$waiting steps waiting and no runner"
+		fi
+		now=$(date +%s)
+		if [ -z "$state" ]; then
+			since=0 last=0
+		else
+			[ "$since" -eq 0 ] && since=$now
+			if [ "$last" -eq 0 ] || [ $((now - last)) -ge "$every" ]; then
+				echo "$(date +%H:%M) $state, idle $(((now - since) / 60)) min"
+				last=$now
+			fi
+		fi
+		sleep 20
+	done
+	;;
 list)
 	echo "waiting:"
 	steps "$Q"
