@@ -28,6 +28,9 @@ add)
 	name=${2:?job name} job=${3:?job script}
 	sha=$(grep -oP 'merge -q --ff-only \K[0-9a-f]{7,40}' "$job" || true)
 	body=$(grep -v 'git -C /workspace/veloverse merge' "$job")
+	# The pod's editor can hang for minutes quitting before its watchdog kills it, so a restart
+	# there outlasts oc.py's 300 s wait for the editor to come back.
+	body=$(sed -E 's#(scripts/oc\.py [a-z-]+)( |$)#\1 --boot-timeout 1200\2#' <<<"$body")
 	if [ -n "$sha" ]; then
 		sha=$(git -C /workspace rev-parse "$sha")
 		tar=/workspace/ue/out/lane/src_${sha:0:12}.tar
