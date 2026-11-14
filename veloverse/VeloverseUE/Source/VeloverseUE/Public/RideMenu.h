@@ -86,6 +86,10 @@ private:
 	bool bKeys = false;
 	FString Dragging;
 	mutable FString Hover; // the hit under the mouse, found as the frame paints
+	// How far each hit has eased towards hovered, 0 to 1 (FPaintContext::Lift), and when the menu
+	// last painted, for the step.
+	mutable TMap<FString, float> Lifts;
+	mutable double LiftClock = 0.0;
 
 	// Each route's numbers and lines, read once per track.
 	struct FRouteSurvey

@@ -162,7 +162,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		const FString Text = FString::Printf(TEXT("Level %d"), Level.Level);
 		const float Wd = P.Width(Text, P.Font("Bold", 16.f)) + 40.f + 96.f;
 		Right -= Wd;
-		P.Round(Right, 48.f, Wd, 44.f, 22.f, WithAlpha(Night, C.Hot(TEXT("level")) ? 0.8f : 0.55f));
+		P.Round(Right, 48.f, Wd, 44.f, 22.f, WithAlpha(Night, 0.55f + 0.25f * C.Lift(TEXT("level"))));
 		P.Border(Right, 48.f, Wd, 44.f, 22.f, InkA(0.16f));
 		const float Tw = P.Text(Right + 20.f, Mid(70.f, 16.f), Text, P.Font("Bold", 16.f), Ink);
 		P.Round(Right + 32.f + Tw, 67.f, 80.f, 6.f, 3.f, InkA(0.16f));
@@ -181,7 +181,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		const FString Status = TrainerStatus(Pawn, bLive);
 		const float Wd = P.Width(Status, P.Font("Bold", 16.f)) + 76.f;
 		Right -= Wd;
-		P.Round(Right, 48.f, Wd, 44.f, 22.f, WithAlpha(Night, C.Hot(TEXT("trainer")) ? 0.8f : 0.55f));
+		P.Round(Right, 48.f, Wd, 44.f, 22.f, WithAlpha(Night, 0.55f + 0.25f * C.Lift(TEXT("trainer"))));
 		P.Border(Right, 48.f, Wd, 44.f, 22.f, InkA(0.16f));
 		P.Icon(Icons::Bluetooth, Right + 16.f, 60.f, 20.f, bLive ? Sky : Muted);
 		P.Text(Right + 44.f, Mid(70.f, 16.f), Status, P.Font("Bold", 16.f), Ink);
@@ -198,8 +198,8 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	const FRouteSurvey* Route = Pawn ? SurveyOf(Pawn->Track) : nullptr;
 	{
 		const FString Key = TEXT("ride");
-		const bool bHot = C.Hot(Key);
-		P.Round(120.f, 292.f, 560.f, 84.f, 14.f, bHot ? C.Accent * 1.12f : C.Accent);
+		const float L = C.Lift(Key); // brightens, and its arrow leans on
+		P.Round(120.f, 292.f, 560.f, 84.f, 14.f, C.Accent * (1.f + 0.12f * L));
 		P.Text(150.f, 330.f, TEXT("Ride"), P.Serif(30.f), C.OnAccent);
 		if (Route)
 		{
@@ -208,7 +208,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 			             P.Font("Medium", 16.f), 430.f),
 			       P.Font("Medium", 16.f), WithAlpha(C.OnAccent, 0.8f));
 		}
-		P.Icon(Icons::Arrow, 618.f, 318.f, 32.f, C.OnAccent, 2.4f);
+		P.Icon(Icons::Arrow, 618.f + 6.f * L, 318.f, 32.f, C.OnAccent, 2.4f);
 		C.Ring(Key, 120.f, 292.f, 560.f, 84.f, 14.f);
 		C.Hit(Key, 120.f, 292.f, 560.f, 84.f).OnClick = [M] { M->Controller()->Ride(); };
 	}
@@ -236,14 +236,14 @@ void URideMenu::PaintStart(FPaintContext& C) const
 	for (const FItem& Item : Items)
 	{
 		// A card each, as the board has them: the icon, the name with a line under it, a chevron.
-		const bool bHot = C.Hot(Item.Key);
-		P.Round(120.f, Y, 560.f, 72.f, 12.f, WithAlpha(Night, bHot ? 0.62f : 0.42f));
-		P.Border(120.f, Y, 560.f, 72.f, 12.f, InkA(bHot ? 0.2f : 0.1f));
+		const float L = C.Lift(Item.Key); // lights up, and its chevron leans on
+		P.Round(120.f, Y, 560.f, 72.f, 12.f, WithAlpha(Night, 0.42f + 0.2f * L));
+		P.Border(120.f, Y, 560.f, 72.f, 12.f, InkA(0.1f + 0.1f * L));
 		P.Icon(Item.Icon, 144.f, Y + 22.f, 28.f, C.Accent, 1.8f);
 		P.Text(192.f, Mid(Y + 27.f, 21.f), Item.Label, P.Font("Medium", 21.f), Ink);
 		const FSlateFontInfo F = P.Font("Medium", 14.f);
 		P.Text(192.f, Mid(Y + 51.f, 14.f), P.Fit(Item.Value, F, 400.f), F, Soft);
-		P.Icon(Icons::Chevron, 680.f - 24.f - 20.f, Y + 26.f, 20.f, InkA(bHot ? 1.f : 0.4f), 2.f);
+		P.Icon(Icons::Chevron, 680.f - 24.f - 20.f + 4.f * L, Y + 26.f, 20.f, InkA(0.4f + 0.6f * L), 2.f);
 		C.Ring(Item.Key, 120.f, Y, 560.f, 72.f, 12.f);
 		C.Hit(Item.Key, 120.f, Y, 560.f, 72.f).OnClick = Item.Click;
 		Y += 84.f;
@@ -255,7 +255,8 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		const FRideEntry& E = History[0];
 		const float Wd = 420.f, Ht = 214.f, X = C.W - 64.f - Wd, Top = 1080.f - 64.f - Ht;
 		const FString Key = TEXT("last");
-		C.Panel(X, Top, Wd, Ht, 16.f, C.Hot(Key) ? 0.9f : 0.78f);
+		const float L = C.Lift(Key);
+		C.Panel(X, Top, Wd, Ht, 16.f, 0.78f + 0.12f * L);
 		Label(P, X + 28.f, Top + 38.f, TEXT("Last ride · ") + RideDay(E.Started));
 		P.Text(X + 28.f, Top + 80.f, P.Fit(E.Route.IsEmpty() ? FString(TEXT("Ride")) : E.Route, P.Serif(28.f), Wd - 56.f),
 		       P.Serif(28.f), Ink);
@@ -271,7 +272,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		}
 		P.Rect(X + 28.f, Top + 166.f, Wd - 56.f, 1.f, InkA(0.08f));
 		P.Text(X + 28.f, Top + 194.f, TEXT("Review the ride"), P.Font("Bold", 16.f), C.Accent);
-		P.Icon(Icons::Arrow, X + 28.f + P.Width(TEXT("Review the ride"), P.Font("Bold", 16.f)) + 8.f, Top + 179.f, 20.f,
+		P.Icon(Icons::Arrow, X + 28.f + P.Width(TEXT("Review the ride"), P.Font("Bold", 16.f)) + 8.f + 4.f * L, Top + 179.f, 20.f,
 		       C.Accent);
 		C.Ring(Key, X, Top, Wd, Ht, 16.f);
 		C.Hit(Key, X, Top, Wd, Ht).OnClick = [M]
@@ -310,10 +311,10 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		}
 		const FString Key = FString::Printf(TEXT("route%d"), I);
 		const bool bOn = I == Chosen;
-		const bool bHot = C.Hot(Key);
+		const float L = C.Lift(Key);
 		P.Round(64.f, Y, 600.f, 88.f, 14.f,
-		        bOn ? WithAlpha(C.Accent, 0.12f) : WithAlpha(Night, bHot ? 0.75f : 0.55f));
-		P.Border(64.f, Y, 600.f, 88.f, 14.f, bOn ? WithAlpha(C.Accent, 0.7f) : InkA(bHot ? 0.24f : 0.1f));
+		        bOn ? WithAlpha(C.Accent, 0.12f) : WithAlpha(Night, 0.55f + 0.2f * L));
+		P.Border(64.f, Y, 600.f, 88.f, 14.f, bOn ? WithAlpha(C.Accent, 0.7f) : InkA(0.1f + 0.14f * L));
 		P.Text(88.f, Y + 38.f, P.Fit(S->Title, P.Font("Bold", 22.f), 340.f), P.Font("Bold", 22.f), Ink);
 		P.Text(88.f, Y + 66.f,
 		       FString::Printf(TEXT("%s · %s %s climbing%s"), *U::Distance(S->Km * 1000.0), *Thousands(U::Height(S->Climb)),
@@ -519,8 +520,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	{
 		Label(P, Dx, 628.f, TEXT("Start at"));
 		const FString Key = TEXT("startat");
-		const bool bHot = C.Hot(Key);
-		P.Round(Dx, 640.f, Dw, 56.f, 12.f, InkA(bHot ? 0.1f : 0.06f));
+		P.Round(Dx, 640.f, Dw, 56.f, 12.f, InkA(0.06f + 0.04f * C.Lift(Key)));
 		P.Icon(Icons::ChevronLeft, Dx + 14.f, 656.f, 24.f, Ink);
 		P.Icon(Icons::Chevron, Dx + Dw - 38.f, 656.f, 24.f, Ink);
 		const ARidePawn::FStart& Start = Starts[FMath::Clamp(StartAt, 0, Starts.Num() - 1)];
@@ -776,9 +776,10 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		const FString Key = FString::Printf(TEXT("tab%d"), I);
 		const float Y = 166.f + I * 64.f;
 		const bool bOn = static_cast<int32>(Tab) == I;
-		if (bOn || C.Hot(Key))
+		const float L = C.Lift(Key);
+		if (bOn || L > 0.001f)
 		{
-			P.Round(80.f, Y, 288.f, 60.f, 12.f, bOn ? WithAlpha(C.Accent, 0.14f) : InkA(0.07f));
+			P.Round(80.f, Y, 288.f, 60.f, 12.f, bOn ? WithAlpha(C.Accent, 0.14f) : InkA(0.07f * L));
 		}
 		P.Icon(TabIcons[I], 100.f, Y + 19.f, 22.f, bOn ? TabInk : Soft);
 		P.Text(140.f, Mid(Y + 30.f, 19.f), Names[I], P.Font("Bold", 19.f), bOn ? TabInk : Ink);
@@ -1475,9 +1476,10 @@ void URideMenu::PaintReview(FPaintContext& C) const
 		const float Ry = 108.f + (I - RidesFirst) * 72.f;
 		const FString Key = FString::Printf(TEXT("ride%d"), I);
 		const bool bOn = Review.Entry == I;
-		if (bOn || C.Hot(Key))
+		const float L = C.Lift(Key);
+		if (bOn || L > 0.001f)
 		{
-			P.Round(60.f, Ry, 276.f, 66.f, 10.f, bOn ? WithAlpha(C.Accent, 0.14f) : InkA(0.07f));
+			P.Round(60.f, Ry, 276.f, 66.f, 10.f, bOn ? WithAlpha(C.Accent, 0.14f) : InkA(0.07f * L));
 		}
 		P.Text(76.f, Ry + 28.f, RideDay(E.Started), P.Font("Bold", 16.f),
 		       bOn ? FMath::Lerp(C.Accent, FLinearColor::White, 0.45f) : Ink);

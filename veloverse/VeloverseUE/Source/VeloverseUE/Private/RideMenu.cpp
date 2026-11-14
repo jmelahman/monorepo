@@ -483,11 +483,21 @@ int32 URideMenu::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 		}
 	}
 	Hits.Reset();
+	const double Now = FPlatformTime::Seconds();
+	const float Dt = FMath::Clamp(static_cast<float>(Now - LiftClock), 0.f, 0.1f);
+	LiftClock = Now;
+	for (auto It = Lifts.CreateIterator(); It; ++It)
+	{
+		if (It.Value() < 0.001f && It.Key() != Hover)
+		{
+			It.RemoveCurrent(); // settled: a hit with no entry is at rest
+		}
+	}
 	const FPainter P{Geometry, Out, Layer, Scale};
 	ARidePawn* Pawn = Rider();
 	const FLinearColor Accent = Pawn ? Pawn->Profile.Accent() : Hex(0xFFAD50);
 	FPaintContext C{P, *const_cast<URideMenu*>(this), Pawn, Local.X / Scale, Accent, TextOn(Accent),
-	                FPlatformTime::Seconds()};
+	                Now, Dt};
 	switch (Current)
 	{
 	case ERideMenuPage::Start: PaintStart(C); break;

@@ -170,6 +170,18 @@ struct URideMenu::FPaintContext
 	float W; // the frame's width: 1920 at 16:9
 	FLinearColor Accent, OnAccent;
 	double Time; // seconds, for what pulses
+	float Dt = 0.f; // seconds since the last paint, for what eases
+
+	// How far Key has come towards hovered (bOn), 0 to 1: eased out over about 150 ms, quick to
+	// start and gentle to settle. Once per hit per frame. The keys' focus moves without easing,
+	// so stepping through the menu with them never lags.
+	float Lift(const FString& Key, bool bOn) const
+	{
+		float& Value = Menu.Lifts.FindOrAdd(Key);
+		Value = Menu.bKeys ? (bOn ? 1.f : 0.f) : FMath::Lerp(Value, bOn ? 1.f : 0.f, 1.f - FMath::Exp(-Dt / 0.05f));
+		return Value;
+	}
+	float Lift(const FString& Key) const { return Lift(Key, Hot(Key)); }
 
 	FHit& Hit(const FString& Key, float X, float Y, float Wd, float H) const
 	{
@@ -208,34 +220,44 @@ struct URideMenu::FPaintContext
 	            bool bSerif = false, float R = 12.f, bool bIconAfter = false) const
 	{
 		using namespace VeloverseMenu;
-		const bool bHot = Hot(Key);
+		// Hovered, the button grows 4% about its middle as it brightens (the hit stays put, so its
+		// edge can't flicker under the pointer).
+		Hit(Key, X, Y, Wd, H).OnClick = MoveTemp(Click);
+		const float L = Lift(Key);
+		const float Grow = 1.f + 0.04f * L;
+		X -= Wd * (Grow - 1.f) * 0.5f;
+		Y -= H * (Grow - 1.f) * 0.5f;
+		Wd *= Grow;
+		H *= Grow;
+		R *= Grow;
+		Px *= Grow;
 		FLinearColor Fg = Ink;
 		switch (Style)
 		{
 		case EButton::Primary:
-			P.Round(X, Y, Wd, H, R, bHot ? Accent * 1.12f : Accent);
+			P.Round(X, Y, Wd, H, R, Accent * (1.f + 0.12f * L));
 			Fg = OnAccent;
 			break;
 		case EButton::Outline:
-			P.Round(X, Y, Wd, H, R, InkA(bHot ? 0.1f : 0.f));
-			P.Border(X, Y, Wd, H, R, InkA(0.28f));
+			P.Round(X, Y, Wd, H, R, InkA(0.1f * L));
+			P.Border(X, Y, Wd, H, R, InkA(0.28f + 0.14f * L));
 			break;
 		case EButton::Quiet:
-			P.Round(X, Y, Wd, H, R, InkA(bHot ? 0.1f : 0.f));
+			P.Round(X, Y, Wd, H, R, InkA(0.1f * L));
 			break;
 		}
 		const FSlateFontInfo F = bSerif ? P.Serif(Px) : P.Font(Style == EButton::Primary ? "Bold" : "Medium", Px);
 		const float TextW = P.Width(Label, F);
-		const float IconW = Icon ? 30.f : 0.f;
+		const float IconW = (Icon ? 30.f : 0.f) * Grow;
 		const float Left = X + (Wd - TextW - IconW) * 0.5f;
 		if (Icon)
 		{
-			// Before the words, or after them for a way on.
-			P.Icon(Icon, bIconAfter ? Left + TextW + 8.f : Left, Y + H * 0.5f - 11.f, 22.f, Fg, 2.2f);
+			// Before the words, or after them for a way on; an arrow after them leans on 3 px.
+			const float IconPx = 22.f * Grow;
+			P.Icon(Icon, bIconAfter ? Left + TextW + 8.f * Grow + 3.f * L : Left, Y + (H - IconPx) * 0.5f, IconPx, Fg, 2.2f);
 		}
 		P.Text(bIconAfter ? Left : Left + IconW, Mid(Y + H * 0.5f, Px), Label, F, Fg);
 		Ring(Key, X, Y, Wd, H, R);
-		Hit(Key, X, Y, Wd, H).OnClick = MoveTemp(Click);
 	}
 
 	// The round back button at the top left of every page but the start.
@@ -243,9 +265,11 @@ struct URideMenu::FPaintContext
 	{
 		using namespace VeloverseMenu;
 		const FString Key = TEXT("back");
-		P.Round(64.f, 48.f, 52.f, 52.f, 26.f, InkA(Hot(Key) ? 0.12f : 0.f));
-		P.Border(64.f, 48.f, 52.f, 52.f, 26.f, InkA(0.22f));
-		P.Icon(Icons::Back, 78.f, 62.f, 24.f, Ink);
+		const float L = Lift(Key);
+		const float Rad = 26.f * (1.f + 0.08f * L); // grows about its middle, and the arrow leans back
+		P.Round(90.f - Rad, 74.f - Rad, 2.f * Rad, 2.f * Rad, Rad, InkA(0.12f * L));
+		P.Border(90.f - Rad, 74.f - Rad, 2.f * Rad, 2.f * Rad, Rad, InkA(0.22f + 0.14f * L));
+		P.Icon(Icons::Back, 78.f - 3.f * L, 62.f, 24.f, Ink);
 		Ring(Key, 64.f, 48.f, 52.f, 52.f, 26.f);
 		Hit(Key, 64.f, 48.f, 52.f, 52.f).OnClick = MoveTemp(Click);
 	}
@@ -275,13 +299,14 @@ struct URideMenu::FPaintContext
 			const FSlateFontInfo F = P.Font("Bold", Px);
 			const float Bw = FMath::Max(MinW, P.Width(Options[I], F) + 36.f);
 			const bool bOn = I == Chosen;
+			const float L = Lift(Each);
 			if (bOn)
 			{
 				P.Round(At, Y + 5.f, Bw, H, 8.f, Accent);
 			}
-			else if (Hot(Each))
+			else if (L > 0.001f)
 			{
-				P.Round(At, Y + 5.f, Bw, H, 8.f, InkA(0.1f));
+				P.Round(At, Y + 5.f, Bw, H, 8.f, InkA(0.1f * L));
 			}
 			P.Text(At + Bw * 0.5f, Mid(Y + 5.f + H * 0.5f, Px), Options[I], F, bOn ? OnAccent : Ink, EAlign::Centre);
 			Ring(Each, At, Y + 5.f, Bw, H, 8.f);
@@ -305,7 +330,7 @@ struct URideMenu::FPaintContext
 		const bool bHot = Hot(Key) || Menu.Dragging == Key;
 		P.Round(X, Cy - 3.f, Track, 6.f, 3.f, InkA(0.14f));
 		P.Round(X, Cy - 3.f, FMath::Max(Track * Share, 6.f), 6.f, 3.f, Accent);
-		P.Disc(X + Track * Share, Cy, bHot ? 12.f : 10.f, Ink);
+		P.Disc(X + Track * Share, Cy, 10.f + 3.f * Lift(Key, bHot), Ink);
 		P.Text(X + Wd, Mid(Cy, 18.f), Value, P.Font("Bold", 18.f), Ink, EAlign::Right);
 		Ring(Key, X - 12.f, Cy - 20.f, Track + 24.f, 40.f, 20.f);
 		FHit& Out = Hit(Key, X - 12.f, Cy - 20.f, Track + 24.f, 40.f);
