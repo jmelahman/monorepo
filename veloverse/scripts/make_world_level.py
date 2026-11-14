@@ -471,8 +471,22 @@ def paint_band(x, y, h, slope, d, w, inland):
     return {k: out[k].astype(np.float32) for k in LAYERS}
 
 
-def trees_band(rng, x, y, h, slope, d, forest, desert):
-    """Candidate stems every TREE_STEP m near the ring, kept where the band is woods."""
+def at_stem(grid, px, py):
+    """`grid` (the whole map, as h or dist) bilinearly at world points (m). Stems are jittered off
+    their sample, so its height and road distance were metres out: on slopes trees floated or
+    sank, and one stood in the road at the end of Vael's bridge (13 Nov QA)."""
+    c = np.clip(np.asarray(px, np.float64) / SPACING + HALF, 0, RES - 1.001)
+    r = np.clip(np.asarray(py, np.float64) / SPACING + HALF, 0, RES - 1.001)
+    c0, r0 = c.astype(int), r.astype(int)
+    fc, fr = c - c0, r - r0
+    top = grid[r0, c0] * (1 - fc) + grid[r0, c0 + 1] * fc
+    low = grid[r0 + 1, c0] * (1 - fc) + grid[r0 + 1, c0 + 1] * fc
+    return top * (1 - fr) + low * fr
+
+
+def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
+    """Candidate stems every TREE_STEP m near the ring, kept where the band is woods. `whole` is
+    (h, dist) for the whole map, read at each stem's own point."""
     near = d < WOODS
     if not near.any():
         return []
@@ -482,7 +496,7 @@ def trees_band(rng, x, y, h, slope, d, forest, desert):
     rows, cols = np.nonzero(near & pick)
     jitter = rng.normal(0, 0.45, (2, len(rows))) * TREE_STEP
     px, py = x[rows, cols] + jitter[0], y[rows, cols] + jitter[1]
-    dd, zz, ww = d[rows, cols], h[rows, cols], forest[rows, cols]
+    zz, dd, ww = at_stem(whole[0], px, py), at_stem(whole[1], px, py), forest[rows, cols]
     clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
     wood = ww * np.clip(0.15 + 1.1 * clump, 0, 1) * (1 - desert[rows, cols])
     far = np.where(dd < 50, 1.0, 0.3)
@@ -521,8 +535,9 @@ def trees_band(rng, x, y, h, slope, d, forest, desert):
     return out
 
 
-def far_trees_band(rng, x, y, h, slope, d, forest, desert):
-    """The far forest's stems in a band: [kind, x, y, z, yaw, scale] in cm, as trees.json."""
+def far_trees_band(rng, x, y, h, slope, d, forest, desert, whole):
+    """The far forest's stems in a band: [kind, x, y, z, yaw, scale] in cm, as trees.json; `whole`
+    as for trees_band."""
     stride = max(1, round(FAR_STEP / SPACING))
     pick = np.zeros(d.shape, bool)
     pick[::stride, ::stride] = True
@@ -531,11 +546,12 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert):
         return []
     jitter = rng.normal(0, 0.45, (2, len(rows))) * FAR_STEP
     px, py = x[rows, cols] + jitter[0], y[rows, cols] + jitter[1]
-    zz = h[rows, cols]
+    zz = at_stem(whole[0], px, py)
     clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
     wood = forest[rows, cols] * np.clip(0.15 + 1.1 * clump, 0, 1) * (1 - desert[rows, cols])
     keep = (
-        (slope[rows, cols] < 1.0)
+        (at_stem(whole[1], px, py) >= WOODS - 10)
+        & (slope[rows, cols] < 1.0)
         & (rng.random(len(rows)) < wood * 0.8)
         & (rng.random(len(rows)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
         & (zz > 6)
@@ -589,8 +605,8 @@ def paint_and_trees(plan, h, dist):
         top = np.argmax(np.stack([q8[k] for k in names]), axis=0)
         img = np.where((hb > 0)[..., None], colours[top], np.uint8([40, 80, 120]))
         small.append(img[::4, ::4])
-        stems += trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"])
-        far += far_trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"])
+        stems += trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"], (h, dist))
+        far += far_trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"], (h, dist))
         print(f"band {r0 // BAND + 1}/{math.ceil(RES / BAND)}: {len(stems)} trees", flush=True)
     if len(far) > FAR_MAX:
         far = [far[i] for i in sorted(rng.choice(len(far), FAR_MAX, replace=False))]
