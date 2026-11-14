@@ -625,6 +625,27 @@ LINE_FRESH = (0.72, 0.72, 0.7)
 ROAD_HALF = 1.5
 
 
+def _wet_road(g, colour, rough, wet_rough=0.12):
+    """The road under rain: darker and glossy as MPC_Ride's "Wet" rises, with puddles gathering in
+    patches. The world's roads ignored the weather (13 Nov QA: "the rain visuals need work"), so a
+    shower fell on dry, matte tarmac. Unchanged when there is no MPC_Ride (the coast makes it)."""
+    path = "/Game/Coast/Materials/MPC_Ride"
+    if not unreal.EditorAssetLibrary.does_asset_exist(path):
+        return colour, rough
+    wet = g.node(
+        unreal.MaterialExpressionCollectionParameter,
+        collection=unreal.load_asset(path),
+        parameter_name="Wet",
+    )
+    colour = g.mul(colour, g.lerp(g.const(1.0), g.const(0.55), wet))
+    rough = g.lerp(rough, g.const(wet_rough), g.mul(wet, 0.8))
+    pool = g.saturate(g.mul(g.add(g.world_noise(0.004, 0.0, 1.0, 3), -0.58), 6.0))
+    pool = g.mul(pool, wet)
+    rough = g.lerp(rough, g.const(0.03), pool)
+    colour = g.mul(colour, g.lerp(g.const(1.0), g.const(0.6), pool))
+    return colour, rough
+
+
 def road_material():
     """The island's Megascans asphalt, world-mapped, darkened for the bike path."""
     g = lib.Graph("M_ClimbRoad", f"{FOLDER}/Road")
@@ -733,6 +754,7 @@ def road_material():
     fresh_white = g.lerp(g.const(LINE_FRESH), g.const(LINE_WHITE), wear)
     colour = g.lerp(colour, fresh_white, paint)
     rough = g.lerp(rough, g.const(0.7), paint)
+    colour, rough = _wet_road(g, colour, rough)
     g.output(colour, normal, rough, specular=0.2, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
@@ -790,6 +812,7 @@ def path_material():
     # The outer 15-30 cm is the ground's own colour, from the world's ground RVT.
     rim = g.saturate(g.mul(g.add(g.add(inside, ragged), -0.22), -6.0))
     colour = g.lerp(colour, _rvt_colour(g), g.mul(rim, g.param("ground blend", 1.0)))
+    colour, rough = _wet_road(g, colour, rough, wet_rough=0.3)
     g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
@@ -851,6 +874,7 @@ def trail_material():
     paint = g.mul(stripe, dash)
     colour = g.lerp(colour, g.const(TRAIL_YELLOW), paint)
     rough = g.lerp(rough, g.const(0.6), paint)
+    colour, rough = _wet_road(g, colour, rough, wet_rough=0.18)
     g.output(colour, rough=rough, specular=0.25, metallic=0.0)
     g.material.set_editor_property("used_with_nanite", True)
     return g.finish()
