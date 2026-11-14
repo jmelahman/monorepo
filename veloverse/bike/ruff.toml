@@ -1,5 +1,5 @@
 # build_bike.py runs inside Blender's own Python (bpy, its bundled numpy), so
-# this is ruff alone rather than the monorepo's python profile, like veloverse.
+# this is ruff alone rather than the monorepo's python profile, like the rest of veloverse.
 line-length = 100
 
 [lint]
