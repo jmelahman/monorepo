@@ -71,8 +71,12 @@ inline const TCHAR* Bolt = TEXT("M13 2L4.5 13.5H11L10 22l8.5-11.5H12z");
 inline const TCHAR* Cadence = TEXT("M20 12a8 8 0 11-2.3-5.7M20 4v4h-4M12 12l3-2");
 inline const TCHAR* Check = TEXT("M5 12l5 5 9-10");
 inline const TCHAR* Download = TEXT("M12 4v11M7 10l5 5 5-5M5 20h14");
-inline const TCHAR* Screen = TEXT("M3 5h18v12H3zM8 21h8M12 17v4");
-inline const TCHAR* Layers = TEXT("M12 3.5l8.5 4.5-8.5 4.5-8.5-4.5zM3.5 12l8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5");
+// A screen with a hill and the sun on it: the picture's quality.
+inline const TCHAR* Screen = TEXT("M5 4h14a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2zM9 21h6M12 17v4M7 14l3.5-4 "
+                                  "2.5 2.5 1.5-1.5 2.5 3M15.5 7.3a1 1 0 100 2 1 1 0 000-2z");
+// Three sliders: each detail set on its own.
+inline const TCHAR* Sliders = TEXT("M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4a2 2 0 100 4 2 2 0 000-4zM9 10a2 2 0 "
+                                   "100 4 2 2 0 000-4zM17 16a2 2 0 100 4 2 2 0 000-4z");
 // A diamond frame on two round wheels, with a saddle and bars.
 inline const TCHAR* Bike = TEXT("M5 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM19 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 16l4-6.5 2 6.5zM9 9.5h7.5M11 16l5.5-6.5L19 16M9 9.5L8.5 7.5M7 7.5h3M16.5 9.5l-.6-2.5h2.3");
 inline const TCHAR* Rider = TEXT("M12 4a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 20a7 7 0 0114 0");

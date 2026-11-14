@@ -769,7 +769,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 	C.Panel(64.f, 150.f, 320.f, 866.f);
 	constexpr int32 Tabs = static_cast<int32>(ERideSettingsTab::Count);
 	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Rider")};
-	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Layers, Icons::Globe, Icons::Bike, Icons::Rider};
+	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Sliders, Icons::Globe, Icons::Bike, Icons::Rider};
 	const FLinearColor TabInk = FMath::Lerp(C.Accent, FLinearColor::White, 0.45f);
 	for (int32 I = 0; I < Tabs; ++I)
 	{
