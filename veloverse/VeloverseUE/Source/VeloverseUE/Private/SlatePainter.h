@@ -40,7 +40,7 @@ enum class EAlign : uint8
 // Slate drops a run's leading space, so text that follows another run starts after this gap.
 constexpr float Space = 4.f;
 
-// Fraunces SemiBold, the titles' serif, from Content/Menu (scripts/make_menu_map.py copies it there);
+// Source Serif 4 Semibold, the titles' serif, from Content/Menu (scripts/make_menu_map.py copies it there);
 // Roboto Bold when it isn't there.
 // Content/Menu/Inter-<Face>.ttf if it's there, else empty; looked up once a weight.
 inline FString SansFile(FName Face)
@@ -57,7 +57,7 @@ inline FString SansFile(FName Face)
 
 inline const FString& SerifFile()
 {
-	static const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Menu/Fraunces-SemiBold.ttf"));
+	static const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Menu/SourceSerif4-Semibold.ttf"));
 	return File;
 }
 
