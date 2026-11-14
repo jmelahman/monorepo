@@ -7,6 +7,9 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/CommandLine.h"
 #include "Misc/ConfigCacheIni.h"
+#include "DynamicRHI.h"
+#include "RHIGlobals.h"
+#include "RHIStats.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "RideMenu.h"
@@ -56,22 +59,25 @@ void ARidePlayerController::UseCursor()
 
 void ARidePlayerController::DetectQualityOnFirstLaunch()
 {
-	// The first launch sets the graphics quality from a quick benchmark of this machine's CPU and GPU,
-	// so a laptop doesn't start on Epic. A rider who has saved their own settings keeps them, and the
-	// benchmark's result is saved, so it runs once.
+	// The first launch picks the graphics quality from the GPU, so a laptop doesn't start on Epic: an
+	// integrated GPU starts on Low, a dedicated one by its memory. Not the engine's hardware benchmark:
+	// its GPU test lost the device (VK_ERROR_DEVICE_LOST) on an AMD Phoenix iGPU under RADV and took the
+	// game down before the menu. A rider who has saved their own settings keeps them, and the choice is
+	// saved, so it runs once.
 	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
 	int32 Saved = 0;
-	if (!Settings || Settings->GetLastGPUBenchmarkResult() >= 0.f ||
-	    GConfig->GetInt(TEXT("ScalabilityGroups"), TEXT("sg.ShadowQuality"), Saved, GGameUserSettingsIni))
+	if (!Settings || GConfig->GetInt(TEXT("ScalabilityGroups"), TEXT("sg.ShadowQuality"), Saved, GGameUserSettingsIni))
 	{
 		return;
 	}
-	Settings->RunHardwareBenchmark();
-	Settings->ApplyHardwareBenchmarkResults();
+	FTextureMemoryStats Memory;
+	RHIGetTextureMemoryStats(Memory);
+	const double Gb = double(Memory.DedicatedVideoMemory) / (1024.0 * 1024.0 * 1024.0);
+	const int32 Level = GRHIDeviceIsIntegrated ? 0 : Gb < 5.0 ? 1 : Gb < 9.0 ? 2 : 3;
+	Settings->SetOverallScalabilityLevel(Level);
 	Settings->ApplySettings(false);
-	UE_LOG(LogTemp, Display, TEXT("RIDE quality detected: CPU %.0f, GPU %.0f, overall %d"),
-	       Settings->GetLastCPUBenchmarkResult(), Settings->GetLastGPUBenchmarkResult(),
-	       Settings->GetOverallScalabilityLevel());
+	UE_LOG(LogTemp, Display, TEXT("RIDE quality detected: %s, %s, %.1f GB, overall %d"), *GRHIAdapterName,
+	       GRHIDeviceIsIntegrated ? TEXT("integrated") : TEXT("dedicated"), Gb, Level);
 }
 
 void ARidePlayerController::Tour()
