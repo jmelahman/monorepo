@@ -34,12 +34,14 @@ export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
 unset R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY
 remote=r2:$R2_BUCKET/ue
 # Same set as pod_sync.sh: sources, generated assets, textures and the imported Content, without
-# the caches and logs a machine rebuilds for itself.
+# the caches and logs a machine rebuilds for itself. Of fab_prep only the JSON, which the look reads;
+# its textures are already imported into Content.
 filters=(
 	--filter '- /VeloverseUE/Intermediate/**' --filter '- /VeloverseUE/Saved/**'
 	--filter '- /VeloverseUE/DerivedDataCache/**' --filter '- *.log' --filter '- __pycache__/**'
 	--filter '+ /scripts/**' --filter '+ /assets_gen/**' --filter '+ /textures/**'
-	--filter '+ /assets_ph/**' --filter '+ /VeloverseUE/**' --filter '- *'
+	--filter '+ /assets_ph/**' --filter '+ /VeloverseUE/**' --filter '+ /fab_prep/*.json'
+	--filter '+ /fab_prep/**/*.json' --filter '- *'
 )
 case ${1:-} in
 push)

@@ -18,6 +18,9 @@
 # (the oc server's own editor doesn't count).
 set -u
 Q=/workspace/ue/out/oc/queue
+# Steps start in the live checkout here; on the pod (scripts/pod_queue.sh), which has none, in /workspace/ue.
+home=/workspace/veloverse
+[ -d "$home" ] || home=/workspace/ue
 mkdir -p "$Q/done" "$Q/failed"
 shopt -s nullglob
 
@@ -72,7 +75,7 @@ run)
 		mv "$Q/$step" "$Q/$name.active"
 		start=$(date +%s)
 		echo "== $name ($(date +%H:%M))"
-		(cd /workspace/veloverse && bash -e "$Q/$name.active") >"$Q/$name.log" 2>&1
+		(cd "$home" && bash -e "$Q/$name.active") >"$Q/$name.log" 2>&1
 		code=$?
 		mins=$((($(date +%s) - start + 59) / 60))
 		where="done"
