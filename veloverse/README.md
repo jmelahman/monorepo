@@ -18,6 +18,16 @@ Git holds the source: `scripts/`, the module in `VeloverseUE/Source`, the projec
 through symlinks: `scripts`, `README.md`, `VeloverseUE/VeloverseUE.uproject`, `VeloverseUE/Source`
 and `VeloverseUE/Config/Default{Engine,Game,Input}.ini`.
 
+## Reproducing the world
+
+What git doesn't hold is pinned. The engine is pinned by digest in the monorepo's
+`tools/containers/unreal/Dockerfile`. Every downloaded or generated asset is pinned by hash in
+`assets.lock.toml` (`scripts/assets_lock.py write` refreshes it, and `check` verifies it). The
+steps from an empty `/workspace/ue` to the stills and a packaged build are declared in
+`reproduce.toml`, which `scripts/reproduce.py` runs (`--list` names the stages, and `--from`,
+`--to` and `--only` pick some of them). Fab's Megascans can't be republished, so the `assets`
+stage lists each Fab listing to download by hand.
+
 `/workspace/ue/local.env`, when present, makes `coast_rebuild.sh` and `coast_ride.sh` render light:
 thinner scatter (`OC_DENSITY`), 720p and a frame-rate cap, for an integrated GPU that also drives
 the desktop and resets on full-density frames. A GPU pod has no copy and renders in full.
