@@ -1295,12 +1295,12 @@ void ARidePawn::ApplyWeather()
 			const float Thick = FMath::Pow(Cloud, 1.5f);
 			// The ozone's absorption stays with the blue, or the thinned sky goes lilac (out/qa/cloudy6).
 			// Only on a change: this runs five times a second and each set re-sends the atmosphere.
-			const float R = Rayleigh * FMath::Lerp(1.f, 0.15f, Thick);
+			const float R = Rayleigh * FMath::Lerp(1.f, 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
 			if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f))
 			{
 				Atmosphere->SetRayleighScatteringScale(R);
 				Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
-				Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.15f, Thick));
+				Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.05f, Thick));
 			}
 		}
 	}
