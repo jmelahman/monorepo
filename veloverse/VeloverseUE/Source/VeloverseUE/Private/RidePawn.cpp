@@ -972,8 +972,9 @@ void ARidePawn::Place()
 			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
 		}
 		const float Effort = bMoving ? FMath::Clamp(static_cast<float>(Reading.Watts) / 250.f, 0.4f, 1.4f) : 0.f;
-		// The rider's own setting (Rider: Head sway) scales the pedalling and the road's judder.
-		const float Strength = Profile.HeadSway / 100.f;
+		// The rider's own setting (Rider: Head sway) scales the pedalling and the road's judder, over
+		// a base of 60% of what it was before 14 Nov (the user: too much at 100%).
+		const float Strength = Profile.HeadSway / 100.f * 0.6f;
 		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
 		// The rock with each stroke is small and its depth wanders, so it doesn't read as a metronome;
