@@ -320,9 +320,30 @@ struct FPainter
 	// An icon drawn the way the canvas strokes it: a 24-unit path in a Size square.
 	void Icon(const TCHAR* D, float X, float Y, float Size, const FLinearColor& Colour, float Stroke = 2.f) const
 	{
+		// Slate's lines end square and don't join, so arrow tips and corners showed notches: round
+		// them as the design's canvas does, with a dot at each end and sharp turn. Only for opaque
+		// ink, since a dot over a translucent line would show darker.
+		const float Width = Stroke * Size / 24.f;
 		for (TArray<FVector2f>& Run : Path(D, X, Y, Size / 24.f))
 		{
-			Lines(MoveTemp(Run), Colour, Stroke * Size / 24.f);
+			if (Colour.A > 0.99f)
+			{
+				const bool bClosed = Run[0].Equals(Run.Last(), 1e-3f);
+				for (int32 I = 0; I < Run.Num(); ++I)
+				{
+					bool bDot = !bClosed && (I == 0 || I == Run.Num() - 1);
+					if (I > 0 && I < Run.Num() - 1)
+					{
+						const FVector2f In = (Run[I] - Run[I - 1]).GetSafeNormal(), Next = (Run[I + 1] - Run[I]).GetSafeNormal();
+						bDot = FVector2f::DotProduct(In, Next) < 0.9f; // turns more than about 25 degrees
+					}
+					if (bDot)
+					{
+						Disc(Run[I].X, Run[I].Y, 0.5f * Width, Colour);
+					}
+				}
+			}
+			Lines(MoveTemp(Run), Colour, Width);
 		}
 	}
 };

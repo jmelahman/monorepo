@@ -50,16 +50,17 @@ inline FLinearColor IslandColour(const FString& Name)
 namespace Icons
 {
 inline const TCHAR* Back = TEXT("M19 12H5M11 6l-6 6 6 6");
-inline const TCHAR* Arrow = TEXT("M5 12h14M13 6l6 6-6 6");
+inline const TCHAR* Arrow = TEXT("M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5");
 inline const TCHAR* Chevron = TEXT("M9 6l6 6-6 6");
 inline const TCHAR* ChevronLeft = TEXT("M15 6l-6 6 6 6");
 inline const TCHAR* Map = TEXT("M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14");
 inline const TCHAR* Stats = TEXT("M4 20V10M10 20V4M16 20v-7M22 20H2");
 inline const TCHAR* Workout = TEXT("M3 17l5-6 4 4 4-7 5 9");
 inline const TCHAR* Signal = TEXT("M4 12a8 8 0 0116 0M7.5 12a4.5 4.5 0 019 0M12 12v8");
-inline const TCHAR* Gear = TEXT("M12 9a3 3 0 100 6 3 3 0 000-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 "
-                                "16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4");
-inline const TCHAR* Leave = TEXT("M10 4H5v16h5M14 8l4 4-4 4M18 12H9");
+// A toothed ring round a hub.
+inline const TCHAR* Gear = TEXT("M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM12 5.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8");
+// Power: quit to the desktop.
+inline const TCHAR* Leave = TEXT("M12 3v8M7.2 6.3a7.5 7.5 0 109.6 0");
 inline const TCHAR* Bluetooth = TEXT("M7 7l10 10-5 5V2l5 5L7 17");
 inline const TCHAR* Trainer = TEXT("M12 3a7 7 0 100 14 7 7 0 000-14zM12 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM8 16.5L6 "
                                    "21M16 16.5l2 4.5M4 21h16");
@@ -71,7 +72,7 @@ inline const TCHAR* Cadence = TEXT("M20 12a8 8 0 11-2.3-5.7M20 4v4h-4M12 12l3-2"
 inline const TCHAR* Check = TEXT("M5 12l5 5 9-10");
 inline const TCHAR* Download = TEXT("M12 4v11M7 10l5 5 5-5M5 20h14");
 inline const TCHAR* Screen = TEXT("M3 5h18v12H3zM8 21h8M12 17v4");
-inline const TCHAR* Layers = TEXT("M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5");
+inline const TCHAR* Layers = TEXT("M12 3.5l8.5 4.5-8.5 4.5-8.5-4.5zM3.5 12l8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5");
 // A diamond frame on two round wheels, with a saddle and bars.
 inline const TCHAR* Bike = TEXT("M5 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM19 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 16l4-6.5 2 6.5zM9 9.5h7.5M11 16l5.5-6.5L19 16M9 9.5L8.5 7.5M7 7.5h3M16.5 9.5l-.6-2.5h2.3");
 inline const TCHAR* Rider = TEXT("M12 4a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 20a7 7 0 0114 0");
