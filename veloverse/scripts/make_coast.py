@@ -547,7 +547,10 @@ def rain_material():
     raining = ride_value(g, "Rain")
     fade = g.node(unreal.MaterialExpressionDepthFade, fade_distance_default=150.0)
     g.link(g.mul(g.mul(streak, raining), 0.2), fade, "Opacity")
-    glow = g.mul(g.const((0.6, 0.64, 0.7)), fade)
+    # In display units, whatever the exposure: a plain 0.12 was nothing against a scene lit at
+    # thousands of lux. Unwired, EyeAdaptationInverse is 1 / the camera's exposure.
+    inverse = g.node(unreal.MaterialExpressionEyeAdaptationInverse)
+    glow = g.mul(g.mul(g.const((0.6, 0.64, 0.7)), fade), inverse)
     g.output(None, None, None, None, None, glow)
     g.material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
     return g.finish(blend_mode=unreal.BlendMode.BLEND_ADDITIVE, two_sided=True)
