@@ -54,10 +54,13 @@ BODY_TARGETS = [
     ("buttocks/buttocks-volume-decr.target.gz", 1.00),
     ("arms/l-upperarm-muscle-decr.target.gz", 0.40),
     ("arms/r-upperarm-muscle-decr.target.gz", 0.40),
-    ("legs/l-upperleg-muscle-incr.target.gz", 0.20),  # quads
-    ("legs/r-upperleg-muscle-incr.target.gz", 0.20),
-    ("legs/l-lowerleg-muscle-incr.target.gz", 0.20),  # calves
-    ("legs/r-lowerleg-muscle-incr.target.gz", 0.20),
+    # slim legs: smaller thigh and calf girth, little fat, lean muscle
+    ("legs/measure-thigh-circ-decr.target.gz", 0.60),
+    ("legs/measure-calf-circ-decr.target.gz", 0.50),
+    ("legs/l-upperleg-fat-decr.target.gz", 0.50),
+    ("legs/r-upperleg-fat-decr.target.gz", 0.50),
+    ("legs/l-lowerleg-fat-decr.target.gz", 0.50),
+    ("legs/r-lowerleg-fat-decr.target.gz", 0.50),
     ("stomach/stomach-tone-incr.target.gz", 0.5),
 ]
 # Proportion targets: a positive weight loads the "-incr" target, a negative one the "-decr".
@@ -238,8 +241,10 @@ class BikeRef:
         sad = sad[sad[:, 2] > 0.85]
         self.saddle_verts = sad
         self.saddle_xmin, self.saddle_xmax = sad[:, 0].min(), sad[:, 0].max()
-        # hoods: the Fork's plastic, per side
+        # hoods: the Fork's plastic at cockpit height, per side (the disc caliper on the
+        # non-drive side of the fork is the same plastic, low down)
         hood = self.material_verts(fork, "M_BlackPlastic")
+        hood = hood[hood[:, 2] > 0.7]
         self.hood_verts = {s: hood[np.sign(hood[:, 1]) == s] for s in (-1, 1)}
         self.trees = {}
 
@@ -525,9 +530,22 @@ SIDES = (("l", 1), ("r", -1))  # MPFB's left is the bike's non-drive side, +Y
 TORSO = ("pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head")
 PELVIS_SHARE = 0.8  # of the torso's forward pitch taken by the pelvis; the spine takes the rest
 SPINE_SHARE = (0.30, 0.35, 0.35)
-FINGER_CURL = {"01": 52.0, "02": 62.0, "03": 32.0}  # deg about each bone's X, draped on hoods
-INDEX_CURL = {"01": 10.0, "02": 30.0, "03": 20.0}  # reaching over the lever blade, not into it
-THUMB_CURL = {"01": 8.0, "02": 18.0, "03": 20.0}
+# The grip (place_hands, then solve_grip). The palm point first moves over the hood, within
+# these offsets, to rest the palm and knuckles on it. Then each joint, knuckle first, closes
+# from its relaxed curl about its bone's X until the skin comes GRIP_GAP off the hood, lever or
+# bar, within its (open, closed) range in degrees.
+HOOD_SEARCH_X = (-0.025, 0.010)  # m, along the hood
+HOOD_SEARCH_OUT = (-0.006, 0.020)  # m, toward the outside of the hood
+HOOD_SEARCH_UP = (0.0, 0.010)  # m, above HOOD_LIFT
+HOOD_SEARCH_STEP = 0.0025
+GRIP_RANGE = {"01": (-10.0, 60.0), "02": (0.0, 80.0), "03": (0.0, 55.0)}
+THUMB_RANGE = {"01": (-10.0, 30.0), "02": (0.0, 45.0), "03": (0.0, 50.0)}
+GRIP_OPEN = 15.0  # deg, the most a joint opens from its relaxed curl to clear the hood
+THUMB_CURL = {"01": 8.0, "02": 18.0, "03": 20.0}  # before the grip is solved
+GRIP_REST = {"01": 8.0, "02": 12.0, "03": 8.0}  # before the grip is solved
+GRIP_GAP = 0.0015  # m, skin to the hood or lever
+GRIP_STEP = 1.0  # deg
+FINGERS = ("index", "middle", "ring", "pinky")
 HAND_AXIS = (1.0, 0.0, -0.10)  # wrist to knuckles on the hood, world
 HAND_PALM_IN = 1.0  # tan of the palm's turn from facing down toward the bike's centre (45 deg)
 ARM_POLE = (-0.20, 0.20, -0.20)  # elbow direction from the shoulder-wrist midpoint (x, out, z)
@@ -708,13 +726,13 @@ class Rider:
         self.set_basis("head")
         # fingers
         pb = self.rig.pose.bones
+        grip = P.get("grip", {})
         for s, _side in SIDES:
-            for f in ("index", "middle", "ring", "pinky"):
-                curl = INDEX_CURL if f == "index" else FINGER_CURL
-                for k, a in curl.items():
-                    pb[f"{f}_{k}_{s}"].matrix_basis = rot_x(a)
+            for f in FINGERS:
+                for k, a in GRIP_REST.items():
+                    pb[f"{f}_{k}_{s}"].matrix_basis = rot_x(grip.get(f"{f}_{k}_{s}", a))
             for k, a in THUMB_CURL.items():
-                pb[f"thumb_{k}_{s}"].matrix_basis = rot_x(a)
+                pb[f"thumb_{k}_{s}"].matrix_basis = rot_x(grip.get(f"thumb_{k}_{s}", a))
         # arms: palm on the hood, hand fixed in the world
         for s, side in SIDES:
             tgt, pole, con = self.targets[("arm", s)]
@@ -775,6 +793,87 @@ class Rider:
 
     def palm_world(self, s):
         return self.pose_mat(f"hand_{s}") @ self.palm[s]["point"]
+
+    def hand_skin(self, s, bones):
+        """Rest positions and normalised weights of the hand vertices that follow `bones`
+        (with hand_s as their root), for skinning in numpy."""
+        names = [f"hand_{s}", *bones]
+        W = vertex_weights(self.mesh, names)
+        rows = np.where(W[:, 1:].sum(1) > 0.05)[0]
+        W = W[rows] / np.maximum(W[rows].sum(1, keepdims=True), 1e-6)
+        co = mesh_co(self.mesh, world=False)[rows]
+        return rows, W, np.c_[co, np.ones(len(rows))]
+
+    def skin_chain(self, s, bones, curl, W, V):
+        """Linear-blend skin V by hand_s (as posed) and the chain `bones` curled about X."""
+        hand = f"hand_{s}"
+        M = {hand: self.rig.pose.bones[hand].matrix.copy()}
+        Ms = [np.array(M[hand] @ self.rest[hand].inverted())]
+        for b in bones:
+            par = self.parent[b]
+            M[b] = M[par] @ self.rest[par].inverted() @ self.rest[b] @ rot_x(curl[b])
+            Ms.append(np.array(M[b] @ self.rest[b].inverted()))
+        out = sum(W[:, j : j + 1] * (V @ Ms[j].T) for j in range(len(Ms)))
+        return out[:, :3]
+
+    def cockpit_clearance(self, pts):
+        """Signed distance (m) of each point to the cockpit (the Fork object: bar, hoods,
+        levers); negative inside."""
+        fork = self.bike.objs["Fork"]
+        tree = self.bike.tree("Fork")
+        inv = fork.matrix_world.inverted()
+        d = np.full(len(pts), 1.0)
+        for i, q in enumerate(pts):
+            loc = inv @ Vector(q)
+            hit = tree.find_nearest(loc, 0.05)
+            if hit[0] is not None:
+                d[i] = hit[3] if (loc - hit[0]).dot(hit[1]) >= 0 else -hit[3]
+        return d
+
+    def solve_grip(self):
+        """Close the fingers and thumbs on the hoods, with the hands where the current pose
+        put them. Each joint, knuckle first, starts at its relaxed curl. If its skin (skinned
+        here in numpy) is in the cockpit there, it opens by up to GRIP_OPEN to where it's
+        clearest. Then it closes until its skin would come nearer than GRIP_GAP (or deeper in
+        than it started). The hands are fixed in the world, so one solve holds for every frame.
+        Returns {bone: deg}."""
+        bpy.context.view_layer.update()
+        grip = {}
+        for s, _side in SIDES:
+            for f in (*FINGERS, "thumb"):
+                rng = THUMB_RANGE if f == "thumb" else GRIP_RANGE
+                bones = [f"{f}_{k}_{s}" for k in rng]
+                _rows, W, V = self.hand_skin(s, bones)
+                relax = THUMB_CURL if f == "thumb" else GRIP_REST
+                curl = {b: relax[b.split("_")[1]] for b in bones}
+                for j, b in enumerate(bones):
+                    moving = W[:, 1 + j :].sum(1) > 0.25
+                    lo, hi = rng[b.split("_")[1]]
+                    angles = np.arange(lo, hi + 1e-6, GRIP_STEP)
+                    clear = []
+                    for a in angles:
+                        curl[b] = float(a)
+                        pts = self.skin_chain(s, bones, curl, W, V)[moving]
+                        clear.append(self.cockpit_clearance(pts).min())
+                    clear = np.array(clear)
+                    rest = relax[b.split("_")[1]]
+                    i = int(np.argmin(np.abs(angles - rest)))
+                    if clear[i] < GRIP_GAP:  # in the hood relaxed: open a little if that helps
+                        near = np.where(angles >= rest - GRIP_OPEN)[0]
+                        near = near[angles[near] <= rest]
+                        i = int(near[np.argmax(clear[near] - 1e-6 * (rest - angles[near]))])
+                    floor = min(GRIP_GAP, clear[i])  # never deeper in than it started
+                    while i + 1 < len(angles) and clear[i + 1] >= floor:
+                        i += 1  # close until the next step would touch
+                    curl[b] = float(angles[i])
+                grip.update(curl)
+                c = self.cockpit_clearance(self.skin_chain(s, bones, curl, W, V)).min()
+                log(
+                    f"grip {f}_{s}: "
+                    + ", ".join(f"{curl[b]:.0f}" for b in bones)
+                    + f" deg, closest {1000 * c:+.1f} mm"
+                )
+        return grip
 
     def eye_point(self):
         X = self.pose_mat("head")
@@ -928,6 +1027,64 @@ def solve_fit(rider, bike, iters=8):
     return P
 
 
+def hood_point(bike, base, side, dx, dout, dz=0.0):
+    """The palm point moved dx along the hood, dout outboard and dz up, from HOOD_LIFT over
+    the hood's top."""
+    x, y, _ = base
+    h = bike.hood_verts[side][:, 0]
+    z, _ = bike.hood_top(side, float(np.clip(x + dx, h.min() + 0.004, h.max() - 0.004)))
+    return (x + dx, y + side * dout, z + HOOD_LIFT + dz)
+
+
+def place_hands(rider, P):
+    """Move each palm point over its hood, within HOOD_SEARCH_*, to the smallest move that
+    rests the palm, knuckles and the fingers' first segments on it (GRIP_GAP off it, to the
+    millimetre): the hood's horn then sits in front of the knuckles, not through a finger.
+    The arms follow by IK. Then the fingers and thumbs close on the hood (solve_grip)."""
+    base = dict(rider.hood)
+    rng = [
+        np.arange(lo, hi + 1e-9, HOOD_SEARCH_STEP)
+        for lo, hi in (HOOD_SEARCH_X, HOOD_SEARCH_OUT, HOOD_SEARCH_UP)
+    ]
+    names = [b.name for b in rider.rig.data.bones]
+    W = vertex_weights(rider.mesh, names)
+    dom = np.array(names)[W.argmax(1)]
+    rigid = {}
+    for s, _side in SIDES:
+        hand = W[:, names.index(f"hand_{s}")]
+        fing = np.array(
+            [d.endswith(f"_{s}") and d.split("_")[0] in (*FINGERS, "thumb") for d in dom]
+        )
+        first = np.isin(dom, [f"{f}_01_{s}" for f in FINGERS])
+        rigid[s] = np.where((dom == f"hand_{s}") | (fing & (hand > 0.3)) | first)[0]
+    best = None
+    for dx in rng[0]:
+        for do in rng[1]:
+            for dz in rng[2]:
+                for s, side in SIDES:
+                    rider.hood[s] = hood_point(rider.bike, base[s], side, dx, do, dz)
+                rider.pose(0, P)
+                co = mesh_co(rider.mesh, evaluated=True, world=False)
+                worst = min(rider.cockpit_clearance(co[rigid[s]]).min() for s, _ in SIDES)
+                # resting on it: the palm and knuckles GRIP_GAP off it, to the millimetre
+                score = (-round(abs(worst - GRIP_GAP) * 1000), -abs(dx) - abs(do) - abs(dz))
+                if best is None or score > best[0]:
+                    best = (score, dx, do, dz, worst)
+    assert best is not None
+    _, dx, do, dz, worst = best
+    for s, side in SIDES:
+        rider.hood[s] = hood_point(rider.bike, base[s], side, dx, do, dz)
+    log(
+        f"hands: palm moved {1000 * dx:+.1f} mm along, {1000 * do:+.1f} mm out,"
+        f" {1000 * dz:+.1f} mm up; palm and knuckles {1000 * worst:+.1f} mm off the cockpit"
+    )
+    P["hood"] = {s: list(rider.hood[s]) for s, _ in SIDES}
+    rider.calibrate_poles(P)
+    rider.pose(0, P)
+    P["grip"] = rider.solve_grip()
+    rider.pose(0, P)
+
+
 def max_knee(rider, P, step=2):
     """The most open knee over the stroke, both legs (deg)."""
     out = 0.0
@@ -961,6 +1118,7 @@ def solve_proportions(bike, iters=8):
             w_next = w1 - (k1 - KNEE_AT_BDC) * (w1 - w0) / (k1 - k0)
         w = float(np.clip(w_next, -1.0, 1.0))
     P["props"] = {"leg": hist[-1][0]}
+    place_hands(rider, P)
     return rider, P
 
 

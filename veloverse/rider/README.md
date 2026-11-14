@@ -65,7 +65,8 @@ The body is MPFB 2's base human, built with these settings:
 - **Macros:** male, 25 years, muscle 0.55, weight 0.12, "ideal" proportions.
 - **Build targets:** a slim, narrow climber's silhouette that sits inside the bike's width:
   - narrower shoulders, torso and hips, a smaller seat and less V-taper;
-  - slimmer upper arms, a little more quad and calf, a toned stomach.
+  - slimmer upper arms, and thin legs: less thigh and calf girth and little fat on them;
+  - a toned stomach.
 - **Height:** scaled uniformly to exactly 1.780 m standing.
 - **Fit:** the rider's proportions change to fit the bike. The saddle and bars never move.
   - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.152. That puts
@@ -85,12 +86,26 @@ The body is MPFB 2's base human, built with these settings:
 | Shoulder protraction | 16.6° |
 | Elbows | 17° short of straight |
 | Sit bones | on the saddle top, sunk 3 mm into the pad |
-| Palms | on the hoods 0.538 m forward of the BB |
-| Fingers | middle, ring and little fingers wrap the hood; the index reaches over the lever blade |
+| Palms | on the hood bodies, 0.513 m forward of the BB, the horns in front of the knuckles |
+| Fingers | solved against the hoods (below) |
 | Head | its forward axis meets the road 10 m ahead |
 
-The palm point is 9 mm above the hood's top surface. The thenar pad bulges below it, so this
-keeps the hand resting on the hood rather than sunk into it.
+**The grip** is fitted to the bike's hoods in two steps, once the proportions are settled.
+The hands are fixed in the world, so one solve holds for every frame, and Unreal only plays it.
+
+1. **Place the palm.** The palm point starts on the hood's centreline, 0.538 m forward of the BB
+   and 9 mm over its top. It then moves, within 25 mm back, 10 mm forward, 20 mm out and 10 mm
+   up, to the smallest move that rests the palm, the knuckles and the fingers' first segments
+   1.5 mm off the hood. The horn then sits in front of the knuckles instead of through the
+   index finger. The arms follow by IK. On this bike it moves 25 mm back and 10 mm up.
+2. **Close the fingers and thumbs.** Each joint, knuckle first, starts at a relaxed curl. If
+   it's in the hood there, it opens by up to 15° to where it's clearest. Then it closes until
+   its skin would come within 1.5 mm of the hood, lever or bar. Fingers in open air stop at a
+   loose curl, not a fist. The skin is checked by skinning the hand in numpy against the
+   cockpit mesh.
+
+The result: the index finger lies along the horn, the middle finger drapes over the lever
+blade, the ring and little fingers curl under the hood, and the thumb wraps its inside.
 
 ## Skeleton
 
