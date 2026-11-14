@@ -26,6 +26,7 @@ struct FRideProfile
 	int32 Weather = 0;         // 0 the route's own, 1 clear, 2 overcast, 3 rain
 	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening
 	float Grass = 100.f;       // how far the grass reaches, % of its own distance
+	float LookSpeed = 100.f;   // how fast the mouse turns the view, % of 0.12 degrees per count
 
 	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
 	FLinearColor Accent() const;

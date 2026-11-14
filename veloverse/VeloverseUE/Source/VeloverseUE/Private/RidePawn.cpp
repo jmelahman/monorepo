@@ -689,8 +689,9 @@ void ARidePawn::ReadKeys()
 void ARidePawn::MouseLook(APlayerController& Player)
 {
 	// The mouse as a head: it turns the view up to a little past the shoulder and up or down, and
-	// after a couple of seconds' rest the eyes drift back to the road. Not in a menu, where the
-	// mouse is the menu's.
+	// after a couple of seconds' rest the eyes drift back to the road, unless the rider has turned
+	// well away from it (more than 45 degrees aside or 25 up or down), to look at something: then
+	// the view stays put until the mouse brings it back. Not in a menu, where the mouse is the menu's.
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	float Dx = 0.f, Dy = 0.f;
 	if (!bPaused)
@@ -699,13 +700,15 @@ void ARidePawn::MouseLook(APlayerController& Player)
 	}
 	if (!FMath::IsNearlyZero(Dx) || !FMath::IsNearlyZero(Dy))
 	{
-		LookYaw = FMath::Clamp(LookYaw + Dx * LookSpeed, -110.f, 110.f);
-		LookPitch = FMath::Clamp(LookPitch + Dy * LookSpeed, -45.f, 35.f);
+		const float Turn = LookSpeed * Profile.LookSpeed / 100.f;
+		LookYaw = FMath::Clamp(LookYaw + Dx * Turn, -110.f, 110.f);
+		LookPitch = FMath::Clamp(LookPitch + Dy * Turn, -45.f, 35.f);
 		LookRest = 0.f;
 		return;
 	}
 	LookRest += Dt;
-	if (LookRest > 2.f && Dt > 0.f)
+	const bool bAway = FMath::Abs(LookYaw) > 45.f || FMath::Abs(LookPitch) > 25.f;
+	if (LookRest > 2.f && Dt > 0.f && !bAway)
 	{
 		const float Ease = 1.f - FMath::Exp(-Dt / 0.6f);
 		LookYaw = FMath::Lerp(LookYaw, 0.f, Ease);

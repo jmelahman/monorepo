@@ -190,6 +190,10 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.Grass = FMath::Clamp(static_cast<float>(Value), 25.f, 200.f);
 		}
+		if (O->TryGetNumberField(TEXT("look_speed"), Value))
+		{
+			Profile.LookSpeed = FMath::Clamp(static_cast<float>(Value), 25.f, 400.f);
+		}
 	}
 	return Profile;
 }
@@ -211,6 +215,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("weather"), Weather);
 	O->SetNumberField(TEXT("time_of_day"), TimeOfDay);
 	O->SetNumberField(TEXT("grass"), Grass);
+	O->SetNumberField(TEXT("look_speed"), LookSpeed);
 	WriteJson(ProfileFile(), O);
 }
 

@@ -960,6 +960,8 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bErg = I == 0; }); });
 		Slide(TEXT("fov"), Row(TEXT("Field of view"), TEXT("How much of the road you see across the screen; wider feels faster")),
 		      &FRideProfile::Fov, 45.f, 100.f, 1.f, TEXT("°"));
+		Slide(TEXT("look"), Row(TEXT("Look speed"), TEXT("How fast the mouse turns your head")),
+		      &FRideProfile::LookSpeed, 25.f, 400.f, 25.f, TEXT("%"));
 	}
 	else if (Tab == ERideSettingsTab::Rider && Pawn)
 	{

@@ -174,7 +174,7 @@ private:
 	float LookYaw = 0.f;
 	float LookPitch = 0.f;
 	float LookRest = 0.f;
-	static constexpr float LookSpeed = 0.12f; // degrees per mouse count
+	static constexpr float LookSpeed = 0.12f; // degrees per mouse count, at the profile's 100%
 	void MouseLook(APlayerController& Player);
 	float QuitAt = -1.f;
 	float ProfileAt = -1.f;
