@@ -238,7 +238,7 @@ private:
 	TWeakObjectPtr<USkyLightComponent> SkyLight;
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
 	TWeakObjectPtr<class USkyAtmosphereComponent> Atmosphere;
-	float Rayleigh = 0.f, Mie = 0.f;
+	float Rayleigh = 0.f, Mie = 0.f, Absorption = 0.f;
 	TWeakObjectPtr<APostProcessVolume> Post;
 
 	static void CameraLook(FPostProcessSettings& Look);
