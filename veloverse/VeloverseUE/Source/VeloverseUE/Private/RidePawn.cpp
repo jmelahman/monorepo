@@ -88,8 +88,10 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	}
 	else if (Weather == 3)
 	{
-		W.Lux = 4000.f;
-		W.Sky = 0.55f;
+		// Under rain cloud the light is nearly all sky: a 4000 lux sun against a 0.55 sky was half
+		// the light and drew hard shadows across the road (out/qa/rain7). The total stays about the same.
+		W.Lux = 800.f;
+		W.Sky = 0.8f;
 		W.Fog = 0.08f;
 		W.Rain = W.Wet = 1.f;
 	}
