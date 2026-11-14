@@ -1023,8 +1023,20 @@ void ARidePawn::Place()
 	// The mouse turns the head on top of all that, the road's frame first and the look in it.
 	const FQuat Body = (Head + FRotator(Surge + Judder, Turn, Roll + Lean)).Quaternion();
 	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
-	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
-	Bike->SetVisibility(Seen == ERideView::Chase, true);
+	// Over the bars rides the Blender bike when it's imported, else make_bike.py's front end.
+	const bool bParts = BikeParts.Num() > 0;
+	Cockpit->SetVisibility(Seen == ERideView::Cockpit && !bParts);
+	Bike->SetVisibility(Seen == ERideView::Chase || (Seen == ERideView::Cockpit && bParts), true);
+	if (Seen == ERideView::Cockpit && bParts)
+	{
+		// The bike's origin is the road under the eyes, and it moves with the body as the old front
+		// end did, so the bars hold still in the frame while the look turns.
+		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
+		Bike->SetWorldLocationAndRotation(Eye + Lift - Body.RotateVector(FVector(0.f, 0.f, EyeHeight)), Body);
+		PoseBike();
+		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CockpitEye), (Body * Look).Rotator());
+		return;
+	}
 	if (Seen == ERideView::Cockpit)
 	{
 		// The camera back and down from the eyes, moving with the body; the front end stays put on
@@ -1166,7 +1178,7 @@ float ARidePawn::RideLine(const URideTrack& On, float S) const
 TArray<ERideView> ARidePawn::Views() const
 {
 	TArray<ERideView> All;
-	if (Cockpit && Cockpit->GetStaticMesh())
+	if (BikeParts.Num() > 0 || (Cockpit && Cockpit->GetStaticMesh()))
 	{
 		All.Add(ERideView::Cockpit);
 	}
