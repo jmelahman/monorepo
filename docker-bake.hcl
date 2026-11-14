@@ -84,10 +84,13 @@ target "unreal-devcontainer" {
 }
 
 # The same image for a Runpod GPU pod: root and an SSH server, for veloverse's second build lane.
-# `docker login ghcr.io && docker buildx bake unreal-pod --push`, after unreal-devcontainer.
+# Built with unreal-devcontainer in one bake (`contexts`), by the Devcontainer workflow.
 target "unreal-pod" {
   context = "tools/containers/unreal-pod"
   dockerfile = "Dockerfile"
+  contexts = {
+    "ghcr.io/jmelahman/unreal-devcontainer:latest" = "target:unreal-devcontainer"
+  }
   platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/jmelahman/unreal-pod:latest",

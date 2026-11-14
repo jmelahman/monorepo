@@ -46,8 +46,9 @@ jobs:
             targets: android-builder
           # Epic's base image is private to accounts linked to Epic Games, which
           # GITHUB_TOKEN isn't.
+          # unreal-pod is built FROM unreal-devcontainer through a bake `contexts` link.
           - name: unreal
-            targets: unreal-devcontainer
+            targets: unreal-devcontainer,unreal-pod
             epic: true
     steps:
       - name: Check out repository
