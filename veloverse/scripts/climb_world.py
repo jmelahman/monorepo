@@ -93,6 +93,62 @@ def tree_mesh(kind):
     return static if unreal.EditorAssetLibrary.does_asset_exist(static) else PVE_TREES[kind]
 
 
+# The real trees import_trees.py brings into /Game/Trees/<kind> (14 Nov), each scaled to this
+# height in cm before the stem's own scale: the Fab packs come at whatever size they were made.
+# A kind with no meshes there falls back to a PVE tree ("spruce" is the old climb's name for the
+# pine); the snag has no stand-in and is left out.
+REAL_TREES = "/Game/Trees"
+TREE_HEIGHT = {"beech": 2000.0, "birch": 1500.0, "pine": 1800.0, "windpine": 1000.0, "snag": 800.0}
+TREE_FALLBACK = {"beech": "beech", "birch": "beech", "pine": "spruce", "windpine": "spruce"}
+TREE_ALIAS = {"spruce": "pine"}
+SEPARATE_TREES = {"birch"}
+
+
+def tree_variants():
+    """{kind: [(meshes, scale, base)]}: each kind's trees, as the parts placed together (a pack's
+    trunk and leaves are meshes of their own in one frame; the birch pack's are five trees), the
+    scale that makes one TREE_HEIGHT tall, and the height (cm, before scale) of its lowest point,
+    so its foot lands on the stem."""
+    out = {}
+    for kind, tall in TREE_HEIGHT.items():
+        folder = f"{REAL_TREES}/{kind}"
+        parts = []
+        if unreal.EditorAssetLibrary.does_directory_exist(folder):
+            for path in unreal.EditorAssetLibrary.list_assets(folder, recursive=False):
+                mesh = unreal.load_asset(path)
+                # A part with no material (the pine pack's flat helper) isn't drawn.
+                if isinstance(mesh, unreal.StaticMesh) and mesh.get_editor_property(
+                    "static_materials"
+                ):
+                    parts.append(mesh)
+        groups = [[m] for m in parts] if kind in SEPARATE_TREES else [parts] if parts else []
+        found = []
+        for group in groups:
+            boxes = [m.get_bounding_box() for m in group]
+            low, high = min(b.min.z for b in boxes), max(b.max.z for b in boxes)
+            found.append((group, tall / max(high - low, 1.0), low))
+        if found:
+            out[kind] = found
+            names = [m.get_name() for m in found[0][0]]
+            log(f"{kind}: {len(found)} real trees, e.g. {names} at x{found[0][1]:.2f}")
+        elif kind in TREE_FALLBACK:
+            path = tree_mesh(TREE_FALLBACK[kind])
+            mesh = unreal.load_asset(path)
+            if mesh is None:
+                raise RuntimeError(f"no {kind} mesh at {path}")
+            out[kind] = [([mesh], 1.0, 0.0)]
+            log(f"{kind}: no real tree, {path} ({type(mesh).__name__})")
+    return out
+
+
+def pick_tree(variants, kind, x, y):
+    """The stem's meshes, scale factor and base, or None for a kind with no mesh."""
+    choice = variants.get(TREE_ALIAS.get(kind, kind))
+    if not choice:
+        return None
+    return choice[int(abs(x * 0.37 + y * 0.61)) % len(choice)]
+
+
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
 TREE_CULL = 200000.0  # cm: instanced trees past this aren't drawn (the map is 2 km across)
 FAR_CULL = 800000.0  # cm: the world's far forest (trees_far.json), seen to 8 km
@@ -475,13 +531,8 @@ def trees():
     if not stems:
         log("trees: none")
         return
-    paths = {kind: tree_mesh(kind) for kind in PVE_TREES}
-    meshes = {kind: unreal.load_asset(path) for kind, path in paths.items()}
-    for kind, mesh in meshes.items():
-        if mesh is None:
-            raise RuntimeError(f"no {kind} mesh at {paths[kind]}")
-        log(f"{kind}: {paths[kind]} ({type(mesh).__name__})")
-    if any(isinstance(m, unreal.SkeletalMesh) for m in meshes.values()):
+    variants = tree_variants()
+    if any(isinstance(g[0], unreal.SkeletalMesh) for v in variants.values() for g, _, _ in v):
         # The plugin's materials read wind and tree data from this actor; without it the trees
         # fall back to proxy cards.
         bp = unreal.load_asset(
@@ -491,24 +542,30 @@ def trees():
         lib.spawn(bp.generated_class(), label="Global Foliage")
     centre = road_points()
     instances = lib.Instances("Trees")
-    placed = {kind: 0 for kind in meshes}
+    placed = {}
     for kind, x, y, z, yaw, scale in stems:
-        mesh = meshes[kind]
+        picked = pick_tree(variants, kind, x, y)
+        if picked is None:
+            continue
+        group, fit, base = picked
+        size = scale * fit
+        mesh = group[0]
         if isinstance(mesh, unreal.SkeletalMesh):
             if min(math.hypot(x - cx, y - cy) for cx, cy in centre) > NEAR:
                 continue
             actor = lib.spawn(unreal.SkeletalMeshActor, (x, y, z), (0, yaw, 0), folder="Trees")
             actor.skeletal_mesh_component.set_skeletal_mesh_asset(mesh)
-            actor.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+            actor.set_actor_scale3d(unreal.Vector(size, size, size))
         else:
-            instances.add(mesh, (x, y, z), yaw, scale)
-        placed[kind] += 1
+            for part in group:
+                instances.add(part, (x, y, z - base * size), yaw, size)
+        placed[kind] = placed.get(kind, 0) + 1
     instances.commit(cull=TREE_CULL)
     log(f"trees: {placed}")
-    far_trees(meshes)
+    far_trees(variants)
 
 
-def far_trees(meshes):
+def far_trees(variants):
     """The world's far forest, past the ring's woods (trees_far.json): instanced, casting no
     shadow (only seen from a distance; the shadow maps would pay for every one), to 8 km."""
     path = f"{SRC}/trees_far.json"
@@ -518,8 +575,11 @@ def far_trees(meshes):
         stems = json.load(f)
     instances = lib.Instances("Trees/Far")
     for kind, x, y, z, yaw, scale in stems:
-        if isinstance(meshes[kind], unreal.StaticMesh):
-            instances.add(meshes[kind], (x, y, z), yaw, scale)
+        picked = pick_tree(variants, kind, x, y)
+        if picked is not None and isinstance(picked[0][0], unreal.StaticMesh):
+            group, fit, base = picked
+            for part in group:
+                instances.add(part, (x, y, z - base * scale * fit), yaw, scale * fit)
     instances.commit(cull=FAR_CULL, shadows=False)
 
 

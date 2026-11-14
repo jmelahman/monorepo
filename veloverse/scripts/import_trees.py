@@ -36,8 +36,6 @@ PREP = "/workspace/ue/fab_prep/trees"
 ROOT = "/Game/Trees"
 STAGE = os.environ.get("OC_STAGE", "import")
 ONLY = set(filter(None, (os.environ.get("OC_ONLY") or "").split(",")))
-# Each pack whose tree comes in parts (trunk, leaves) is one mesh; the birch pack is five trees.
-SEPARATE = {"birch"}
 
 
 def log(message):
@@ -67,34 +65,17 @@ def import_texture(path, folder, name, normal):
 
 
 def import_mesh(record, folder):
-    """Through Interchange with the default pipeline, its meshes combined unless the pack is
-    several trees; through a plain import task if this engine's Python lacks the pipeline."""
-    path = record["fbx"]
-    combine = record["kind"] not in SEPARATE
-    try:
-        pipeline = unreal.load_asset("/Interchange/Pipelines/DefaultAssetsPipeline")
-        pipeline.get_editor_property("mesh_pipeline").set_editor_property(
-            "combine_static_meshes", combine
-        )
-        params = unreal.ImportAssetParameters()
-        params.set_editor_property("is_automated", True)
-        params.set_editor_property("replace_existing", True)
-        params.get_editor_property("override_pipelines").append(
-            unreal.SoftObjectPath(pipeline.get_path_name())
-        )
-        manager = unreal.InterchangeManager.get_interchange_manager_scripted()
-        source = unreal.InterchangeManager.create_source_data(path)
-        manager.import_asset(folder, source, params)
-        log(f"{record['kind']}: Interchange, combine {combine}")
-    except Exception as e:  # any failure of the override falls back
-        log(f"{record['kind']}: no Interchange override ({e}); a plain import")
-        task = unreal.AssetImportTask()
-        task.filename = path
-        task.destination_path = folder
-        task.automated = True
-        task.replace_existing = True
-        task.save = False
-        tools.import_asset_tasks([task])
+    """Interchange's default pipeline keeps each part of a pack (trunk, leaves) its own mesh,
+    baked into the pack's one frame: climb_world.py places a kind's parts together (the birch
+    pack's five trees are each a tree of their own). In 5.8 the combine switch is the mesh
+    pipeline's combine_static_meshes_behavior; a probe (14 Nov) found it DO_NOT_COMBINE."""
+    task = unreal.AssetImportTask()
+    task.filename = record["fbx"]
+    task.destination_path = folder
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    tools.import_asset_tasks([task])
 
 
 def import_one(record):

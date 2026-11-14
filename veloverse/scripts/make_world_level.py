@@ -489,6 +489,20 @@ def at_stem(grid, px, py):
     return top * (1 - fr) + low * fr
 
 
+def species(rng, px, py, zz, snags):
+    """Each stem's kind: pine above a wandering line and beech below it, as before 14 Nov, now
+    with birch in stands among the beech, windswept pine toward the treeline, and about `snags` of
+    them dead (more near the treeline, where the weather kills them)."""
+    line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
+    conifer = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
+    wind = rng.random(len(zz)) < 0.1 + 0.7 * mi.smoothstep(TREELINE - 220, TREELINE - 40, zz)
+    stand = mi.smoothstep(0.52, 0.6, mi.fbm(px, py, 180, 2, SEED + 80))
+    birch = rng.random(len(zz)) < 0.1 + 0.75 * stand
+    dead = rng.random(len(zz)) < snags + 0.06 * mi.smoothstep(TREELINE - 150, TREELINE, zz)
+    kind = np.where(conifer, np.where(wind, "windpine", "pine"), np.where(birch, "birch", "beech"))
+    return np.where(dead, "snag", kind)
+
+
 def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
     """Candidate stems every TREE_STEP m near the ring, kept where the band is woods. `whole` is
     (h, dist) for the whole map, read at each stem's own point."""
@@ -503,7 +517,11 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
     px, py = x[rows, cols] + jitter[0], y[rows, cols] + jitter[1]
     zz, dd, ww = at_stem(whole[0], px, py), at_stem(whole[1], px, py), forest[rows, cols]
     clump = mi.smoothstep(0.3, 0.62, mi.fbm(px, py, 60, 3, SEED + 70))
+    # Stands of a few trees with gaps between, every 25-40 m (the AAA review's gap 3): on the old
+    # grid alone the woods read as planted.
+    stand = mi.smoothstep(0.3, 0.55, mi.fbm(px, py, 28, 2, SEED + 75))
     wood = ww * np.clip(0.15 + 1.1 * clump, 0, 1) * (1 - desert[rows, cols])
+    wood = np.clip(wood * (0.3 + 0.9 * stand), 0, 1)
     far = np.where(dd < 50, 1.0, 0.3)
     keep = (
         (dd > mi.ROAD_HALF + 2.5)
@@ -514,11 +532,10 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (zz > 6)
     )
     px, py, zz = px[keep], py[keep], zz[keep] - 0.4
-    line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
-    spruce = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
+    kinds = species(rng, px, py, zz, 0.04)
     stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     out = []
-    for xm, ym, zm, s, small in zip(px, py, zz, spruce, stunt, strict=True):
+    for xm, ym, zm, kind, small in zip(px, py, zz, kinds, stunt, strict=True):
         roll = rng.random()
         size = (
             rng.uniform(1.25, 1.5)
@@ -529,7 +546,7 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         )
         out.append(
             [
-                "spruce" if s else "beech",
+                str(kind),
                 round(float(xm) * 100, 1),
                 round(float(ym) * 100, 1),
                 round(float(zm) * 100, 1),
@@ -562,22 +579,21 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (zz > 6)
     )
     px, py, zz = px[keep], py[keep], zz[keep] - 0.6
-    line = 260 + 120 * (mi.fbm(px, py, 900, 3, SEED + 60) - 0.5)
-    spruce = rng.random(len(zz)) < mi.smoothstep(line - 80, line + 80, zz)
+    kinds = species(rng, px, py, zz, 0.02)
     size = rng.uniform(0.9, 1.35, len(zz)) * (
         1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     )
     yaw = rng.uniform(0, 360, len(zz))
     return [
         [
-            "spruce" if s else "beech",
+            str(s),
             round(float(a) * 100, 1),
             round(float(b) * 100, 1),
             round(float(c) * 100, 1),
             round(float(r), 1),
             round(float(k), 3),
         ]
-        for a, b, c, s, r, k in zip(px, py, zz, spruce, yaw, size, strict=True)
+        for a, b, c, s, r, k in zip(px, py, zz, kinds, yaw, size, strict=True)
     ]
 
 
@@ -1237,12 +1253,12 @@ def main():
         with open(f"{OUT}/{name}.json", "w") as f:
             json.dump([], f)
     grade = np.diff(line[:, 2])
-    spruce = sum(t[0] == "spruce" for t in stems)
+    kinds = {k: sum(t[0] == k for t in stems) for k in sorted({t[0] for t in stems})}
     print(
         f"{OUT}: ground {h.min():.0f}..{h.max():.0f} m; {first} {len(line) / 1000:.1f} km,"
         f" {line[:, 2].min():.0f}..{line[:, 2].max():.0f} m, steepest"
         f" {np.abs(ndimage.uniform_filter1d(grade, 100, mode='wrap')).max() * 100:.1f}% over 100 m;"
-        f" {len(stems)} trees ({spruce} spruce)"
+        f" {len(stems)} trees {kinds}"
     )
     for r in rides:
         km = sum(m for _, m in r["stretches"]) / 1000
