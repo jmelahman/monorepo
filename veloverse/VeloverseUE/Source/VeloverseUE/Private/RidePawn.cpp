@@ -7,9 +7,6 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SkyLightComponent.h"
-#include "Components/VolumetricCloudComponent.h"
-#include "Engine/VolumetricCloud.h"
-#include "Materials/MaterialInstanceDynamic.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
@@ -1224,19 +1221,6 @@ void ARidePawn::FindWeather()
 	{
 		Sun = Cast<UDirectionalLightComponent>(It->GetLightComponent());
 	}
-	for (TActorIterator<AVolumetricCloud> It(GetWorld()); It && !Clouds.IsValid(); ++It)
-	{
-		Clouds = It->FindComponentByClass<UVolumetricCloudComponent>();
-		if (Clouds.IsValid() && Clouds->GetMaterial())
-		{
-			CloudLook = UMaterialInstanceDynamic::Create(Clouds->GetMaterial(), this);
-			CloudLook->GetScalarParameterValue(FName(TEXT("Cloud_GlobalCoverage")), CloudCover);
-			CloudLook->GetScalarParameterValue(FName(TEXT("Cloud_GlobalDensity")), CloudDensity);
-			Clouds->SetMaterial(CloudLook);
-			UE_LOG(LogTemp, Display, TEXT("WEATHER clouds %s coverage %.3f density %.4f"),
-				*GetNameSafe(Clouds->GetMaterial()), CloudCover, CloudDensity);
-		}
-	}
 	for (TActorIterator<ASkyLight> It(GetWorld()); It && !SkyLight.IsValid(); ++It)
 	{
 		SkyLight = It->GetLightComponent();
@@ -1287,13 +1271,6 @@ void ARidePawn::ApplyWeather()
 		}
 		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
 		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
-		// The same cloudiness closes the sky: an overcast or rain sky was blue overhead (out/qa/cloudy3).
-		if (CloudLook)
-		{
-			const float Thick = FMath::Pow(Cloud, 1.5f);
-			CloudLook->SetScalarParameterValue(FName(TEXT("Cloud_GlobalCoverage")), CloudCover + 0.9f * Thick);
-			CloudLook->SetScalarParameterValue(FName(TEXT("Cloud_GlobalDensity")), CloudDensity * (1.f + 3.f * Thick));
-		}
 		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Azimuth, 0.f));
 	}
 	if (SkyLight.IsValid())
