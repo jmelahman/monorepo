@@ -1250,7 +1250,10 @@ void ARidePawn::FindWeather()
 void ARidePawn::ApplyWeather()
 {
 	const bool bOwn = Automated() || (Profile.Weather == 0 && Profile.TimeOfDay == 0);
-	if (!Track || (Track->Weather.Num() == 0 && bOwn))
+	// A route with no weather rows rides its default row, a clear day, as the pill says: the level's
+	// own light is flat and pale in the ride (out/qa/own1 against clear4). The automated stills keep
+	// the level's light, which is what they review.
+	if (!Track || (Track->Weather.Num() == 0 && Automated()))
 	{
 		return;
 	}
