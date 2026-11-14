@@ -82,3 +82,17 @@ target "unreal-devcontainer" {
     BUILDKIT_INLINE_CACHE = 1
   }
 }
+
+# The same image for a Runpod GPU pod: root and an SSH server, for veloverse's second build lane.
+# `docker login ghcr.io && docker buildx bake unreal-pod --push`, after unreal-devcontainer.
+target "unreal-pod" {
+  context = "tools/containers/unreal-pod"
+  dockerfile = "Dockerfile"
+  platforms = ["linux/amd64"]
+  tags = [
+    "ghcr.io/jmelahman/unreal-pod:latest",
+  ]
+  labels = {
+    "org.opencontainers.image.source" = "https://github.com/jmelahman/monorepo"
+  }
+}
