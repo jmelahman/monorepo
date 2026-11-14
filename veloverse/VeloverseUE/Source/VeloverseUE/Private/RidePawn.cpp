@@ -918,6 +918,7 @@ void ARidePawn::Place()
 		Pitch = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Z - Eye.Z - 40.0 * Run / 3000.0, Run));
 	}
 	FVector Lift = FVector::ZeroVector;
+	float Judder = 0.f; // degrees of nod
 	float Roll = 0.f;
 	float Turn = 0.f;
 	if (Dt > 0.f)
@@ -935,6 +936,14 @@ void ARidePawn::Place()
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
 		Roll = Sway * (0.45f * FMath::Sin(Crank) + 0.15f * FMath::Sin(0.23f * Crank + 2.f));
 		Turn = Sway * (0.2f * FMath::Sin(0.5f * Crank + 0.5f) + 0.1f * FMath::Sin(0.17f * Crank));
+		// The road through the bike: a judder tied to the distance, so it quickens with the speed and
+		// stops with the bike. Noise over 0.6 m and 2.3 m (13 and 3.5 Hz at 30 km/h), about half a
+		// centimetre up and down and a sixth of a degree of nod at that speed, more going faster.
+		const float Rough = Motion * FMath::Clamp(Speed / 8.f, 0.f, 1.4f);
+		const float Fine = FMath::PerlinNoise1D(S / 60.f), Coarse = FMath::PerlinNoise1D(S / 230.f + 17.f);
+		Lift.Z += Rough * (0.35f * Fine + 0.45f * Coarse);
+		Judder = Rough * (0.12f * FMath::PerlinNoise1D(S / 60.f + 41.f) + 0.06f * Coarse);
+		Roll += Rough * 0.1f * FMath::PerlinNoise1D(S / 90.f + 83.f);
 		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
 		const float Want = bMoves ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
@@ -959,7 +968,7 @@ void ARidePawn::Place()
 		Head.Normalize();
 	}
 	// The mouse turns the head on top of all that, the road's frame first and the look in it.
-	const FQuat Body = (Head + FRotator(Surge, Turn, Roll + Lean)).Quaternion();
+	const FQuat Body = (Head + FRotator(Surge + Judder, Turn, Roll + Lean)).Quaternion();
 	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
 	Bike->SetVisibility(Seen == ERideView::Chase);
