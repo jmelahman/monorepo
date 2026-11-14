@@ -142,6 +142,38 @@ ROUTES = [
     ("highlands", "The Highlands", "The mountain, then the moor.", ("Vael", "The Moor")),
     ("east", "Heath and Sand", "The moor, then the desert.", ("The Moor", "Red Sands")),
 ]
+# Rides that stay on one island, in its biome all the way: its long road round the far side, home
+# by the back road (Spur.back) on the side facing the harbour. Neither bridge.
+ISLAND_ROUTES = [
+    (
+        "greenwood_woods",
+        "Greenwood Woods",
+        "Round the forest island under the trees, never leaving it.",
+        "Greenwood",
+    ),
+    (
+        "vael_high",
+        "High Vael",
+        "Over the saddle under the summit and round, all on the mountain.",
+        "Vael",
+    ),
+    (
+        "moor_round",
+        "Round the Moor",
+        "The tors and the wind farm, all on the open moor.",
+        "The Moor",
+    ),
+    (
+        "sands_round",
+        "Round the Sands",
+        "Among the mesas and home through the desert, never leaving it.",
+        "Red Sands",
+    ),
+]
+# The back road leaves the long road BACK_IN m in from each landfall, and keeps to BACK_RADIUS of
+# the island's radii (the bridges' landfalls are nearer the shore).
+BACK_IN = 450.0
+BACK_RADIUS = (0.5, 0.62)
 # The road's sideways waves on an island: wavelength, m.
 # 13 Nov: the two short waves give bends at eye level (the AAA review: "a dead-straight ribbon");
 # the tightest they make together is about 60 m in radius.
@@ -564,6 +596,40 @@ class Spur:
         c = b + len(curve) - 1
         d = len(self.xy) - 1 - max(int(lead_back / STEP), 0)
         self.bridges = [(a, b), (c, d)]
+        # Its own random numbers, so adding it leaves every other road as it was.
+        self.back = self.back_road(p, b, c, np.random.default_rng(SEED + 500 + p), h, land, inland)
+
+    def back_road(self, p, b, c, rng, h, land, inland):
+        """The island's second road, closing a loop on it: off the long road BACK_IN m before its
+        far landfall, the short way round inside both landfalls, onto the long road BACK_IN m after
+        its near one. (xy, first, last): xy runs from self.xy[last] to self.xy[first], the indices
+        where it leaves and joins, so self.xy[first:last + 1] then xy is the closed loop."""
+        n = int(BACK_IN / STEP)
+        first, last = b + n, c - n
+        j0, j1 = self.xy[last], self.xy[first]
+        a0, a1 = angle_on(p, j0), angle_on(p, j1)
+        span = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi  # the short way
+        count = max(2, int(abs(span) * 3.4))
+        points = [self.xy[last - 8], j0]
+        for k in range(1, count):
+            radius = rng.uniform(*BACK_RADIUS)
+            points.append(
+                onshore(ellipse_point(p, a0 + span * k / count, radius), p, inland, 500.0)
+            )
+        points += [j1, self.xy[first + 8]]
+        kept = [points[0], points[1]]
+        for q in points[2:-2]:
+            if np.linalg.norm(q - kept[-1]) > 500:
+                kept.append(q)
+        kept += points[-2:]
+        curve = mi.catmull([q / 1000 for q in kept], False, step=STEP)
+        # Trim the lead-in and lead-out on the long road: start at j0 and end at j1.
+        s0 = int(np.argmin(np.linalg.norm(curve - j0, axis=1)))
+        s1 = int(np.argmin(np.linalg.norm(curve - j1, axis=1)))
+        curve = even(np.vstack([curve[s0:s1], j1]), False)
+        curve = contour(wander(curve, land), h, land, inland)
+        curve[0], curve[-1] = j0, j1
+        return curve, first, last
 
     @staticmethod
     def site(p, offset, ring, land, which):
@@ -849,7 +915,12 @@ def main():
         flush=True,
     )
     h = landings(h, land, [q for sp in spurs.values() for q in sp.shores])
-    added = keep_land(land, [(ring, [])] + [(sp.xy, sp.bridges) for sp in spurs.values()])
+    added = keep_land(
+        land,
+        [(ring, [])]
+        + [(sp.xy, sp.bridges) for sp in spurs.values()]
+        + [(sp.back[0], []) for sp in spurs.values()],
+    )
     if added.any():
         # Raise the new land to a low bank and blend it in.
         h = np.where(added, np.maximum(h, 4.0), h)
@@ -859,6 +930,8 @@ def main():
     ring_z = heights(h, ring, [], True)
     for sp in spurs.values():
         sp.z = heights(h, sp.xy, sp.bridges, False, (ring_z[sp.enter], ring_z[sp.leave]))
+        back, first, last = sp.back
+        sp.back_z = heights(h, back, [], False, (sp.z[last], sp.z[first]))
     routes, summary = [], []
     for key, title, blurb, names in ROUTES:
         xyz, bridges = assemble(ring, ring_z, spurs, names)
@@ -872,6 +945,28 @@ def main():
                 "islands": ["Harbour Isle", *names],
                 "xyz": xyz.round(2).tolist(),
                 "bridges": bridges,
+            }
+        )
+        summary.append({"key": key, "title": title, **stats})
+    for key, title, blurb, name in ISLAND_ROUTES:
+        sp = spurs[name]
+        back, first, last = sp.back
+        xyz = np.vstack(
+            [
+                np.column_stack([sp.xy[first : last + 1], sp.z[first : last + 1]]),
+                np.column_stack([back[1:-1], sp.back_z[1:-1]]),
+            ]
+        )
+        stats = profile_stats(xyz[:, :2], xyz[:, 2])
+        print(f"route {key}: {stats}", flush=True)
+        routes.append(
+            {
+                "key": key,
+                "title": title,
+                "blurb": blurb,
+                "islands": [name],
+                "xyz": xyz.round(2).tolist(),
+                "bridges": [],
             }
         )
         summary.append({"key": key, "title": title, **stats})
@@ -903,7 +998,14 @@ def main():
     }
     with open(f"{OUT}/world.json", "w") as f:
         json.dump(info, f, indent=1)
-    preview(h, land, weights, [(ring, [])] + [(sp.xy, sp.bridges) for sp in spurs.values()])
+    preview(
+        h,
+        land,
+        weights,
+        [(ring, [])]
+        + [(sp.xy, sp.bridges) for sp in spurs.values()]
+        + [(sp.back[0], []) for sp in spurs.values()],
+    )
     print(f"{OUT}: done", flush=True)
 
 
