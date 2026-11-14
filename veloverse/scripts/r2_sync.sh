@@ -16,10 +16,13 @@ set -a
 set +a
 # A pinned rclone: Ubuntu 22.04's (1.53) predates the Cloudflare provider.
 rclone_version=v1.68.2
+rclone_sha256=0e6fa18051e67fc600d803a2dcb10ddedb092247fc6eee61be97f64ec080a13c
 rclone=/usr/local/bin/rclone
 if ! "$rclone" version 2>/dev/null | grep -q "^rclone $rclone_version"; then
 	tmp=$(mktemp -d)
-	curl -fsSL -o "$tmp/r.zip" "https://downloads.rclone.org/$rclone_version/rclone-$rclone_version-linux-amd64.zip"
+	curl -fsSL -o "$tmp/r.zip" \
+		"https://github.com/rclone/rclone/releases/download/$rclone_version/rclone-$rclone_version-linux-amd64.zip"
+	echo "$rclone_sha256  $tmp/r.zip" | sha256sum -c --quiet
 	(cd "$tmp" && unzip -q r.zip && install -m 755 "rclone-$rclone_version-linux-amd64/rclone" "$rclone")
 	rm -rf "$tmp"
 fi
