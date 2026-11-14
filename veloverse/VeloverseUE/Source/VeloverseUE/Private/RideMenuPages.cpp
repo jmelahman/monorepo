@@ -508,7 +508,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	{
 		const float Lx = Dx + (I % 2) * Dw * 0.5f, Ly = 512.f + (I / 2) * 30.f;
 		P.Disc(Lx + 6.f, Ly - 5.f, 6.f, IslandColour(Shares[I].Key));
-		const float Nw = P.Text(Lx + 20.f, Ly, Shares[I].Key, P.Font("Medium", 16.f), Soft);
+		const float Nw = P.Text(Lx + 20.f, Ly, IslandLabel(Shares[I].Key), P.Font("Medium", 16.f), Soft);
 		P.Text(Lx + 26.f + Nw, Ly, FString::Printf(TEXT("%.0f%%"), Shares[I].Value * 100.f), P.Font("Bold", 16.f),
 		       Muted);
 	}
@@ -1328,7 +1328,7 @@ void URideMenu::PaintStats(FPaintContext& C) const
 		const bool bElsewhere = I >= 5;
 		const FLinearColor Colour = bElsewhere ? InkA(0.4f) : IslandColour(IslandKm[I].Key);
 		const double Shown = U::Long(IslandKm[I].Value * 1000.0);
-		P.Text(816.f, Iy, IslandKm[I].Key, P.Font("Medium", 15.f), bElsewhere ? Soft : Ink);
+		P.Text(816.f, Iy, IslandLabel(IslandKm[I].Key), P.Font("Medium", 15.f), bElsewhere ? Soft : Ink);
 		P.Text(1228.f, Iy, U::Number(Shown, Shown < 9.95 ? 1 : 0) + TEXT(" ") + U::LongUnit(), P.Font("Medium", 15.f),
 		       Soft, EAlign::Right);
 		P.Round(816.f, Iy + 8.f, 412.f, 8.f, 4.f, InkA(0.08f));

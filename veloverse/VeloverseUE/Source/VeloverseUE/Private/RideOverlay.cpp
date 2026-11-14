@@ -509,7 +509,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 					break;
 				}
 			}
-			const TCHAR* Names[] = {TEXT("Clear"), TEXT("Cloudy"), TEXT("Rain")};
+			const TCHAR* Names[] = {TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
 			const FSlateFontInfo Big = P.Font("Bold", 14.f);
 			const FSlateFontInfo Small = P.Font("Regular", 12.f);
 			const float Wide = 10.f + 22.f + 8.f + P.Width(Names[static_cast<int32>(Now)], Big) +

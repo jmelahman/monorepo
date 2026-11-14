@@ -45,6 +45,12 @@ inline FLinearColor IslandColour(const FString& Name)
 	}
 	return Muted;
 }
+// The name an island shows on screen. The hub's roads carry "The Coast" in the world's data, but the
+// route headers, the map and the ride summary call the island Harbour Isle.
+inline FString IslandLabel(const FString& Name)
+{
+	return Name == TEXT("The Coast") ? FString(TEXT("Harbour Isle")) : Name;
+}
 
 // The design's icons, on a 24-unit grid.
 namespace Icons
