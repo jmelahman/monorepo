@@ -40,8 +40,10 @@ services:
       - ./dashboard/:/srv/dashboard/:ro
       # Written by the dashboard when its layout is edited
       - ./dashboard/data/:/srv/dashboard/data/
+      - ../.config/git-orchard/shared/design/design/:/srv/design/:ro
       - ../image-editor/:/srv/draw/:ro
       - ../text-editor/:/srv/write/:ro
+      - ../document-viewer/:/srv/view/:ro
       # Markdown the editor opens and saves in place
       - ../:/srv/files/
     depends_on:

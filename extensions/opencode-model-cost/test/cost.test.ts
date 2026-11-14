@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { formatModelCost, isFree, withModelCost } from "../src/cost"
+import { MAX_PAD_TO, approximateWidth, formatModelCost, isFree, withModelCost } from "../src/cost"
 
 const paid = [{ input: 3, output: 15 }]
 
@@ -22,6 +22,14 @@ describe("formatModelCost", () => {
       { input: 3, output: 15 },
     ]
     expect(formatModelCost(tiered)).toBe("$3/$15")
+  })
+
+  test("marks the threshold when only context tiers are present", () => {
+    const tiered = [
+      { tier: { type: "context" as const, size: 1_000_000 }, input: 8, output: 30 },
+      { tier: { type: "context" as const, size: 200_000 }, input: 6, output: 22.5 },
+    ]
+    expect(formatModelCost(tiered)).toBe("$6/$22.5 (200K+)")
   })
 
   test("returns nothing for a model with no cost data", () => {
@@ -82,6 +90,16 @@ describe("withModelCost", () => {
     expect(aligned).not.toContain("�")
   })
 
+  test("pads with an empty separator, as this repo configures it", () => {
+    const aligned = withModelCost("Claude Sonnet", paid, { separator: "", padTo: 24 })
+    expect(aligned).toBe("Claude Sonnet     $3/$15")
+    expect(Bun.stringWidth(aligned)).toBe(24)
+  })
+
+  test("accepts the maximum padding width", () => {
+    expect(Bun.stringWidth(withModelCost("Claude Sonnet", paid, { padTo: MAX_PAD_TO }))).toBe(MAX_PAD_TO)
+  })
+
   test("does not pad when the width is already used by the price", () => {
     expect(withModelCost("Model", paid, { padTo: 5 })).toBe("Model · $3/$15")
   })
@@ -91,8 +109,16 @@ describe("withModelCost", () => {
   })
 
   test("ignores invalid padding widths", () => {
-    for (const padTo of [Number.NaN, Number.POSITIVE_INFINITY, -1, 24.5, 1_000_001]) {
+    for (const padTo of [Number.NaN, Number.POSITIVE_INFINITY, -1, 24.5, MAX_PAD_TO + 1]) {
       expect(withModelCost("Claude Sonnet", paid, { padTo })).toBe("Claude Sonnet · $3/$15")
+    }
+  })
+})
+
+describe("approximateWidth", () => {
+  test("matches Bun.stringWidth outside Bun", () => {
+    for (const value of ["Claude Sonnet · $3/$15", "模型😀", "😀😀", "e\u0301", "…", "👨‍👩‍👧", "ｆｕｌｌ"]) {
+      expect(approximateWidth(value)).toBe(Bun.stringWidth(value))
     }
   })
 })

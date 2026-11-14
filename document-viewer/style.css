@@ -24,20 +24,6 @@ body {
   display: none !important;
 }
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.875rem;
-  position: relative;
-  z-index: 2;
-  min-height: 3.25rem;
-  padding: 0.375rem 0.625rem;
-  background: var(--ink);
-  border-bottom: 1px solid var(--edge);
-  box-shadow: var(--shadow-bar);
-}
-
 .group,
 .zoom-controls,
 .page-number {

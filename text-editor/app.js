@@ -2,7 +2,6 @@
 
 const DRAFT_KEY = 'text-editor:draft';
 const MODE_KEY = 'text-editor:mode';
-const THEME_KEY = 'text-editor:theme'; // also read by theme.js
 const FOLDER_KEY = 'text-editor:folder';
 const FILES_URL = '/files/'; // a folder of the server's, where it offers one
 const DEVICE = Symbol('device'); // chosen over the server's files
@@ -56,7 +55,6 @@ const root = document.documentElement;
 const formatButtons = [...document.querySelectorAll('[data-format]')];
 const coarsePointer = matchMedia('(pointer: coarse)');
 const modeButtons = [...document.querySelectorAll('[data-mode]')];
-const darkScheme = matchMedia('(prefers-color-scheme: dark)');
 
 let editor = null; // toastui.Editor; rebuilt for every document
 let mode = 'wysiwyg'; // the mode asked for, which a document can overrule
@@ -548,18 +546,13 @@ function scheduleBubble() {
 
 // ---------------------------------------------------------------- theme
 
-// The chosen theme, which theme.js put on the root, or else the system's.
+// design/theme.js keeps the theme, and marks the root while it is dark.
 function isDark() {
-  return root.dataset.theme ? root.dataset.theme === 'dark' : darkScheme.matches;
+  return root.classList.contains('dark');
 }
 
 function applyTheme() {
-  const dark = isDark();
-  root.classList.toggle('dark', dark);
-  $('editor').firstElementChild?.classList.toggle('toastui-editor-dark', dark);
-  const label = `Switch to the ${dark ? 'light' : 'dark'} theme`;
-  $('theme').title = label;
-  $('theme').ariaLabel = label;
+  $('editor').firstElementChild?.classList.toggle('toastui-editor-dark', isDark());
 }
 
 // ---------------------------------------------------------------- status
@@ -1229,17 +1222,7 @@ for (const type of ['selectionchange', 'focusin', 'focusout']) document.addEvent
 workspace.addEventListener('scroll', scheduleBubble, true);
 window.addEventListener('resize', scheduleBubble);
 
-$('theme').addEventListener('click', () => {
-  const theme = isDark() ? 'light' : 'dark';
-  root.dataset.theme = theme;
-  try {
-    localStorage.setItem(THEME_KEY, theme);
-  } catch {
-    // Storage can be disabled; the theme just won't be remembered.
-  }
-  applyTheme();
-});
-darkScheme.addEventListener('change', applyTheme);
+document.addEventListener('themechange', applyTheme);
 
 // Capturing, as the editor would otherwise take Ctrl+S for strikethrough.
 document.addEventListener('keydown', (e) => {
@@ -1280,7 +1263,6 @@ window.addEventListener('pagehide', () => {
     // Storage is disabled.
   }
   if (modeButtons.some((b) => b.dataset.mode === stored)) mode = stored;
-  applyTheme();
   loadRecent();
   loadRevisions();
   createEditor(draft ? draft.text : WELCOME);

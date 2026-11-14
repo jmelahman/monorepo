@@ -16,7 +16,10 @@ export interface CostFormatOptions {
 }
 
 const DEFAULT_SEPARATOR = " · "
-const MAX_PAD_TO = 10_000
+const ELLIPSIS = "…"
+export const MAX_PAD_TO = 10_000
+
+const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" })
 
 /**
  * Whether every input price is zero. Mirrors the model picker's own "Free"
@@ -28,17 +31,24 @@ export function isFree(cost: readonly ModelCost[]): boolean {
 
 /**
  * A compact `$input/$output` price per million tokens. Undefined when there is
- * no price to show or the model is free.
+ * no price to show or the model is free. When the catalog only has context
+ * tiers, the smallest tier is shown with its threshold so it is not mistaken
+ * for a base price.
  */
 export function formatModelCost(cost: readonly ModelCost[]): string | undefined {
-  if (cost.length === 0) return undefined
-  if (isFree(cost)) return undefined
-  const base = cost.find((tier) => tier.tier === undefined) ?? cost[0]
-  if (!base) return undefined
-  return `${usd(base.input)}/${usd(base.output)}`
+  if (cost.length === 0 || isFree(cost)) return undefined
+  const base = cost.find((tier) => tier.tier === undefined)
+  if (base) return price(base)
+  const lowest = cost.reduce((a, b) => ((b.tier?.size ?? 0) < (a.tier?.size ?? 0) ? b : a))
+  return `${price(lowest)} (${tokens(lowest.tier?.size ?? 0)}+)`
 }
 
-/** Appends the price to a model's display name, idempotently. */
+/**
+ * Appends the price to a model's display name. A name that already ends with
+ * the exact suffix is returned unchanged, so callers should pass the original
+ * catalog name when they need to re-decorate (for example after `padTo`
+ * changes).
+ */
 export function withModelCost(name: string, cost: readonly ModelCost[], options: CostFormatOptions = {}): string {
   const price = formatModelCost(cost)
   if (!price) return name
@@ -54,27 +64,67 @@ export function withModelCost(name: string, cost: readonly ModelCost[], options:
  * edge. Long names are truncated so the price always stays visible.
  */
 function padName(name: string, suffix: string, width: number): string {
-  const room = width - Bun.stringWidth(suffix)
+  const room = width - stringWidth(suffix)
   if (room <= 0) return `${name}${suffix}`
   const label = truncateToWidth(name, room)
-  return `${label}${" ".repeat(room - Bun.stringWidth(label))}${suffix}`
+  return `${label}${" ".repeat(room - stringWidth(label))}${suffix}`
 }
 
 function truncateToWidth(value: string, width: number): string {
-  if (Bun.stringWidth(value) <= width) return value
-  if (width <= Bun.stringWidth("…")) return "…"
+  if (stringWidth(value) <= width) return value
+  const budget = width - stringWidth(ELLIPSIS)
+  if (budget <= 0) return ELLIPSIS
 
   let result = ""
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+  let used = 0
   for (const { segment } of segmenter.segment(value)) {
-    if (Bun.stringWidth(`${result}${segment}…`) > width) break
+    const cells = stringWidth(segment)
+    if (used + cells > budget) break
     result += segment
+    used += cells
   }
-  return `${result}…`
+  return `${result}${ELLIPSIS}`
 }
 
-function isValidPadTo(value: number | undefined): value is number {
-  return value !== undefined && Number.isSafeInteger(value) && value >= 0 && value <= MAX_PAD_TO
+/**
+ * Terminal cell width. Uses `Bun.stringWidth` when running under Bun and a
+ * grapheme-based approximation otherwise (the plugin SDK also loads under
+ * Node). Ambiguous-width characters count as narrow, matching how the TUI
+ * itself measures titles.
+ */
+export function stringWidth(value: string): number {
+  if (typeof Bun !== "undefined") return Bun.stringWidth(value)
+  return approximateWidth(value)
+}
+
+/** The non-Bun fallback for `stringWidth`. Exported for tests. */
+export function approximateWidth(value: string): number {
+  let width = 0
+  for (const { segment } of segmenter.segment(value)) width += graphemeWidth(segment)
+  return width
+}
+
+const ZERO_WIDTH = /^[\p{Mn}\p{Me}\p{Cf}\p{Cc}]+$/u
+const WIDE =
+  /\p{Extended_Pictographic}|[\u{1100}-\u{115F}\u{2E80}-\u{303E}\u{3041}-\u{33FF}\u{3400}-\u{4DBF}\u{4E00}-\u{9FFF}\u{A000}-\u{A4CF}\u{AC00}-\u{D7A3}\u{F900}-\u{FAFF}\u{FE30}-\u{FE4F}\u{FF00}-\u{FF60}\u{FFE0}-\u{FFE6}\u{20000}-\u{3FFFD}]/u
+
+function graphemeWidth(segment: string): number {
+  if (ZERO_WIDTH.test(segment)) return 0
+  return WIDE.test(segment) ? 2 : 1
+}
+
+export function isValidPadTo(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= MAX_PAD_TO
+}
+
+function price(cost: ModelCost): string {
+  return `${usd(cost.input)}/${usd(cost.output)}`
+}
+
+function tokens(value: number): string {
+  if (value >= 1_000_000 && value % 1_000_000 === 0) return `${value / 1_000_000}M`
+  if (value >= 1_000) return `${Number((value / 1_000).toFixed(1))}K`
+  return String(value)
 }
 
 function usd(value: number): string {

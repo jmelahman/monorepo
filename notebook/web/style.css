@@ -43,14 +43,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--ink);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.875rem;
-  min-height: 3rem;
-  padding: 0.375rem 0.5rem;
-  border-bottom: 1px solid var(--rule);
 }
 
 .group {
@@ -243,16 +235,6 @@ button.small.icon {
 button.small.icon svg {
   width: 0.95rem;
   height: 0.95rem;
-}
-
-/* The theme button shows the one it switches to. */
-#theme .sun,
-:root.dark #theme .moon {
-  display: none;
-}
-
-:root.dark #theme .sun {
-  display: block;
 }
 
 .menu {
