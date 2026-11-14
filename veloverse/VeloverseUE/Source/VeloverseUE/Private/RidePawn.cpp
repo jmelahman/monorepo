@@ -81,11 +81,11 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	}
 	else if (Weather == 2)
 	{
-		// A thin overcast: soft shadows from a sun about four times stronger, against the sky,
-		// than the rain's. 25000 lux against a 0.8 sky drew clear-day shadows under a blue sky,
-		// and pushed exposure to 11.6, past what the cached lighting holds (out/qa/cloudy1).
-		W.Lux = 2500.f;
-		W.Sky = 2.5f;
+		// An overcast: soft shadows from a sun about twice as strong, against the sky, as the rain's.
+		// 25000 lux against a 0.8 sky drew clear-day shadows (out/qa/cloudy1), and 2500 against 2.5
+		// still drew them dark and crisp (cloudy2).
+		W.Lux = 1200.f;
+		W.Sky = 3.f;
 		W.Fog = 0.025f;
 		W.Rain = W.Wet = 0.f;
 	}
