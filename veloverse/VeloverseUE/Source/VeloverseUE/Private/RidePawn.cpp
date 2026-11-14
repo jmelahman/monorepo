@@ -956,8 +956,11 @@ void ARidePawn::Place()
 		const float Strength = Profile.HeadSway / 100.f;
 		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
-		Roll = Sway * (0.45f * FMath::Sin(Crank) + 0.15f * FMath::Sin(0.23f * Crank + 2.f));
-		Turn = Sway * (0.2f * FMath::Sin(0.5f * Crank + 0.5f) + 0.1f * FMath::Sin(0.17f * Crank));
+		// The rock with each stroke is small and its depth wanders, so it doesn't read as a metronome;
+		// the head's turn is a slow drift, not a sine (both too strong and regular, the user, 14 Nov).
+		const float Vary = 0.7f + 0.5f * FMath::PerlinNoise1D(S / 900.f + 5.f);
+		Roll = Sway * (0.2f * Vary * FMath::Sin(Crank) + 0.12f * FMath::PerlinNoise1D(S / 300.f + 2.f));
+		Turn = Sway * 0.12f * FMath::PerlinNoise1D(S / 600.f + 9.f);
 		// The road through the bike: a judder tied to the distance, so it quickens with the speed and
 		// stops with the bike. Noise over 0.6 m and 2.3 m (13 and 3.5 Hz at 30 km/h), about half a
 		// centimetre up and down and a sixth of a degree of nod at that speed, more going faster.
@@ -1048,10 +1051,10 @@ bool ARidePawn::Moves() const
 
 float ARidePawn::RideLine(const URideTrack& On, float S) const
 {
-	// Two slow swells across the lane, one every 90 m and one every 37 m, up to 34 cm either way,
-	// so it never repeats in a way the eye catches; tied to the distance, so it stops when the bike
-	// does. Plus the inside of the bend (Apex). Steady eases back to KeepLeft exactly.
-	const float Drift = Motion * (22.f * FMath::Sin(2.f * PI * S / 9000.f) + 12.f * FMath::Sin(2.f * PI * S / 3700.f + 1.3f));
+	// A slow, uneven wander across the lane over 20-50 m, mostly within 5-8 cm and about 15 cm at
+	// most; tied to the distance, so it stops when the bike does. Two sines up to 34 cm read as a
+	// weave (the user, 14 Nov). Plus the inside of the bend (Apex). Steady eases back to KeepLeft.
+	const float Drift = Motion * (12.f * FMath::PerlinNoise1D(S / 5200.f + 3.f) + 6.f * FMath::PerlinNoise1D(S / 1900.f + 11.f));
 	return -On.KeepLeft + Drift + Apex;
 }
 
