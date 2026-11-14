@@ -12,7 +12,7 @@ tar -h -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCac
 	sudo -u ue4 tar -C "$snap" -xf -
 # Straight from the repo: config files the live project doesn't link (DefaultScalability.ini went
 # unpackaged that way), and the cursors, read as loose files from Content/Menu.
-repo=$(cd "$(dirname "$0")/.." && pwd -P)
+repo=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd -P) # scripts/ is linked from /workspace/ue
 for f in "$repo"/VeloverseUE/Config/*.ini; do
 	[ -e "$snap/Config/${f##*/}" ] || install -o ue4 -g ue4 -m 644 "$f" "$snap/Config/"
 done
