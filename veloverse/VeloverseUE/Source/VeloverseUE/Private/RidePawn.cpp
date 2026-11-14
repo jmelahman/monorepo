@@ -952,14 +952,16 @@ void ARidePawn::Place()
 			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
 		}
 		const float Effort = bMoving ? FMath::Clamp(static_cast<float>(Reading.Watts) / 250.f, 0.4f, 1.4f) : 0.f;
-		Sway = FMath::Lerp(Sway, Effort, 1.f - FMath::Exp(-Dt / 0.8f));
+		// The rider's own setting (Rider: Head sway) scales the pedalling and the road's judder.
+		const float Strength = Profile.HeadSway / 100.f;
+		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
 		Roll = Sway * (0.45f * FMath::Sin(Crank) + 0.15f * FMath::Sin(0.23f * Crank + 2.f));
 		Turn = Sway * (0.2f * FMath::Sin(0.5f * Crank + 0.5f) + 0.1f * FMath::Sin(0.17f * Crank));
 		// The road through the bike: a judder tied to the distance, so it quickens with the speed and
 		// stops with the bike. Noise over 0.6 m and 2.3 m (13 and 3.5 Hz at 30 km/h), about half a
 		// centimetre up and down and a sixth of a degree of nod at that speed, more going faster.
-		const float Rough = Motion * FMath::Clamp(Speed / 8.f, 0.f, 1.4f);
+		const float Rough = Motion * FMath::Clamp(Speed / 8.f, 0.f, 1.4f) * Strength;
 		const float Fine = FMath::PerlinNoise1D(S / 60.f), Coarse = FMath::PerlinNoise1D(S / 230.f + 17.f);
 		Lift.Z += Rough * (0.35f * Fine + 0.45f * Coarse);
 		Judder = Rough * (0.12f * FMath::PerlinNoise1D(S / 60.f + 41.f) + 0.06f * Coarse);

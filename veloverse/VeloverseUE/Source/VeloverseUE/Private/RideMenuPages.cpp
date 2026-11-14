@@ -988,7 +988,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			const TCHAR* Unit;
 			bool bMass; // kilograms, shown and stepped in pounds under imperial
 		};
-		static const FSlide Slides[4] = {
+		static const FSlide Slides[5] = {
 			{TEXT("ftp"), TEXT("FTP"), TEXT("The power you can hold for an hour"), 100.f, 450.f, 5.f, &FRideProfile::Ftp,
 			 false, TEXT("W"), false},
 			{TEXT("weight"), TEXT("Weight"), TEXT("Yours: it sets how hard the climbs are"), 40.f, 150.f, 0.5f,
@@ -997,6 +997,8 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			 true, TEXT("kg"), true},
 			{TEXT("maxhr"), TEXT("Max heart rate"), TEXT("Sets the heart-rate zones"), 150.f, 215.f, 1.f, nullptr,
 			 false, TEXT("bpm"), false},
+			{TEXT("sway"), TEXT("Head sway"), TEXT("How much your head moves as you pedal and over the road"), 0.f, 200.f,
+			 10.f, &FRideProfile::HeadSway, false, TEXT("%"), false},
 		};
 		for (const FSlide& S : Slides)
 		{
