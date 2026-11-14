@@ -191,11 +191,15 @@ These came from the old laptop. Keep the ones that protect data; re-test the siz
 - **Credentials:**
   - Runpod key: source `/home/ue4/.env` only inside scripts, and never print it.
   - The fal key is in `~/.config/opencycle/fal.key`.
+  - R2 key (read/write, bucket `veloverse-sync` only): `~/.config/opencycle/r2.env`, sourced by
+    `scripts/r2_sync.sh`. Never print it. The bucket must stay private (Fab's licence).
   - The GitHub/ghcr token must never pass through Claude. Don't look for other credentials.
   - Never send the user's email anywhere.
 - **Runpod:**
   - Quote prices before creating anything, and ask before spending over $10.
   - No pods are running.
+  - A pod gets the project with `scripts/r2_sync.sh pull`, not over SSH from here: the route to
+    the pod's datacenter was ~0.9 MB/s, while R2 takes uploads at ~8 MiB/s.
 - **Files:**
   - No stray .py files in `/workspace/ue`. Probes go in `out/qa`, temp files in the scratchpad.
   - Don't delete `/workspace/ue/out` without the user's OK.
