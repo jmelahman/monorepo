@@ -30,7 +30,8 @@ OUT = os.environ.get("OC_BIKE_OUT", "/workspace/ue/world_gen/rider")
 EYE = 150.0  # cm: RidePawn's EyeHeight
 # The cockpit camera, from the eyes, in the bike's frame (cm forward, cm up) and its pitch
 # (degrees, down negative): back and down from the eyes, so the bars sit in the frame's foot.
-COCKPIT_CAMERA = (-25.0, -28.0, -12.0)
+COCKPIT_CAMERA = (-45.0, -38.0, -8.0)
+FOV = 61.0  # degrees across: the rider profile's default
 
 # The geometry (cm, in the bike's frame: the origin on the road under the eyes).
 TYRE = 33.9  # the tyre's outer radius: a 622 mm bead seat and a 28 mm tyre
@@ -499,8 +500,8 @@ def preview(bike, path):
         ax.set_aspect("equal")
         ax.set_title(name)
         if name == "cockpit":
-            # The frame at a 90 degree field of view and 16:9.
-            half = 120.0
+            # The frame at the game's default 61 degree field of view and 16:9.
+            half = 120.0 * math.tan(math.radians(FOV / 2))
             ax.set_xlim(-half, half)
             ax.set_ylim(-half * 9 / 16, half * 9 / 16)
         else:

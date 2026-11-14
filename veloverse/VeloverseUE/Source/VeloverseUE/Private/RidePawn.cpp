@@ -37,16 +37,18 @@ namespace
 {
 constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
-// Behind the bike: the camera this far back from the rider's eyes and this far over them, tipped
-// down a little to keep the bike low in the frame.
-constexpr float ChaseBack = 420.f;
-constexpr float ChaseUp = 70.f;
-constexpr float ChaseTilt = -7.f;
+// Behind the bike: the camera this far back along the look from a point ChaseAim over the road
+// (the bike's middle, with no rider on it yet), tipped down so the bike sits low of centre.
+constexpr float ChaseBack = 330.f;
+constexpr float ChaseAim = 95.f;
+constexpr float ChaseTilt = -12.f;
 // Over the bars: the camera this far behind and below the eyes, in the bike's frame (cm), tipped
-// down so the bars, hoods and computer sit in the foot of the frame. make_bike.py's
-// COCKPIT_CAMERA holds the same numbers for its preview.
-const FVector CockpitEye(-25.f, 0.f, -28.f);
-constexpr float CockpitTilt = -12.f;
+// down so the bars, hoods and computer sit in the bottom third with the horizon in the top third
+// at the default 61 degree field of view. Nearer the bars, the narrow view can't hold both: the bars
+// fall out of the frame's foot or the horizon out of its top. make_bike.py's COCKPIT_CAMERA holds
+// the same numbers for its preview.
+const FVector CockpitEye(-45.f, 0.f, -38.f);
+constexpr float CockpitTilt = -8.f;
 
 // A mesh by path, or none when it isn't in the project: no warning for a bike not yet made.
 UStaticMesh* MeshAt(const TCHAR* Path)
@@ -996,7 +998,8 @@ void ARidePawn::Place()
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
 	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
 	const FRotator Look(Head.Pitch * 0.5f + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
-	const FVector Back = Eye + Lift * 0.3f - Look.Vector() * ChaseBack + FVector(0.f, 0.f, ChaseUp);
+	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
+	const FVector Back = Aim - Look.Vector() * ChaseBack;
 	SetActorLocationAndRotation(Back, Look);
 }
 
