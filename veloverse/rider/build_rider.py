@@ -2293,7 +2293,10 @@ def stage_all(opts):
     log(json.dumps(stats, indent=1, default=str))
     fbx = os.path.join(out, "rider.fbx")
     export_fbx(rider.rig, rider_ob, fbx)
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, "rider.blend"))
+    blend = os.path.join(out, "rider.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=blend)
+    if os.path.exists(blend + "1"):
+        os.remove(blend + "1")  # Blender's backup of the previous build
     if opts["render"]:
         os.makedirs(os.path.join(out, "debug"), exist_ok=True)
         render_all(out, opts["quick"], bike_objs)
