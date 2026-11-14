@@ -561,6 +561,12 @@ void ARidePawn::ReadCommandLine()
 {
 	const TCHAR* Line = FCommandLine::Get();
 	bStartGiven = FParse::Value(Line, TEXT("RideStart="), StartMetres);
+	// For stills of the bike from aside: the look swung this far (degrees, + right). Past 45 it
+	// stays put, as a free look held away does.
+	if (float Yaw = 0.f; FParse::Value(Line, TEXT("RideLookYaw="), Yaw))
+	{
+		LookYaw = FMath::Clamp(Yaw, -110.f, 110.f);
+	}
 	FString From;
 	if (FParse::Value(Line, TEXT("RideFrom="), From))
 	{
