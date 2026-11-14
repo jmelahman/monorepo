@@ -426,12 +426,21 @@ def build_body(props):
     rig.matrix_world = Matrix.Identity(4)
     basemesh.data.transform(R @ basemesh.matrix_world)
     basemesh.matrix_basis = Matrix.Identity(4)
+    # MPFB's Root sits 3 mm up; put it on the ground (it deforms nothing)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="EDIT")
+    eb = rig.data.edit_bones["Root"]
+    eb.head.z = 0.0
+    eb.tail.z = 0.0
+    bpy.ops.object.mode_set(mode="OBJECT")
     bpy.context.view_layer.update()
     # eyeball centres from the helper eyes, then drop the helpers except the eyeballs
     co = mesh_co(basemesh, world=False)
     eyes = [co[group_mask(basemesh, f"helper-{s}-eye")].mean(0) for s in ("l", "r")]
-    keep = group_mask(basemesh, "body") | group_mask(basemesh, "helper-l-eye")
-    keep |= group_mask(basemesh, "helper-r-eye")
+    keep = group_mask(basemesh, "body")
+    for lr in ("l", "r"):
+        for g in ("eye", "eyelashes-1", "eyelashes-2"):
+            keep |= group_mask(basemesh, f"helper-{lr}-{g}")
     bm = bmesh.new()
     bm.from_mesh(basemesh.data)
     bm.verts.ensure_lookup_table()
@@ -581,9 +590,14 @@ class Rider:
         for s, _side in SIDES:
             ball = self.head_rest[f"ball_{s}"]
             # the sole is the floor (MPFB stands the feet on z = 0); the cleat sits on the
-            # foot's centre line just behind the ball joint, under sole + cleat + pedal stack
+            # foot's centre line just behind the ball joint. The point that rides the pedal
+            # axle is PEDAL_STACK under the cleat's face, so the cleat rests on the pedal's top.
             self.cleat_rest[s] = Vector(
-                (ball.x - CLEAT_BEHIND_BALL, ball.y, -(SOLE_THICKNESS + CLEAT_THICKNESS))
+                (
+                    ball.x - CLEAT_BEHIND_BALL,
+                    ball.y,
+                    -(SOLE_THICKNESS + CLEAT_THICKNESS + PEDAL_STACK),
+                )
             )
 
     def empty(self, name):
@@ -979,6 +993,1189 @@ def debug_render(path, cam_loc, target, ortho=None, res=(1200, 900)):
 
 
 # =============================================================================================
+# Gear: helmet, straps, glasses, brows and shoes (built in the rest pose)
+# =============================================================================================
+ARM_PARTS = ("upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring", "pinky")
+LEG_PARTS = ("thigh", "calf", "foot", "ball")
+HELMET_PAD = 0.010  # m, scalp to the helmet's inner shell (pads and hair)
+HELMET_SHELL = 0.022  # m, shell thickness at the crown
+HELMET_AZ, HELMET_ROWS = 144, 26
+# vent slots: (centre of d.y, d.x from, d.x to, half width in d.y), d the unit direction from
+# the helmet's centre; mirrored for the +Y lanes
+HELMET_VENTS = [
+    (0.0, 0.32, 0.80, 0.035),
+    (0.0, -0.82, -0.30, 0.035),
+    (0.22, 0.26, 0.82, 0.040),
+    (0.22, -0.86, -0.24, 0.040),
+    (0.46, 0.16, 0.62, 0.034),
+    (0.46, -0.70, -0.20, 0.034),
+]
+LENS_R = 0.090  # m, radius of the wraparound lens's cylinder
+LENS_GAP = 0.017  # m, front of the eyeball to the lens
+SHOE_GAP = 0.004  # m, foot skin to the shoe's outer surface
+STRAP_WIDTH, STRAP_THICK = 0.013, 0.0015
+
+
+def unit(v):
+    v = np.asarray(v, float)
+    return v / np.linalg.norm(v)
+
+
+def new_object(name, verts, faces, uvs=None, mats=(), mat_idx=None, groups=None, rig=None):
+    """A mesh object from numpy verts and face tuples, with per-corner UVs (list per face),
+    material slots, vertex groups {name: weights per vertex} and an armature modifier."""
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(v) for v in verts], [], [tuple(f) for f in faces])
+    uv = me.uv_layers.new(name="UVMap")
+    if uvs is not None:
+        flat = [c for f in uvs for c in f]
+        uv.data.foreach_set("uv", np.asarray(flat, np.float32).ravel())
+    for m in mats:
+        me.materials.append(m)
+    if mat_idx is not None:
+        me.polygons.foreach_set("material_index", np.asarray(mat_idx, np.int32))
+    me.validate()
+    me.update()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    for g, w in (groups or {}).items():
+        vg = ob.vertex_groups.new(name=g)
+        w = np.broadcast_to(np.asarray(w, float), (len(verts),))
+        for i in np.where(w > 0)[0]:
+            vg.add([int(i)], float(w[i]), "REPLACE")
+    if rig is not None:
+        ob.parent = rig
+        mod = ob.modifiers.new("Armature", "ARMATURE")
+        mod.object = rig
+    return ob
+
+
+def apply_modifiers(ob):
+    """Bake the object's non-armature modifiers into its mesh."""
+    arm = [(m.name, m.object) for m in ob.modifiers if m.type == "ARMATURE"]
+    for m in list(ob.modifiers):
+        if m.type == "ARMATURE":
+            ob.modifiers.remove(m)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(
+        ob.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg
+    )
+    old = ob.data
+    ob.modifiers.clear()
+    ob.data = me
+    bpy.data.meshes.remove(old)
+    for name, rig in arm:
+        mod = ob.modifiers.new(name, "ARMATURE")
+        mod.object = rig
+
+
+def solidify(ob, thickness, offset=-1.0, mat_offset=0, group=None, group_factor=1.0):
+    mod = ob.modifiers.new("Solidify", "SOLIDIFY")
+    mod.thickness = thickness
+    mod.offset = offset
+    mod.use_rim = True
+    mod.use_even_offset = True
+    mod.material_offset = mat_offset
+    mod.material_offset_rim = mat_offset
+    if group:
+        mod.vertex_group = group
+        mod.thickness_vertex_group = group_factor
+    apply_modifiers(ob)
+
+
+def tube_mesh(points, normals, width, thick):
+    """A flat strap along points: a width x thick rectangle, its thickness along normals."""
+    P = np.asarray(points, float)
+    N = np.asarray(normals, float)
+    T = np.gradient(P, axis=0)
+    verts, faces = [], []
+    n = len(P)
+    for i in range(n):
+        t = unit(T[i])
+        nn = unit(N[i] - N[i].dot(t) * t)
+        b = np.cross(t, nn)
+        w = width[i] if np.ndim(width) else width
+        for sb, sn in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+            verts.append(P[i] + sb * b * w / 2 + sn * nn * thick / 2)
+    for i in range(n - 1):
+        for k in range(4):
+            a, c = 4 * i + k, 4 * i + (k + 1) % 4
+            faces.append((a + 4, c + 4, c, a))
+    faces.append((0, 1, 2, 3))
+    m = 4 * (n - 1)
+    faces.append((m + 3, m + 2, m + 1, m))
+    return np.array(verts), faces
+
+
+def catmull_rom(ctrl, per_seg=10):
+    C = [np.asarray(c, float) for c in ctrl]
+    C = [2 * C[0] - C[1], *C, 2 * C[-1] - C[-2]]
+    out = []
+    for i in range(1, len(C) - 2):
+        p0, p1, p2, p3 = C[i - 1], C[i], C[i + 1], C[i + 2]
+        for k in range(per_seg):
+            t = k / per_seg
+            out.append(
+                0.5
+                * (
+                    2 * p1
+                    + (-p0 + p2) * t
+                    + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t
+                    + (-p0 + 3 * p1 - 3 * p2 + p3) * t**3
+                )
+            )
+    out.append(C[-2])
+    return np.array(out)
+
+
+class Gear:
+    """Head landmarks and BVHs of the rest-pose body, and the gear builders."""
+
+    def __init__(self, rider, mats):
+        self.rider = rider
+        self.mesh, self.rig, self.mats = rider.mesh, rider.rig, mats
+        self.E = np.array((rider.eyes_rest[0] + rider.eyes_rest[1]) / 2)
+        co = mesh_co(self.mesh, world=False)
+        body = group_mask(self.mesh, "body")
+        polys = [
+            tuple(p.vertices)
+            for p in self.mesh.data.polygons
+            if all(body[v] for v in p.vertices) and co[p.vertices[0], 2] > self.E[2] - 0.30
+        ]
+        self.head = BVHTree.FromPolygons([tuple(v) for v in co], polys)
+        self.C = self.E + np.array((-0.075, 0.0, 0.020))  # the helmet's centre
+
+    def snap(self, p, off):
+        loc, nrm, _, _ = self.head.find_nearest(Vector(p))
+        n = np.array(nrm)
+        if np.dot(np.asarray(p) - np.array(loc), n) < -0.02:
+            n = -n
+        return np.array(loc) + n * off, n
+
+    def skull(self, d):
+        hit = self.head.ray_cast(Vector(self.C), Vector(d))
+        return hit[3] if hit[0] is not None else 0.10
+
+    # ----- helmet -----
+    @staticmethod
+    def rim_el(phi):
+        c = math.cos(phi)
+        return math.radians(5.0 + 14.0 * c - 2.0 * c * c)
+
+    def helmet_dir(self, phi, i):
+        e0 = self.rim_el(phi)
+        el = e0 + (math.radians(86.0) - e0) * (i / (HELMET_ROWS - 1)) ** 0.9
+        return np.array((math.cos(el) * math.cos(phi), math.cos(el) * math.sin(phi), math.sin(el)))
+
+    @staticmethod
+    def in_vent(d):
+        for yc, x0, x1, w in HELMET_VENTS:
+            for s in (1, -1) if yc else (1,):
+                xm, hl = 0.5 * (x0 + x1), 0.5 * (x1 - x0)
+                if ((d[1] - s * yc) / w) ** 2 + ((d[0] - xm) / hl) ** 8 < 1.0:
+                    return True
+        return False
+
+    def build_helmet(self):
+        A, R = HELMET_AZ, HELMET_ROWS
+        D = np.array(
+            [[self.helmet_dir(2 * math.pi * j / A, i) for j in range(A)] for i in range(R)]
+        )
+        r = np.array([[self.skull(D[i, j]) for j in range(A)] for i in range(R)])
+        for _ in range(4):  # smooth out the hair and the ears' edges
+            up = np.vstack([r[1:], r[-1:]])
+            dn = np.vstack([r[:1], r[:-1]])
+            r = 0.5 * r + 0.125 * (np.roll(r, 1, 1) + np.roll(r, -1, 1) + up + dn)
+        tail = 0.012 * np.clip(-D[..., 0], 0, 1) ** 1.5 * np.clip(1 - np.abs(D[..., 2]), 0, 1)
+        rout = r + HELMET_PAD + HELMET_SHELL + tail
+        self.helmet_r = r
+        V = (self.C + D * rout[..., None]).reshape(-1, 3)
+        top = np.array([self.C + np.array((0.0, 0.0, 1.0)) * (self.skull((0, 0, 1)) + 0.032)])
+        V = np.vstack([V, top])
+        pole = len(V) - 1
+        F, UV = [], []
+        for i in range(R - 1):
+            for j in range(A):
+                jn = (j + 1) % A
+                dc = unit(D[i, j] + D[i, (j + 1) % A] + D[i + 1, j] + D[i + 1, jn])
+                if i >= 3 and self.in_vent(dc):
+                    continue
+                F.append((i * A + j, i * A + jn, (i + 1) * A + jn, (i + 1) * A + j))
+                v0, v1 = i / (R - 1) * 0.98, (i + 1) / (R - 1) * 0.98
+                UV.append(((j / A, v0), ((j + 1) / A, v0), ((j + 1) / A, v1), (j / A, v1)))
+        for j in range(A):
+            F.append(((R - 1) * A + j, (R - 1) * A + (j + 1) % A, pole))
+            UV.append(((j / A, 0.98), ((j + 1) / A, 0.98), ((j + 0.5) / A, 1.0)))
+        rows = np.repeat(np.arange(R), A)
+        thick = np.append(np.clip(rows / 4.0, 0, 1), 1.0)
+        ob = new_object(
+            "Helmet",
+            V,
+            F,
+            UV,
+            [self.mats["M_Helmet"], self.mats["M_Strap"]],
+            [0] * len(F),
+            {"thick": thick},
+        )
+        # shell inward; the inner foam and the vents' walls get M_Strap's black
+        solidify(ob, HELMET_SHELL, -1.0, 1, "thick", 0.45)
+        ob.vertex_groups.remove(ob.vertex_groups["thick"])
+        return ob
+
+    def helmet_inner(self, phi, el):
+        d = np.array((math.cos(el) * math.cos(phi), math.cos(el) * math.sin(phi), math.sin(el)))
+        return self.C + d * (self.skull(d) + HELMET_PAD + 0.002)
+
+    # ----- straps -----
+    def build_straps(self):
+        E = self.E
+        V, F = [], []
+        for side in (1, -1):
+            front = self.helmet_inner(side * math.radians(70), self.rim_el(math.radians(70)) + 0.06)
+            rear = self.helmet_inner(
+                side * math.radians(120), self.rim_el(math.radians(120)) + 0.06
+            )
+            junction = E + np.array((-0.085, side * 0.064, -0.078))
+            paths = [
+                [front, E + np.array((-0.055, side * 0.074, -0.030)), junction],
+                [rear, E + np.array((-0.128, side * 0.064, -0.035)), junction],
+                [
+                    junction,
+                    E + np.array((-0.055, side * 0.050, -0.108)),
+                    E + np.array((-0.026, side * 0.010, -0.126)),
+                ],
+            ]
+            for ctrl in paths:
+                P = catmull_rom(ctrl, 12)
+                S = [self.snap(p, 0.0035) for p in P]
+                verts, faces = tube_mesh(
+                    [s[0] for s in S], [s[1] for s in S], STRAP_WIDTH, STRAP_THICK
+                )
+                F += [tuple(len(V) + k for k in f) for f in faces]
+                V += list(verts)
+        # the buckle under the chin
+        c, _n = self.snap(E + np.array((-0.026, 0.0, -0.126)), 0.006)
+        bv, bf = box_mesh(c, (0.022, 0.030, 0.008))
+        F += [tuple(len(V) + k for k in f) for f in bf]
+        V += list(bv)
+        return new_object(
+            "Straps", np.array(V), F, None, [self.mats["M_Strap"]], None, {"head": 1.0}
+        )
+
+    # ----- glasses -----
+    def build_glasses(self):
+        E = self.E
+        cx = E[0] + 0.012 + LENS_GAP - LENS_R
+        na, nz = 44, 9
+        amax = math.radians(82.0)
+        A = np.linspace(-amax, amax, na)
+        V, notch = [], []
+        for k in range(nz):
+            for a in A:
+                f = (abs(a) / amax) ** 2
+                zb, zt = E[2] - 0.030 + 0.016 * f, E[2] + 0.021 - 0.002 * f
+                z = zb + (zt - zb) * k / (nz - 1)
+                d = np.array((math.cos(a), math.sin(a), 0.0))
+                o = np.array((cx, 0.0, z))
+                hit = self.head.ray_cast(Vector(o), Vector(d))
+                rr, bad = LENS_R, False
+                if hit[0] is not None and hit[3] > LENS_R - 0.005:
+                    if abs(LENS_R * math.sin(a)) < 0.026 and z < E[2] + 0.006:
+                        bad = True
+                    else:
+                        rr = hit[3] + 0.006
+                V.append(o + d * rr)
+                notch.append(bad)
+        F = []
+        for k in range(nz - 1):
+            for j in range(na - 1):
+                q = (k * na + j, k * na + j + 1, (k + 1) * na + j + 1, (k + 1) * na + j)
+                # wound so the normal faces out, away from the face
+                if not any(notch[v] for v in q):
+                    F.append(q)
+        lens = new_object("Lens", np.array(V), F, None, [self.mats["M_Lens"]], None, {"head": 1.0})
+        solidify(lens, 0.0015, 1.0)
+        # frame: a bar along the lens's top edge and the temple arms over the ears
+        top = np.array(V[(nz - 1) * na : nz * na]) + np.array((0, 0, 0.002))
+        out = top - np.array((cx, 0.0, 0.0))
+        out[:, 2] = 0
+        out /= np.linalg.norm(out, axis=1, keepdims=True)
+        FV, FF = [], []
+        verts, faces = tube_mesh(top, out, 0.005, 0.004)
+        FF += faces
+        FV += list(verts)
+        for side in (1, -1):
+            end = np.array(V[(nz - 1) * na + (na - 1 if side > 0 else 0)])
+            ctrl = [
+                end + np.array((0, 0, -0.006)),
+                E + np.array((-0.075, side * 0.077, 0.012)),
+                E + np.array((-0.108, side * 0.076, 0.002)),
+            ]
+            P = catmull_rom(ctrl, 10)
+            S = [(P[0], np.array((0, side, 0.0)))] + [self.snap(p, 0.003) for p in P[1:]]
+            verts, faces = tube_mesh([s[0] for s in S], [s[1] for s in S], 0.005, 0.0022)
+            FF += [tuple(len(FV) + k for k in f) for f in faces]
+            FV += list(verts)
+        frame = new_object(
+            "GlassesFrame", np.array(FV), FF, None, [self.mats["M_Strap"]], None, {"head": 1.0}
+        )
+        return [lens, frame]
+
+    # ----- brows -----
+    def build_brows(self):
+        E = self.E
+        V, F = [], []
+        n = 9
+        for side in (1, -1):
+            P, N = [], []
+            for k in range(n):
+                t = k / (n - 1)
+                y = side * (0.013 + 0.040 * t)
+                z = E[2] + 0.027 + 0.006 * math.sin(math.pi * t) - 0.004 * t
+                hit = self.head.ray_cast(Vector((E[0] + 0.2, y, z)), Vector((-1.0, 0.0, 0.0)))
+                p = np.array(hit[0]) + np.array(hit[1]) * 0.0012
+                P.append(p)
+                N.append(np.array(hit[1]))
+            base = len(V)
+            for k in range(n):
+                w = 0.0075 * (1 - 0.5 * k / (n - 1))
+                up = np.array((0.0, 0.0, 1.0))
+                up = unit(up - up.dot(N[k]) * N[k])
+                V += [P[k] - up * w / 2, P[k] + up * w / 2]
+            for k in range(n - 1):
+                a = base + 2 * k
+                q = (a, a + 2, a + 3, a + 1)
+                F.append(q if side > 0 else q[::-1])
+        return new_object("Brows", np.array(V), F, None, [self.mats["M_Hair"]], None, {"head": 1.0})
+
+    # ----- shoes -----
+    def shoe_masks(self):
+        """Per body vertex: the foot share (foot + ball weights), the shoe region and the part
+        hidden inside the shoe."""
+        co = mesh_co(self.mesh, world=False)
+        W = vertex_weights(self.mesh, [f"{b}_{s}" for s in ("l", "r") for b in ("foot", "ball")])
+        foot = np.maximum(W[:, 0] + W[:, 1], W[:, 2] + W[:, 3])
+        collar = np.zeros(len(co))
+        for s, side in SIDES:
+            ank = np.array(self.rider.head_rest[f"foot_{s}"])
+            m = np.sign(co[:, 1]) == side
+            collar[m] = np.interp(
+                co[m, 0] - ank[0], [-0.09, -0.03, 0.02, 0.07], [0.078, 0.060, 0.066, 0.098]
+            )
+        shoe = (foot > 0.4) & (co[:, 2] < collar)
+        hidden = shoe & (co[:, 2] < collar - 0.012)
+        return shoe, hidden
+
+    def build_shoes(self):
+        shoe_v, _ = self.shoe_masks()
+        ob = self.mesh.copy()
+        ob.data = self.mesh.data.copy()
+        ob.name = ob.data.name = "Shoes"
+        bpy.context.scene.collection.objects.link(ob)
+        ob.modifiers.clear()
+        me = ob.data
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.normal_update()
+        orig_z = {v: v.co.z for v in bm.verts}
+        bm.faces.ensure_lookup_table()
+        kill = [f for f in bm.faces if not all(shoe_v[v.index] for v in f.verts)]
+        bmesh.ops.delete(bm, geom=kill, context="FACES")
+        loose = [v for v in bm.verts if not v.link_faces]
+        bmesh.ops.delete(bm, geom=loose, context="VERTS")
+        for v in bm.verts:
+            v.co += v.normal * SHOE_GAP
+            if orig_z[v] < 0.008:
+                v.co.z = -SOLE_THICKNESS
+            v.co.z = max(v.co.z, -SOLE_THICKNESS)
+        bm.to_mesh(me)
+        bm.free()
+        me.materials.clear()
+        me.materials.append(self.mats["M_Shoe"])
+        me.polygons.foreach_set("material_index", np.zeros(len(me.polygons), np.int32))
+        ob.parent = self.rig
+        mod = ob.modifiers.new("Armature", "ARMATURE")
+        mod.object = self.rig
+        solidify(ob, 0.002, -1.0)
+        # the cleats, rigid to the foot (the solver's cleat point rides with the foot bone)
+        for s, _side in SIDES:
+            c = self.rider.cleat_rest[s]
+            z0, z1 = -(SOLE_THICKNESS + CLEAT_THICKNESS), -SOLE_THICKNESS + 0.001
+            bv, bf = box_mesh((c.x, c.y, 0.5 * (z0 + z1)), (0.064, 0.054, z1 - z0))
+            n0 = len(ob.data.vertices)
+            bm = bmesh.new()
+            bm.from_mesh(ob.data)
+            vs = [bm.verts.new(tuple(p)) for p in bv]
+            for f in bf:
+                bm.faces.new([vs[k] for k in f])
+            bm.to_mesh(ob.data)
+            bm.free()
+            idx = list(range(n0, n0 + len(bv)))
+            for g in ob.vertex_groups:
+                g.remove(idx)
+            ob.vertex_groups[f"foot_{s}"].add(idx, 1.0, "REPLACE")
+        smart_uv(ob)
+        return ob
+
+    def remove_hidden_feet(self):
+        _, hidden = self.shoe_masks()
+        bm = bmesh.new()
+        bm.from_mesh(self.mesh.data)
+        bm.faces.ensure_lookup_table()
+        kill = [f for f in bm.faces if all(hidden[v.index] for v in f.verts)]
+        bmesh.ops.delete(bm, geom=kill, context="FACES")
+        loose = [v for v in bm.verts if not v.link_faces]
+        bmesh.ops.delete(bm, geom=loose, context="VERTS")
+        bm.to_mesh(self.mesh.data)
+        bm.free()
+        log(f"removed {len(kill)} foot faces hidden by the shoes")
+
+
+def box_mesh(centre, size):
+    c = np.asarray(centre, float)
+    h = np.asarray(size, float) / 2
+    V = np.array([c + h * np.array((x, y, z)) for z in (-1, 1) for y in (-1, 1) for x in (-1, 1)])
+    F = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
+    return V, F
+
+
+def smart_uv(ob):
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+# =============================================================================================
+# Textures: rasterised in UV space from rest-pose fields
+# =============================================================================================
+SKIN_L, JERSEY_L, ORANGE_L, SHORTS_L, SOCK_L, HAIR_L = range(6)
+KIT_LABELS = (JERSEY_L, ORANGE_L, SHORTS_L, SOCK_L)
+SLEEVE_END = 0.55  # of the upper arm, shoulder joint to elbow
+CUFF = 0.08
+SHORTS_END = 0.82  # of the thigh, hip joint to knee
+SOCK_TOP = 0.78  # of the calf, knee to ankle
+HEM_ABOVE_HIP = 0.05  # m, the jersey's hem above the hip joints (standing)
+
+
+def tri_arrays(me):
+    me.calc_loop_triangles()
+    lt = me.loop_triangles
+    n = len(lt)
+    vi = np.empty(n * 3, np.int64)
+    lt.foreach_get("vertices", vi)
+    li = np.empty(n * 3, np.int64)
+    lt.foreach_get("loops", li)
+    pi = np.empty(n, np.int64)
+    lt.foreach_get("polygon_index", pi)
+    uv = np.empty(len(me.loops) * 2)
+    me.uv_layers["UVMap"].data.foreach_get("uv", uv)
+    uv = uv.reshape(-1, 2)[li].reshape(n, 3, 2)
+    return vi.reshape(n, 3), uv, pi
+
+
+def rasterize(uv, attrs, size):
+    """Interpolate per-corner attributes (T, 3, C) over UV triangles (T, 3, 2) into a
+    (size, size, C) image, row 0 at v = 1. Returns the image and its coverage."""
+    C = attrs.shape[2]
+    out = np.zeros((size, size, C), np.float32)
+    cov = np.zeros((size, size), bool)
+    px = uv[..., 0] * size - 0.5
+    py = (1.0 - uv[..., 1]) * size - 0.5
+    for t in range(len(uv)):
+        x0, x1, x2 = px[t]
+        y0, y1, y2 = py[t]
+        d = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
+        if abs(d) < 1e-9:
+            continue
+        xa = max(math.floor(min(x0, x1, x2)), 0)
+        xb = min(math.ceil(max(x0, x1, x2)), size - 1)
+        ya = max(math.floor(min(y0, y1, y2)), 0)
+        yb = min(math.ceil(max(y0, y1, y2)), size - 1)
+        if xb < xa or yb < ya:
+            continue
+        gy, gx = np.mgrid[ya : yb + 1, xa : xb + 1]
+        l0 = ((y1 - y2) * (gx - x2) + (x2 - x1) * (gy - y2)) / d
+        l1 = ((y2 - y0) * (gx - x2) + (x0 - x2) * (gy - y2)) / d
+        l2 = 1.0 - l0 - l1
+        e = -1e-4
+        ins = (l0 >= e) & (l1 >= e) & (l2 >= e)
+        if not ins.any():
+            continue
+        a = attrs[t]
+        val = l0[ins, None] * a[0] + l1[ins, None] * a[1] + l2[ins, None] * a[2]
+        out[gy[ins], gx[ins]] = val
+        cov[gy[ins], gx[ins]] = True
+    return out, cov
+
+
+def dilate(img, cov, iters=6):
+    """Spread the edge texels into the empty space so mips and seams don't bleed black."""
+    img = img.copy()
+    m = cov.copy()
+    for _ in range(iters):
+        acc = np.zeros_like(img)
+        cnt = np.zeros(m.shape, np.float32)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            acc += np.roll(np.roll(img * m[..., None], dy, 0), dx, 1)
+            cnt += np.roll(np.roll(m, dy, 0), dx, 1)
+        new = (~m) & (cnt > 0)
+        img[new] = acc[new] / cnt[new][:, None]
+        m |= new
+    return img
+
+
+def to_srgb(lin):
+    lin = np.clip(lin, 0.0, 1.0)
+    return np.where(lin <= 0.0031308, 12.92 * lin, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
+
+
+def blur(h, n=1):
+    for _ in range(n):
+        h = (h + np.roll(h, 1, 0) + np.roll(h, -1, 0) + np.roll(h, 1, 1) + np.roll(h, -1, 1)) / 5
+    return h
+
+
+class BodyMap:
+    """Where the kit, skin and hair are on the body, from rest-pose position and weights."""
+
+    def __init__(self, rider):
+        mesh, rig = rider.mesh, rider.rig
+        self.bones = {
+            b.name: (np.array(b.head_local), np.array(b.tail_local)) for b in rig.data.bones
+        }
+        names = [b.name for b in rig.data.bones]
+        W = vertex_weights(mesh, names)
+        col = {n: i for i, n in enumerate(names)}
+
+        def share(parts):
+            idx = [col[n] for n in names if n.rsplit("_", 2)[0] in parts]
+            return W[:, idx].sum(1)
+
+        self.arm = share(ARM_PARTS)
+        self.leg = share(LEG_PARTS)
+        self.head = W[:, [col["neck_01"], col["head"]]].sum(1)
+        self.co = mesh_co(mesh, world=False)
+        self.E = np.array((rider.eyes_rest[0] + rider.eyes_rest[1]) / 2)
+        self.hip_z = self.bones["thigh_l"][0][2]
+        self.armpit_z = self.bones["upperarm_l"][0][2] - 0.07
+        # torso centre line per height
+        tor = (self.arm < 0.5) & (self.leg < 0.5) & (self.head < 0.5) & group_mask(mesh, "body")
+        z = self.co[tor, 2]
+        bins = np.arange(z.min(), z.max() + 0.01, 0.01)
+        cx = [self.co[tor][(z >= b) & (z < b + 0.01), 0].mean() for b in bins]
+        ok = ~np.isnan(cx)
+        self.cz, self.cx = bins[ok] + 0.005, np.array(cx)[ok]
+
+    def t_along(self, p, bone):
+        """Parameter along the bone (0 head, 1 tail), the side picked by the sign of y."""
+        out = np.zeros(len(p))
+        for s, side in SIDES:
+            h, t = self.bones[f"{bone}_{s}"]
+            m = np.sign(p[:, 1]) == side
+            ax = t - h
+            out[m] = (p[m] - h) @ ax / ax.dot(ax)
+        return out
+
+    def labels(self, p, arm, leg, head):
+        lab = np.full(len(p), SKIN_L)
+        x, y, z = p[:, 0], p[:, 1], p[:, 2]
+        neck = self.bones["neck_01"][0]
+        below_collar = z < neck[2] + 0.015 - 0.4 * (x - neck[0])
+        is_arm, is_leg = arm > 0.5, leg > 0.5
+        torso = ~is_arm & ~is_leg
+        hem = self.hip_z + HEM_ABOVE_HIP
+        tua = self.t_along(p, "upperarm")
+        tth = self.t_along(p, "thigh")
+        tca = self.t_along(p, "calf")
+        jersey = (torso & (z > hem) & below_collar) | (is_arm & (tua < SLEEVE_END))
+        lab[jersey] = JERSEY_L
+        cuff = is_arm & (tua > SLEEVE_END - CUFF) & (tua < SLEEVE_END)
+        cxz = np.interp(z, self.cz, self.cx)
+        ang = np.abs(np.arctan2(np.abs(y), x - cxz) - math.pi / 2)
+        panel = jersey & torso & (ang < math.radians(15)) & (z > hem + 0.02) & (z < self.armpit_z)
+        lab[cuff | panel] = ORANGE_L
+        shorts = (torso & (z <= hem)) | (is_leg & (tth < SHORTS_END) & (z > 0.2))
+        lab[shorts] = SHORTS_L
+        lab[is_leg & (tca > SOCK_TOP)] = SOCK_L
+        # short hair under the helmet
+        r = p - self.E
+        zline = np.interp(
+            r[:, 0],
+            [-0.20, -0.15, -0.11, -0.07, -0.04, 0.0],
+            [-0.085, -0.075, -0.03, -0.01, 0.045, 0.055],
+        )
+        ear = (np.abs(r[:, 1]) > 0.074) & (r[:, 2] < 0.03)
+        lab[(head > 0.5) & (r[:, 2] > zline) & ~ear & ~below_collar] = HAIR_L
+        return lab
+
+    def vertex_labels(self):
+        return self.labels(self.co, self.arm, self.leg, self.head)
+
+
+def paint_body(rider, out, size):
+    bmap = BodyMap(rider)
+    me = rider.mesh.data
+    vi, uv, _ = tri_arrays(me)
+    body = group_mask(rider.mesh, "body")
+    keep = body[vi].all(1)  # the helper eyes and lashes overlap the body's UVs
+    vi, uv = vi[keep], uv[keep]
+    attrs = np.concatenate(
+        [bmap.co[vi], bmap.arm[vi][..., None], bmap.leg[vi][..., None], bmap.head[vi][..., None]],
+        -1,
+    )
+    img, cov = rasterize(uv, attrs.astype(np.float32), size)
+    p = img[cov][:, :3]
+    lab = bmap.labels(p, img[cov][:, 3], img[cov][:, 4], img[cov][:, 5])
+    rng = np.random.default_rng(3)
+    lo = blur(rng.normal(0, 1, (size, size)), 6) * 6  # low-frequency mottling
+    fine = rng.normal(0, 1, (size, size))
+    colours = {
+        SKIN_L: SKIN,
+        JERSEY_L: NAVY,
+        ORANGE_L: ORANGE,
+        SHORTS_L: BLACK,
+        SOCK_L: WHITE,
+        HAIR_L: (0.030, 0.019, 0.012),
+    }
+    base = np.zeros((size, size, 3), np.float32)
+    lab_img = np.full((size, size), -1)
+    lab_img[cov] = lab
+    for k, c in colours.items():
+        m = lab_img == k
+        base[m] = c
+    skin = lab_img == SKIN_L
+    base[skin] *= (1 + 0.05 * lo[skin] + 0.02 * fine[skin])[:, None]
+    hair = lab_img == HAIR_L
+    base[hair] = (
+        base[hair] * 0.8 + 0.2 * np.array(SKIN) * (0.5 + 0.5 * np.clip(fine[hair], 0, 1))[:, None]
+    )
+    kit = np.isin(lab_img, KIT_LABELS)
+    base[kit] *= (1 + 0.025 * lo[kit] + 0.015 * fine[kit])[:, None]
+    base = dilate(base, cov, 8)
+    # normals: a fine knit on the kit, pores on the skin, streaks in the hair
+    Y, X = np.mgrid[0:size, 0:size].astype(np.float32)
+    knit = 0.5 * np.abs(np.sin(np.pi * X / 3.0 + 0.6 * np.sin(np.pi * Y / 3.0))) + 0.15 * fine
+    pores = blur(fine, 1)
+    streak = blur(np.roll(fine, 1, 0) + fine + np.roll(fine, -1, 0), 1)
+    h = np.where(kit, 0.9 * knit, np.where(hair, 0.6 * streak, 0.25 * pores))
+    nrm = normal_from_height(h, 1.0)
+    nrm[~cov] = (0.5, 0.5, 1.0)
+    nrm = dilate(nrm, cov, 8)
+    save_png(os.path.join(out, "T_Body_BaseColor.png"), to_srgb(base), "sRGB")
+    save_png(os.path.join(out, "T_Body_Normal.png"), nrm, "Non-Color")
+    return bmap
+
+
+def paint_helmet(helmet, C, out, size):
+    me = helmet.data
+    vi, uv, pi = tri_arrays(me)
+    mi = np.empty(len(me.polygons), np.int64)
+    me.polygons.foreach_get("material_index", mi)
+    keep = mi[pi] == 0
+    co = mesh_co(helmet, world=False)
+    d = co - np.asarray(C)
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    img, cov = rasterize(uv[keep], d[vi[keep]].astype(np.float32), size)
+    D = img[cov]
+    base = np.zeros((size, size, 3), np.float32)
+    col = np.tile(np.array(NAVY, np.float32), (len(D), 1))
+    ay = np.abs(D[:, 1])
+    stripe = (ay > 0.315) & (ay < 0.355) & (D[:, 2] > 0.25)
+    tailband = (D[:, 0] < -0.80) & (D[:, 2] > -0.05) & (D[:, 2] < 0.20)
+    col[stripe | tailband] = ORANGE
+    el = np.degrees(np.arcsin(np.clip(D[:, 2], -1, 1)))
+    c = np.cos(np.arctan2(D[:, 1], D[:, 0]))
+    rim = 5.0 + 14.0 * c - 2.0 * c * c  # Gear.rim_el in degrees
+    col[el < rim + 3.0] = BLACK
+    base[cov] = col
+    base = dilate(base, cov, 8)
+    h = np.zeros((size, size), np.float32)
+    hv = np.zeros(len(D), np.float32)
+    hv[stripe | tailband] = 0.3  # the accent is a raised decal
+    h[cov] = hv
+    nrm = normal_from_height(blur(h, 1), 2.0)
+    nrm[~cov] = (0.5, 0.5, 1.0)
+    save_png(os.path.join(out, "T_Helmet_BaseColor.png"), to_srgb(base), "sRGB")
+    save_png(os.path.join(out, "T_Helmet_Normal.png"), dilate(nrm, cov, 8), "Non-Color")
+
+
+def paint_shoes(shoes, rider, out, size):
+    me = shoes.data
+    vi, uv, _ = tri_arrays(me)
+    co = mesh_co(shoes, world=False)
+    img, cov = rasterize(uv, co[vi].astype(np.float32), size)
+    p = img[cov]
+    ank = np.zeros((len(p), 3))
+    for s, side in SIDES:
+        ank[np.sign(p[:, 1]) == side] = np.array(rider.head_rest[f"foot_{s}"])
+    rx, z = p[:, 0] - ank[:, 0], p[:, 2]
+    col = np.tile(np.array(WHITE, np.float32), (len(p), 1))
+    black = (
+        (z < 0.009) | ((rx < -0.035) & (z < 0.058)) | ((np.abs(rx - 0.062) < 0.011) & (z > 0.032))
+    )
+    col[black] = BLACK
+    col[z < -SOLE_THICKNESS - 0.0005] = (0.03, 0.03, 0.032)  # the cleat
+    base = np.zeros((size, size, 3), np.float32)
+    base[cov] = col
+    # perforations on the toe box
+    Y, X = np.mgrid[0:size, 0:size]
+    holes = ((X % 7 < 2) & (Y % 7 < 2)).astype(np.float32)
+    toe = np.zeros((size, size), bool)
+    toe[cov] = (rx > 0.12) & (z > 0.02) & ~black
+    h = np.where(toe, -0.5 * holes, 0.0)
+    base[toe & (holes > 0)] *= 0.6
+    nrm = normal_from_height(h, 1.5)
+    nrm[~cov] = (0.5, 0.5, 1.0)
+    save_png(os.path.join(out, "T_Shoe_BaseColor.png"), to_srgb(dilate(base, cov, 8)), "sRGB")
+    save_png(os.path.join(out, "T_Shoe_Normal.png"), dilate(nrm, cov, 8), "Non-Color")
+
+
+# =============================================================================================
+# Materials
+# =============================================================================================
+# name: (base colour or texture prefix, roughness, extra Principled inputs)
+MATERIALS = {
+    "M_Skin": ("T_Body", 0.50, {"Subsurface Weight": 0.12}),
+    "M_Kit": ("T_Body", 0.62, {"Sheen Weight": 0.25}),
+    "M_Helmet": ("T_Helmet", 0.30, {"Coat Weight": 0.4}),
+    "M_Lens": ((0.010, 0.011, 0.014), 0.05, {"Metallic": 0.55}),
+    "M_Shoe": ("T_Shoe", 0.38, {}),
+    "M_Strap": (BLACK, 0.70, {}),
+    "M_Hair": ((0.030, 0.019, 0.012), 0.60, {}),
+}
+
+
+def make_materials(out):
+    mats = {}
+    for name, (base, rough, extra) in MATERIALS.items():
+        m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+        nt = m.node_tree
+        bsdf = nt.nodes.get("Principled BSDF")
+        bsdf.inputs["Roughness"].default_value = rough
+        for k, v in extra.items():
+            if k in bsdf.inputs:
+                bsdf.inputs[k].default_value = v
+        if isinstance(base, str):
+            m["textures"] = base
+        else:
+            bsdf.inputs["Base Color"].default_value = (*base, 1.0)
+        mats[name] = m
+    return mats
+
+
+def hook_textures(mats, out):
+    """Wire the saved PNGs into the textured materials (after painting)."""
+    for name, m in mats.items():
+        prefix = m.get("textures")
+        if not prefix:
+            continue
+        nt = m.node_tree
+        bsdf = nt.nodes.get("Principled BSDF")
+        bc = nt.nodes.new("ShaderNodeTexImage")
+        bc.image = bpy.data.images.load(
+            os.path.join(out, f"{prefix}_BaseColor.png"), check_existing=True
+        )
+        nt.links.new(bc.outputs["Color"], bsdf.inputs["Base Color"])
+        nm = nt.nodes.new("ShaderNodeTexImage")
+        nm.image = bpy.data.images.load(
+            os.path.join(out, f"{prefix}_Normal.png"), check_existing=True
+        )
+        nm.image.colorspace_settings.name = "Non-Color"
+        nmap = nt.nodes.new("ShaderNodeNormalMap")
+        nt.links.new(nm.outputs["Color"], nmap.inputs["Color"])
+        nt.links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+        if name == "M_Skin":
+            bsdf.inputs["Subsurface Radius"].default_value = (0.010, 0.004, 0.002)
+            bsdf.inputs["Subsurface Scale"].default_value = 0.01
+
+
+def assign_body_materials(rider, bmap, mats):
+    me = rider.mesh.data
+    me.materials.clear()
+    for n in ("M_Skin", "M_Kit", "M_Lens", "M_Hair"):
+        me.materials.append(mats[n])
+    lab = bmap.vertex_labels()
+    kit = np.isin(lab, KIT_LABELS)
+    eye = group_mask(rider.mesh, "helper-l-eye") | group_mask(rider.mesh, "helper-r-eye")
+    lash = np.zeros(len(me.vertices), bool)
+    for s in ("l", "r"):
+        for g in ("eyelashes-1", "eyelashes-2"):
+            lash |= group_mask(rider.mesh, f"helper-{s}-{g}")
+    idx = np.zeros(len(me.polygons), np.int32)
+    for p in me.polygons:
+        v = list(p.vertices)
+        if all(eye[v]):
+            idx[p.index] = 2
+        elif all(lash[v]):
+            idx[p.index] = 3
+        elif kit[v].mean() >= 0.5:
+            idx[p.index] = 1
+    me.polygons.foreach_set("material_index", idx)
+
+
+def join_rider(rider, parts):
+    body = rider.mesh
+    for ob in parts:
+        ob.parent = rider.rig
+    with bpy.context.temp_override(
+        active_object=body, object=body, selected_editable_objects=[body, *parts]
+    ):
+        bpy.ops.object.join()
+    body.name = body.data.name = "Rider"
+    bones = {b.name for b in rider.rig.data.bones}
+    for g in list(body.vertex_groups):
+        if g.name not in bones:
+            body.vertex_groups.remove(g)
+    with bpy.context.temp_override(active_object=body, object=body):
+        bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
+        bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
+    # merge the materials that the join duplicated by name order
+    return body
+
+
+# =============================================================================================
+# Animation
+# =============================================================================================
+def bake_pedal(rider, P):
+    """Pose every frame through the IK, record the bones, then key them and drop the IK."""
+    rig = rider.rig
+    P = dict(P, rock=1.0)
+    rec = []
+    for k in range(FRAMES):
+        rider.pose(k, P)
+        rec.append({pb.name: pb.matrix.copy() for pb in rig.pose.bones})
+    for pb in rig.pose.bones:
+        for c in list(pb.constraints):
+            pb.constraints.remove(c)
+        pb.lock_ik_y = pb.lock_ik_z = False
+    rider.dispose()
+    rest = {b.name: b.matrix_local for b in rig.data.bones}
+    par = {b.name: (b.parent.name if b.parent else None) for b in rig.data.bones}
+    bpy.context.preferences.edit.keyframe_new_interpolation_type = "LINEAR"
+    rig.animation_data_create()
+    action = bpy.data.actions.new("Pedal")
+    rig.animation_data.action = action
+    prev = {}
+    for k, M in enumerate(rec):
+        for pb in rig.pose.bones:
+            n = pb.name
+            p = par[n]
+            if p:
+                basis = (rest[p].inverted() @ rest[n]).inverted() @ M[p].inverted() @ M[n]
+            else:
+                basis = rest[n].inverted() @ M[n]
+            loc, q, _ = basis.decompose()
+            if n in prev and q.dot(prev[n]) < 0:
+                q.negate()
+            prev[n] = q
+            pb.location = loc
+            pb.rotation_quaternion = q
+            pb.scale = (1.0, 1.0, 1.0)
+            pb.keyframe_insert("location", frame=k, group=n)
+            pb.keyframe_insert("rotation_quaternion", frame=k, group=n)
+    action.use_frame_range = True
+    action.frame_start, action.frame_end = 0, FRAMES - 1
+    action.use_cyclic = True
+    for fc in action_fcurves(action):
+        for kp in fc.keyframe_points:
+            kp.interpolation = "LINEAR"
+    sc = bpy.context.scene
+    sc.frame_start, sc.frame_end = 0, FRAMES - 1
+    sc.render.fps = FPS
+    sc.frame_set(0)
+    return rec
+
+
+def action_fcurves(action):
+    if hasattr(action, "layers"):
+        out = []
+        for layer in action.layers:
+            for strip in layer.strips:
+                for cb in strip.channelbags:
+                    out.extend(cb.fcurves)
+        return out
+    return list(action.fcurves)
+
+
+# =============================================================================================
+# Checks
+# =============================================================================================
+def seam_check(rec):
+    """The pose's step from frame 59 back to 0, against the largest step between frames."""
+
+    def step(a, b):
+        dl = max((a[n].translation - b[n].translation).length for n in a)
+        da = max(
+            math.degrees(a[n].to_quaternion().rotation_difference(b[n].to_quaternion()).angle)
+            for n in a
+        )
+        return dl, da
+
+    steps = [step(rec[k], rec[k + 1]) for k in range(FRAMES - 1)]
+    seam = step(rec[-1], rec[0])
+    return {
+        "max_step_mm": round(1000 * max(s[0] for s in steps), 2),
+        "max_step_deg": round(max(s[1] for s in steps), 2),
+        "seam_mm": round(1000 * seam[0], 2),
+        "seam_deg": round(seam[1], 2),
+    }
+
+
+def penetration(rider_ob, bike, bike_objs, slot_of_vertex):
+    """Rider vertices more than 5 mm inside a bike part, over all frames."""
+    names = [
+        n
+        for n in ("Frame", "Fork", "WheelFront", "WheelRear", "Cranks", "PedalL", "PedalR", "Chain")
+        if n in bike_objs
+    ]
+    worst = {}
+    box = {}
+    for n in names:
+        v = np.array([x.co for x in bike_objs[n].data.vertices])
+        box[n] = (v.min(0) - 0.01, v.max(0) + 0.01)
+    sc = bpy.context.scene
+    for k in range(FRAMES):
+        sc.frame_set(k)
+        pose_bike(bike_objs, k)
+        co = mesh_co(rider_ob, evaluated=True)
+        for n in names:
+            ob = bike_objs[n]
+            inv = np.array(ob.matrix_world.inverted())
+            loc = co @ inv[:3, :3].T + inv[:3, 3]
+            lo, hi = box[n]
+            sel = np.where(np.all((loc > lo) & (loc < hi), 1))[0]
+            tree = bike.tree(n)
+            for i in sel:
+                hit = tree.find_nearest(Vector(loc[i]), 0.06)
+                if hit[0] is None:
+                    continue
+                dvec = Vector(loc[i]) - hit[0]
+                if dvec.dot(hit[1]) < 0 and hit[3] > 0.005:
+                    key = (n, slot_of_vertex[i])
+                    w = worst.get(key, {"verts": set(), "max_mm": 0.0, "frames": set()})
+                    w["verts"].add(int(i))
+                    w["frames"].add(k)
+                    w["max_mm"] = max(w["max_mm"], 1000 * hit[3])
+                    worst[key] = w
+    pose_bike(bike_objs, 0)
+    sc.frame_set(0)
+    return [
+        {
+            "bike_part": n,
+            "rider_slot": s,
+            "vertices": len(w["verts"]),
+            "frames": len(w["frames"]),
+            "max_depth_mm": round(w["max_mm"], 1),
+        }
+        for (n, s), w in sorted(worst.items())
+    ]
+
+
+def collect_stats(rider, P, rider_ob, bike, bike_objs, rec):
+    me = rider_ob.data
+    mi = np.empty(len(me.polygons), np.int64)
+    me.polygons.foreach_get("material_index", mi)
+    lt = np.empty(len(me.polygons), np.int64)
+    me.polygons.foreach_get("loop_total", lt)
+    tris = {}
+    for i, m in enumerate(me.materials):
+        tris[m.name] = tris.get(m.name, 0) + int((lt[mi == i] - 2).sum())
+    sc = bpy.context.scene
+    cleat, hood, knee = 0.0, 0.0, {"l": [], "r": []}
+    for k in range(FRAMES):
+        sc.frame_set(k)
+        for s, side in SIDES:
+            cleat = max(cleat, (rider.cleat_world(s) - Vector(pedal_axle(k, side))).length)
+            hood = max(hood, (rider.palm_world(s) - Vector(rider.hood[s])).length)
+            knee[s].append(rider.knee_angle(s))
+    sc.frame_set(0)
+    eye = rider.eye_point()
+    # vertex -> slot name for the penetration report
+    slot = np.empty(len(me.vertices), object)
+    for p in me.polygons:
+        for v in p.vertices:
+            slot[v] = me.materials[p.material_index].name
+    pen = penetration(rider_ob, bike, bike_objs, slot)
+    infl = max(len(v.groups) for v in me.vertices)
+    leg = rider.rig.data.bones
+    return {
+        "triangles": {"per_slot": tris, "total": sum(tris.values())},
+        "bones": len(rider.rig.data.bones),
+        "max_influences": infl,
+        "frames": FRAMES,
+        "fps": FPS,
+        "max_cleat_to_pedal_axle_mm": round(1000 * cleat, 2),
+        "knee_deg": {
+            ("drive_r" if s == "r" else "non_drive_l"): {
+                "min": round(min(v), 1),
+                "max": round(max(v), 1),
+            }
+            for s, v in knee.items()
+        },
+        "max_hand_to_hood_mm": round(1000 * hood, 2),
+        "interpenetration_over_5mm": pen,
+        "eye_point_frame0": [round(c, 4) for c in eye],
+        "eye_point_game_assumes": [0.18, None, 1.50],
+        "eye_point_delta_xz_m": [round(eye.x - 0.18, 3), round(eye.z - 1.50, 3)],
+        "fit": {
+            "leg_target_weight": round(P["props"]["leg"], 3),
+            "back_deg_hip_to_neck_base": round(rider_back(rider), 1),
+            "torso_pitch_deg": round(P["torso"], 2),
+            "clavicle_protraction_deg": round(P["clav"], 2),
+            "hip_joint_xz": [round(P["hip"][0], 4), round(P["hip"][1], 4)],
+            "thigh_m": round((leg["thigh_l"].tail_local - leg["thigh_l"].head_local).length, 4),
+            "calf_m": round((leg["calf_l"].tail_local - leg["calf_l"].head_local).length, 4),
+        },
+        "loop_seam": seam_check(rec),
+    }
+
+
+def rider_back(rider):
+    bpy.context.scene.frame_set(0)
+    return rider.back_angle()
+
+
+# =============================================================================================
+# Export and renders
+# =============================================================================================
+def export_fbx(rig, rider_ob, path):
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    rider_ob.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.context.scene.name = "Pedal"  # the FBX take's name
+    bpy.ops.export_scene.fbx(
+        filepath=path,
+        use_selection=True,
+        object_types={"ARMATURE", "MESH"},
+        apply_unit_scale=True,
+        apply_scale_options="FBX_SCALE_ALL",
+        bake_space_transform=False,
+        axis_forward="Y",
+        axis_up="Z",
+        mesh_smooth_type="FACE",
+        use_tspace=True,
+        use_mesh_modifiers=False,
+        add_leaf_bones=False,
+        use_armature_deform_only=True,
+        armature_nodetype="NULL",
+        bake_anim=True,
+        bake_anim_use_all_bones=True,
+        bake_anim_use_nla_strips=False,
+        bake_anim_use_all_actions=False,
+        bake_anim_force_startend_keying=True,
+        bake_anim_step=1.0,
+        bake_anim_simplify_factor=0.0,
+        path_mode="RELATIVE",
+        embed_textures=False,
+        use_custom_props=False,
+    )
+
+
+def check_fbx(path):
+    """Re-import the FBX into an empty scene and report what came back."""
+    bpy.ops.wm.read_homefile(use_empty=True)
+    bpy.ops.import_scene.fbx(filepath=path)
+    arms = [o for o in bpy.data.objects if o.type == "ARMATURE"]
+    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    out = {
+        "objects": sorted(o.name for o in bpy.data.objects),
+        "bones": len(arms[0].data.bones) if arms else 0,
+        "actions": [a.name for a in bpy.data.actions],
+        "frame_range": [list(a.frame_range) for a in bpy.data.actions],
+        "materials": sorted({m.name for o in meshes for m in o.data.materials}),
+        "max_influences": max((len(v.groups) for o in meshes for v in o.data.vertices), default=0),
+        "triangles": sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes),
+        "armature_scale": [round(c, 4) for c in arms[0].scale] if arms else None,
+    }
+    log("fbx check", out)
+    return out
+
+
+def bike_mod():
+    path = os.path.join(HERE, "..", "bike")
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    import build_bike  # ty: ignore[unresolved-import]
+
+    return build_bike
+
+
+def save_png(path, rgb, colorspace="sRGB"):
+    return bike_mod().save_png(path, rgb.astype(np.float32), colorspace)
+
+
+def normal_from_height(h, strength):
+    return bike_mod().normal_from_height(h, strength)
+
+
+def aim(cam, loc, target, lens):
+    cam.location = loc
+    cam.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+    cam.data.type = "PERSP"
+    cam.data.lens = lens
+
+
+def render_all(out, quick, bike_objs):
+    sc = bpy.context.scene
+    cam, _ = bike_mod().setup_render_scene(quick)
+    sc.frame_set(0)
+    pose_bike(bike_objs, 0)
+    views = {
+        "render_chase": ((-3.0, -0.35, 1.40), (0.35, 0.0, 0.85), 40),
+        "render_side_drive": ((0.10, -4.4, 0.95), (0.10, 0.0, 0.82), 50),
+        "render_side_non_drive": ((0.10, 4.4, 0.95), (0.10, 0.0, 0.82), 50),
+        "render_front": ((4.2, -0.25, 1.05), (0.0, 0.0, 0.85), 50),
+    }
+    for name, (loc, tgt, lens) in views.items():
+        aim(cam, loc, tgt, lens)
+        sc.render.filepath = os.path.join(out, name + ".png")
+        t0 = time.time()
+        bpy.ops.render.render(write_still=True)
+        log(f"{name}: {time.time() - t0:.0f}s")
+    # contact sheet: drive side, legs and drivetrain, labelled with the crank angle
+    sc.render.resolution_x, sc.render.resolution_y = 800, 520
+    sc.render.resolution_percentage = 50 if quick else 100
+    sc.cycles.samples = 24 if quick else 64
+    aim(cam, (0.0, -2.5, 0.62), (0.0, 0.0, 0.58), 50)
+    tcu = bpy.data.curves.new("_label", "FONT")
+    tob = bpy.data.objects.new("_label", tcu)
+    sc.collection.objects.link(tob)
+    tcu.size = 0.07
+    tob.location = (-0.72, -0.35, 0.98)
+    tob.rotation_euler = (math.pi / 2, 0.0, 0.0)
+    lm = bpy.data.materials.new("_label")
+    lm.node_tree.nodes["Principled BSDF"].inputs["Emission Color"].default_value = (1, 1, 1, 1)
+    lm.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 2.0
+    tcu.materials.append(lm)
+    tiles = []
+    for k in (0, 8, 15, 23, 30, 38, 45, 53):
+        sc.frame_set(k)
+        pose_bike(bike_objs, k)
+        tcu.body = f"frame {k}   crank {360.0 * k / FRAMES:.0f} deg"
+        path = os.path.join(out, "debug", f"contact_{k:02d}.png")
+        sc.render.filepath = path
+        bpy.ops.render.render(write_still=True)
+        img = bpy.data.images.load(path)
+        w, h = img.size
+        px = np.array(img.pixels[:], np.float32).reshape(h, w, 4)[::-1, :, :3]
+        tiles.append(px)
+        bpy.data.images.remove(img)
+    rows = [np.concatenate(tiles[i : i + 2], 1) for i in range(0, 8, 2)]
+    sheet = np.concatenate(rows, 0)
+    if sheet.shape[1] != 1600:  # quick renders are half size
+        rep = 1600 // sheet.shape[1]
+        sheet = sheet.repeat(rep, 0).repeat(rep, 1)
+    save_png(os.path.join(out, "render_contact.png"), sheet, "sRGB")
+    sc.frame_set(0)
+    pose_bike(bike_objs, 0)
+
+
+# =============================================================================================
 # Stages
 # =============================================================================================
 def limb_lengths(rig):
@@ -1030,6 +2227,52 @@ def stage_fit(opts):
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(opts["out"], "fit.blend"))
 
 
+def stage_all(opts):
+    import json
+
+    out = opts["out"]
+    t0 = time.time()
+    bike_objs, _ = load_bike(opts["bike_blend"], out)
+    bike = BikeRef(bike_objs)
+    rider, P = solve_proportions(bike)
+    fit_report(rider, P)
+    # gear, built on the rest pose and skinned to the rig
+    mats = make_materials(out)
+    gear = Gear(rider, mats)
+    helmet = gear.build_helmet()
+    parts = [helmet, gear.build_straps(), *gear.build_glasses(), gear.build_brows()]
+    shoes = gear.build_shoes()
+    parts.append(shoes)
+    gear.remove_hidden_feet()
+    tex = 1024 if opts["quick"] else 2048
+    bmap = paint_body(rider, out, tex)
+    paint_helmet(helmet, gear.C, out, min(tex, 1024))
+    paint_shoes(shoes, rider, out, min(tex, 1024))
+    hook_textures(mats, out)
+    assign_body_materials(rider, bmap, mats)
+    for ob in parts:
+        if not ob.modifiers:
+            mod = ob.modifiers.new("Armature", "ARMATURE")
+            mod.object = rider.rig
+    rider_ob = join_rider(rider, parts)
+    rider.mesh = rider_ob
+    log(f"gear and textures done, {time.time() - t0:.0f}s")
+    rec = bake_pedal(rider, P)
+    stats = collect_stats(rider, P, rider_ob, bike, bike_objs, rec)
+    log(json.dumps(stats, indent=1, default=str))
+    fbx = os.path.join(out, "rider.fbx")
+    export_fbx(rider.rig, rider_ob, fbx)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, "rider.blend"))
+    if opts["render"]:
+        os.makedirs(os.path.join(out, "debug"), exist_ok=True)
+        render_all(out, opts["quick"], bike_objs)
+    stats["fbx_reimport"] = check_fbx(fbx)
+    stats["build_seconds"] = round(time.time() - t0)
+    with open(os.path.join(out, "stats.json"), "w") as f:
+        json.dump(stats, f, indent=2, default=str)
+    log(f"done in {time.time() - t0:.0f}s")
+
+
 def main():
     opts = parse_args()
     os.makedirs(opts["out"], exist_ok=True)
@@ -1038,7 +2281,15 @@ def main():
         stage_probe(opts)
     elif opts["stage"] == "fit":
         stage_fit(opts)
+    else:
+        stage_all(opts)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)  # Blender would otherwise exit 0 after a script error
