@@ -571,6 +571,11 @@ void ARidePawn::ReadCommandLine()
 	{
 		LookYaw = FMath::Clamp(Yaw, -110.f, 110.f);
 	}
+	// For stills of the arms over the bars: how far RiderArms tips back (degrees); below 0, no arms.
+	if (FParse::Value(Line, TEXT("RideArmsTilt="), ArmsTilt))
+	{
+		UE_LOG(LogTemp, Display, TEXT("RIDE arms tilt %.0f"), ArmsTilt);
+	}
 	FString From;
 	if (FParse::Value(Line, TEXT("RideFrom="), From))
 	{
@@ -1033,7 +1038,13 @@ void ARidePawn::Place()
 	Bike->SetVisibility(Seen == ERideView::Chase || (Seen == ERideView::Cockpit && bParts), true);
 	if (RiderBody)
 	{
-		RiderBody->SetVisibility(Seen == ERideView::Chase); // over the bars the camera is in its chest
+		// Over the bars the camera is in the rider's back: the body only throws its shadow there.
+		RiderBody->SetVisibility(Seen == ERideView::Chase);
+		RiderBody->SetCastHiddenShadow(Seen == ERideView::Cockpit && bParts);
+	}
+	if (RiderArms)
+	{
+		RiderArms->SetVisibility(Seen == ERideView::Cockpit && bParts && ArmsTilt >= 0.f);
 	}
 	if (Seen == ERideView::Cockpit && bParts)
 	{
@@ -1150,7 +1161,18 @@ void ARidePawn::PoseBike()
 		// One revolution is frames 0-59 at 30 fps, frame 0 with the drive-side crank ahead as at
 		// Crank 0, and turning the same way (rider/README.md). Past frame 59 it holds that frame.
 		const float Turned = FMath::Fmod(Crank, 2.f * PI) / (2.f * PI);
-		RiderBody->SetPosition(FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength()), false);
+		const float At = FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength());
+		RiderBody->SetPosition(At, false);
+		if (RiderArms && RiderArms->IsVisible())
+		{
+			// Tipped back about the knuckles, which hold the hoods all round the loop; the turn's
+			// top goes back, so it is negative in this frame.
+			const FVector Grip = 0.5f * (RiderBody->GetBoneLocation(TEXT("middle_01_l"), EBoneSpaces::ComponentSpace) +
+			                             RiderBody->GetBoneLocation(TEXT("middle_01_r"), EBoneSpaces::ComponentSpace));
+			const FQuat R(FVector::YAxisVector, -FMath::DegreesToRadians(ArmsTilt));
+			RiderArms->SetRelativeLocationAndRotation(PartsOrigin + Grip - R.RotateVector(Grip), R);
+			RiderArms->SetPosition(At, false);
+		}
 	}
 }
 
@@ -1173,7 +1195,25 @@ void ARidePawn::MakeRider()
 	RiderBody->RegisterComponent();
 	RiderBody->SetAnimation(Loop);
 	RiderBody->Stop(); // PoseBike scrubs it
+	// Hidden over the bars, it still poses for its shadow and for RiderArms' grip.
+	RiderBody->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 	RiderPedal = Loop;
+	RiderArms = NewObject<USkeletalMeshComponent>(this, TEXT("RiderArms"));
+	RiderArms->SetMobility(EComponentMobility::Movable);
+	RiderArms->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RiderArms->SetSkeletalMesh(Mesh);
+	RiderArms->SetupAttachment(Bike);
+	RiderArms->SetRelativeLocation(PartsOrigin);
+	RiderArms->SetVisibility(false);
+	RiderArms->SetCastShadow(false); // tipped back, its shadow would be wrong: RiderBody casts
+	RiderArms->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	RiderArms->RegisterComponent();
+	RiderArms->SetAnimation(Loop);
+	RiderArms->Stop();
+	for (const TCHAR* Bone : {TEXT("neck_01"), TEXT("thigh_l"), TEXT("thigh_r")})
+	{
+		RiderArms->HideBoneByName(Bone, EPhysBodyOp::PBO_None); // and all below it
+	}
 	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, Pedal %.3f s"), Mesh->GetRefSkeleton().GetNum(), Loop->GetPlayLength());
 }
 

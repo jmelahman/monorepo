@@ -66,9 +66,14 @@ public:
 	// its one mesh when all are there: the wheels turn with the distance, the cranks with Crank
 	// and the pedals stay level. In EBikePart's order.
 	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
-	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind only: its
-	// one Pedal loop (a crank revolution) scrubbed to Crank, so the feet stay on the pedals.
+	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind: its
+	// one Pedal loop (a crank revolution) scrubbed to Crank, so the feet stay on the pedals. Over
+	// the bars it is hidden but casts its shadow, and RiderArms shows instead: a copy without the
+	// head or legs, tipped back ArmsTilt degrees about the hands, so the hands stay on the hoods
+	// while the shoulders drop below the frame and the forearms reach in from its foot.
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderBody;
+	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderArms;
+	float ArmsTilt = 57.f;
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
