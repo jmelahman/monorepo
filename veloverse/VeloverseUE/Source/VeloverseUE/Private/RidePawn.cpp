@@ -249,6 +249,7 @@ void ARidePawn::BeginPlay()
 	}
 	Bike->SetStaticMesh(MeshAt(BikeMesh));
 	Cockpit->SetStaticMesh(MeshAt(CockpitMesh));
+	MakeBikeParts();
 	ReadCommandLine();
 	bStarted = bStarted || Automated();
 	if (!bStartGiven)
@@ -1017,7 +1018,7 @@ void ARidePawn::Place()
 	const FQuat Body = (Head + FRotator(Surge + Judder, Turn, Roll + Lean)).Quaternion();
 	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
-	Bike->SetVisibility(Seen == ERideView::Chase);
+	Bike->SetVisibility(Seen == ERideView::Chase, true);
 	if (Seen == ERideView::Cockpit)
 	{
 		// The camera back and down from the eyes, moving with the body; the front end stays put on
@@ -1036,10 +1037,87 @@ void ARidePawn::Place()
 	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
 	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
+	PoseBike();
 	const FRotator Look(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
 	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
 	const FVector Back = Aim - Look.Vector() * ChaseBack;
 	SetActorLocationAndRotation(Back, Look);
+}
+
+namespace
+{
+// The Blender bike's parts, as bike/README.md names them, and the pivots its moving ones turn
+// about, in cm in the bike's frame: the ground under the bottom bracket, +X ahead, the drive side +Y.
+enum EBikePart { BikeFrame, BikeFork, BikeWheelFront, BikeWheelRear, BikeCranks, BikePedalL, BikePedalR, BikeChain, PartCount };
+const TCHAR* const BikePartNames[PartCount] = {
+	TEXT("Frame"), TEXT("Fork"), TEXT("WheelFront"), TEXT("WheelRear"),
+	TEXT("Cranks"), TEXT("PedalL"), TEXT("PedalR"), TEXT("Chain")};
+const FVector FrontHub(58.63f, 0.f, 33.9f);
+const FVector RearHub(-40.195f, 0.f, 33.9f);
+const FVector BottomBracket(0.f, 0.f, 26.9f);
+constexpr float WheelRadius = 33.9f; // to the tyre's tread
+constexpr float CrankLength = 17.25f; // to the pedal's axle
+// SM_Bike's origin is the road under the rider's eyes, with its bottom bracket 18 cm behind them.
+const FVector PartsOrigin(-18.f, 0.f, 0.f);
+} // namespace
+
+void ARidePawn::MakeBikeParts()
+{
+	TArray<UStaticMesh*> Meshes;
+	for (const TCHAR* Name : BikePartNames)
+	{
+		UStaticMesh* Mesh = MeshAt(*FString::Printf(TEXT("/Game/Rider/Bike/SM_Bike_%s.SM_Bike_%s"), Name, Name));
+		if (!Mesh)
+		{
+			return; // not imported yet: SM_Bike, if it's there
+		}
+		Meshes.Add(Mesh);
+	}
+	for (int32 Part = 0; Part < PartCount; ++Part)
+	{
+		UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, *FString::Printf(TEXT("Bike%s"), BikePartNames[Part]));
+		C->SetMobility(EComponentMobility::Movable);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetStaticMesh(Meshes[Part]);
+		C->SetupAttachment(Bike);
+		C->SetRelativeLocation(PartsOrigin);
+		C->SetVisibility(false);
+		C->RegisterComponent();
+		BikeParts.Add(C);
+	}
+	Bike->SetStaticMesh(nullptr);
+	UE_LOG(LogTemp, Display, TEXT("RIDE bike: %d parts"), BikeParts.Num());
+}
+
+bool ARidePawn::HasBike() const
+{
+	return BikeParts.Num() == PartCount || (Bike && Bike->GetStaticMesh());
+}
+
+void ARidePawn::PoseBike()
+{
+	if (BikeParts.Num() != PartCount)
+	{
+		return;
+	}
+	// Each part's mesh is in the bike's frame, so turning it by R about a pivot P puts it at
+	// P - R(P). A positive turn about +Y carries the top forward, as the wheels roll and the cranks
+	// go round.
+	const auto Turn = [this](int32 Part, const FVector& Pivot, float Angle)
+	{
+		const FQuat R(FVector::YAxisVector, Angle);
+		BikeParts[Part]->SetRelativeLocationAndRotation(PartsOrigin + Pivot - R.RotateVector(Pivot), R);
+	};
+	const double Round = 2.0 * PI * WheelRadius;
+	const float Spin = float(FMath::Fmod(Distance, Round) / WheelRadius);
+	Turn(BikeWheelFront, FrontHub, Spin);
+	Turn(BikeWheelRear, RearHub, Spin);
+	Turn(BikeCranks, BottomBracket, Crank);
+	// The pedals ride round on the cranks' ends but stay level, as a foot keeps them.
+	const FQuat Pedal(FVector::YAxisVector, Crank);
+	const FVector Arm(CrankLength, 0.f, 0.f);
+	BikeParts[BikePedalR]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(Arm) - Arm);
+	BikeParts[BikePedalL]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(-Arm) + Arm);
 }
 
 void ARidePawn::PlaceRain(float Dt)
@@ -1088,7 +1166,7 @@ TArray<ERideView> ARidePawn::Views() const
 	}
 	All.Add(ERideView::Eyes);
 	All.Add(ERideView::Steady);
-	if (Bike && Bike->GetStaticMesh())
+	if (HasBike())
 	{
 		All.Add(ERideView::Chase);
 	}

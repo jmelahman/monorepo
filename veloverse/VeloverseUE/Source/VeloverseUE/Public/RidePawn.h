@@ -58,6 +58,10 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Cockpit;
 	static constexpr const TCHAR* BikeMesh = TEXT("/Game/Rider/SM_Bike.SM_Bike");
 	static constexpr const TCHAR* CockpitMesh = TEXT("/Game/Rider/SM_Cockpit.SM_Cockpit");
+	// The Blender bike's parts (/Game/Rider/Bike, import_bike_parts.py), under Bike in place of
+	// its one mesh when all are there: the wheels turn with the distance, the cranks with Crank
+	// and the pedals stay level. In EBikePart's order.
+	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
 	// The level's routes, its default track first; Track is one of them.
@@ -247,6 +251,9 @@ private:
 	void Ride(float Dt);
 	void Place();
 	void PlaceRain(float Dt);
+	void MakeBikeParts();
+	void PoseBike();
+	bool HasBike() const;
 	void FindWeather();
 	void ApplyWeather();
 	// The profile's settings: the units, the view, ERG and the grass's reach.
