@@ -77,7 +77,7 @@ FString Km(float Metres)
 // The weather's icon in a 22 px square at X, Y.
 void Icon(const FPainter& P, float X, float Y, ESky Weather)
 {
-	P.Icon(Weather == ESky::Clear ? Icons::Sun : Weather == ESky::Rain ? Icons::CloudRain : Icons::Cloud, X, Y, 22.f, Sky);
+	P.Icon(Weather == ESky::Clear ? VeloverseMenu::Icons::Sun : Weather == ESky::Rain ? VeloverseMenu::Icons::CloudRain : VeloverseMenu::Icons::Cloud, X, Y, 22.f, Sky);
 }
 } // namespace
 
