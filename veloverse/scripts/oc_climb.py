@@ -653,24 +653,60 @@ def _road_look(kind):
     return {**clear, **debug} if kind == "blade" else clear
 
 
-def _road_fold(g, kind, offset=None):
-    """The world position offset for `kind`'s master ("blade", "plant" or "prop"): `offset` (or
-    none), turned into a fold to the plant's base where its base is on a road."""
-    tex = _road_texture()
-    if tex is None:
-        return offset
-    with open(f"{SRC}/info.json") as f:
-        info = json.load(f)
-    spacing, half = info["spacing"], (info["size"] - 1) / 2
-    # The instance's origin. "Local" space is the primitive's here, not the instance's (the
-    # engine's own TODO: inconsistent with instancing), so every blade of a grass component read
-    # one texel (12 Nov).
+def _instance_base(g):
+    """The instance's origin in world space. "Local" space is the primitive's here, not the
+    instance's (the engine's own TODO: inconsistent with instancing), so every blade of a grass
+    component read one texel (12 Nov)."""
     base = g.node(
         unreal.MaterialExpressionTransformPosition,
         transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE,
         transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
     )
     g.link(g.const((0.0, 0.0, 0.0)), base)
+    return base
+
+
+def _distance_fade(g, base):
+    """0 near, 1 at "Fade end" cm from the camera: grass and plants shrink to their base over the
+    last stretch before the grass type culls them, each from its own random share (55-95%) of the
+    way, so the edge melts instead of stopping on a line (13 Nov QA: "very abrupt"). Nanite
+    grass has no per-instance fade of its own."""
+    camera = g.node(unreal.MaterialExpressionCameraPositionWS)
+    far = g.op(unreal.MaterialExpressionDistance, base, camera)
+    end = g.param("Fade end", 4000.0)
+    rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
+    start = g.mul(end, g.add(g.mul(rnd, 0.4), 0.55))
+    span = g.op(
+        unreal.MaterialExpressionMax,
+        g.op(unreal.MaterialExpressionSubtract, end, start),
+        g.const(1.0),
+    )
+    return g.saturate(
+        g.op(
+            unreal.MaterialExpressionDivide,
+            g.op(unreal.MaterialExpressionSubtract, far, start),
+            span,
+        )
+    )
+
+
+def _road_fold(g, kind, offset=None):
+    """The world position offset for `kind`'s master ("blade", "plant" or "prop"): `offset` (or
+    none), turned into a fold to the plant's base where its base is on a road, and for grass and
+    plants, toward their cull distance (_distance_fade)."""
+    tex = _road_texture()
+    base = _instance_base(g)
+    fold = g.op(
+        unreal.MaterialExpressionSubtract, base, g.node(unreal.MaterialExpressionWorldPosition)
+    )
+    shrink = _distance_fade(g, base) if kind in ("blade", "plant") else None
+    if tex is None:
+        if shrink is None:
+            return offset
+        return g.mul(fold, shrink) if offset is None else g.lerp(offset, fold, shrink)
+    with open(f"{SRC}/info.json") as f:
+        info = json.load(f)
+    spacing, half = info["spacing"], (info["size"] - 1) / 2
     texel = (half + 0.5) / ROAD_DIST_SIZE
     shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
     # Divide, not multiply by the reciprocal: HLSL constants are written with 8 decimals, so
@@ -702,9 +738,8 @@ def _road_fold(g, kind, offset=None):
     clear = g.param("Road clear", info["road_half"] + ROAD_REACH[kind])
     hide = g.saturate(g.mul(g.add(clear, g.mul(metres, -1.0)), 4.0))
     g.road_metres, g.road_sample, g.road_uv = metres, sample, uv  # for the "Road debug" colours
-    fold = g.op(
-        unreal.MaterialExpressionSubtract, base, g.node(unreal.MaterialExpressionWorldPosition)
-    )
+    if shrink is not None:
+        hide = g.op(unreal.MaterialExpressionMax, hide, shrink)
     return g.mul(fold, hide) if offset is None else g.lerp(offset, fold, hide)
 
 
@@ -1120,6 +1155,27 @@ def _fill_empty_slots(biome, slug, meshes):
             log(f"{mesh.get_name()}: MI_{slug} in {len(empty)} empty slot(s)")
 
 
+def _set_fade_ends():
+    """Each grass and plant instance's "Fade end" (_distance_fade): the nearest end cull of the
+    varieties that use it, so none is culled before it has shrunk away. Blades share MI_Blade and
+    MI_Heath across slugs, so those take the nearest of all theirs."""
+    ends = {}
+    for rows in GRASS.values():
+        for biome, slug, _density, _start, cull_end, *_ in rows:
+            for path in assets.list_assets(_mesh_folder(biome, slug), _is_blade(biome, slug)):
+                mesh = unreal.load_asset(path)
+                if not isinstance(mesh, unreal.StaticMesh):
+                    continue
+                for slot in mesh.get_editor_property("static_materials"):
+                    mi = slot.get_editor_property("material_interface")
+                    if isinstance(mi, unreal.MaterialInstanceConstant):
+                        key = mi.get_path_name()
+                        ends[key] = min(ends.get(key, cull_end), cull_end)
+    for key, end in ends.items():
+        _set_params(unreal.load_asset(key), {"Fade end": float(end)})
+    log(f"fade ends on {len(ends)} instances: {sorted(set(ends.values()))}")
+
+
 def _gt_name(layer):
     """Grass types are saved per biome, so a switch of biome doesn't reuse the last one's."""
     prefix = "GT_" if BIOME == "alpine" else f"GT_{BIOME}_"
@@ -1485,6 +1541,7 @@ def op_rebuild_ground(rebuild_grass=False):
         saved = unreal.load_asset(f"{FOLDER}/Grass/{_gt_name(layer)}")
         grass[layer] = saved if saved and not rebuild_grass else _grass_type(layer)
         yield 10
+    _set_fade_ends()
     # The instance goes first: while it refers to the material, the material can't be deleted,
     # and a reused material keeps its old Landscape Grass node, which fails the compile.
     # The material goes too: a reused one can keep a stale Landscape Grass node that
