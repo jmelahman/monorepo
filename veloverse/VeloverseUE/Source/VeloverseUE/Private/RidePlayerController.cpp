@@ -1,8 +1,10 @@
 #include "RidePlayerController.h"
 
+#include "GameFramework/GameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/CommandLine.h"
+#include "Misc/ConfigCacheIni.h"
 #include "TimerManager.h"
 #include "UnrealClient.h"
 #include "RideMenu.h"
@@ -29,12 +31,33 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 		Scalability::SetQualityLevels(Levels);
 		return;
 	}
+	DetectQualityOnFirstLaunch();
 	ShowStart();
 	if (FParse::Value(FCommandLine::Get(), TEXT("RideTour="), TourDir))
 	{
 		FParse::Value(FCommandLine::Get(), TEXT("RideTourRide="), TourRide);
 		GetWorldTimerManager().SetTimer(TourTimer, this, &ARidePlayerController::Tour, 2.f, true);
 	}
+}
+
+void ARidePlayerController::DetectQualityOnFirstLaunch()
+{
+	// The first launch sets the graphics quality from a quick benchmark of this machine's CPU and GPU,
+	// so a laptop doesn't start on Epic. A rider who has saved their own settings keeps them, and the
+	// benchmark's result is saved, so it runs once.
+	UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings();
+	int32 Saved = 0;
+	if (!Settings || Settings->GetLastGPUBenchmarkResult() >= 0.f ||
+	    GConfig->GetInt(TEXT("ScalabilityGroups"), TEXT("sg.ShadowQuality"), Saved, GGameUserSettingsIni))
+	{
+		return;
+	}
+	Settings->RunHardwareBenchmark();
+	Settings->ApplyHardwareBenchmarkResults();
+	Settings->ApplySettings(false);
+	UE_LOG(LogTemp, Display, TEXT("RIDE quality detected: CPU %.0f, GPU %.0f, overall %d"),
+	       Settings->GetLastCPUBenchmarkResult(), Settings->GetLastGPUBenchmarkResult(),
+	       Settings->GetOverallScalabilityLevel());
 }
 
 void ARidePlayerController::Tour()

@@ -44,6 +44,7 @@ private:
 	float TourRide = 40.f;
 	FTimerHandle TourTimer;
 	void Tour();
+	void DetectQualityOnFirstLaunch();
 	void Open(ERideMenuPage Page);
 	void Close();
 };
