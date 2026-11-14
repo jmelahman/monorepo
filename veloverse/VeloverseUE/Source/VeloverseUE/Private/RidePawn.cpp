@@ -1255,6 +1255,14 @@ void ARidePawn::ApplyWeather()
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
+		// Cloud hides the sun's disc and spreads its light: widen the source as the light falls
+		// below a clear day's, so a rain sky's shadows go soft and faint instead of sharp.
+		if (SunAngle < 0.f)
+		{
+			SunAngle = Sun->LightSourceAngle;
+		}
+		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
+		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
 		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Azimuth, 0.f));
 	}
 	if (SkyLight.IsValid())

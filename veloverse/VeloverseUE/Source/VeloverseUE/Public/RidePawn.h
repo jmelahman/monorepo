@@ -234,6 +234,7 @@ private:
 	void Automate(float Dt);
 
 	TWeakObjectPtr<UDirectionalLightComponent> Sun;
+	float SunAngle = -1.f; // the level's own sun disc, degrees, read on the first weather
 	TWeakObjectPtr<USkyLightComponent> SkyLight;
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
 	TWeakObjectPtr<APostProcessVolume> Post;
