@@ -17,6 +17,8 @@
 class UCameraComponent;
 class UStaticMeshComponent;
 class UStaticMesh;
+class USkeletalMeshComponent;
+class UAnimSequence;
 class URideTrack;
 struct FPostProcessSettings;
 class UDirectionalLightComponent;
@@ -58,10 +60,16 @@ public:
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Cockpit;
 	static constexpr const TCHAR* BikeMesh = TEXT("/Game/Rider/SM_Bike.SM_Bike");
 	static constexpr const TCHAR* CockpitMesh = TEXT("/Game/Rider/SM_Cockpit.SM_Cockpit");
+	static constexpr const TCHAR* RiderMesh = TEXT("/Game/Rider/Body/SK_Rider.SK_Rider");
+	static constexpr const TCHAR* RiderAnim = TEXT("/Game/Rider/Body/A_Rider_Pedal.A_Rider_Pedal");
 	// The Blender bike's parts (/Game/Rider/Bike, import_bike_parts.py), under Bike in place of
 	// its one mesh when all are there: the wheels turn with the distance, the cranks with Crank
 	// and the pedals stay level. In EBikePart's order.
 	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
+	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind only: its
+	// one Pedal loop (a crank revolution) scrubbed to Crank, so the feet stay on the pedals.
+	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> Rider;
+	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
 	// The level's routes, its default track first; Track is one of them.
@@ -252,6 +260,7 @@ private:
 	void Place();
 	void PlaceRain(float Dt);
 	void MakeBikeParts();
+	void MakeRider();
 	void PoseBike();
 	bool HasBike() const;
 	void FindWeather();
