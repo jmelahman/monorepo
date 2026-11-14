@@ -1001,10 +1001,10 @@ void ARidePawn::Place()
 		// The rider's effort by W/kg, rider/README.md's blend: Easy to 1.5, Pedal at 3, Hard from 5;
 		// eased over a couple of seconds so a surge doesn't snap the back down.
 		const float Wkg = bMoving ? static_cast<float>(Reading.Watts) / FMath::Max(Profile.WeightKg, 30.f) : 0.f;
-		const float Want = PinnedEffort >= 0.f ? PinnedEffort
+		const float EffortWant = PinnedEffort >= 0.f ? PinnedEffort
 		                   : Wkg < 3.f        ? FMath::GetMappedRangeValueClamped(FVector2f(1.5f, 3.f), FVector2f(0.f, 1.f), Wkg)
 		                                      : FMath::GetMappedRangeValueClamped(FVector2f(3.f, 5.f), FVector2f(1.f, 2.f), Wkg);
-		RiderEffort = PinnedEffort >= 0.f ? Want : FMath::Lerp(RiderEffort, Want, 1.f - FMath::Exp(-Dt / 1.5f));
+		RiderEffort = PinnedEffort >= 0.f ? EffortWant : FMath::Lerp(RiderEffort, EffortWant, 1.f - FMath::Exp(-Dt / 1.5f));
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
 		// The rock with each stroke is small and its depth wanders, so it doesn't read as a metronome;
 		// the head's turn is a slow drift, not a sine (both too strong and regular, the user, 14 Nov).

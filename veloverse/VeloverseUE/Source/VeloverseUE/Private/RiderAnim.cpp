@@ -32,7 +32,7 @@ bool FRiderAnimProxy::Evaluate(FPoseContext& Output)
 	const float At = FMath::Clamp(Effort, 0.f, float(Last));
 	const int32 Low = FMath::Min(FMath::FloorToInt32(At), FMath::Max(Last - 1, 0));
 	const float High = At - float(Low); // the weight of the next effort up
-	const FAnimExtractContext Context(double(Time));
+	const FAnimExtractContext Context(static_cast<double>(Time));
 	FAnimationPoseData Out(Output);
 	Takes[Low]->GetAnimationPose(Out, Context);
 	if (Low == Last || High < 0.01f)
