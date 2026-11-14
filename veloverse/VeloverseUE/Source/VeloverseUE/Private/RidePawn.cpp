@@ -885,10 +885,27 @@ void ARidePawn::Place()
 		}
 	}
 	const float S = On->Wrap(static_cast<float>(At));
-	const FVector Eye = On->Point(S, -On->KeepLeft, EyeHeight);
+	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	// The road's bend here (radians a metre, right positive), from 3 m either side.
+	FVector Unused2;
+	float Before, After;
+	On->At(On->Wrap(S - 300.f), Unused2, Before);
+	On->At(On->Wrap(S + 300.f), Unused2, After);
+	const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f;
+	const bool bMoves = Moves() && !bBackdrop;
+	if (Dt > 0.f)
+	{
+		// Into a bend the rider takes its inside, up to 40 cm, more the tighter it is (30 cm on a
+		// 40 m radius), and drifts back out of it over a couple of seconds.
+		const float Want = bMoves ? FMath::Clamp(Curve * 1200.f, -40.f, 40.f) : 0.f;
+		Apex = FMath::Lerp(Apex, Want, 1.f - FMath::Exp(-Dt / 1.5f));
+		Motion = FMath::Lerp(Motion, bMoves ? 1.f : 0.f, 1.f - FMath::Exp(-Dt / 0.6f));
+	}
+	const FVector Eye = On->Point(S, RideLine(*On, S), EyeHeight);
 	// Along the rider's own line, not at the centreline: aiming there turned the view inward by
-	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead.
-	const FVector Ahead = On->Point(On->Wrap(S + LookAhead), -On->KeepLeft, EyeHeight);
+	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead. The line
+	// ahead wanders too, so the view turns gently as it does.
+	const FVector Ahead = On->Point(On->Wrap(S + LookAhead), RideLine(*On, On->Wrap(S + LookAhead)), EyeHeight);
 	float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = On->Height(On->Wrap(S + GradeSpan)) - On->Height(S);
 	float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
@@ -900,15 +917,14 @@ void ARidePawn::Place()
 		const double Run = FVector::Dist2D(Ahead, Eye);
 		Pitch = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Z - Eye.Z - 40.0 * Run / 3000.0, Run));
 	}
-	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	FVector Lift = FVector::ZeroVector;
 	float Roll = 0.f;
 	float Turn = 0.f;
 	if (Dt > 0.f)
 	{
-		// Pedalling, with -RideSway: the head rises and falls twice a turn of the crank, rocks once,
-		// and turns a little. Stopped (paused, or at the start) it settles to nothing.
-		const bool bMoving = bSway && !bPaused && !bFinished && Speed > 0.3f;
+		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
+		// little. Stopped (paused, or at the start) it settles to nothing.
+		const bool bMoving = bMoves && !bPaused && !bFinished && Speed > 0.3f;
 		const float Rpm = Reading.CadenceRpm > 20.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f;
 		if (bMoving)
 		{
@@ -920,13 +936,13 @@ void ARidePawn::Place()
 		Roll = Sway * (0.45f * FMath::Sin(Crank) + 0.15f * FMath::Sin(0.23f * Crank + 2.f));
 		Turn = Sway * (0.2f * FMath::Sin(0.5f * Crank + 0.5f) + 0.1f * FMath::Sin(0.17f * Crank));
 		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
-		FVector Unused2;
-		float Before, After;
-		On->At(On->Wrap(S - 300.f), Unused2, Before);
-		On->At(On->Wrap(S + 300.f), Unused2, After);
-		const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f; // per metre
-		const float Want = bSway ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
+		const float Want = bMoves ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
+		// A surge tips the head back a little and easing off lets it drop, about half a degree
+		// for each m/s gained a second, up to a degree and a half.
+		const float Gain = LastSpeed >= 0.f && !bPaused ? (Speed - LastSpeed) / Dt : 0.f;
+		LastSpeed = Speed;
+		Surge = FMath::Lerp(Surge, bMoves ? FMath::Clamp(Gain * 0.5f, -1.5f, 1.5f) : 0.f, 1.f - FMath::Exp(-Dt / 0.5f));
 	}
 	const FRotator Road(Pitch, Yaw, 0.f);
 	if (!bHeadSet || Dt <= 0.f)
@@ -943,7 +959,7 @@ void ARidePawn::Place()
 		Head.Normalize();
 	}
 	// The mouse turns the head on top of all that, the road's frame first and the look in it.
-	const FQuat Body = (Head + FRotator(0.f, Turn, Roll + Lean)).Quaternion();
+	const FQuat Body = (Head + FRotator(Surge, Turn, Roll + Lean)).Quaternion();
 	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
 	Bike->SetVisibility(Seen == ERideView::Chase);
@@ -955,19 +971,36 @@ void ARidePawn::Place()
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
 	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
-	Bike->SetWorldLocationAndRotation(On->Point(S, -On->KeepLeft, 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
+	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
 	const FRotator Look(Head.Pitch * 0.5f + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
 	const FVector Back = Eye + Lift * 0.3f - Look.Vector() * ChaseBack + FVector(0.f, 0.f, ChaseUp);
 	SetActorLocationAndRotation(Back, Look);
 }
 
+bool ARidePawn::Moves() const
+{
+	// Tests and stills ride steady, so they compare frame to frame, unless they ask for the motion.
+	return Automated() ? bSway : View() != ERideView::Steady;
+}
+
+float ARidePawn::RideLine(const URideTrack& On, float S) const
+{
+	// Two slow swells across the lane, one every 90 m and one every 37 m, up to 34 cm either way,
+	// so it never repeats in a way the eye catches; tied to the distance, so it stops when the bike
+	// does. Plus the inside of the bend (Apex). Steady eases back to KeepLeft exactly.
+	const float Drift = Motion * (22.f * FMath::Sin(2.f * PI * S / 9000.f) + 12.f * FMath::Sin(2.f * PI * S / 3700.f + 1.3f));
+	return -On.KeepLeft + Drift + Apex;
+}
+
 TArray<ERideView> ARidePawn::Views() const
 {
-	TArray<ERideView> All = {ERideView::Eyes};
+	TArray<ERideView> All;
 	if (Cockpit && Cockpit->GetStaticMesh())
 	{
 		All.Add(ERideView::Cockpit);
 	}
+	All.Add(ERideView::Eyes);
+	All.Add(ERideView::Steady);
 	if (Bike && Bike->GetStaticMesh())
 	{
 		All.Add(ERideView::Chase);
@@ -977,7 +1010,7 @@ TArray<ERideView> ARidePawn::Views() const
 
 ERideView ARidePawn::View() const
 {
-	const ERideView Wanted = static_cast<ERideView>(FMath::Clamp(Profile.View, 0, 2));
+	const ERideView Wanted = static_cast<ERideView>(FMath::Clamp(Profile.View, 0, 3));
 	return !Automated() && Views().Contains(Wanted) ? Wanted : ERideView::Eyes;
 }
 

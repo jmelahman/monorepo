@@ -196,7 +196,7 @@ FRideProfile FRideProfile::Load()
 		}
 		if (O->TryGetNumberField(TEXT("view"), Value))
 		{
-			Profile.View = FMath::Clamp(static_cast<int32>(Value), 0, 2);
+			Profile.View = FMath::Clamp(static_cast<int32>(Value), 0, 3);
 		}
 		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
 		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);

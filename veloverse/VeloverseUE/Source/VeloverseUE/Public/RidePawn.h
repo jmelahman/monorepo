@@ -25,14 +25,17 @@ class UExponentialHeightFogComponent;
 class APostProcessVolume;
 class APlayerController;
 
-// Where the camera rides: through the rider's eyes, over the bike's bars, or behind the bike. The
-// last two need the bike's meshes (ARidePawn's BikeMesh and CockpitMesh); without them there's
-// only the eyes.
+// Where the camera rides. Eyes: the rider's, with the body's motion (a line that wanders across the
+// lane and takes the inside of bends, the lean into them, the pedalling and the pull of a surge).
+// Cockpit: the same over the bike's bars. Chase: behind the bike. Steady: the eyes on rails, none
+// of the motion. Cockpit and Chase need the bike's meshes (CockpitMesh and BikeMesh). The values
+// are saved in the profile, so new ones go at the end.
 enum class ERideView : uint8
 {
 	Eyes,
 	Cockpit,
 	Chase,
+	Steady,
 };
 
 UCLASS()
@@ -84,8 +87,8 @@ public:
 	// cm ridden since the start, wherever it was, across any jumps and changes of route.
 	double Ridden() const { return RiddenBefore + Distance - StartMetres * 100.0; }
 
-	// The views there are meshes for, the eyes first, and the one in use (Profile.View, if it's
-	// there). CycleView steps to the next (V).
+	// The views there are meshes for, in the order V steps through them, and the one in use
+	// (Profile.View, if it's there; the eyes otherwise). CycleView steps to the next (V).
 	TArray<ERideView> Views() const;
 	ERideView View() const;
 	void CycleView();
@@ -204,12 +207,21 @@ private:
 	FRotator Head;
 	bool bHeadSet = false;
 	// The body on the bike: the crank's angle (radians), which drives a pedalling sway, and the
-	// roll into a bend, eased, both in degrees. The sway's size follows the effort. Off unless the
-	// ride starts with -RideSway: a steady view is easier to watch for an hour.
+	// roll into a bend, eased, both in degrees. The sway's size follows the effort. In every view
+	// but Steady; tests and stills ride steady unless they start with -RideSway.
 	bool bSway = false;
 	float Crank = 0.f;
 	float Sway = 0.f;
 	float Lean = 0.f;
+	// The rider's line: cm toward the inside of the bend, eased, on top of the drift across the
+	// lane (RideLine), and the speed's change, eased, which tips the head back on a surge.
+	float Apex = 0.f;
+	float Surge = 0.f;
+	float LastSpeed = -1.f;
+	float Motion = 0.f; // 0 steady to 1 moving, eased, so changing view doesn't jump the line
+	bool Moves() const;
+	// Cm right of the centreline the rider rides at S: KeepLeft, wandering with the distance.
+	float RideLine(const class URideTrack& On, float S) const;
 	// The mouse's look round, degrees on top of the road's view, and how long it has rested.
 	float LookYaw = 0.f;
 	float LookPitch = 0.f;
