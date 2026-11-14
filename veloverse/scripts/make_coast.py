@@ -546,7 +546,8 @@ def rain_material():
     # Rain is wetness without the drying tail.
     raining = ride_value(g, "Rain")
     fade = g.node(unreal.MaterialExpressionDepthFade, fade_distance_default=150.0)
-    g.link(g.mul(g.mul(streak, raining), 0.2), fade, "Opacity")
+    # 0.2 of display white read as a bright curtain (out/qa/rain5); rain from a bike is faint.
+    g.link(g.mul(g.mul(streak, raining), 0.07), fade, "Opacity")
     # In display units, whatever the exposure: a plain 0.12 was nothing against a scene lit at
     # thousands of lux. Unwired, EyeAdaptationInverse is 1 / the camera's exposure.
     inverse = g.node(unreal.MaterialExpressionEyeAdaptationInverse)
