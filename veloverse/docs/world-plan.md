@@ -38,7 +38,8 @@ twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
    - alpine cliffs, scree and snow-capped rock;
    - clutter: logs, stumps, stones and moss;
    - ground textures: coastal grass and sand, and fine sand or shingle for the quay.
-4. The reshape, from the AAA gap review (`/workspace/ue/out/qa/aaa_gap_review.md`):
+4. The reshape, from the AAA gap review (`plans/aaa-gap-review.md`; what's left of it, in
+   order, is in `plans/aaa-release.md`):
    - in v44: droplet erosion on the outer islands, a 1150 m Vael (tree line 820 m, snow 900 m),
      strata benches on steep rock, Fab cliff faces on steep ground near the road with scree below,
      no pylons, and the rider and stills in the right lane;

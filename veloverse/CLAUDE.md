@@ -1,7 +1,8 @@
 # Veloverse: working notes for Claude
 
 This file is the goal and the rules. Keep it short and current. Version history goes in the
-storybook, the plan in `docs/world-plan.md`, and the detail in `docs/engine-notes.md`.
+storybook, the plan in `docs/world-plan.md`, the plans for upcoming work in `plans/`, and the
+detail in `docs/engine-notes.md`.
 
 ## The goal
 
@@ -27,6 +28,11 @@ and four islands hang off it on bridges: **Greenwood** (forest), **Vael** (mount
 Moor** (heath) and **Red Sands** (desert). `ROUTES` in `make_chain.py` lists the rides. Any set of
 islands makes a loop with no road ridden twice. The plan of record is `docs/world-plan.md`: read
 it first.
+
+`plans/` holds the plans for upcoming work. It is gitignored, so it lives only in the main
+checkout (`/workspace/veloverse/plans`), not in worktrees. `plans/aaa-release.md` is what's left to reach the AAA
+bar before the next release, in order, tracking Fable's review in `plans/aaa-gap-review.md`. Work
+from it, and mark items done there as they land.
 
 `docs/archive/` holds the old plans (the alpine hero climb L_Hero and the 57 km ring). They're
 history, not instructions; don't work from them.
