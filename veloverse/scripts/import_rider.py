@@ -7,10 +7,12 @@ Two stages, as import_bike_parts.py, because Interchange rewrites a mesh's slots
 returns. The FBX is regenerated, not committed: OC_RIDER_FBX names its folder (default
 /workspace/ue/fab_prep/rider), which also holds the T_*.png textures.
 
-The skeletal mesh lands as SK_Rider and its one take as A_Rider_Pedal: a crank revolution, frames
-0-59 at 30 fps, which RidePawn scrubs to its crank angle. The rider keeps the bike's frame (the
-ground under the bottom bracket, +X forward, the drive side +Y), so it sits under Bike at the bike
-parts' origin. The assign stage logs the mesh's bounds, bones and the take's length.
+The skeletal mesh lands as SK_Rider and its three efforts as A_Rider_Pedal_Easy, A_Rider_Pedal
+(aero, the default) and A_Rider_Pedal_Hard: each a crank revolution, frames 0-59 at 30 fps, sharing
+crank timing, which RidePawn plays at its crank angle and blends by W/kg (rider/README.md). The
+rider keeps the bike's frame (the ground under the bottom bracket, +X forward, the drive side +Y),
+so it sits under Bike at the bike parts' origin. The assign stage logs the mesh's bounds, bones
+and the takes' lengths.
 """
 
 import importlib.util
@@ -147,9 +149,18 @@ def assign_stage():
             stray.append(path)  # what Interchange made from the FBX's own materials
     if len(meshes) != 1:
         raise RuntimeError(f"expected one skeletal mesh, found {[m for m, _ in meshes]}")
-    pedal = [t for t in takes if "pedal" in t[0].lower()] or takes
-    if len(pedal) != 1:
-        raise RuntimeError(f"expected one Pedal take, found {[t for t, _ in takes]}")
+    named = {}
+    for path, _ in takes:
+        low = path.rsplit("/", 1)[-1].lower()
+        if "pedal" not in low:
+            continue
+        kind = "Easy" if "easy" in low else "Hard" if "hard" in low else ""
+        name = f"A_Rider_Pedal_{kind}" if kind else "A_Rider_Pedal"
+        if name in named:
+            raise RuntimeError(f"two takes for {name}: {named[name]} and {path}")
+        named[name] = path
+    if "A_Rider_Pedal" not in named:
+        raise RuntimeError(f"no Pedal take among {[t for t, _ in takes]}")
     bare, mesh = meshes[0]
     slots, unpainted = [], []
     for s in mesh.get_editor_property("materials"):
@@ -164,19 +175,20 @@ def assign_stage():
     lib.assets.save_loaded_asset(mesh, False)
     for path in stray:
         lib.assets.delete_asset(path)
-    for old, new in ((bare, "SK_Rider"), (pedal[0][0], "A_Rider_Pedal")):
+    for old, new in ((bare, "SK_Rider"), *((p, n) for n, p in named.items())):
         if old != f"{FOLDER}/{new}" and not lib.assets.rename_asset(old, f"{FOLDER}/{new}"):
             raise RuntimeError(f"could not move {old} to {FOLDER}/{new}")
     lib.assets.save_directory(FOLDER, only_if_is_dirty=False, recursive=True)
     mesh = unreal.load_asset(f"{FOLDER}/SK_Rider")
-    take = unreal.load_asset(f"{FOLDER}/A_Rider_Pedal")
     box = mesh.get_bounds()
     c, e = box.origin, box.box_extent
     log(
         f"mesh centre ({c.x:.1f}, {c.y:.1f}, {c.z:.1f}) size ({2 * e.x:.1f}, {2 * e.y:.1f}, "
         f"{2 * e.z:.1f}) slots {len(slots)} unpainted {unpainted or 'none'}"
     )
-    log(f"Pedal {take.get_play_length():.3f} s, {len(stray)} strays removed")
+    for name in sorted(named):
+        log(f"{name} {unreal.load_asset(f'{FOLDER}/{name}').get_play_length():.3f} s")
+    log(f"{len(takes)} takes, {len(stray)} strays removed")
 
 
 if STAGE == "import":

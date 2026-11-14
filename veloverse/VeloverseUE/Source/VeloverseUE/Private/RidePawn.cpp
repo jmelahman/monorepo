@@ -31,6 +31,7 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RidePlayerController.h"
+#include "RiderAnim.h"
 #include "RHI.h"
 #include "RideTrack.h"
 #include "UnrealClient.h"
@@ -572,6 +573,11 @@ void ARidePawn::ReadCommandLine()
 		LookYaw = FMath::Clamp(Yaw, -110.f, 110.f);
 	}
 	// For stills of the arms over the bars: how far RiderArms tips back (degrees); below 0, no arms.
+	if (FParse::Value(Line, TEXT("RideEffort="), PinnedEffort))
+	{
+		PinnedEffort = FMath::Clamp(PinnedEffort, 0.f, 2.f);
+		RiderEffort = PinnedEffort;
+	}
 	if (FParse::Value(Line, TEXT("RideArmsTilt="), ArmsTilt))
 	{
 		UE_LOG(LogTemp, Display, TEXT("RIDE arms tilt %.0f"), ArmsTilt);
@@ -992,6 +998,13 @@ void ARidePawn::Place()
 		// a base of 60% of what it was before 14 Nov, at the user's request.
 		const float Strength = Profile.HeadSway / 100.f * 0.6f;
 		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
+		// The rider's effort by W/kg, rider/README.md's blend: Easy to 1.5, Pedal at 3, Hard from 5;
+		// eased over a couple of seconds so a surge doesn't snap the back down.
+		const float Wkg = bMoving ? static_cast<float>(Reading.Watts) / FMath::Max(Profile.WeightKg, 30.f) : 0.f;
+		const float Want = PinnedEffort >= 0.f ? PinnedEffort
+		                   : Wkg < 3.f        ? FMath::GetMappedRangeValueClamped(FVector2f(1.5f, 3.f), FVector2f(0.f, 1.f), Wkg)
+		                                      : FMath::GetMappedRangeValueClamped(FVector2f(3.f, 5.f), FVector2f(1.f, 2.f), Wkg);
+		RiderEffort = PinnedEffort >= 0.f ? Want : FMath::Lerp(RiderEffort, Want, 1.f - FMath::Exp(-Dt / 1.5f));
 		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
 		// The rock with each stroke is small and its depth wanders, so it doesn't read as a metronome;
 		// the head's turn is a slow drift, not a sine (both too strong and regular, the user, 14 Nov).
@@ -1162,7 +1175,14 @@ void ARidePawn::PoseBike()
 		// Crank 0, and turning the same way (rider/README.md). Past frame 59 it holds that frame.
 		const float Turned = FMath::Fmod(Crank, 2.f * PI) / (2.f * PI);
 		const float At = FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength());
-		RiderBody->SetPosition(At, false);
+		for (USkeletalMeshComponent* C : {RiderBody.Get(), RiderArms.Get()})
+		{
+			if (URiderAnim* Anim = C ? Cast<URiderAnim>(C->GetAnimInstance()) : nullptr)
+			{
+				Anim->Time = At;
+				Anim->Effort = RiderEffort;
+			}
+		}
 		if (RiderArms && RiderArms->IsVisible())
 		{
 			// Tipped back about the knuckles, which hold the hoods all round the loop; the turn's
@@ -1171,7 +1191,6 @@ void ARidePawn::PoseBike()
 			                             RiderBody->GetBoneLocation(TEXT("middle_01_r"), EBoneSpaces::ComponentSpace));
 			const FQuat R(FVector::YAxisVector, -FMath::DegreesToRadians(ArmsTilt));
 			RiderArms->SetRelativeLocationAndRotation(PartsOrigin + Grip - R.RotateVector(Grip), R);
-			RiderArms->SetPosition(At, false);
 		}
 	}
 }
@@ -1179,11 +1198,30 @@ void ARidePawn::PoseBike()
 void ARidePawn::MakeRider()
 {
 	USkeletalMesh* Mesh = Cast<USkeletalMesh>(FSoftObjectPath(RiderMesh).TryLoad());
-	UAnimSequence* Loop = Cast<UAnimSequence>(FSoftObjectPath(RiderAnim).TryLoad());
+	TArray<UAnimSequence*> Takes;
+	for (const TCHAR* Path : RiderTakes)
+	{
+		if (UAnimSequence* Take = Cast<UAnimSequence>(FSoftObjectPath(Path).TryLoad()))
+		{
+			Takes.Add(Take);
+		}
+	}
+	UAnimSequence* Loop = Cast<UAnimSequence>(FSoftObjectPath(RiderTakes[1]).TryLoad());
 	if (BikeParts.Num() != PartCount || !Mesh || !Loop)
 	{
 		return; // not imported yet, or no bike to sit on
 	}
+	// Both copies play the efforts through URiderAnim; PoseBike sets its time and effort.
+	auto Animate = [&Takes](USkeletalMeshComponent* C)
+	{
+		C->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+		C->SetAnimInstanceClass(URiderAnim::StaticClass());
+		C->RegisterComponent();
+		if (URiderAnim* Anim = Cast<URiderAnim>(C->GetAnimInstance()))
+		{
+			Anim->Takes = Takes;
+		}
+	};
 	RiderBody = NewObject<USkeletalMeshComponent>(this, TEXT("RiderBody"));
 	RiderBody->SetMobility(EComponentMobility::Movable);
 	RiderBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -1191,10 +1229,7 @@ void ARidePawn::MakeRider()
 	RiderBody->SetupAttachment(Bike);
 	RiderBody->SetRelativeLocation(PartsOrigin); // its origin is the bike's: the ground under the BB
 	RiderBody->SetVisibility(false);
-	RiderBody->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-	RiderBody->RegisterComponent();
-	RiderBody->SetAnimation(Loop);
-	RiderBody->Stop(); // PoseBike scrubs it
+	Animate(RiderBody);
 	// Hidden over the bars, it still poses for its shadow and for RiderArms' grip.
 	RiderBody->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 	RiderPedal = Loop;
@@ -1206,15 +1241,13 @@ void ARidePawn::MakeRider()
 	RiderArms->SetRelativeLocation(PartsOrigin);
 	RiderArms->SetVisibility(false);
 	RiderArms->SetCastShadow(false); // tipped back, its shadow would be wrong: RiderBody casts
-	RiderArms->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-	RiderArms->RegisterComponent();
-	RiderArms->SetAnimation(Loop);
-	RiderArms->Stop();
+	Animate(RiderArms);
 	for (const TCHAR* Bone : {TEXT("neck_01"), TEXT("thigh_l"), TEXT("thigh_r")})
 	{
 		RiderArms->HideBoneByName(Bone, EPhysBodyOp::PBO_None); // and all below it
 	}
-	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, Pedal %.3f s"), Mesh->GetRefSkeleton().GetNum(), Loop->GetPlayLength());
+	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, %d takes, Pedal %.3f s"), Mesh->GetRefSkeleton().GetNum(), Takes.Num(),
+	       Loop->GetPlayLength());
 }
 
 void ARidePawn::PlaceRain(float Dt)
