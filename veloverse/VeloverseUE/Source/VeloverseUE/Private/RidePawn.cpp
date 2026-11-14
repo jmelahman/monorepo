@@ -40,9 +40,11 @@ constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
 // Behind the bike: the camera this far back along the look from a point ChaseAim over the road
 // (the bike's middle, with no rider on it yet), tipped down so the bike sits low of centre.
-constexpr float ChaseBack = 330.f;
+// 3.3 m and 12 degrees down sat too close and steep (the user, 14 Nov).
+constexpr float ChaseBack = 420.f;
 constexpr float ChaseAim = 95.f;
-constexpr float ChaseTilt = -12.f;
+constexpr float ChaseTilt = -9.f;
+constexpr float ChaseGrade = 0.35f; // the share of the road's pitch the camera follows (was 0.5)
 // Over the bars: the camera this far behind and below the eyes, in the bike's frame (cm), tipped
 // down so the bars, hoods and computer sit in the bottom third with the horizon in the top third
 // at the default 61 degree field of view. Nearer the bars, the narrow view can't hold both: the bars
@@ -1015,7 +1017,7 @@ void ARidePawn::Place()
 	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
 	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
-	const FRotator Look(Head.Pitch * 0.5f + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
+	const FRotator Look(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
 	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
 	const FVector Back = Aim - Look.Vector() * ChaseBack;
 	SetActorLocationAndRotation(Back, Look);
