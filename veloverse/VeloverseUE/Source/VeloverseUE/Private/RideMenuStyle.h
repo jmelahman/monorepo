@@ -79,6 +79,13 @@ inline const TCHAR* Rider = TEXT("M12 4a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 20a7 
 // The world: a ring, one elliptical meridian and the equator.
 inline const TCHAR* Globe = TEXT("M12 3a9 9 0 100 18 9 9 0 000-18zM12 3a4 9 0 100 18 4 9 0 000-18zM3 12h18");
 inline const TCHAR* Lock = TEXT("M6 11h12v9H6zM9 11V8a3 3 0 016 0v3");
+// The ride's dock: an eye for the view, a pulse for the graphs, a framed screen for the HUD, four
+// arrows for free look, and two bars for pause.
+inline const TCHAR* Eye = TEXT("M2 12Q12 2.5 22 12Q12 21.5 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z");
+inline const TCHAR* Pulse = TEXT("M2 12h4l2-5 4 10 2-5h8");
+inline const TCHAR* Hud = TEXT("M3 4h18v16H3zM3 9h18M9 9v11");
+inline const TCHAR* Move = TEXT("M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3");
+inline const TCHAR* Pause = TEXT("M8 5v14M16 5v14");
 } // namespace Icons
 
 // "1,140"

@@ -173,6 +173,14 @@ void URideMenu::GoBack()
 	{
 	case ERideMenuPage::Start: break;
 	case ERideMenuPage::Routes:
+		// Picked from the dock mid-ride: back is back to the road.
+		if (const ARidePawn* Pawn = Rider(); Pawn && Pawn->bStarted && !Pawn->bFinished)
+		{
+			Controller()->Resume();
+			break;
+		}
+		Show(ERideMenuPage::Start);
+		break;
 	case ERideMenuPage::Stats: Show(ERideMenuPage::Start); break;
 	case ERideMenuPage::Sensors: Show(Back); break;
 	case ERideMenuPage::Settings:
@@ -800,10 +808,15 @@ void URideMenu::ReviewJustRidden()
 	Review.bJustRidden = true;
 	Review.Saved = Pawn->SavedRide;
 	Review.Xp = Pawn->EarnedXp.Total();
-	const FRouteSurvey* S = SurveyOf(Pawn->Track);
+	// A ride that changed route partway has no one route's islands to show.
+	const FRouteSurvey* S = Pawn->bChangedRoute ? nullptr : SurveyOf(Pawn->Track);
 	if (S)
 	{
 		Review.Route = S->Title;
+	}
+	else if (Pawn->bChangedRoute)
+	{
+		Review.Route = Pawn->RideRoutes;
 	}
 	// Where the ride crossed each island: its metres along the route from where it started.
 	const double RouteM = Pawn->Track ? Pawn->Track->Length() / 100.0 : 0.0;

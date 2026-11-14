@@ -26,6 +26,9 @@ public:
 	void Resume();  // from the pause menu
 	void EndRide(); // from the pause menu: saves the ride and shows its summary
 	void ShowSummary();
+	void ShowRoutes(); // mid-ride, from the dock: pick another route and ride on along it
+	// Riding: the cursor and dock with the mouse, or free look's mouse as a head alone.
+	void RideInput();
 	void Restart(); // back to the start screen, the ride reset
 	void Quit();
 	bool InMenu() const;

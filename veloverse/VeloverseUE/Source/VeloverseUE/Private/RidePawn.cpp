@@ -9,9 +9,12 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/SkyLight.h"
+#include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -27,12 +30,29 @@
 #include "RHI.h"
 #include "RideTrack.h"
 #include "UnrealClient.h"
+#include "InputCoreTypes.h"
 #include "Units.h"
 
 namespace
 {
 constexpr float LookAhead = 600.f; // cm: the camera looks this far up the road
 constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows the grade
+// Behind the bike: the camera this far back from the rider's eyes and this far over them, tipped
+// down a little to keep the bike low in the frame.
+constexpr float ChaseBack = 420.f;
+constexpr float ChaseUp = 70.f;
+constexpr float ChaseTilt = -7.f;
+
+// A mesh by path, or none when it isn't in the project: no warning for a bike not yet made.
+UStaticMesh* MeshAt(const TCHAR* Path)
+{
+	const FSoftObjectPath Object(Path);
+	if (!FPackageName::DoesPackageExist(Object.GetLongPackageName()))
+	{
+		return nullptr;
+	}
+	return Cast<UStaticMesh>(Object.TryLoad());
+}
 
 // The rider's weather and time of day in place of the route's, as the coast route's rows set them:
 // clear sun, the overcast before its shower, and the shower itself.
@@ -146,6 +166,23 @@ ARidePawn::ARidePawn()
 	Rain->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Rain->SetMobility(EComponentMobility::Movable);
 
+	// The bike stands on the road, wherever the camera has swung to, so it keeps its own transform.
+	Bike = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Bike"));
+	Bike->SetupAttachment(Camera);
+	Bike->SetUsingAbsoluteLocation(true);
+	Bike->SetUsingAbsoluteRotation(true);
+	Bike->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Bike->SetMobility(EComponentMobility::Movable);
+	Bike->SetVisibility(false);
+	// The bars sit under and ahead of the eyes, turning with the head.
+	Cockpit = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cockpit"));
+	Cockpit->SetupAttachment(Camera);
+	Cockpit->SetRelativeLocation(FVector(55.f, 0.f, -62.f));
+	Cockpit->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Cockpit->SetCastShadow(false);
+	Cockpit->SetMobility(EComponentMobility::Movable);
+	Cockpit->SetVisibility(false);
+
 }
 
 void ARidePawn::BeginPlay()
@@ -187,6 +224,8 @@ void ARidePawn::BeginPlay()
 			Rain->SetStaticMesh(Track->RainShell);
 		}
 	}
+	Bike->SetStaticMesh(MeshAt(BikeMesh));
+	Cockpit->SetStaticMesh(MeshAt(CockpitMesh));
 	ReadCommandLine();
 	bStarted = bStarted || Automated();
 	if (!bStartGiven)
@@ -252,14 +291,18 @@ int32 ARidePawn::StartIndex() const
 void ARidePawn::UseStart(int32 Index)
 {
 	const TArray<FStart> All = Starts();
-	if (bStarted || !All.IsValidIndex(Index))
+	if (!All.IsValidIndex(Index))
 	{
 		return;
+	}
+	if (bStarted)
+	{
+		RiddenBefore = Ridden(); // the ride goes on from there
 	}
 	StartMetres = All[Index].Metres;
 	ChosenStart = StartMetres;
 	Distance = StartMetres * 100.0;
-	Segments.Reset();
+	Segments.Reset(bStarted);
 	bHeadSet = false;
 	ApplyWeather();
 	Place();
@@ -282,19 +325,33 @@ float ARidePawn::DefaultStart() const
 
 void ARidePawn::UseRoute(int32 Index)
 {
-	if (bStarted || !Routes.IsValidIndex(Index) || Routes[Index] == Track)
+	if (!Routes.IsValidIndex(Index) || Routes[Index] == Track)
 	{
 		return;
 	}
+	if (bStarted)
+	{
+		// Mid-ride: the ride goes on along the new route from its start, its segments and all.
+		RiddenBefore = Ridden();
+		RideRoutes = (RideRoutes.IsEmpty() ? Track->Title : RideRoutes) + TEXT(", then ") + Routes[Index]->Title;
+		bChangedRoute = true;
+	}
 	Track = Routes[Index];
 	ChosenRoute = Track->Title;
-	if (!bStartGiven)
+	if (bStarted || !bStartGiven)
 	{
 		StartMetres = DefaultStart();
 		ChosenStart = -1.f;
 	}
 	Distance = StartMetres * 100.0;
-	Segments.Reset();
+	if (bStarted)
+	{
+		Segments.Use(*Track, true);
+	}
+	else
+	{
+		Segments.Reset();
+	}
 	if (Track->RainShell)
 	{
 		Rain->SetStaticMesh(Track->RainShell);
@@ -389,7 +446,8 @@ FString ARidePawn::EndRide()
 			Climbs.Add({R.Name, R.Effort.Seconds, R.Effort.AverageWatts, R.Ranking.Rank, R.Ranking.Of, bPr});
 		}
 		const Veloverse::FRideXp Earned = Veloverse::RideXp(S.Metres, S.Climbed, Segments.Results().Num(), Prs, Workout.Done());
-		SavedRide = Recorder.Save(Track ? Track->Title : FString(), StartMetres, Used, Climbs, Earned.Total());
+		const FString Route = bChangedRoute ? RideRoutes : Track ? Track->Title : FString();
+		SavedRide = Recorder.Save(Route, StartMetres, Used, Climbs, Earned.Total());
 		Segments.Save(FDateTime::Now().ToIso8601());
 		if (!SavedRide.IsEmpty())
 		{
@@ -650,6 +708,10 @@ void ARidePawn::ReadKeys()
 	const bool Up = Player->IsInputKeyDown(EKeys::Up) || Player->IsInputKeyDown(EKeys::W);
 	const bool Down = Player->IsInputKeyDown(EKeys::Down) || Player->IsInputKeyDown(EKeys::S);
 	Legs.Direction = (Up ? 1 : 0) - (Down ? 1 : 0);
+	if (bStarted && !bPaused && !Automated())
+	{
+		Docking(*Player);
+	}
 	MouseLook(*Player);
 	if (Workout.Active() && !bPaused)
 	{
@@ -691,10 +753,13 @@ void ARidePawn::MouseLook(APlayerController& Player)
 	// The mouse as a head: it turns the view up to a little past the shoulder and up or down, and
 	// after a couple of seconds' rest the eyes drift back to the road, unless the rider has turned
 	// well away from it (more than 45 degrees aside or 25 up or down), to look at something: then
-	// the view stays put until the mouse brings it back. Not in a menu, where the mouse is the menu's.
+	// the view stays put until the mouse brings it back. Not in a menu, where the mouse is the menu's,
+	// and with the dock about only while a button is held (and wasn't pressed on the dock).
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	float Dx = 0.f, Dy = 0.f;
-	if (!bPaused)
+	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
+	const bool bLooks = bFreeLook || Automated() || !bStarted || (bHeld && !bPressOnDock);
+	if (!bPaused && bLooks)
 	{
 		Player.GetInputMouseDelta(Dx, Dy);
 	}
@@ -749,9 +814,10 @@ void ARidePawn::Ride(float Dt)
 	ClimbedMetres += FMath::Max(0.f, Track->Height(Track->Wrap(static_cast<float>(Distance))) - Before) / 100.f;
 	Joules += Reading.Watts * Dt;
 	ZoneSeconds[Zone(Reading.Watts)] += Dt;
+	// Where the rider is, not the camera, which rides behind in the chase view.
+	const FVector At = Track->Point(Track->Wrap(static_cast<float>(Distance)), -Track->KeepLeft, 0.f);
 	Recorder.Tick(Dt, Ridden() / 100.0, Reading.Watts, Reading.CadenceRpm, Reading.HeartRateBpm, Speed,
-	              Track->Height(Track->Wrap(static_cast<float>(Distance))) / 100.0, GetActorLocation().X / 100.0,
-	              GetActorLocation().Y / 100.0);
+	              Track->Height(Track->Wrap(static_cast<float>(Distance))) / 100.0, At.X / 100.0, At.Y / 100.0);
 	if (!Track->bClosed && Distance >= Track->Length())
 	{
 		Distance = static_cast<double>(Track->Length());
@@ -859,7 +925,163 @@ void ARidePawn::Place()
 	}
 	// The mouse turns the head on top of all that, the road's frame first and the look in it.
 	const FQuat Body = (Head + FRotator(0.f, Turn, Roll + Lean)).Quaternion();
-	SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
+	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
+	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
+	Bike->SetVisibility(Seen == ERideView::Chase);
+	if (Seen != ERideView::Chase)
+	{
+		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
+		return;
+	}
+	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
+	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
+	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
+	Bike->SetWorldLocationAndRotation(On->Point(S, -On->KeepLeft, 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
+	const FRotator Look(Head.Pitch * 0.5f + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
+	const FVector Back = Eye + Lift * 0.3f - Look.Vector() * ChaseBack + FVector(0.f, 0.f, ChaseUp);
+	SetActorLocationAndRotation(Back, Look);
+}
+
+TArray<ERideView> ARidePawn::Views() const
+{
+	TArray<ERideView> All = {ERideView::Eyes};
+	if (Cockpit && Cockpit->GetStaticMesh())
+	{
+		All.Add(ERideView::Cockpit);
+	}
+	if (Bike && Bike->GetStaticMesh())
+	{
+		All.Add(ERideView::Chase);
+	}
+	return All;
+}
+
+ERideView ARidePawn::View() const
+{
+	const ERideView Wanted = static_cast<ERideView>(FMath::Clamp(Profile.View, 0, 2));
+	return !Automated() && Views().Contains(Wanted) ? Wanted : ERideView::Eyes;
+}
+
+void ARidePawn::CycleView()
+{
+	const TArray<ERideView> All = Views();
+	const int32 Next = (All.IndexOfByKey(View()) + 1) % All.Num();
+	Profile.View = static_cast<int32>(All[Next]);
+	Profile.Save();
+}
+
+void ARidePawn::SetFreeLook(bool bOn)
+{
+	bFreeLook = bOn;
+	bPressOnDock = false;
+	DockHover = -1;
+	if (bOn)
+	{
+		Dock.Hide();
+	}
+	else
+	{
+		Dock.Moved();
+	}
+	if (ARidePlayerController* Rides = GetController<ARidePlayerController>())
+	{
+		Rides->RideInput();
+	}
+}
+
+void ARidePawn::PressDock(Veloverse::EDock Button)
+{
+	using Veloverse::EDock;
+	ARidePlayerController* Rides = GetController<ARidePlayerController>();
+	switch (Button)
+	{
+	case EDock::View: CycleView(); break;
+	case EDock::Graphs:
+		Profile.bGraphs = !Profile.bGraphs;
+		Profile.Save();
+		break;
+	case EDock::Hud:
+		Profile.bHud = !Profile.bHud;
+		Profile.Save();
+		break;
+	case EDock::Route:
+		if (Rides)
+		{
+			Rides->ShowRoutes();
+		}
+		break;
+	case EDock::Look: SetFreeLook(true); break;
+	case EDock::Pause:
+		if (Rides)
+		{
+			Rides->ShowPause();
+		}
+		break;
+	default: break;
+	}
+}
+
+void ARidePawn::Docking(APlayerController& Player)
+{
+	using Veloverse::EDock;
+	// The keys work with the dock up or away, and in free look.
+	if (Player.WasInputKeyJustPressed(EKeys::Tab))
+	{
+		SetFreeLook(!bFreeLook);
+		return;
+	}
+	const TPair<FKey, EDock> Keys[] = {{EKeys::V, EDock::View}, {EKeys::G, EDock::Graphs}, {EKeys::H, EDock::Hud},
+		{EKeys::R, EDock::Route}};
+	for (const TPair<FKey, EDock>& Key : Keys)
+	{
+		if (Player.WasInputKeyJustPressed(Key.Key))
+		{
+			PressDock(Key.Value);
+			return;
+		}
+	}
+	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	if (bFreeLook)
+	{
+		DockHover = -1;
+		Dock.Tick(Dt, false);
+		return;
+	}
+	// The pointer in the HUD's frame: 720 tall, as wide as the screen's shape makes it.
+	FVector2D Size(0.0, 0.0);
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->GetViewportSize(Size);
+	}
+	float Mx = 0.f, My = 0.f;
+	const bool bOnScreen = Size.Y > 0.0 && Player.GetMousePosition(Mx, My);
+	const float K = bOnScreen ? 720.f / static_cast<float>(Size.Y) : 0.f;
+	const FVector2f Now(Mx * K, My * K);
+	if (bOnScreen && MouseAt.X >= 0.f && FVector2f::Distance(Now, MouseAt) > 0.5f)
+	{
+		Dock.Moved();
+	}
+	MouseAt = bOnScreen ? Now : FVector2f(-1.f, -1.f);
+	const Veloverse::FDockLayout L =
+		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Profile.bGraphs, Dock.Shown);
+	DockHover = bOnScreen ? L.Hit(Now.X, Now.Y) : -1;
+	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
+	if (Player.WasInputKeyJustPressed(EKeys::LeftMouseButton) || Player.WasInputKeyJustPressed(EKeys::RightMouseButton))
+	{
+		bPressOnDock = DockHover >= 0;
+		if (bPressOnDock && Player.WasInputKeyJustPressed(EKeys::LeftMouseButton))
+		{
+			PressDock(static_cast<EDock>(DockHover));
+		}
+	}
+	else if (!bHeld)
+	{
+		bPressOnDock = false;
+	}
+	Dock.Tick(Dt, DockHover >= 0 || bPressOnDock);
+	// The cursor goes with the dock, and while a drag turns the head.
+	const bool bDragging = bHeld && !bPressOnDock;
+	Player.CurrentMouseCursor = Dock.Visible() && !bDragging ? EMouseCursor::Default : EMouseCursor::None;
 }
 
 bool ARidePawn::Backdrop(const URideTrack*& On, double& At) const

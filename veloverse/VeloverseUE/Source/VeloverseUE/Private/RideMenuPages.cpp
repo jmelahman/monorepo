@@ -336,9 +336,9 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		C.Ring(Key, 64.f, Y, 600.f, 88.f, 14.f);
 		C.Hit(Key, 64.f, Y, 600.f, 88.f).OnClick = [M, I]
 		{
-			if (ARidePawn* R = M->Rider(); R && !R->bStarted)
+			if (ARidePawn* R = M->Rider(); R && !R->bFinished)
 			{
-				R->UseRoute(I);
+				R->UseRoute(I); // mid-ride, the ride carries on along it
 			}
 		};
 		Y += 96.f;
@@ -531,7 +531,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		auto Step = [M](int32 By)
 		{
 			ARidePawn* R = M->Rider();
-			if (R && !R->bStarted && R->Starts().Num() > 0)
+			if (R && !R->bFinished && R->Starts().Num() > 0)
 			{
 				const int32 N = R->Starts().Num();
 				R->UseStart(((R->StartIndex() + By) % N + N) % N);
@@ -544,8 +544,9 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		H.OnRight = [Step] { Step(1); };
 		C.Hit(TEXT("startprev"), Dx, 640.f, 56.f, 56.f).OnClick = [Step] { Step(-1); };
 	}
-	C.Button(TEXT("start"), Dx, 718.f, Dw, 72.f, TEXT("Start ride"), EButton::Primary,
-	         [M] { M->Controller()->Ride(); }, nullptr, 28.f, true, 14.f);
+	const bool bRiding = Pawn->bStarted;
+	C.Button(TEXT("start"), Dx, 718.f, Dw, 72.f, bRiding ? TEXT("Ride on") : TEXT("Start ride"), EButton::Primary,
+	         [M, bRiding] { bRiding ? M->Controller()->Resume() : M->Controller()->Ride(); }, nullptr, 28.f, true, 14.f);
 	C.Button(TEXT("check"), Dx, 802.f, Dw, 44.f, TEXT("Check trainer"), EButton::Quiet,
 	         [M] { M->Show(ERideMenuPage::Sensors); }, Icons::Signal, 16.f);
 

@@ -12,7 +12,7 @@
 
 FString FRideSegments::File() { return FRideProfile::Folder() / TEXT("segments.json"); }
 
-void FRideSegments::Use(const URideTrack& Track)
+void FRideSegments::Use(const URideTrack& Track, bool bKeepResults)
 {
 	Used = &Track;
 	TrackLength = Track.Length() / 100.0;
@@ -20,7 +20,10 @@ void FRideSegments::Use(const URideTrack& Track)
 	Timers.Reset();
 	Keys.Reset();
 	Names.Reset();
-	Finished.Reset();
+	if (!bKeepResults)
+	{
+		Finished.Reset();
+	}
 	// The height every 10 m, in metres.
 	constexpr double Step = 10.0;
 	std::vector<double> Heights;
@@ -59,13 +62,16 @@ void FRideSegments::Use(const URideTrack& Track)
 	UE_LOG(LogTemp, Display, TEXT("RIDE segments: %d climbs on %s"), Timers.Num(), *Track.Title);
 }
 
-void FRideSegments::Reset()
+void FRideSegments::Reset(bool bKeepResults)
 {
 	for (Veloverse::FSegmentTimer& T : Timers)
 	{
 		T.Reset();
 	}
-	Finished.Reset(); // a new ride from a new start
+	if (!bKeepResults)
+	{
+		Finished.Reset(); // a new ride from a new start
+	}
 }
 
 void FRideSegments::Tick(double DistanceM, double Now, double Watts)
@@ -76,6 +82,7 @@ void FRideSegments::Tick(double DistanceM, double Now, double Watts)
 		{
 			FSegmentResult R;
 			R.Name = Names[I];
+			R.Key = Keys[I];
 			R.Effort = MoveTemp(*Effort);
 			const FHistory* Past = History.Find(Keys[I]);
 			std::vector<Veloverse::FSegmentRecord> Before;
@@ -86,7 +93,7 @@ void FRideSegments::Tick(double DistanceM, double Now, double Watts)
 			// This ride's earlier passes count too, a lap ago.
 			for (const FSegmentResult& Earlier : Finished)
 			{
-				if (Earlier.Name == R.Name)
+				if (Earlier.Key == R.Key)
 				{
 					Before.push_back({"", Earlier.Effort.Seconds, Earlier.Effort.AverageWatts});
 				}
@@ -124,7 +131,7 @@ TOptional<FRideSegments::FLive> FRideSegments::Live(double DistanceM, double Rea
 		}
 		for (const FSegmentResult& R : Finished)
 		{
-			if (R.Name == L.Name && (!L.Best || R.Effort.Seconds < *L.Best))
+			if (R.Key == Keys[I] && (!L.Best || R.Effort.Seconds < *L.Best))
 			{
 				L.Best = R.Effort.Seconds;
 				Ghost = &R.Effort;
@@ -230,12 +237,11 @@ void FRideSegments::Save(const FString& When)
 	Load(); // what's on disk now, in case another ride wrote since
 	for (const FSegmentResult& R : Finished)
 	{
-		const int32 I = Names.IndexOfByKey(R.Name);
-		if (I == INDEX_NONE)
+		if (R.Key.IsEmpty())
 		{
 			continue;
 		}
-		FHistory& H = History.FindOrAdd(Keys[I]);
+		FHistory& H = History.FindOrAdd(R.Key);
 		H.Name = R.Name;
 		Veloverse::FSegmentRecord Record;
 		Record.When = TCHAR_TO_UTF8(*When);

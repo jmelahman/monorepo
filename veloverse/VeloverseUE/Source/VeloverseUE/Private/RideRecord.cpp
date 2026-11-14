@@ -194,6 +194,12 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.LookSpeed = FMath::Clamp(static_cast<float>(Value), 25.f, 400.f);
 		}
+		if (O->TryGetNumberField(TEXT("view"), Value))
+		{
+			Profile.View = FMath::Clamp(static_cast<int32>(Value), 0, 2);
+		}
+		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
+		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);
 	}
 	return Profile;
 }
@@ -216,6 +222,9 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("time_of_day"), TimeOfDay);
 	O->SetNumberField(TEXT("grass"), Grass);
 	O->SetNumberField(TEXT("look_speed"), LookSpeed);
+	O->SetNumberField(TEXT("view"), View);
+	O->SetBoolField(TEXT("hud"), bHud);
+	O->SetBoolField(TEXT("graphs"), bGraphs);
 	WriteJson(ProfileFile(), O);
 }
 

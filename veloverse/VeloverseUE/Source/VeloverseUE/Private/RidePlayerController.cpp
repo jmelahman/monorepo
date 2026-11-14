@@ -115,17 +115,35 @@ void ARidePlayerController::Close()
 	{
 		Menu->RemoveFromParent();
 	}
-	SetShowMouseCursor(false);
-	SetInputMode(FInputModeGameOnly());
 	if (ARidePawn* Pawn = Rider())
 	{
 		Pawn->bPaused = false;
 	}
+	RideInput();
+}
+
+void ARidePlayerController::RideInput()
+{
+	const ARidePawn* Pawn = Rider();
+	if (!Pawn || !Pawn->bStarted || Pawn->bFreeLook || ARidePawn::Automated())
+	{
+		SetShowMouseCursor(false);
+		SetInputMode(FInputModeGameOnly());
+		return;
+	}
+	// The cursor stays for the dock, and the game still reads the keys and a held button's drag.
+	SetShowMouseCursor(true);
+	FInputModeGameAndUI Mode;
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	Mode.SetHideCursorDuringCapture(false);
+	SetInputMode(Mode);
 }
 
 void ARidePlayerController::ShowStart() { Open(ERideMenuPage::Start); }
 
 void ARidePlayerController::ShowPause() { Open(ERideMenuPage::Pause); }
+
+void ARidePlayerController::ShowRoutes() { Open(ERideMenuPage::Routes); }
 
 void ARidePlayerController::Ride()
 {
@@ -134,6 +152,10 @@ void ARidePlayerController::Ride()
 		Pawn->bStarted = true;
 	}
 	Close();
+	if (ARidePawn* Pawn = Rider())
+	{
+		Pawn->Dock.Moved(); // shown at the off, so the rider learns it's there
+	}
 }
 
 void ARidePlayerController::Resume() { Close(); }

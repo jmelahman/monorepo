@@ -12,6 +12,7 @@ class URideTrack;
 struct FSegmentResult
 {
 	FString Name;
+	FString Key; // the segment's history key: its route's title and where it starts
 	Veloverse::FSegmentEffort Effort;
 	Veloverse::FRanking Ranking; // against the rides before this one
 	double FinishedAt = 0.0;     // ride seconds
@@ -20,14 +21,16 @@ struct FSegmentResult
 class FRideSegments
 {
 public:
-	// Finds the track's climbs and reads their history; again whenever the track changes.
-	void Use(const URideTrack& Track);
+	// Finds the track's climbs and reads their history; again whenever the track changes. A ride
+	// that changes route keeps what it finished on the last one (bKeepResults).
+	void Use(const URideTrack& Track, bool bKeepResults = false);
 	bool UsesTrack(const URideTrack* Track) const { return Track && Track == Used.Get(); }
 
 	// Every frame of riding: metres along the track, unwrapped, ride seconds and power.
 	void Tick(double DistanceM, double Now, double Watts);
-	// A new start (a jump, or a new ride): nothing under way counts, and the results start over.
-	void Reset();
+	// A new start (a jump, or a new ride): nothing under way counts, and the results start over
+	// unless bKeepResults (a jump mid-ride).
+	void Reset(bool bKeepResults = false);
 
 	struct FLive
 	{

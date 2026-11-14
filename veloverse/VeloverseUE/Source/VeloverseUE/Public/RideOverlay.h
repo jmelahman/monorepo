@@ -2,16 +2,22 @@
 // scaled to the screen's height). Top left: power, its zone and the zone bar. Top right, the same
 // size as the power panel to mirror it: the grade as a badge, the road ahead or the climb you're
 // on coloured yellow to red, and at its foot the stretch you're in over a bar of the loop; the
-// weather under it. Top middle: the ride so far.
+// weather under it. Top middle: the ride so far. Along the foot, when on: the dock (Dock.h) and the
+// graphs of power and heart rate; H puts the panels away.
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Dock.h"
 #include "RideOverlay.generated.h"
 
 class ARidePawn;
 class FRideSegments;
 class URideTrack;
+namespace VeloversePaint
+{
+struct FPainter;
+}
 
 UCLASS()
 class VELOVERSEUE_API URideOverlay : public UUserWidget
@@ -52,4 +58,6 @@ private:
 	float GradeAt(float Metres) const;
 	// The climb at Metres, or the next one within Reach, with its start and top unwrapped past Here.
 	const FClimb* ClimbAt(float Metres, bool& bOn, float& Start, float& Top, float Reach) const;
+	void PaintGraphs(const VeloversePaint::FPainter& P, float W, float H) const;
+	void PaintDock(const VeloversePaint::FPainter& P, const Veloverse::FDockLayout& L, const FLinearColor& Accent) const;
 };

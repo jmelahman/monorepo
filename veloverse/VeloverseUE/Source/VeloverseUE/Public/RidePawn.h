@@ -11,10 +11,12 @@
 #include "Progress.h"
 #include "RideSegments.h"
 #include "Workout.h"
+#include "Dock.h"
 #include "RidePawn.generated.h"
 
 class UCameraComponent;
 class UStaticMeshComponent;
+class UStaticMesh;
 class URideTrack;
 struct FPostProcessSettings;
 class UDirectionalLightComponent;
@@ -22,6 +24,16 @@ class USkyLightComponent;
 class UExponentialHeightFogComponent;
 class APostProcessVolume;
 class APlayerController;
+
+// Where the camera rides: through the rider's eyes, over the bike's bars, or behind the bike. The
+// last two need the bike's meshes (ARidePawn's BikeMesh and CockpitMesh); without them there's
+// only the eyes.
+enum class ERideView : uint8
+{
+	Eyes,
+	Cockpit,
+	Chase,
+};
 
 UCLASS()
 class VELOVERSEUE_API ARidePawn : public APawn
@@ -37,12 +49,21 @@ public:
 
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UCameraComponent> Camera;
 	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Rain;
+	// The bike seen from behind, on the road under the rider, and its bars seen from the saddle,
+	// fixed to the camera. Each is loaded from its path if it's there (/Game/Rider).
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Bike;
+	UPROPERTY(VisibleAnywhere) TObjectPtr<UStaticMeshComponent> Cockpit;
+	static constexpr const TCHAR* BikeMesh = TEXT("/Game/Rider/SM_Bike.SM_Bike");
+	static constexpr const TCHAR* CockpitMesh = TEXT("/Game/Rider/SM_Cockpit.SM_Cockpit");
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
 	// The level's routes, its default track first; Track is one of them.
 	UPROPERTY(Transient) TArray<TObjectPtr<URideTrack>> Routes;
-	// Rides Routes[Index] from its start. Only before the ride starts.
+	// Rides Routes[Index] from its start. Mid-ride the ride carries on there: its time, distance,
+	// segments and recording go on, and it's saved under both routes' names.
 	void UseRoute(int32 Index);
+	bool bChangedRoute = false;
+	FString RideRoutes; // "Coast Loop, then Vael", once the route has changed
 	int32 RouteIndex() const { return Routes.IndexOfByKey(Track); }
 
 	UPROPERTY(EditAnywhere) float EyeHeight = 150.f; // cm above the road
@@ -58,10 +79,25 @@ public:
 	};
 	TArray<FStart> Starts() const;
 	int32 StartIndex() const;
-	// Moves the rider to Starts()[Index]. Only before the ride starts.
+	// Moves the rider to Starts()[Index]; mid-ride, the ride carries on from there.
 	void UseStart(int32 Index);
-	// cm ridden since the start, wherever it was.
-	double Ridden() const { return Distance - StartMetres * 100.0; }
+	// cm ridden since the start, wherever it was, across any jumps and changes of route.
+	double Ridden() const { return RiddenBefore + Distance - StartMetres * 100.0; }
+
+	// The views there are meshes for, the eyes first, and the one in use (Profile.View, if it's
+	// there). CycleView steps to the next (V).
+	TArray<ERideView> Views() const;
+	ERideView View() const;
+	void CycleView();
+
+	// The dock along the foot of the screen (Dock.h): it rises when the mouse moves, and the mouse
+	// turns the head while a button is held. In free look (Tab, or the dock's button) the mouse
+	// turns the head on its own, with no cursor or dock, until Tab brings them back.
+	Veloverse::FDockReveal Dock;
+	int32 DockHover = -1; // the button under the pointer, or -1
+	bool bFreeLook = false;
+	void SetFreeLook(bool bOn);
+	void PressDock(Veloverse::EDock Button);
 
 	// What the HUD shows.
 	// cm along the track, not wrapped: laps add up. Double: 25 km is 2.5 million cm, where a float
@@ -138,6 +174,10 @@ private:
 	static FString ChosenRoute;
 	static float ChosenStart;
 	bool bStartGiven = false; // -RideStart or -RideFrom on the command line
+	double RiddenBefore = 0.0; // cm ridden before the last jump or change of route
+	FVector2f MouseAt = FVector2f(-1.f, -1.f); // in the HUD's frame
+	bool bPressOnDock = false; // the button went down on the dock, so the drag doesn't look
+	void Docking(APlayerController& Player);
 	float DefaultStart() const;
 	TUniquePtr<ITrainer> Trainer;
 	// The keys always drive these legs: as the rider's power, or as a simulated trainer's rider.
