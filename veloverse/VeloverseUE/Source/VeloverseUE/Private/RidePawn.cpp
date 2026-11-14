@@ -9,7 +9,6 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
-#include "UObject/UObjectIterator.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -89,10 +88,11 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	}
 	else if (Weather == 3)
 	{
-		// Under rain cloud the light is nearly all sky: a 4000 lux sun against a 0.55 sky was half
-		// the light and drew hard shadows across the road (out/qa/rain7). The total stays about the same.
+		// Under rain cloud the light is nearly all sky. The sky light is captured from the atmosphere,
+		// which the sun lights, so dimming the sun dims the sky with it and the shadows keep their
+		// contrast (out/qa/rain8, rain9): the sky's own multiplier has to carry the shift.
 		W.Lux = 800.f;
-		W.Sky = 0.8f;
+		W.Sky = 3.f;
 		W.Fog = 0.08f;
 		W.Rain = W.Wet = 1.f;
 	}
@@ -1217,17 +1217,6 @@ void ARidePawn::FindWeather()
 	for (TActorIterator<ADirectionalLight> It(GetWorld()); It && !Sun.IsValid(); ++It)
 	{
 		Sun = Cast<UDirectionalLightComponent>(It->GetLightComponent());
-	}
-	// Every directional light in the level, to see which one weather drives and which cast shadows.
-	for (TObjectIterator<UDirectionalLightComponent> It; It; ++It)
-	{
-		if (It->GetWorld() == GetWorld())
-		{
-			UE_LOG(LogTemp, Display, TEXT("WEATHER light %s owner %s lux %.0f shadows %d mobility %d atmosphere %d driven %d"),
-				*It->GetName(), *GetNameSafe(It->GetOwner()), It->Intensity, It->CastShadows ? 1 : 0,
-				static_cast<int32>(It->Mobility.GetValue()), It->IsUsedAsAtmosphereSunLight() ? 1 : 0,
-				*It == Sun.Get() ? 1 : 0);
-		}
 	}
 	for (TActorIterator<ASkyLight> It(GetWorld()); It && !SkyLight.IsValid(); ++It)
 	{
