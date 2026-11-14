@@ -1094,16 +1094,27 @@ def bridges(out, g, road):
                     (sgn * (edge + 25), -22),
                 ][::sgn],
             )
+            # The top rail, a closed bar on posts from the parapet: open underneath and floating
+            # with nothing under it, its inside showed from the road and its thin faces flickered
+            # (13 Nov QA: "fuzzy artifacts around the top rail").
             sweep(
                 steel,
                 local,
                 [
                     (sgn * (edge + 5), 100),
-                    (sgn * (edge + 5), 110),
-                    (sgn * (edge + 20), 110),
+                    (sgn * (edge + 5), 112),
+                    (sgn * (edge + 20), 112),
                     (sgn * (edge + 20), 100),
-                ][::sgn],
+                ],
+                closed=True,
             )
+            for j, (x, y, z) in enumerate(local):
+                d = np.subtract(local[min(j + 1, len(local) - 1)], local[max(j - 1, 0)])
+                length = math.hypot(d[0], d[1]) or 1.0
+                rx, ry = -d[1] / length, d[0] / length
+                across = sgn * (edge + 12.5)
+                yaw = math.degrees(math.atan2(d[1], d[0]))
+                box(steel, (x + rx * across, y + ry * across, z + 87.5), (8, 8, 26), yaw)
         # Piers wherever the ground is well below the deck, about every 45 m.
         ground = g.z(pts[:, 0], pts[:, 1])
         seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts[:, :2], axis=0), axis=1))]
