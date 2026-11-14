@@ -1,0 +1,122 @@
+{
+  "triangles": {
+    "Frame": 447882,
+    "Fork": 383060,
+    "WheelFront": 200632,
+    "WheelRear": 349324,
+    "Cranks": 52992,
+    "PedalR": 5616,
+    "PedalL": 5616,
+    "Chain": 95040,
+    "_total": 1540162
+  },
+  "pivots": {
+    "Frame": {
+      "location_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "Fork": {
+      "location_m": [
+        0.41193,
+        0.0,
+        0.76228
+      ],
+      "rotation_deg": [
+        0.0,
+        -17.0,
+        0.0
+      ]
+    },
+    "WheelFront": {
+      "location_m": [
+        0.5863,
+        0.0,
+        0.339
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "WheelRear": {
+      "location_m": [
+        -0.40195,
+        0.0,
+        0.339
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "Cranks": {
+      "location_m": [
+        0.0,
+        0.0,
+        0.269
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "PedalR": {
+      "location_m": [
+        0.1725,
+        -0.073,
+        0.269
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "PedalL": {
+      "location_m": [
+        -0.1725,
+        0.073,
+        0.269
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    },
+    "Chain": {
+      "location_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_deg": [
+        0.0,
+        -0.0,
+        0.0
+      ]
+    }
+  },
+  "geometry": {
+    "wheelbase_mm": 988.3,
+    "axle_to_crown_mm": 380.8,
+    "chain_links": 110,
+    "rd_cage_angle_deg": 17.54,
+    "steering_axis_up": [
+      -0.29237,
+      0.0,
+      0.9563
+    ]
+  }
+}
