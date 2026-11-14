@@ -896,6 +896,9 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			       Video()->SetFullscreenMode(Modes[I]);
 			       Apply();
 		       });
+		Choice(TEXT("fps"), Row(TEXT("Frame rate counter"), TEXT("Frames per second, in the ride's corner")),
+		       {TEXT("Off"), TEXT("On")}, Pawn->Profile.bFps ? 1 : 0,
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bFps = I == 1; }); });
 	}
 	else if (Tab == ERideSettingsTab::Detail && V)
 	{

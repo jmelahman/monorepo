@@ -150,6 +150,8 @@ void URideOverlay::NativeTick(const FGeometry& Geometry, float DeltaTime)
 		TakeClimbs(Pawn->Segments);
 	}
 	Watts += (Pawn->Reading.Watts - Watts) * (1.f - FMath::Exp(-DeltaTime / 0.8f));
+	FrameSeconds = FrameSeconds > 0.f ? FrameSeconds + (DeltaTime - FrameSeconds) * (1.f - FMath::Exp(-DeltaTime / 0.5f))
+	                                  : DeltaTime;
 }
 
 void URideOverlay::Survey(const URideTrack& Track)
@@ -726,6 +728,16 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 				P.Text(X + Wide - 16.f, Y + 41.f, Line, Soft, Dim, EAlign::Right);
 			}
 		}
+	}
+
+	// ---- Bottom right: the frame rate, if the rider asked for it (Graphics), with or without the HUD --
+	if (Pawn->Profile.bFps && FrameSeconds > 0.f)
+	{
+		const FString Text = FString::Printf(TEXT("%.0f FPS  ·  %.1f ms"), 1.f / FrameSeconds, FrameSeconds * 1000.f);
+		const FSlateFontInfo Font = P.Font("Bold", 11.f);
+		const float Wide = P.Width(Text, Font) + 28.f, Tall = 32.f, X = W - 20.f - Wide, Y = Dock.Floor - 20.f - Tall;
+		P.Panel(X, Y, Wide, Tall, 16.f);
+		P.Text(X + Wide * 0.5f, Y + 20.f, Text, Font, Ink, EAlign::Centre);
 	}
 
 	// ---- Bottom middle: the dock, over everything ------------------------------------------------

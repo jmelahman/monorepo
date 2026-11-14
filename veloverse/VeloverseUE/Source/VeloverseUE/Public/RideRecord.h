@@ -30,6 +30,7 @@ struct FRideProfile
 	int32 View = 0;            // ARidePawn::ERideView: the eyes, over the bars, or behind
 	bool bHud = true;          // the ride's panels shown (the dock's H)
 	bool bGraphs = false;      // power and heart rate across the foot of the screen (G)
+	bool bFps = false;         // the frame rate in the ride's bottom-right corner (Graphics)
 
 	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
 	FLinearColor Accent() const;

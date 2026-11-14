@@ -200,6 +200,7 @@ FRideProfile FRideProfile::Load()
 		}
 		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
 		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);
+		O->TryGetBoolField(TEXT("fps"), Profile.bFps);
 	}
 	return Profile;
 }
@@ -225,6 +226,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("view"), View);
 	O->SetBoolField(TEXT("hud"), bHud);
 	O->SetBoolField(TEXT("graphs"), bGraphs);
+	O->SetBoolField(TEXT("fps"), bFps);
 	WriteJson(ProfileFile(), O);
 }
 

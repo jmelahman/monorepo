@@ -51,6 +51,7 @@ private:
 
 	// Power as shown, eased over about a second so the number and the zone don't flicker.
 	float Watts = 0.f;
+	float FrameSeconds = 0.f; // the frame time, smoothed over about half a second, for the counter
 
 	const ARidePawn* Rider() const;
 	void Survey(const URideTrack& Track);
