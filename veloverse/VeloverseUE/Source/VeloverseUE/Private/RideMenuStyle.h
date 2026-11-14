@@ -52,51 +52,42 @@ inline FString IslandLabel(const FString& Name)
 	return Name == TEXT("The Coast") ? FString(TEXT("Harbour Isle")) : Name;
 }
 
-// The design's icons, on a 24-unit grid.
+// The design's icons: Lucide's (lucide.dev, ISC; Fonts/Lucide.ttf, lucide-static 0.460.0), each a
+// glyph of its icon font. Drawn as text, they are anti-aliased and joined cleanly at any size and
+// alpha; the old stroked paths notched at the corners whenever they faded (the dock).
 namespace Icons
 {
-inline const TCHAR* Back = TEXT("M19 12H5M11 6l-6 6 6 6");
-inline const TCHAR* Arrow = TEXT("M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5");
-inline const TCHAR* Chevron = TEXT("M9 6l6 6-6 6");
-inline const TCHAR* ChevronLeft = TEXT("M15 6l-6 6 6 6");
-// A start, a switchback and a finish flag.
-inline const TCHAR* Route = TEXT("M5 20a2 2 0 100-4 2 2 0 000 4zM7 18h7.5a3.5 3.5 0 000-7h-5a3.5 3.5 0 010-7H15M17 9V2.5l4 2-4 2");
-inline const TCHAR* Stats = TEXT("M4 20V10M10 20V4M16 20v-7M22 20H2");
-inline const TCHAR* Workout = TEXT("M3 17l5-6 4 4 4-7 5 9");
-inline const TCHAR* Signal = TEXT("M4 12a8 8 0 0116 0M7.5 12a4.5 4.5 0 019 0M12 12v8");
-// A toothed ring round a hub.
-inline const TCHAR* Gear = TEXT("M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM12 5.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8");
-// Power: quit to the desktop.
-inline const TCHAR* Leave = TEXT("M12 3v8M7.2 6.3a7.5 7.5 0 109.6 0");
-inline const TCHAR* Bluetooth = TEXT("M7 7l10 10-5 5V2l5 5L7 17");
-inline const TCHAR* Trainer = TEXT("M12 3a7 7 0 100 14 7 7 0 000-14zM12 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM8 16.5L6 "
-                                   "21M16 16.5l2 4.5M4 21h16");
-// Two round lobes meeting in a point.
-inline const TCHAR* HeartIcon = TEXT("M12 20.5L4.6 13.2C2.4 11 2.4 7.4 4.6 5.3C6.7 3.2 10 3.4 12 5.8C14 3.4 17.3 3.2 "
-                                     "19.4 5.3C21.6 7.4 21.6 11 19.4 13.2z");
-inline const TCHAR* Bolt = TEXT("M13 2L4.5 13.5H11L10 22l8.5-11.5H12z");
-inline const TCHAR* Cadence = TEXT("M20 12a8 8 0 11-2.3-5.7M20 4v4h-4M12 12l3-2");
-inline const TCHAR* Check = TEXT("M5 12l5 5 9-10");
-inline const TCHAR* Download = TEXT("M12 4v11M7 10l5 5 5-5M5 20h14");
-// A screen with a hill and the sun on it: the picture's quality.
-inline const TCHAR* Screen = TEXT("M5 4h14a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2zM9 21h6M12 17v4M7 14l3.5-4 "
-                                  "2.5 2.5 1.5-1.5 2.5 3M15.5 7.3a1 1 0 100 2 1 1 0 000-2z");
-// Three sliders: each detail set on its own.
-inline const TCHAR* Sliders = TEXT("M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4a2 2 0 100 4 2 2 0 000-4zM9 10a2 2 0 "
-                                   "100 4 2 2 0 000-4zM17 16a2 2 0 100 4 2 2 0 000-4z");
-// A diamond frame on two round wheels, with a saddle and bars.
-inline const TCHAR* Bike = TEXT("M5 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM19 12.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 16l4-6.5 2 6.5zM9 9.5h7.5M11 16l5.5-6.5L19 16M9 9.5L8.5 7.5M7 7.5h3M16.5 9.5l-.6-2.5h2.3");
-inline const TCHAR* Rider = TEXT("M12 4a3.5 3.5 0 100 7 3.5 3.5 0 000-7zM5 20a7 7 0 0114 0");
-// The world: a ring, one elliptical meridian and the equator.
-inline const TCHAR* Globe = TEXT("M12 3a9 9 0 100 18 9 9 0 000-18zM12 3a4 9 0 100 18 4 9 0 000-18zM3 12h18");
-inline const TCHAR* Lock = TEXT("M6 11h12v9H6zM9 11V8a3 3 0 016 0v3");
-// The ride's dock: an eye for the view, a pulse for the graphs, a framed screen for the HUD, four
-// arrows for free look, and two bars for pause.
-inline const TCHAR* Eye = TEXT("M2 12Q12 2.5 22 12Q12 21.5 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z");
-inline const TCHAR* Pulse = TEXT("M2 12h4l2-5 4 10 2-5h8");
-inline const TCHAR* Hud = TEXT("M3 4h18v16H3zM3 9h18M9 9v11");
-inline const TCHAR* Move = TEXT("M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3");
-inline const TCHAR* Pause = TEXT("M8 5v14M16 5v14");
+inline const TCHAR* Back = TEXT("\uE04C"); // arrow-left
+inline const TCHAR* Arrow = TEXT("\uE04D"); // arrow-right
+inline const TCHAR* Chevron = TEXT("\uE073"); // chevron-right
+inline const TCHAR* ChevronLeft = TEXT("\uE072"); // chevron-left
+inline const TCHAR* Route = TEXT("\uE543"); // route
+inline const TCHAR* Stats = TEXT("\uE2A3"); // chart-column
+inline const TCHAR* Workout = TEXT("\uE1E0"); // timer
+inline const TCHAR* Signal = TEXT("\uE146"); // radio
+inline const TCHAR* Gear = TEXT("\uE158"); // settings
+inline const TCHAR* Leave = TEXT("\uE144"); // power
+inline const TCHAR* Bluetooth = TEXT("\uE060"); // bluetooth
+inline const TCHAR* Trainer = TEXT("\uE4E6"); // circle-gauge
+inline const TCHAR* HeartIcon = TEXT("\uE0F5"); // heart
+inline const TCHAR* Bolt = TEXT("\uE1B4"); // zap
+inline const TCHAR* Cadence = TEXT("\uE14D"); // rotate-cw
+inline const TCHAR* Check = TEXT("\uE070"); // check
+inline const TCHAR* Download = TEXT("\uE0B6"); // download
+inline const TCHAR* Screen = TEXT("\uE121"); // monitor
+inline const TCHAR* Sliders = TEXT("\uE29A"); // sliders-horizontal
+inline const TCHAR* Bike = TEXT("\uE1D2"); // bike
+inline const TCHAR* Rider = TEXT("\uE19F"); // user
+inline const TCHAR* Globe = TEXT("\uE0EB"); // globe
+inline const TCHAR* Lock = TEXT("\uE10F"); // lock
+inline const TCHAR* Eye = TEXT("\uE0BE"); // eye
+inline const TCHAR* Pulse = TEXT("\uE038"); // activity
+inline const TCHAR* Hud = TEXT("\uE130"); // panels-top-left
+inline const TCHAR* Move = TEXT("\uE53B"); // scan-eye
+inline const TCHAR* Pause = TEXT("\uE132"); // pause
+inline const TCHAR* Sun = TEXT("\uE17C"); // sun
+inline const TCHAR* Cloud = TEXT("\uE08C"); // cloud
+inline const TCHAR* CloudRain = TEXT("\uE092"); // cloud-rain
 } // namespace Icons
 
 // "1,140"

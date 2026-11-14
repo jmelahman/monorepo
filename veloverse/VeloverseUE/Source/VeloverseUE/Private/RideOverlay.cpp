@@ -74,46 +74,10 @@ FString Km(float Metres)
 	return Veloverse::Units::Number(Close, 0) + TEXT(" ") + Veloverse::Units::HeightUnit();
 }
 
-// The weather's icon in a 22 px square at X, Y, drawn on the canvas's 24-unit grid.
+// The weather's icon in a 22 px square at X, Y.
 void Icon(const FPainter& P, float X, float Y, ESky Weather)
 {
-	const float K = 22.f / 24.f;
-	auto Place = [&](TArray<FVector2f> Points)
-	{
-		for (FVector2f& Point : Points)
-		{
-			Point = FVector2f(X, Y) + Point * K;
-		}
-		P.Lines(MoveTemp(Points), Sky, 1.8f);
-	};
-	if (Weather == ESky::Clear)
-	{
-		TArray<FVector2f> Disc;
-		FPainter::Arc(Disc, FVector2f(12.f, 12.f), 4.f, 0.f, 360.f);
-		Place(Disc);
-		for (int32 I = 0; I < 8; ++I)
-		{
-			const float T = FMath::DegreesToRadians(45.f * I);
-			const FVector2f D(FMath::Cos(T), FMath::Sin(T));
-			Place({FVector2f(12.f, 12.f) + D * 6.5f, FVector2f(12.f, 12.f) + D * 9.f});
-		}
-		return;
-	}
-	const float Up = Weather == ESky::Rain ? 0.f : 2.f;
-	TArray<FVector2f> Cloud;
-	FPainter::Arc(Cloud, FVector2f(7.5f, 12.f + Up), 3.5f, 90.f, 290.f);
-	FPainter::Arc(Cloud, FVector2f(12.5f, 10.f + Up), 4.5f, 200.f, 340.f);
-	FPainter::Arc(Cloud, FVector2f(17.f, 12.5f + Up), 3.5f, 250.f, 450.f);
-	const FVector2f First = Cloud[0];
-	Cloud.Add(First);
-	Place(Cloud);
-	if (Weather == ESky::Rain)
-	{
-		for (const float Drop : {9.f, 13.f, 17.f})
-		{
-			Place({FVector2f(Drop, 19.f), FVector2f(Drop - 1.f, 21.f)});
-		}
-	}
+	P.Icon(Weather == ESky::Clear ? Icons::Sun : Weather == ESky::Rain ? Icons::CloudRain : Icons::Cloud, X, Y, 22.f, Sky);
 }
 } // namespace
 

@@ -317,34 +317,18 @@ struct FPainter
 	// units a path unit, as the stroked polylines it's made of: the design's icons.
 	static TArray<TArray<FVector2f>> Path(const TCHAR* D, float X = 0.f, float Y = 0.f, float Scale = 1.f);
 
-	// An icon drawn the way the canvas strokes it: a 24-unit path in a Size square.
-	void Icon(const TCHAR* D, float X, float Y, float Size, const FLinearColor& Colour, float Stroke = 2.f) const
+	// An icon (Icons::, a glyph of Lucide's icon font) filling a Size square at X, Y. The font's em
+	// is the icons' 24-unit grid, from the baseline up, so a Size px font sits the glyph on Y + Size.
+	// Stroke is the old path icons' weight, kept so callers needn't change: Lucide's is 2 in 24.
+	void Icon(const TCHAR* Glyph, float X, float Y, float Size, const FLinearColor& Colour, float Stroke = 2.f) const
 	{
-		// Slate's lines end square and don't join, so arrow tips and corners showed notches: round
-		// them as the design's canvas does, with a dot at each end and sharp turn. Only for opaque
-		// ink, since a dot over a translucent line would show darker.
-		const float Width = Stroke * Size / 24.f;
-		for (TArray<FVector2f>& Run : Path(D, X, Y, Size / 24.f))
+		static const FString File = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Menu/Lucide.ttf"));
+		static const bool bThere = FPaths::FileExists(File);
+		if (!bThere || !Glyph)
 		{
-			if (Colour.A > 0.99f)
-			{
-				const bool bClosed = Run[0].Equals(Run.Last(), 1e-3f);
-				for (int32 I = 0; I < Run.Num(); ++I)
-				{
-					bool bDot = !bClosed && (I == 0 || I == Run.Num() - 1);
-					if (I > 0 && I < Run.Num() - 1)
-					{
-						const FVector2f In = (Run[I] - Run[I - 1]).GetSafeNormal(), Next = (Run[I + 1] - Run[I]).GetSafeNormal();
-						bDot = FVector2f::DotProduct(In, Next) < 0.9f; // turns more than about 25 degrees
-					}
-					if (bDot)
-					{
-						Disc(Run[I].X, Run[I].Y, 0.5f * Width, Colour);
-					}
-				}
-			}
-			Lines(MoveTemp(Run), Colour, Width);
+			return;
 		}
+		Text(X, Y + Size, Glyph, FSlateFontInfo(File, Size * 0.75f * S), Colour);
 	}
 };
 

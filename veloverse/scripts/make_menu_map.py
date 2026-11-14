@@ -8,6 +8,8 @@ cropped to the land, and beside it how world positions land on it.
     Content/Menu/SourceSerif4-Semibold.ttf and SourceSerif-OFL.txt, Inter-*.ttf and Inter-OFL.txt
                             the titles' serif, the sans for everything else, and their
                             licences, copied from VeloverseUE/Fonts
+    Content/Menu/Lucide.ttf and Lucide-LICENSE.txt
+                            the icons' font, cut to the glyphs RideMenuStyle.h's Icons use
 
 The game reads both at run time (DirectoriesToAlwaysStageAsNonUFS in DefaultGame.ini packages
 them). Run with uv run --with numpy --with pillow python -I scripts/make_menu_map.py
@@ -93,7 +95,14 @@ def main():
     with open(os.path.join(OUT, "map.json"), "w") as f:
         json.dump(meta, f, indent=1)
     sans = [f"Inter-{w}.ttf" for w in ("Regular", "Medium", "Bold", "Black")]
-    for name in ["SourceSerif4-Semibold.ttf", "SourceSerif-OFL.txt", *sans, "Inter-OFL.txt"]:
+    for name in [
+        "SourceSerif4-Semibold.ttf",
+        "SourceSerif-OFL.txt",
+        *sans,
+        "Inter-OFL.txt",
+        "Lucide.ttf",
+        "Lucide-LICENSE.txt",
+    ]:
         shutil.copyfile(os.path.join(FONTS, name), os.path.join(OUT, name))
     print(f"wrote {OUT}/map.jpg ({WIDTH}x{tall}) and map.json, labels {sorted(labels)}")
 

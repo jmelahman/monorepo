@@ -11,13 +11,15 @@ rm -rf "$snap" && install -d -o ue4 -g ue4 "$snap"
 tar -h -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCache -cf - . |
 	sudo -u ue4 tar -C "$snap" -xf -
 # Straight from the repo: config files the live project doesn't link (DefaultScalability.ini went
-# unpackaged that way), and the cursors, read as loose files from Content/Menu.
+# unpackaged that way), the cursors and the icon font, read as loose files from Content/Menu.
 repo=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd -P) # scripts/ is linked from /workspace/ue
 for f in "$repo"/VeloverseUE/Config/*.ini; do
 	[ -e "$snap/Config/${f##*/}" ] || install -o ue4 -g ue4 -m 644 "$f" "$snap/Config/"
 done
 install -d -o ue4 -g ue4 "$snap/Content/Menu/Cursors"
 install -o ue4 -g ue4 -m 644 "$repo"/VeloverseUE/Cursors/*.png "$snap/Content/Menu/Cursors/"
+# The icon font (the menus' and HUD's icons are its glyphs), whatever make_menu_map last copied.
+install -o ue4 -g ue4 -m 644 "$repo"/VeloverseUE/Fonts/Lucide.ttf "$repo"/VeloverseUE/Fonts/Lucide-LICENSE.txt "$snap/Content/Menu/"
 echo "snapshot $(du -sh "$snap" | cut -f1) at $(date +%H:%M)"
 OC_PKG_PROJECT=$snap OC_PKG_OUT=/workspace/ue/out/package_snap OC_PKG_LOG=/workspace/ue/package_snap.log \
 	bash "$(dirname "$0")/package.sh"
