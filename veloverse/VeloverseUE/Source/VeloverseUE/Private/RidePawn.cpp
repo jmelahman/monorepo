@@ -176,6 +176,8 @@ ARidePawn::ARidePawn()
 	Rain->SetupAttachment(Camera);
 	// The shells hang level round the rider whichever way the camera looks.
 	Rain->SetUsingAbsoluteRotation(true);
+	Rain->SetUsingAbsoluteLocation(true); // PlaceRain sets it, round the camera
+	Rain->SetUsingAbsoluteScale(true);
 	Rain->SetCastShadow(false);
 	Rain->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Rain->SetMobility(EComponentMobility::Movable);
@@ -256,6 +258,7 @@ void ARidePawn::BeginPlay()
 	FindWeather();
 	ApplyWeather();
 	Place();
+	PlaceRain(0.f);
 }
 
 FString ARidePawn::TrainerName() const { return Trainer ? Trainer->Name() : TEXT("None"); }
@@ -320,6 +323,7 @@ void ARidePawn::UseStart(int32 Index)
 	bHeadSet = false;
 	ApplyWeather();
 	Place();
+	PlaceRain(0.f);
 }
 
 float ARidePawn::DefaultStart() const
@@ -373,6 +377,7 @@ void ARidePawn::UseRoute(int32 Index)
 	bHeadSet = false;
 	ApplyWeather();
 	Place();
+	PlaceRain(0.f);
 }
 
 float ARidePawn::TrackLength() const { return Track ? Track->Length() : 0.f; }
@@ -403,6 +408,7 @@ void ARidePawn::Tick(float Dt)
 		ReleaseTrainer();
 	}
 	Place();
+	PlaceRain(Dt);
 	Automate(Dt);
 	WeatherClock += Dt;
 	if (WeatherClock > 0.2f)
@@ -1008,6 +1014,28 @@ void ARidePawn::Place()
 	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
 	const FVector Back = Aim - Look.Vector() * ChaseBack;
 	SetActorLocationAndRotation(Back, Look);
+}
+
+void ARidePawn::PlaceRain(float Dt)
+{
+	// Riding into rain, the drops come at the rider: they fall at about 7 m/s, so from the bike they
+	// slant in from ahead by atan(speed / 7), 40 degrees at 21 km/h. Eased so a surge doesn't twitch
+	// them; held at 55 degrees (35 km/h), past which the shells no longer cover the view.
+	const float Want = bStarted && !bOnBackdrop ? FMath::RadiansToDegrees(FMath::Atan(Speed / 7.f)) : 0.f;
+	RainTilt = Dt > 0.f ? FMath::FInterpTo(RainTilt, FMath::Min(Want, 55.f), Dt, 2.f) : 0.f;
+	if (!Rain->IsVisible())
+	{
+		return;
+	}
+	// The streaks fall down the shells, so tipping their tops forward along the road slants the rain
+	// at the rider (and a little crosswind from the left). The shells stretch along their length by
+	// 1 / cos(tilt), the drops' speed past the rider, so the streaks lengthen as it rises; and they
+	// slide forward up their axis 10 sin(tilt) m, or the 14 m shell's top rim (15 m up) would come
+	// into view ahead (a sweep of the view's rays, 0-55 degrees).
+	const float T = FMath::DegreesToRadians(RainTilt);
+	const FRotator Lean(-RainTilt, Head.Yaw, 4.f);
+	Rain->SetWorldLocationAndRotation(Camera->GetComponentLocation() + Lean.RotateVector(FVector(0.f, 0.f, 1000.f * FMath::Sin(T))), Lean);
+	Rain->SetWorldScale3D(FVector(1.f, 1.f, 1.f / FMath::Cos(T)));
 }
 
 bool ARidePawn::Moves() const

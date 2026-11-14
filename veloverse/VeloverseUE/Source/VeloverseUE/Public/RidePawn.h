@@ -218,6 +218,7 @@ private:
 	float Apex = 0.f;
 	float Surge = 0.f;
 	float LastSpeed = -1.f;
+	float RainTilt = 0.f; // degrees the rain slants from ahead, eased
 	float Motion = 0.f; // 0 steady to 1 moving, eased, so changing view doesn't jump the line
 	bool Moves() const;
 	// Cm right of the centreline the rider rides at S: KeepLeft, wandering with the distance.
@@ -245,6 +246,7 @@ private:
 	void ReadKeys();
 	void Ride(float Dt);
 	void Place();
+	void PlaceRain(float Dt);
 	void FindWeather();
 	void ApplyWeather();
 	// The profile's settings: the units, the view, ERG and the grass's reach.
