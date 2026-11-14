@@ -30,9 +30,9 @@ islands makes a loop with no road ridden twice. The plan of record is `docs/worl
 it first.
 
 `plans/` holds the plans for upcoming work. It is gitignored, so it lives only in the main
-checkout (`/workspace/veloverse/plans`), not in worktrees. `plans/aaa-release.md` is what's left to reach the AAA
-bar before the next release, in order, tracking Fable's review in `plans/aaa-gap-review.md`. Work
-from it, and mark items done there as they land.
+checkout (`/workspace/veloverse/plans`), not in worktrees. `plans/aaa-release.md` is what's left
+to reach the AAA bar before the next release, in order, tracking Fable's review in
+`plans/aaa-gap-review.md`. Work from it, and mark items done there as they land.
 
 `docs/archive/` holds the old plans (the alpine hero climb L_Hero and the 57 km ring). They're
 history, not instructions; don't work from them.
