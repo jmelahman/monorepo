@@ -9,6 +9,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
+#include "UObject/UObjectIterator.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -1217,6 +1218,17 @@ void ARidePawn::FindWeather()
 	{
 		Sun = Cast<UDirectionalLightComponent>(It->GetLightComponent());
 	}
+	// Every directional light in the level, to see which one weather drives and which cast shadows.
+	for (TObjectIterator<UDirectionalLightComponent> It; It; ++It)
+	{
+		if (It->GetWorld() == GetWorld())
+		{
+			UE_LOG(LogTemp, Display, TEXT("WEATHER light %s owner %s lux %.0f shadows %d mobility %d atmosphere %d driven %d"),
+				*It->GetName(), *GetNameSafe(It->GetOwner()), It->Intensity, It->CastShadows ? 1 : 0,
+				static_cast<int32>(It->Mobility.GetValue()), It->IsUsedAsAtmosphereSunLight() ? 1 : 0,
+				*It == Sun.Get() ? 1 : 0);
+		}
+	}
 	for (TActorIterator<ASkyLight> It(GetWorld()); It && !SkyLight.IsValid(); ++It)
 	{
 		SkyLight = It->GetLightComponent();
@@ -1262,6 +1274,8 @@ void ARidePawn::ApplyWeather()
 		if (SunAngle < 0.f)
 		{
 			SunAngle = Sun->LightSourceAngle;
+			UE_LOG(LogTemp, Display, TEXT("WEATHER first apply: sun %s lux %.0f angle %.2f sky %.2f fog %.3f rain %.1f"),
+				*Sun->GetName(), W.Lux, SunAngle, W.Sky, W.Fog, W.Rain);
 		}
 		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
 		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
