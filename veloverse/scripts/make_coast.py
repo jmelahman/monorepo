@@ -532,22 +532,25 @@ def stream_water():
 
 def rain_material():
     """Falling streaks on the camera's rain shells, only where it is raining, fading near
-    surfaces."""
+    surfaces. Additive: rain catches the sky's light, so it brightens what is behind it and
+    all but vanishes against a pale sky. A translucent grey read as dark scratches on the sky."""
     g = Graph("M_Rain", MATS)
     streaks = lib.texture("rain_streaks", "mask", "/workspace/ue/textures/rain_streaks.png")
     time = g.node(unreal.MaterialExpressionTime)
     coords = g.node(unreal.MaterialExpressionTextureCoordinate)
-    fall = g.node(unreal.MaterialExpressionConstant2Vector, r=0.0, g=-1.4)
-    sway = g.node(unreal.MaterialExpressionConstant2Vector, r=0.03, g=0.0)
+    # About 7-14 m/s down the shells (UVs are 1.5-3.2 m a tile): at 1.4 the drops seemed to hang.
+    fall = g.node(unreal.MaterialExpressionConstant2Vector, r=0.0, g=-4.5)
+    sway = g.node(unreal.MaterialExpressionConstant2Vector, r=0.08, g=0.0)
     uv = g.add(g.add(coords, g.mul(fall, time)), g.mul(sway, time))
     streak = g.mask(g.sample(streaks, uv, "mask"), "r")
     # Rain is wetness without the drying tail.
     raining = ride_value(g, "Rain")
     fade = g.node(unreal.MaterialExpressionDepthFade, fade_distance_default=150.0)
     g.link(g.mul(g.mul(streak, raining), 0.2), fade, "Opacity")
-    g.output(None, None, None, None, None, g.const((0.42, 0.46, 0.5)), opacity=fade)
+    glow = g.mul(g.const((0.6, 0.64, 0.7)), fade)
+    g.output(None, None, None, None, None, glow)
     g.material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
-    return g.finish(blend_mode=unreal.BlendMode.BLEND_TRANSLUCENT, two_sided=True)
+    return g.finish(blend_mode=unreal.BlendMode.BLEND_ADDITIVE, two_sided=True)
 
 
 def card_leaves(kind, title):

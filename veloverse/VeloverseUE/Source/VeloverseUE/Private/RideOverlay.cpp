@@ -482,7 +482,13 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 
 		// ---- The weather, under the panel -----------------------------------------------------------
 		{
-			const ESky Now = SkyOf(Track.WeatherAt(Here));
+			// Weather picked in the settings holds for the whole ride (RidePawn's Overrule): say that,
+			// with no change ahead, rather than the route's own weather.
+			const int32 Fixed = ARidePawn::Automated() ? 0 : Pawn->Profile.Weather;
+			auto SkyAt = [&Track, Fixed](float M) {
+				return Fixed > 0 ? static_cast<ESky>(FMath::Clamp(Fixed - 1, 0, 2)) : SkyOf(Track.WeatherAt(M));
+			};
+			const ESky Now = SkyAt(Here);
 			FString Change;
 			for (float Ahead = SampleM; Ahead <= 6000.f; Ahead += SampleM)
 			{
@@ -495,7 +501,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 					}
 					M -= LengthM;
 				}
-				const ESky Then = SkyOf(Track.WeatherAt(M));
+				const ESky Then = SkyAt(M);
 				if (Then != Now)
 				{
 					const TCHAR* What = Then == ESky::Rain ? TEXT("rain") : Now == ESky::Rain ? TEXT("clears") : Then == ESky::Clear ? TEXT("clearing") : TEXT("cloud");
