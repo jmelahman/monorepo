@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
@@ -1229,6 +1230,16 @@ void ARidePawn::FindWeather()
 	{
 		Fog = It->GetComponent();
 	}
+	for (TActorIterator<ASkyAtmosphere> It(GetWorld()); It && !Atmosphere.IsValid(); ++It)
+	{
+		Atmosphere = It->GetComponent();
+		if (Atmosphere.IsValid())
+		{
+			Rayleigh = Atmosphere->RayleighScatteringScale;
+			Mie = Atmosphere->MieScatteringScale;
+			UE_LOG(LogTemp, Display, TEXT("WEATHER atmosphere rayleigh %.4f mie %.4f"), Rayleigh, Mie);
+		}
+	}
 	for (TActorIterator<APostProcessVolume> It(GetWorld()); It && !Post.IsValid(); ++It)
 	{
 		Post = *It;
@@ -1272,6 +1283,15 @@ void ARidePawn::ApplyWeather()
 		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
 		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
 		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Azimuth, 0.f));
+		// An overcast sky is grey-white to the zenith, not blue: the ride frames only the sky near
+		// the horizon, where the cloud layer never showed (out/qa/cloudy5, package 0454), so thin
+		// the atmosphere's blue scattering and thicken its haze instead.
+		if (Atmosphere.IsValid())
+		{
+			const float Thick = FMath::Pow(Cloud, 1.5f);
+			Atmosphere->SetRayleighScatteringScale(Rayleigh * FMath::Lerp(1.f, 0.15f, Thick));
+			Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
+		}
 	}
 	if (SkyLight.IsValid())
 	{

@@ -237,6 +237,8 @@ private:
 	float SunAngle = -1.f; // the level's own sun disc, degrees, read on the first weather
 	TWeakObjectPtr<USkyLightComponent> SkyLight;
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
+	TWeakObjectPtr<class USkyAtmosphereComponent> Atmosphere;
+	float Rayleigh = 0.f, Mie = 0.f;
 	TWeakObjectPtr<APostProcessVolume> Post;
 
 	static void CameraLook(FPostProcessSettings& Look);
