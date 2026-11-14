@@ -236,6 +236,12 @@ private:
 	TWeakObjectPtr<UDirectionalLightComponent> Sun;
 	float SunAngle = -1.f; // the level's own sun disc, degrees, read on the first weather
 	TWeakObjectPtr<USkyLightComponent> SkyLight;
+	TWeakObjectPtr<class UVolumetricCloudComponent> Clouds;
+	// The cloud layer's material, made dynamic so the weather can thicken it; and its own coverage
+	// and density, read the first time, for clear weather.
+	UPROPERTY(Transient)
+	TObjectPtr<class UMaterialInstanceDynamic> CloudLook;
+	float CloudCover = 0.f, CloudDensity = 0.f;
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
 	TWeakObjectPtr<APostProcessVolume> Post;
 
