@@ -192,7 +192,8 @@ These came from the old laptop. Keep the ones that protect data; re-test the siz
   - Runpod key: source `/home/ue4/.env` only inside scripts, and never print it.
   - The fal key is in `~/.config/opencycle/fal.key`.
   - R2 key (read/write, bucket `veloverse-sync` only): `~/.config/opencycle/r2.env`, sourced by
-    `scripts/r2_sync.sh`. Never print it. The bucket must stay private (Fab's licence).
+    `scripts/r2_sync.sh`. Never print it. The bucket must stay private (Fab's licence). It
+    deletes objects 30 days after upload; `r2_sync.sh push` re-sends any that expired.
   - The GitHub/ghcr token must never pass through Claude. Don't look for other credentials.
   - Never send the user's email anywhere.
 - **Runpod:**
