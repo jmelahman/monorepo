@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs a queue job on the Runpod pod instead of here: a second Unreal, so two builds run at once.
-#   scripts/pod_lane.sh HOST PORT JOB.sh
+#   [R2_PUSH=0] scripts/pod_lane.sh HOST PORT JOB.sh
 # The job is written as for out/oc/queue. Its `git ... merge --ff-only SHA` line is not run (that
 # would move this machine's live checkout under its own build); the source at SHA goes to the pod
 # instead, over the synced project. The job's other lines run there in /workspace/ue, under nohup
@@ -18,7 +18,8 @@ echo "== $(date +%T) the pod pulls the project from R2"
 # Push this machine's changes to R2 first (only what changed goes up), then the pod pulls at
 # datacenter speed: SSH to a pod is slow from here. The pod gets the key on its local disk for the
 # pull and loses it after; a read-only key ($R2_POD_ENV) is preferred when there is one.
-bash "$here/r2_sync.sh" push
+# R2_PUSH=0 skips the push, e.g. while an import here is still writing Content.
+[ "${R2_PUSH:-1}" = 0 ] || bash "$here/r2_sync.sh" push
 r2_env=${R2_POD_ENV:-$HOME/.config/opencycle/r2-read.env}
 [ -r "$r2_env" ] || r2_env=$HOME/.config/opencycle/r2.env
 on_pod "umask 077 && mkdir -p /root/.config/opencycle && cat > /root/.config/opencycle/r2.env" <"$r2_env"
