@@ -102,6 +102,11 @@ CHAIN_NAMES = {
 }
 if CHAIN:
     REMOTE = {"The Moor", "Vael", "Red Sands"}
+# The mountain's stretches stay asphalt from either end until the road has climbed this far (m):
+# the dirt path starts with the climb, not at the shore (the user, 13 Nov: "keep an asphalt road
+# in Vael until the climb starts").
+PAVED_TO_CLIMB = {"Mountain", "Vael"}
+CLIMB_RISE = 20.0
 NAMES = {
     "coast": "Coast",
     "desert": "Desert",
@@ -850,14 +855,24 @@ def ring_road(centre):
     )
 
 
-def surfaces(runs, points, trail=None):
+def surfaces(runs, points, trail=None, z=None):
     """[(surface, first point, end point)] round the ring: runs of stretches on one surface, the
-    asphalt of `trail`'s points (a mask, see trail_mask) the trail's."""
+    asphalt of `trail`'s points (a mask, see trail_mask) the trail's. With `z` (m, per point) a
+    PAVED_TO_CLIMB stretch is asphalt from each end until it has climbed CLIMB_RISE."""
     each = np.empty(points, object)
     start = 0
     for name, metres in runs:
         end = min(start + round(metres), points)
         each[start:end] = "path" if name in REMOTE else "asphalt"
+        if z is not None and name in PAVED_TO_CLIMB and end > start:
+            run = np.asarray(z[start:end])
+            up = run - min(run[0], run[-1]) > CLIMB_RISE
+            if up.any():
+                first, last = np.argmax(up), len(up) - np.argmax(up[::-1])
+                each[start : start + first] = "asphalt"
+                each[start + last : end] = "asphalt"
+            else:
+                each[start:end] = "asphalt"
         start = end
     each[start:] = each[start - 1] if start else "asphalt"
     if trail is not None:
@@ -1185,13 +1200,13 @@ def main():
         wear = road_wear(plan, here, here_bridge)
         trail = trail_mask(plan, here)
         if done is None:
-            for surface, a, b in surfaces(ride["stretches"], len(centre), trail):
+            for surface, a, b in surfaces(ride["stretches"], len(centre), trail, here[:, 2]):
                 mesh_run(centre, a, b, surface, spans, count, wear=wear)
             with open(f"{OUT}/trail.json", "w") as f:
                 json.dump(trail_dressing(here, trail, spans), f)
             done = here
             continue
-        kinds = surfaces(ride["stretches"], len(centre), trail)
+        kinds = surfaces(ride["stretches"], len(centre), trail, here[:, 2])
         for a, b in extra_runs(here, done):
             # Its surface where the run starts; the coast road's is asphalt all round.
             surface = next(s for s, c, d in kinds if c <= a % len(centre) < d)
