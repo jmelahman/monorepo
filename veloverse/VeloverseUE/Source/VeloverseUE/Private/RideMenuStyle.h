@@ -53,7 +53,8 @@ inline const TCHAR* Back = TEXT("M19 12H5M11 6l-6 6 6 6");
 inline const TCHAR* Arrow = TEXT("M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5");
 inline const TCHAR* Chevron = TEXT("M9 6l6 6-6 6");
 inline const TCHAR* ChevronLeft = TEXT("M15 6l-6 6 6 6");
-inline const TCHAR* Map = TEXT("M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14");
+// A start, a switchback and a finish flag.
+inline const TCHAR* Route = TEXT("M5 20a2 2 0 100-4 2 2 0 000 4zM7 18h7.5a3.5 3.5 0 000-7h-5a3.5 3.5 0 010-7H15M17 9V2.5l4 2-4 2");
 inline const TCHAR* Stats = TEXT("M4 20V10M10 20V4M16 20v-7M22 20H2");
 inline const TCHAR* Workout = TEXT("M3 17l5-6 4 4 4-7 5 9");
 inline const TCHAR* Signal = TEXT("M4 12a8 8 0 0116 0M7.5 12a4.5 4.5 0 019 0M12 12v8");

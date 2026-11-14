@@ -1,6 +1,6 @@
 // The ride's dock: a row of buttons along the foot of the screen that rises when the mouse moves
-// and sinks away after a few seconds still. Under it, when on, the graphs: power and heart rate
-// across the whole width. In the HUD's 1280x720 frame (wider on wider screens); no engine, so
+// and sinks away after a few seconds still. Behind it, when on, the graphs: power and heart rate
+// across the whole width; the dock stays where it is either way. In the HUD's 1280x720 frame (wider on wider screens); no engine, so
 // tests/dock_test.cpp checks it.
 #pragma once
 
@@ -33,7 +33,7 @@ struct FDockLayout
 	static constexpr float Margin = 16.f, Slide = 18.f;
 	static constexpr float GraphsTall = 128.f;
 
-	float Floor = 720.f; // the top of the graphs, or the frame's foot without them
+	float Floor = 720.f; // the frame's foot
 	float Shown = 0.f;   // 0 away, 1 up
 	FDockBox Panel;
 	std::array<FDockBox, DockCount> Buttons{};
@@ -59,12 +59,12 @@ struct FDockLayout
 	}
 };
 
-// The dock for a frame W wide and H tall, raised by Shown, over the graphs when they're on.
-inline FDockLayout LayoutDock(float W, float H, bool bGraphs, float Shown)
+// The dock for a frame W wide and H tall, raised by Shown.
+inline FDockLayout LayoutDock(float W, float H, float Shown)
 {
 	FDockLayout L;
 	L.Shown = std::clamp(Shown, 0.f, 1.f);
-	L.Floor = H - (bGraphs ? FDockLayout::GraphsTall : 0.f);
+	L.Floor = H;
 	const float Wide = DockCount * FDockLayout::Button + (DockCount - 1) * FDockLayout::Gap + 2.f * FDockLayout::Pad;
 	// Eased out: it slides the last few units up as it fades in.
 	const float Rise = 1.f - (1.f - L.Shown) * (1.f - L.Shown);

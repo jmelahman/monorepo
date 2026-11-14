@@ -15,7 +15,7 @@ static void Check(bool Ok, const char* What, double Got = 0.0)
 
 int main()
 {
-	const FDockLayout Up = LayoutDock(1280.f, 720.f, false, 1.f);
+	const FDockLayout Up = LayoutDock(1280.f, 720.f, 1.f);
 	Check(Up.Panel.X + Up.Panel.W * 0.5f == 640.f, "centred", Up.Panel.X);
 	Check(Up.Panel.Y + Up.Panel.H == 720.f - FDockLayout::Margin, "a margin off the foot", Up.Panel.Y);
 	bool Inside = true, Apart = true;
@@ -33,16 +33,15 @@ int main()
 	Check(Up.Hit(Up.Buttons[0].X + Up.Buttons[0].W + 1.f, Up.Buttons[0].Y + 10.f) == -1, "the gap hits nothing");
 	Check(Up.Hit(10.f, 10.f) == -1, "the sky hits nothing");
 
-	const FDockLayout Away = LayoutDock(1280.f, 720.f, false, 0.f);
+	const FDockLayout Away = LayoutDock(1280.f, 720.f, 0.f);
 	Check(Away.Hit(Away.Buttons[2].X + 5.f, Away.Buttons[2].Y + 5.f) == -1, "a hidden dock can't be clicked");
 	Check(Away.Panel.Y > Up.Panel.Y, "it sinks as it goes", Away.Panel.Y - Up.Panel.Y);
 	Check(Away.Clear() == 720.f && Up.Clear() <= Up.Panel.Y, "panels over the foot clear it only while it's up",
 	      Up.Clear());
 
-	const FDockLayout OverGraphs = LayoutDock(1280.f, 720.f, true, 1.f);
-	Check(OverGraphs.Panel.Y + OverGraphs.Panel.H <= 720.f - FDockLayout::GraphsTall, "over the graphs",
-	      OverGraphs.Panel.Y);
-	Check(LayoutDock(2240.f, 720.f, false, 1.f).Panel.X > Up.Panel.X, "centred on a wide screen too");
+	Check(Up.Panel.Y + Up.Panel.H > 720.f - FDockLayout::GraphsTall, "over the graphs, not raised by them",
+	      Up.Panel.Y);
+	Check(LayoutDock(2240.f, 720.f, 1.f).Panel.X > Up.Panel.X, "centred on a wide screen too");
 
 	FDockReveal R;
 	R.Tick(0.1f, false);

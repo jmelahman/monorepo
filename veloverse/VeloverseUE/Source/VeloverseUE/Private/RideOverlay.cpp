@@ -291,7 +291,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	const FLinearColor Accent = Pawn->Profile.Accent();
 
 	const Veloverse::FDockLayout Dock =
-		Veloverse::LayoutDock(W, H, Pawn->Profile.bGraphs, Pawn->bFreeLook ? 0.f : Pawn->Dock.Shown);
+		Veloverse::LayoutDock(W, H, Pawn->bFreeLook ? 0.f : Pawn->Dock.Shown);
 	if (Pawn->Profile.bGraphs)
 	{
 		PaintGraphs(P, W, H);
@@ -304,7 +304,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		{
 			const int32 Zone = Pawn->Zone(Watts);
 			const FLinearColor ZoneColour = Hex(ZoneHex[Zone]);
-			const float X = 20.f, Y = 20.f, Wide = 196.f;
+			const float X = 20.f, Y = 20.f, Wide = 220.f;
 			P.Panel(X, Y, Wide, 130.f, 14.f);
 			P.Text(X + 16.f, Y + 25.f, TEXT("POWER"), P.Font("Bold", 12.f, 0.08f), Dim);
 			const FString Badge = FString::Printf(TEXT("Z%d %s"), Zone + 1, ZoneNames[Zone]);
@@ -327,7 +327,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		// and the stretch bar level with the zone bar.
 		float WeatherTop;
 		{
-			const float Wide = 196.f, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
+			const float Wide = 220.f, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
 			const float X0 = X + 16.f, Inner = Wide - 32.f, Right = X0 + Inner;
 			bool bOn = false;
 			float Start = 0.f, Peak = 0.f;
@@ -750,21 +750,17 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 
 void URideOverlay::PaintGraphs(const FPainter& P, float W, float H) const
 {
-	// The last ten minutes across the whole foot of the screen: a column a second of power coloured
-	// by zone, heart rate as a red line over it, and FTP as a faint rule. Newest on the right.
+	// The last ten minutes across the whole foot of the screen, behind the dock: power as a white
+	// line, heart rate as a red one on its own scale. Lines only, no labels or backing; a faint dark
+	// under-stroke keeps them readable over bright ground. Newest on the right.
 	const ARidePawn* Pawn = Rider();
-	const float Tall = Veloverse::FDockLayout::GraphsTall, Top = H - Tall;
-	P.Gradient(0.f, Top - 24.f, W, Tall + 24.f,
-	           {{0.f, Hex(0x080A09, 0.f)}, {24.f / (Tall + 24.f), Hex(0x080A09, 0.55f)}, {1.f, Hex(0x080A09, 0.78f)}}, false);
 	const std::vector<Veloverse::FSample>& Samples = Pawn->Recorder.Samples();
-	constexpr double Window = 600.0;
-	const float PlotTop = Top + 30.f, PlotFoot = H - 10.f, PlotTall = PlotFoot - PlotTop;
-	const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
-	P.Text(20.f, Top + 20.f, TEXT("POWER · HEART RATE · 10 MIN"), Label, Dim);
-	if (Samples.empty())
+	if (Samples.size() < 2)
 	{
 		return;
 	}
+	constexpr double Window = 600.0;
+	const float PlotTop = H - Veloverse::FDockLayout::GraphsTall + 12.f, PlotFoot = H - 12.f, PlotTall = PlotFoot - PlotTop;
 	const double Now = Samples.back().Seconds;
 	double Peak = Pawn->Ftp * 1.5, HrLo = 1e9, HrHi = 0.0;
 	size_t First = Samples.size();
@@ -779,44 +775,36 @@ void URideOverlay::PaintGraphs(const FPainter& P, float W, float H) const
 			HrHi = FMath::Max(HrHi, S.HeartRate);
 		}
 	}
-	const float Step = W / static_cast<float>(Window);
 	auto XAt = [&](double Seconds) { return W - static_cast<float>((Now - Seconds) / Window) * W; };
+	auto Stroke = [&](const TArray<FVector2f>& Line, const FLinearColor& Colour)
+	{
+		if (Line.Num() > 1)
+		{
+			P.Lines(Line, Hex(0x080A09, 0.35f), 4.f);
+			P.Lines(Line, Colour, 2.f);
+		}
+	};
+	TArray<FVector2f> Power;
 	for (size_t I = First; I < Samples.size(); ++I)
 	{
 		const Veloverse::FSample& S = Samples[I];
-		const float Up = PlotTall * static_cast<float>(FMath::Clamp(S.Watts / Peak, 0.0, 1.0));
-		if (Up > 0.5f)
-		{
-			const FLinearColor Colour = Hex(VeloverseMenu::ZoneHex[Pawn->Zone(static_cast<float>(S.Watts))], 0.85f);
-			P.Rect(XAt(S.Seconds) - Step, PlotFoot - Up, FMath::Max(Step - 0.4f, 0.8f), Up, Colour);
-		}
+		Power.Add({XAt(S.Seconds), PlotFoot - PlotTall * static_cast<float>(FMath::Clamp(S.Watts / Peak, 0.0, 1.0))});
 	}
-	const float FtpY = PlotFoot - PlotTall * static_cast<float>(Pawn->Ftp / Peak);
-	P.Rect(0.f, FtpY, W, 1.f, Hex(0xF4F1EA, 0.3f));
-	P.Text(W - 20.f, FtpY - 4.f, FString::Printf(TEXT("FTP %.0f"), Pawn->Ftp), P.Font("Bold", 10.f), Dim, EAlign::Right);
+	Stroke(Power, Hex(0xF4F1EA, 0.9f));
 	if (HrHi > 0.0)
 	{
 		// Its own scale, from a little under the lowest to a little over the highest.
 		const double Lo = FMath::Max(40.0, HrLo - 10.0), Hi = FMath::Max(HrHi + 10.0, Lo + 40.0);
-		TArray<FVector2f> Line;
+		TArray<FVector2f> Heart;
 		for (size_t I = First; I < Samples.size(); ++I)
 		{
 			const Veloverse::FSample& S = Samples[I];
 			if (S.HeartRate > 0.0)
 			{
-				Line.Add({XAt(S.Seconds), PlotFoot - PlotTall * static_cast<float>((S.HeartRate - Lo) / (Hi - Lo))});
+				Heart.Add({XAt(S.Seconds), PlotFoot - PlotTall * static_cast<float>((S.HeartRate - Lo) / (Hi - Lo))});
 			}
 		}
-		if (Line.Num() > 1)
-		{
-			P.Lines(Line, VeloverseMenu::Heart, 2.f);
-		}
-		const double Last = Samples.back().HeartRate;
-		if (Last > 0.0)
-		{
-			P.Text(W - 20.f, Top + 20.f, FString::Printf(TEXT("%.0f bpm"), Last), P.Font("Bold", 12.f), VeloverseMenu::Heart,
-			       EAlign::Right);
-		}
+		Stroke(Heart, VeloverseMenu::Heart);
 	}
 }
 
@@ -841,7 +829,7 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 		{Icons::Eye, FString::Printf(TEXT("View: %s"), ViewNames[static_cast<int32>(Pawn->View())]), TEXT("V"), false, Views.Num() < 2},
 		{Icons::Pulse, TEXT("Graphs"), TEXT("G"), Pawn->Profile.bGraphs, false},
 		{Icons::Hud, TEXT("HUD"), TEXT("H"), Pawn->Profile.bHud, false},
-		{Icons::Map, TEXT("Change route"), TEXT("R"), false, false},
+		{Icons::Route, TEXT("Change route"), TEXT("R"), false, false},
 		{Icons::Move, TEXT("Free look"), TEXT("Tab"), Pawn->bFreeLook, false},
 		{Icons::Pause, TEXT("Pause"), TEXT("Esc"), false, false},
 	};

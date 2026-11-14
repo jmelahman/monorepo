@@ -223,7 +223,7 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		TFunction<void()> Click;
 	};
 	const TArray<FItem> Items = {
-		{TEXT("routes"), Icons::Map, TEXT("Choose a route"),
+		{TEXT("routes"), Icons::Route, TEXT("Choose a route"),
 		 Route ? FString::Printf(TEXT("Now: %s"), *Route->Title) : FString::Printf(TEXT("%d routes across the islands"), Surveys.Num()),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
@@ -1516,7 +1516,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 			            URideMenu::bRoutesNext = true;
 			            M->Controller()->Restart();
 		            },
-		            Icons::Map);
+		            Icons::Route);
 	}
 	else
 	{
