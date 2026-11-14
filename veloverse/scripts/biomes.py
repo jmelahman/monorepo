@@ -186,7 +186,9 @@ PRESETS["world"] = {
     # a 35 m strip of mud.
     "SURFACES": {
         "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
-        "Sand": ("coast", "trampled_beach_sand", (1.0, 1.0, 1.0)),
+        # v55: rippled sand, not trampled: its footprints, with the pebbles' near-white patches
+        # over them, read as cracked mud from the road and at the harbour (v52-v54 stills).
+        "Sand": ("coast", "rippled_sand", (1.0, 1.0, 1.0)),
         "Dirt": ("shared", "uncut_grass", (0.55, 0.58, 0.42)),
         # Verge is the bare sand beside the road in the desert and on the beaches
         # (make_world_level.py): Desert's sand with no mix and no GRASS row, so nothing grows.
@@ -194,7 +196,8 @@ PRESETS["world"] = {
     },
     "MIXES": {
         "Desert": ("desert", "dry_mud_ground", "patches", 30.0),
-        "Sand": ("coast", "beach_pebbles", "patches", 5.0),
+        # Wet sand along the water (the sea is at 0): below 1.2 m, fading over the next 0.6 m.
+        "Sand": ("coast", "thai_wet_beach_sand", "wet", 120.0),
         "Dirt": ("shared", "lawn_grass", "patches", 30.0),
     },
     "LOOK_TINTS": {
