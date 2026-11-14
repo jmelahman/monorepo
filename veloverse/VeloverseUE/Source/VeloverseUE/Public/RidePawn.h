@@ -73,7 +73,7 @@ public:
 	// while the shoulders drop below the frame and the forearms reach in from its foot.
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderBody;
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderArms;
-	float ArmsTilt = 57.f;
+	float ArmsTilt = 40.f; // chosen from stills at 40, 57 and 75: past 50 the fingers stand up off the hoods
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
