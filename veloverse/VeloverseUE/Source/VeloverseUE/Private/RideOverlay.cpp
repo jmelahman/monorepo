@@ -580,28 +580,70 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			{
 				const TCHAR* Label;
 				FString Value, Unit;
+				const TCHAR* Room; // the widest value the column makes room for, so the panel holds its width
 			};
 			TArray<FItem> Items = {
-				{TEXT("SPEED"), Veloverse::Units::Number(Veloverse::Units::Speed(Pawn->Speed), 1), Veloverse::Units::SpeedUnit()},
-				{TEXT("CADENCE"), FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), TEXT("rpm")},
+				{TEXT("SPEED"), Veloverse::Units::Number(Veloverse::Units::Speed(Pawn->Speed), 1), Veloverse::Units::SpeedUnit(), TEXT("00.0")},
+				{TEXT("CADENCE"), FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), TEXT("rpm"), TEXT("000")},
 			};
 			if (Pawn->Reading.HeartRateBpm > 0.0)
 			{
-				Items.Add({TEXT("HEART"), FString::Printf(TEXT("%.0f"), Pawn->Reading.HeartRateBpm), TEXT("bpm")});
+				Items.Add({TEXT("HEART"), FString::Printf(TEXT("%.0f"), Pawn->Reading.HeartRateBpm), TEXT("bpm"), TEXT("000")});
 			}
-			Items.Add({TEXT("TIME"), Clock(Pawn->Elapsed), TEXT("")});
+			Items.Add({TEXT("TIME"), Clock(Pawn->Elapsed), TEXT(""), TEXT("0:00:00")});
 			Items.Add({TEXT("DISTANCE"), Veloverse::Units::Number(Veloverse::Units::Long(Pawn->Ridden() / 100.0), 1),
-			           Veloverse::Units::LongUnit()});
+			           Veloverse::Units::LongUnit(), TEXT("000.0")});
 			Items.Add({TEXT("CLIMBED"), Veloverse::Units::Number(Veloverse::Units::Height(Pawn->ClimbedMetres), 0),
-			           Veloverse::Units::HeightUnit()});
+			           Veloverse::Units::HeightUnit(), TEXT("0000")});
 			const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
 			const FSlateFontInfo Value = P.Font("Bold", 20.f);
 			const FSlateFontInfo Unit = P.Font("Medium", 13.f);
-			TArray<float> Widths;
+			// The font's digits are proportional ("1" is narrower than "0"), so a value measured as it
+			// is made the panel breathe as the numbers changed (the user, 14 Nov). Digits are drawn in
+			// cells as wide as the widest digit (tabular figures), each column is as wide as its Room,
+			// and each value sits right-aligned in that room, so the units stay put too.
+			float DigitW = 0.f;
+			for (TCHAR C = TEXT('0'); C <= TEXT('9'); ++C)
+			{
+				DigitW = FMath::Max(DigitW, P.Width(FString::Chr(C), Value));
+			}
+			auto Figures = [&](const FString& Text, const float* DrawX, float DrawY)
+			{
+				float Run = 0.f;
+				FString Rest;
+				auto Flush = [&]
+				{
+					if (DrawX && !Rest.IsEmpty())
+					{
+						P.Text(*DrawX + Run, DrawY, Rest, Value, Ink);
+					}
+					Run += P.Width(Rest, Value);
+					Rest.Reset();
+				};
+				for (const TCHAR C : Text)
+				{
+					if (!FChar::IsDigit(C))
+					{
+						Rest.AppendChar(C);
+						continue;
+					}
+					Flush();
+					if (DrawX)
+					{
+						const FString Digit = FString::Chr(C);
+						P.Text(*DrawX + Run + (DigitW - P.Width(Digit, Value)) * 0.5f, DrawY, Digit, Value, Ink);
+					}
+					Run += DigitW;
+				}
+				Flush();
+				return Run;
+			};
+			TArray<float> Widths, Rooms;
 			float Total = 44.f + 28.f * (Items.Num() - 1);
 			for (const FItem& Item : Items)
 			{
-				const float V = P.Width(Item.Value, Value) + (Item.Unit.IsEmpty() ? 0.f : 3.f + P.Width(Item.Unit, Unit));
+				Rooms.Add(FMath::Max(Figures(Item.Room, nullptr, 0.f), Figures(Item.Value, nullptr, 0.f)));
+				const float V = Rooms.Last() + (Item.Unit.IsEmpty() ? 0.f : 3.f + P.Width(Item.Unit, Unit));
 				Widths.Add(FMath::Max(P.Width(Item.Label, Label), V));
 				Total += Widths.Last();
 			}
@@ -615,13 +657,13 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 				const FItem& Item = Items[I];
 				const float Mid = X + Widths[I] * 0.5f;
 				P.Text(Mid, Y + 19.f, Item.Label, Label, Dim, EAlign::Centre);
-				const float VW = P.Width(Item.Value, Value);
 				const float UW = Item.Unit.IsEmpty() ? 0.f : 3.f + P.Width(Item.Unit, Unit);
-				const float Left = Mid - (VW + UW) * 0.5f;
-				P.Text(Left, Y + 43.f, Item.Value, Value, Ink);
+				const float Left = Mid - (Rooms[I] + UW) * 0.5f;
+				const float VX = Left + Rooms[I] - Figures(Item.Value, nullptr, 0.f);
+				Figures(Item.Value, &VX, Y + 43.f);
 				if (!Item.Unit.IsEmpty())
 				{
-					P.Text(Left + VW + 3.f, Y + 43.f, Item.Unit, Unit, Ink);
+					P.Text(Left + Rooms[I] + 3.f, Y + 43.f, Item.Unit, Unit, Ink);
 				}
 				X += Widths[I] + 28.f;
 			}
