@@ -7,6 +7,6 @@ public class VeloverseUE : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		// Each file keeps its drawing helpers in an anonymous namespace, and some share names.
 		bUseUnity = false;
-		PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore", "RHI", "RenderCore", "Json" });
+		PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore", "RHI", "RenderCore", "Json", "MoviePlayer" });
 	}
 }
