@@ -518,12 +518,14 @@ TORSO = ("pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head")
 PELVIS_SHARE = 0.8  # of the torso's forward pitch taken by the pelvis; the spine takes the rest
 SPINE_SHARE = (0.30, 0.35, 0.35)
 FINGER_CURL = {"01": 52.0, "02": 62.0, "03": 32.0}  # deg about each bone's X, draped on hoods
+INDEX_CURL = {"01": 10.0, "02": 30.0, "03": 20.0}  # reaching over the lever blade, not into it
 THUMB_CURL = {"01": 8.0, "02": 18.0, "03": 20.0}
 HAND_AXIS = (1.0, 0.0, -0.10)  # wrist to knuckles on the hood, world
 HAND_PALM_IN = 1.0  # tan of the palm's turn from facing down toward the bike's centre (45 deg)
 ARM_POLE = (-0.20, 0.20, -0.20)  # elbow direction from the shoulder-wrist midpoint (x, out, z)
 CLAV_MAX = 20.0  # deg, the most the shoulders protract
-HOOD_CONTACT_X = 0.548  # m, where the middle of the palm rests on the hood's top
+HOOD_CONTACT_X = 0.538  # m, where the middle of the palm rests on the hood's top
+HOOD_LIFT = 0.009  # m, palm point above the hood's top: the thenar pad bulges below it
 
 
 def angle_at(a, b, c):
@@ -700,7 +702,8 @@ class Rider:
         pb = self.rig.pose.bones
         for s, _side in SIDES:
             for f in ("index", "middle", "ring", "pinky"):
-                for k, a in FINGER_CURL.items():
+                curl = INDEX_CURL if f == "index" else FINGER_CURL
+                for k, a in curl.items():
                     pb[f"{f}_{k}_{s}"].matrix_basis = rot_x(a)
             for k, a in THUMB_CURL.items():
                 pb[f"thumb_{k}_{s}"].matrix_basis = rot_x(a)
@@ -856,7 +859,7 @@ def solve_fit(rider, bike, iters=8):
     hood = {}
     for s, side in SIDES:
         z, y = bike.hood_top(side, HOOD_CONTACT_X)
-        hood[s] = (HOOD_CONTACT_X, y, z)
+        hood[s] = (HOOD_CONTACT_X, y, z + HOOD_LIFT)
     rider.hood = hood
     P: dict[str, Any] = {
         "hip": [-0.215, 1.13],
@@ -1069,12 +1072,13 @@ def apply_modifiers(ob):
         mod.object = rig
 
 
-def solidify(ob, thickness, offset=-1.0, mat_offset=0, group=None, group_factor=1.0):
+def solidify(ob, thickness, offset=-1.0, mat_offset=0, group=None, group_factor=1.0, even=True):
     mod = ob.modifiers.new("Solidify", "SOLIDIFY")
     mod.thickness = thickness
     mod.offset = offset
     mod.use_rim = True
-    mod.use_even_offset = True
+    mod.use_even_offset = even  # off where faces are degenerate: even offset explodes there
+    mod.use_quality_normals = True
     mod.material_offset = mat_offset
     mod.material_offset_rim = mat_offset
     if group:
@@ -1215,7 +1219,7 @@ class Gear:
             UV,
             [self.mats["M_Helmet"], self.mats["M_Strap"]],
             [0] * len(F),
-            {"thick": thick},
+            {"thick": thick, "head": 1.0},
         )
         # shell inward; the inner foam and the vents' walls get M_Strap's black
         solidify(ob, HELMET_SHELL, -1.0, 1, "thick", 0.45)
@@ -1383,8 +1387,20 @@ class Gear:
         bmesh.ops.delete(bm, geom=kill, context="FACES")
         loose = [v for v in bm.verts if not v.link_faces]
         bmesh.ops.delete(bm, geom=loose, context="VERTS")
+        foot = BVHTree.FromBMesh(bm)
+        # a shoe is a smooth last, not a sock: round off the toes' clefts, keeping the collar
+        inner = [v for v in bm.verts if not v.is_boundary]
+        for _ in range(30):
+            bmesh.ops.smooth_vert(
+                bm, verts=inner, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True
+            )
+        bm.normal_update()
         for v in bm.verts:
             v.co += v.normal * SHOE_GAP
+            # never inside the foot: at least the gap off its nearest surface
+            p, n, _i, _d = foot.find_nearest(v.co)
+            if p is not None and (v.co - p).dot(n) < SHOE_GAP:
+                v.co = p + n * SHOE_GAP
             if orig_z[v] < 0.008:
                 v.co.z = -SOLE_THICKNESS
             v.co.z = max(v.co.z, -SOLE_THICKNESS)
@@ -1396,7 +1412,7 @@ class Gear:
         ob.parent = self.rig
         mod = ob.modifiers.new("Armature", "ARMATURE")
         mod.object = self.rig
-        solidify(ob, 0.002, -1.0)
+        solidify(ob, 0.002, -1.0, even=False)  # the flattened sole has degenerate faces
         # the cleats, rigid to the foot (the solver's cleat point rides with the foot bone)
         for s, _side in SIDES:
             c = self.rider.cleat_rest[s]
@@ -1566,9 +1582,12 @@ class BodyMap:
         tor = (self.arm < 0.5) & (self.leg < 0.5) & (self.head < 0.5) & group_mask(mesh, "body")
         z = self.co[tor, 2]
         bins = np.arange(z.min(), z.max() + 0.01, 0.01)
-        cx = [self.co[tor][(z >= b) & (z < b + 0.01), 0].mean() for b in bins]
-        ok = ~np.isnan(cx)
-        self.cz, self.cx = bins[ok] + 0.005, np.array(cx)[ok]
+        xs = [self.co[tor][(z >= b) & (z < b + 0.01), 0] for b in bins]
+        ok = np.array([len(x) > 0 for x in xs])
+        # the middle of the front and back, smoothed: a vertex mean is pulled about by density
+        cx = np.array([(x.min() + x.max()) / 2 for x, k in zip(xs, ok, strict=True) if k])
+        cx = np.convolve(np.pad(cx, 3, mode="edge"), np.ones(7) / 7, mode="valid")
+        self.cz, self.cx = bins[ok] + 0.005, cx
 
     def t_along(self, p, bone):
         """Parameter along the bone (0 head, 1 tail), the side picked by the sign of y."""
@@ -1661,7 +1680,7 @@ def paint_body(rider, out, size):
     knit = 0.5 * np.abs(np.sin(np.pi * X / 3.0 + 0.6 * np.sin(np.pi * Y / 3.0))) + 0.15 * fine
     pores = blur(fine, 1)
     streak = blur(np.roll(fine, 1, 0) + fine + np.roll(fine, -1, 0), 1)
-    h = np.where(kit, 0.9 * knit, np.where(hair, 0.6 * streak, 0.25 * pores))
+    h = np.where(kit, 0.35 * knit, np.where(hair, 0.6 * streak, 0.25 * pores))
     nrm = normal_from_height(h, 1.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     nrm = dilate(nrm, cov, 8)
@@ -1740,7 +1759,7 @@ def paint_shoes(shoes, rider, out, size):
 # name: (base colour or texture prefix, roughness, extra Principled inputs)
 MATERIALS = {
     "M_Skin": ("T_Body", 0.50, {"Subsurface Weight": 0.12}),
-    "M_Kit": ("T_Body", 0.62, {"Sheen Weight": 0.25}),
+    "M_Kit": ("T_Body", 0.62, {"Sheen Weight": 0.06}),
     "M_Helmet": ("T_Helmet", 0.30, {"Coat Weight": 0.4}),
     "M_Lens": ((0.010, 0.011, 0.014), 0.05, {"Metallic": 0.55}),
     "M_Shoe": ("T_Shoe", 0.38, {}),
@@ -1830,11 +1849,22 @@ def join_rider(rider, parts):
     for g in list(body.vertex_groups):
         if g.name not in bones:
             body.vertex_groups.remove(g)
-    with bpy.context.temp_override(active_object=body, object=body):
-        bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
-        bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
-    # merge the materials that the join duplicated by name order
+    limit_influences(body, 4)
     return body
+
+
+def limit_influences(ob, limit):
+    """Keep each vertex's strongest `limit` bone weights and renormalise them."""
+    groups = ob.vertex_groups
+    for v in ob.data.vertices:
+        ws = sorted(((g.weight, g.group) for g in v.groups), reverse=True)
+        for _, gi in ws[limit:]:
+            groups[gi].remove([v.index])
+        kept = [(w, gi) for w, gi in ws[:limit] if w > 0]
+        total = sum(w for w, _ in kept)
+        if total > 0:
+            for w, gi in kept:
+                groups[gi].add([v.index], w / total, "REPLACE")
 
 
 # =============================================================================================
@@ -1907,12 +1937,13 @@ def action_fcurves(action):
 def seam_check(rec):
     """The pose's step from frame 59 back to 0, against the largest step between frames."""
 
+    def turn(qa, qb):
+        ang = qa.rotation_difference(qb).angle
+        return math.degrees(min(ang, 2 * math.pi - ang))  # q and -q are the same rotation
+
     def step(a, b):
         dl = max((a[n].translation - b[n].translation).length for n in a)
-        da = max(
-            math.degrees(a[n].to_quaternion().rotation_difference(b[n].to_quaternion()).angle)
-            for n in a
-        )
+        da = max(turn(a[n].to_quaternion(), b[n].to_quaternion()) for n in a)
         return dl, da
 
     steps = [step(rec[k], rec[k + 1]) for k in range(FRAMES - 1)]
@@ -2079,14 +2110,14 @@ def export_fbx(rig, rider_ob, path):
 def check_fbx(path):
     """Re-import the FBX into an empty scene and report what came back."""
     bpy.ops.wm.read_homefile(use_empty=True)
-    bpy.ops.import_scene.fbx(filepath=path)
+    bpy.ops.import_scene.fbx(filepath=path, anim_offset=0.0)
     arms = [o for o in bpy.data.objects if o.type == "ARMATURE"]
     meshes = [o for o in bpy.data.objects if o.type == "MESH"]
     out = {
         "objects": sorted(o.name for o in bpy.data.objects),
         "bones": len(arms[0].data.bones) if arms else 0,
         "actions": [a.name for a in bpy.data.actions],
-        "frame_range": [list(a.frame_range) for a in bpy.data.actions],
+        "frame_range": [list(a.frame_range) for a in bpy.data.actions],  # anim_offset=0 below
         "materials": sorted({m.name for o in meshes for m in o.data.materials}),
         "max_influences": max((len(v.groups) for o in meshes for v in o.data.vertices), default=0),
         "triangles": sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in meshes),
@@ -2129,7 +2160,7 @@ def render_all(out, quick, bike_objs):
         "render_chase": ((-3.0, -0.35, 1.40), (0.35, 0.0, 0.85), 40),
         "render_side_drive": ((0.10, -4.4, 0.95), (0.10, 0.0, 0.82), 50),
         "render_side_non_drive": ((0.10, 4.4, 0.95), (0.10, 0.0, 0.82), 50),
-        "render_front": ((4.2, -0.25, 1.05), (0.0, 0.0, 0.85), 50),
+        "render_front": ((4.6, -0.25, 1.00), (0.0, 0.0, 0.88), 45),
     }
     for name, (loc, tgt, lens) in views.items():
         aim(cam, loc, tgt, lens)
