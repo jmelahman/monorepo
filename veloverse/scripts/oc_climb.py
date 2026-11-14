@@ -180,6 +180,56 @@ FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
 # "<layer> canopy start" cm over "<layer> canopy span": about M_Blade's root and tip colours,
 # averaged as a far meadow shows them. Try values with `look --ground-param`.
 CANOPY = {"Grass": (0.085, 0.16, 0.03)}
+# 14 Nov, the user: "increase the view distance even more and reduce density". The dense cover
+# (GRASS rows at 10 or more per 100 m^2: blades, heath, clover, clumps) grows at GRASS_THIN of its
+# density, and every grass and plant row reaches GRASS_REACH times as far, so the meadow reaches
+# 70-100 m for about the instances it drew before (0.5 x 1.4^2). The sparse flowers and herbs keep
+# their density, so the meadow keeps its colour, and the props (culled at 90 m or more) their reach.
+GRASS_THIN = 0.5
+GRASS_REACH = 1.4
+# The rider's grass reach (RidePawn::UseGrassReach): 1 in the editor and the stills. It scales the
+# blades' fade (_distance_fade) and the canopy colour with grass.CullDistanceScale.
+MPC_GRASS = f"{FOLDER}/Grass/MPC_Grass"
+
+
+def _grass_row(row):
+    """A GRASS row as it's grown: (biome, slug, density, cull start, cull end, *scale)."""
+    biome, slug, density, start, end, *scale = row
+    if density >= 10.0:
+        density *= GRASS_THIN
+    if end < 9000:
+        start, end = int(start * GRASS_REACH), int(end * GRASS_REACH)
+    return (biome, slug, density, start, end, *scale)
+
+
+def _grass_collection():
+    """MPC_Grass, with its one scalar "Reach" at 1."""
+    if assets.does_asset_exist(MPC_GRASS):
+        return unreal.load_asset(MPC_GRASS)
+    folder, name = MPC_GRASS.rsplit("/", 1)
+    mpc = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+        name,
+        folder,
+        unreal.MaterialParameterCollection,
+        unreal.MaterialParameterCollectionFactoryNew(),
+    )
+    param = unreal.CollectionScalarParameter()
+    param.set_editor_property("parameter_name", "Reach")
+    param.set_editor_property("default_value", 1.0)
+    mpc.set_editor_property("scalar_parameters", [param])
+    assets.save_loaded_asset(mpc, only_if_is_dirty=False)
+    return mpc
+
+
+def _grass_reach(g):
+    """MPC_Grass's "Reach" in graph `g`."""
+    return g.node(
+        unreal.MaterialExpressionCollectionParameter,
+        collection=_grass_collection(),
+        parameter_name="Reach",
+    )
+
+
 # Grass per layer: (biome, slug, instances per 100 m^2, cull start, cull end in cm[, (min, max)
 # scale, 0.6 to 1.4 if left out]). The density is per mesh: a scan with six variants draws six
 # times it (fern at 2.0 was 12 per 100 m^2), and `look --grass` multiplies it again. Scans whose
@@ -485,11 +535,12 @@ class Ground:
             # metres as a meadow is, so the far ground reads as grass and not as paint.
             mottle = g.world_noise(1.0 / 300, 0.7, 1.25, 2)
             canopy = g.mul(g.mask(g.param(f"{name} canopy", CANOPY[name]), "rgb"), mottle)
-            start = g.param(f"{name} canopy start", 4000.0)
+            reach = _grass_reach(g)
+            start = g.mul(g.param(f"{name} canopy start", 4000.0 * GRASS_REACH), reach)
             fade = g.op(
                 unreal.MaterialExpressionDivide,
                 g.op(unreal.MaterialExpressionSubtract, self.distance, start),
-                g.param(f"{name} canopy span", 3000.0),
+                g.mul(g.param(f"{name} canopy span", 3000.0 * GRASS_REACH), reach),
             )
             fade = g.mul(g.saturate(fade), g.param(f"{name} canopy share", 1.0))
             base["colour"] = g.lerp(base["colour"], canopy, fade)
@@ -673,7 +724,7 @@ def _distance_fade(g, base):
     grass has no per-instance fade of its own."""
     camera = g.node(unreal.MaterialExpressionCameraPositionWS)
     far = g.op(unreal.MaterialExpressionDistance, base, camera)
-    end = g.param("Fade end", 4000.0)
+    end = g.mul(g.param("Fade end", 4000.0), _grass_reach(g))
     rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
     start = g.mul(end, g.add(g.mul(rnd, 0.4), 0.55))
     span = g.op(
@@ -1161,7 +1212,7 @@ def _set_fade_ends():
     MI_Heath across slugs, so those take the nearest of all theirs."""
     ends = {}
     for rows in GRASS.values():
-        for biome, slug, _density, _start, cull_end, *_ in rows:
+        for biome, slug, _density, _start, cull_end, *_ in map(_grass_row, rows):
             for path in assets.list_assets(_mesh_folder(biome, slug), _is_blade(biome, slug)):
                 mesh = unreal.load_asset(path)
                 if not isinstance(mesh, unreal.StaticMesh):
@@ -1192,7 +1243,7 @@ def _grass_type(layer):
     with open(f"{PREP}/index.json") as f:
         plants = {r["slug"] for r in json.load(f) if r["kind"] == "plant"}
     varieties = []
-    for biome, slug, density, cull_start, cull_end, *scale in GRASS[layer]:
+    for biome, slug, density, cull_start, cull_end, *scale in map(_grass_row, GRASS[layer]):
         paths = assets.list_assets(_mesh_folder(biome, slug), _is_blade(biome, slug))
         meshes = [a for a in map(unreal.load_asset, paths) if isinstance(a, unreal.StaticMesh)]
         if not meshes:
@@ -1611,7 +1662,7 @@ def _grass(density, cull):
     Grass is regenerated, nothing compiles."""
     rows = {}
     for layer, table in GRASS.items():
-        for _biome, slug, base, start, end, *_ in table:
+        for _biome, slug, base, start, end, *_ in map(_grass_row, table):
             rows.setdefault(layer, []).append((f"/{slug}/", base, start, end))
     changed = 0
     for layer, table in rows.items():

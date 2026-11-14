@@ -45,6 +45,8 @@ constexpr float ChaseBack = 420.f;
 constexpr float ChaseAim = 95.f;
 constexpr float ChaseTilt = -9.f;
 constexpr float ChaseGrade = 0.35f; // the share of the road's pitch the camera follows (was 0.5)
+constexpr float ChaseGrassReach = 1.3f; // the grass reach from behind, times the rider's setting
+const TCHAR* const GrassCollection = TEXT("/Game/Climb/Grass/MPC_Grass.MPC_Grass");
 // Over the bars: the camera this far behind and below the eyes, in the bike's frame (cm), tipped
 // down so the bars, hoods and computer sit in the bottom third with the horizon in the top third
 // at the default 61 degree field of view. Nearer the bars, the narrow view can't hold both: the bars
@@ -528,14 +530,27 @@ void ARidePawn::UseGrassReach()
 	// it vanished at full size, a hard edge close to the bike. Undo that scale for the grass, so its
 	// reach is the rider's Grass setting alone and it fades out before it's culled; Low thins it by
 	// density instead (DefaultScalability.ini).
-	static IConsoleVariable* View = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
+	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
 	static IConsoleVariable* Reach = IConsoleManager::Get().FindConsoleVariable(TEXT("grass.CullDistanceScale"));
-	if (!View || !Reach)
+	if (!ViewScale || !Reach)
 	{
 		return;
 	}
-	GrassViewScale = FMath::Max(View->GetFloat(), 0.1f);
-	Reach->Set(Profile.Grass / 100.f / GrassViewScale, ECVF_SetByCode);
+	// From behind the camera stands higher and sees more of the ground ahead, so the carpet
+	// reaches further there.
+	const float Share = Profile.Grass / 100.f * (View() == ERideView::Chase ? ChaseGrassReach : 1.f);
+	GrassViewScale = FMath::Max(ViewScale->GetFloat(), 0.1f);
+	Reach->Set(Share / GrassViewScale, ECVF_SetByCode);
+	// The blades shrink away over the last stretch before their cull, and the ground takes their
+	// colour from there (MPC_Grass "Reach", oc_climb.py): both move with the cull. Before 14 Nov
+	// the fade was fixed, so a reach over 100% only culled blades that had already shrunk away.
+	if (UMaterialParameterCollection* Collection = LoadObject<UMaterialParameterCollection>(nullptr, GrassCollection))
+	{
+		if (UMaterialParameterCollectionInstance* Values = GetWorld()->GetParameterCollectionInstance(Collection))
+		{
+			Values->SetScalarParameterValue(TEXT("Reach"), Share);
+		}
+	}
 }
 
 void ARidePawn::ReadCommandLine()
@@ -1088,6 +1103,7 @@ void ARidePawn::CycleView()
 	const int32 Next = (All.IndexOfByKey(View()) + 1) % All.Num();
 	Profile.View = static_cast<int32>(All[Next]);
 	Profile.Save();
+	UseGrassReach(); // the chase view reaches further
 }
 
 void ARidePawn::SetFreeLook(bool bOn)
