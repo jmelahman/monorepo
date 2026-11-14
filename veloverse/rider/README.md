@@ -6,7 +6,7 @@ The bike is loaded only as reference geometry: `../bike/bike.blend` if it exists
 `../bike/build_bike.py` builds it into `out/bike_ref/`. The bike is never exported or modified.
 
 ```sh
-blender -b -P build_rider.py                        # full build + renders (~5.5 min, 24-core CPU)
+blender -b -P build_rider.py                        # full build + renders (~4.75 min, 24-core CPU)
 blender -b -P build_rider.py -- --no-render         # mesh, FBX, textures and stats only
 blender -b -P build_rider.py -- --quick             # 1K textures, low-sample half-size renders
 blender -b -P build_rider.py -- --out /some/dir     # write outputs elsewhere (default: ./out)
@@ -70,9 +70,9 @@ The body is MPFB 2's base human, built with these settings:
   - a toned stomach.
 - **Height:** scaled uniformly to exactly 1.780 m standing.
 - **Fit:** the rider's proportions change to fit the bike. The saddle and bars never move.
-  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.152. That puts
-    the knee at the bottom of the stroke at 144.6° (target 145°).
-  - The hip joint ends up at x −0.215, z 1.064. The thigh is 0.446 m and the calf 0.461 m.
+  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.171, solved
+    in the default pose. That puts the knee at the bottom of the stroke at 144.8° (target 145°).
+  - The hip joint ends up at x −0.215, z 1.067. The thigh is 0.448 m and the calf 0.462 m.
 - **Helpers:** MPFB's helper geometry is removed. Only the eyeballs and eyelashes are kept, as
   cheap meshes.
 - **Hair and brows:** the hair is short and painted on the scalp in the body texture, under the
@@ -235,15 +235,16 @@ The gear:
 | Bones | 53 |
 | Most influences per vertex | 4 |
 | Largest cleat-to-axle distance | 0.1 mm |
-| Knee angle, min / max | 70.1° / 144.6°, both legs |
-| Largest hand-to-hood distance | 0.0 mm (to the palm point) |
-| Interpenetration deeper than 5 mm | index knuckles on the brake levers, 9.6 mm (39 vertices); shorts into the saddle pad, 7.5 mm (16 vertices) |
-| Eye point, frame 0 | (0.359, −0.004, 1.530) |
+| Knee angle, min / max | 70.3° / 144.8° in `Pedal`; 69.9° / 144.0° in `Pedal_Easy` |
+| Largest hand-to-hood distance | 0.0 mm (to the palm point), every effort |
+| Interpenetration deeper than 5 mm | skin into the fork, 5.9 mm (2 vertices); kit into the frame, 6.2 mm (9 vertices) in `Pedal`, 7.2 mm in `Pedal_Easy` |
+| Eye point, frame 0 | `Pedal` (0.409, −0.004, 1.465); `Pedal_Easy` (0.357, −0.002, 1.533); `Pedal_Hard` (0.433, −0.007, 1.423) |
 | Game's assumed eye point | (0.18, ·, 1.50) |
+| Hand and foot drift at a halfway blend | 5.1 mm Easy/Pedal, 1.4 mm Pedal/Hard |
 
-The eye point is 0.18 m further forward and 0.03 m higher than the game assumes. A 178 cm
-rider on the hoods of this bike, with the back at 42°, puts the eyes over the front of the top
-tube, not over the BB. The game's camera should take the eye point from `stats.json` (or from
+`stats.json` holds these per effort, under `efforts`. The default eye point is 0.23 m further
+forward and 0.035 m lower than the game assumes. A 178 cm rider on the hoods of this bike, with
+the back at 34°, puts the eyes over the front of the top tube, not over the BB. The game's camera should take the eye point from `stats.json` (or from
 the `head` bone) rather than the constant.
 
 ## Assets and licences
