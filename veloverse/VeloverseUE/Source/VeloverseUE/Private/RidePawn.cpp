@@ -42,6 +42,11 @@ constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows t
 constexpr float ChaseBack = 420.f;
 constexpr float ChaseUp = 70.f;
 constexpr float ChaseTilt = -7.f;
+// Over the bars: the camera this far behind and below the eyes, in the bike's frame (cm), tipped
+// down so the bars, hoods and computer sit in the foot of the frame. make_bike.py's
+// COCKPIT_CAMERA holds the same numbers for its preview.
+const FVector CockpitEye(-25.f, 0.f, -28.f);
+constexpr float CockpitTilt = -12.f;
 
 // A mesh by path, or none when it isn't in the project: no warning for a bike not yet made.
 UStaticMesh* MeshAt(const TCHAR* Path)
@@ -177,7 +182,7 @@ ARidePawn::ARidePawn()
 	// The bars sit under and ahead of the eyes, turning with the head.
 	Cockpit = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cockpit"));
 	Cockpit->SetupAttachment(Camera);
-	Cockpit->SetRelativeLocation(FVector(55.f, 0.f, -62.f));
+	// Place() sets its transform each frame: the mesh's origin is the rider's eyes.
 	Cockpit->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Cockpit->SetCastShadow(false);
 	Cockpit->SetMobility(EComponentMobility::Movable);
@@ -972,6 +977,15 @@ void ARidePawn::Place()
 	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit);
 	Bike->SetVisibility(Seen == ERideView::Chase);
+	if (Seen == ERideView::Cockpit)
+	{
+		// The camera back and down from the eyes, moving with the body; the front end stays put on
+		// the body while the look turns, so it is placed relative to the camera by the look's inverse.
+		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
+		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CockpitEye), (Body * Look).Rotator());
+		Cockpit->SetRelativeLocationAndRotation(Look.Inverse().RotateVector(-CockpitEye), Look.Inverse());
+		return;
+	}
 	if (Seen != ERideView::Chase)
 	{
 		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
