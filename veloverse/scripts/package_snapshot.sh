@@ -10,6 +10,14 @@ rm -rf "$snap" && install -d -o ue4 -g ue4 "$snap"
 # whatever the source is when the compile reaches it, edits in progress and all.
 tar -h -C /workspace/ue/VeloverseUE --exclude ./Saved --exclude ./DerivedDataCache -cf - . |
 	sudo -u ue4 tar -C "$snap" -xf -
+# Straight from the repo: config files the live project doesn't link (DefaultScalability.ini went
+# unpackaged that way), and the cursors, read as loose files from Content/Menu.
+repo=$(cd "$(dirname "$0")/.." && pwd -P)
+for f in "$repo"/VeloverseUE/Config/*.ini; do
+	[ -e "$snap/Config/${f##*/}" ] || install -o ue4 -g ue4 -m 644 "$f" "$snap/Config/"
+done
+install -d -o ue4 -g ue4 "$snap/Content/Menu/Cursors"
+install -o ue4 -g ue4 -m 644 "$repo"/VeloverseUE/Cursors/*.png "$snap/Content/Menu/Cursors/"
 echo "snapshot $(du -sh "$snap" | cut -f1) at $(date +%H:%M)"
 OC_PKG_PROJECT=$snap OC_PKG_OUT=/workspace/ue/out/package_snap OC_PKG_LOG=/workspace/ue/package_snap.log \
 	bash "$(dirname "$0")/package.sh"

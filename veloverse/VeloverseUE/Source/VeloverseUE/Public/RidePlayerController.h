@@ -45,6 +45,7 @@ private:
 	FTimerHandle TourTimer;
 	void Tour();
 	void DetectQualityOnFirstLaunch();
+	void UseCursor();
 	void Open(ERideMenuPage Page);
 	void Close();
 };

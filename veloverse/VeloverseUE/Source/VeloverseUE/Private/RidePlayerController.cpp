@@ -1,5 +1,7 @@
 #include "RidePlayerController.h"
 
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
 #include "GameFramework/GameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -32,12 +34,24 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 		return;
 	}
 	DetectQualityOnFirstLaunch();
+	UseCursor();
 	ShowStart();
 	if (FParse::Value(FCommandLine::Get(), TEXT("RideTour="), TourDir))
 	{
 		FParse::Value(FCommandLine::Get(), TEXT("RideTourRide="), TourRide);
 		GetWorldTimerManager().SetTimer(TourTimer, this, &ARidePlayerController::Tour, 2.f, true);
 	}
+}
+
+void ARidePlayerController::UseCursor()
+{
+	// Our arrow, in the HUD's off-white with a dark edge, for the system's: a hardware cursor, so it
+	// moves at the mouse's rate however low the frame rate. Content/Menu/Cursors/Arrow.png and
+	// Arrow@2x.png (VeloverseUE/Cursors, staged by scripts/package_snapshot.sh); the engine picks the
+	// size nearest the screen's scale. Without them the system's arrow stays.
+	UGameViewportClient* Viewport = GEngine ? GEngine->GameViewport : nullptr;
+	const bool bSet = Viewport && Viewport->SetHardwareCursor(EMouseCursor::Default, TEXT("Menu/Cursors/Arrow"), FVector2D(1.5 / 24.0, 1.5 / 24.0));
+	UE_LOG(LogTemp, Display, TEXT("RIDE cursor: %s"), bSet ? TEXT("ours") : TEXT("the system's"));
 }
 
 void ARidePlayerController::DetectQualityOnFirstLaunch()
