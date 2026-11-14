@@ -1,14 +1,16 @@
 """Downloads the coast ride's CC0 models (glTF) and textures from Poly Haven, and writes
 assets_ph/README.md with each one's source and licence. Run with system Python; it skips
-files it already has.
+files it already has, and fetches several assets at once (OC_FETCH_THREADS, default 8).
 
-    python3 -I scripts/fetch_assets.py
+    python3 -I scripts/fetch_assets.py [ASSET ...]
 """
 
 import json
 import os
 import sys
+import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 ROOT = "/workspace/ue"
 MODELS = os.path.join(ROOT, "assets_ph", "models")
@@ -99,15 +101,27 @@ TEXTURE_IDS = [
     "rocky_terrain_02",
 ]
 TEXTURE_KINDS = ("diff", "nor_dx", "rough", "arm")
+THREADS = int(os.environ.get("OC_FETCH_THREADS", "8"))
 
 
 HEADERS = {"User-Agent": "veloverse-asset-fetch/1.0"}  # Poly Haven refuses urllib's default agent
 
 
+def opened(url, timeout, tries=4):
+    """urlopen with retries: a flaky network drops some of many parallel requests."""
+    for attempt in range(tries):
+        try:
+            return urllib.request.urlopen(
+                urllib.request.Request(url, headers=HEADERS), timeout=timeout
+            )
+        except OSError:  # URLError, timeouts and resets; HTTP errors other than 5xx don't recover
+            if attempt == tries - 1:
+                raise
+            time.sleep(2**attempt)
+
+
 def get_json(url):
-    with urllib.request.urlopen(
-        urllib.request.Request(url, headers=HEADERS), timeout=60
-    ) as response:
+    with opened(url, 60) as response:
         return json.load(response)
 
 
@@ -115,12 +129,7 @@ def download(url, path):
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return False
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with (
-        urllib.request.urlopen(
-            urllib.request.Request(url, headers=HEADERS), timeout=600
-        ) as response,
-        open(path + ".part", "wb") as out,
-    ):
+    with opened(url, 600) as response, open(path + ".part", "wb") as out:
         while chunk := response.read(1 << 20):
             out.write(chunk)
     os.replace(path + ".part", path)
@@ -128,7 +137,8 @@ def download(url, path):
 
 
 def fetch_model(asset, resolution):
-    files = get_json(f"https://api.polyhaven.com/files/{asset}")["gltf"]
+    listing = get_json(f"https://api.polyhaven.com/files/{asset}")
+    files = listing["gltf"]
     resolution = resolution if resolution in files else sorted(files)[0]
     entry = files[resolution]["gltf"]
     folder = os.path.join(MODELS, asset)
@@ -137,7 +147,6 @@ def fetch_model(asset, resolution):
         got |= download(include["url"], os.path.join(folder, name))
     # glTF can't say "cut out with this separate alpha map", so its leaves arrive opaque; fetch the
     # alpha maps alongside for the builder's masked foliage material.
-    listing = get_json(f"https://api.polyhaven.com/files/{asset}")
     for key, sizes in listing.items():
         if "alpha" not in key.lower() or not isinstance(sizes, dict):
             continue
@@ -168,6 +177,26 @@ def fetch_texture(asset):
     return kinds
 
 
+def model_row(asset, resolution):
+    try:
+        used, got = fetch_model(asset, resolution)
+    except Exception as error:  # keep going; the builder skips what's missing
+        print(f"model {asset} FAILED {error}", flush=True)
+        return None
+    print(f"model {asset} {used} {'downloaded' if got else 'cached'}", flush=True)
+    return f"| {asset} | model (glTF) | {used} | https://polyhaven.com/a/{asset} |"
+
+
+def texture_row(asset):
+    try:
+        kinds = fetch_texture(asset)
+    except Exception as error:
+        print(f"texture {asset} FAILED {error}", flush=True)
+        return None
+    print(f"texture {asset} {kinds}", flush=True)
+    return f"| {asset} | texture ({', '.join(kinds)}) | 2k | https://polyhaven.com/a/{asset} |"
+
+
 def main():
     only = set(sys.argv[1:])
     lines = [
@@ -180,26 +209,11 @@ def main():
         "| asset | kind | resolution | page |",
         "|---|---|---|---|",
     ]
-    for asset, resolution in MODEL_IDS.items():
-        if only and asset not in only:
-            continue
-        try:
-            used, got = fetch_model(asset, resolution)
-            print(f"model {asset} {used} {'downloaded' if got else 'cached'}", flush=True)
-            lines.append(f"| {asset} | model (glTF) | {used} | https://polyhaven.com/a/{asset} |")
-        except Exception as error:  # keep going; the builder skips what's missing
-            print(f"model {asset} FAILED {error}", flush=True)
-    for asset in TEXTURE_IDS:
-        if only and asset not in only:
-            continue
-        try:
-            kinds = fetch_texture(asset)
-            print(f"texture {asset} {kinds}", flush=True)
-            lines.append(
-                f"| {asset} | texture ({', '.join(kinds)}) | 2k | https://polyhaven.com/a/{asset} |"
-            )
-        except Exception as error:
-            print(f"texture {asset} FAILED {error}", flush=True)
+    with ThreadPoolExecutor(THREADS) as pool:
+        jobs = [pool.submit(model_row, a, r) for a, r in MODEL_IDS.items() if not only or a in only]
+        jobs += [pool.submit(texture_row, a) for a in TEXTURE_IDS if not only or a in only]
+        rows = [j.result() for j in jobs]  # in the lists' order, whatever order they finish in
+    lines += [r for r in rows if r]
     if not only:
         with open(os.path.join(ROOT, "assets_ph", "README.md"), "w") as f:
             f.write("\n".join(lines) + "\n")
