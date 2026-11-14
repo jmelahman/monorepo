@@ -26,6 +26,7 @@ RUN apt-get update \
         libwayland-egl1 \
         libdecor-0-0 \
         openssh-client \
+        rsync \
         git \
     && rm -rf /var/lib/apt/lists/* /etc/apt/keyrings/kisak-turtle.gpg \
         /etc/apt/sources.list.d/kisak-turtle.list /etc/apt/keyrings/git-core.gpg \
