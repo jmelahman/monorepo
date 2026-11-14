@@ -1031,9 +1031,9 @@ void ARidePawn::Place()
 	const bool bParts = BikeParts.Num() > 0;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit && !bParts);
 	Bike->SetVisibility(Seen == ERideView::Chase || (Seen == ERideView::Cockpit && bParts), true);
-	if (Rider)
+	if (RiderBody)
 	{
-		Rider->SetVisibility(Seen == ERideView::Chase); // over the bars the camera is in its chest
+		RiderBody->SetVisibility(Seen == ERideView::Chase); // over the bars the camera is in its chest
 	}
 	if (Seen == ERideView::Cockpit && bParts)
 	{
@@ -1145,12 +1145,12 @@ void ARidePawn::PoseBike()
 	const FVector Arm(CrankLength, 0.f, 0.f);
 	BikeParts[BikePedalR]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(Arm) - Arm);
 	BikeParts[BikePedalL]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(-Arm) + Arm);
-	if (Rider && RiderPedal)
+	if (RiderBody && RiderPedal)
 	{
 		// One revolution is frames 0-59 at 30 fps, frame 0 with the drive-side crank ahead as at
 		// Crank 0, and turning the same way (rider/README.md). Past frame 59 it holds that frame.
 		const float Turned = FMath::Fmod(Crank, 2.f * PI) / (2.f * PI);
-		Rider->SetPosition(FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength()), false);
+		RiderBody->SetPosition(FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength()), false);
 	}
 }
 
@@ -1162,17 +1162,17 @@ void ARidePawn::MakeRider()
 	{
 		return; // not imported yet, or no bike to sit on
 	}
-	Rider = NewObject<USkeletalMeshComponent>(this, TEXT("Rider"));
-	Rider->SetMobility(EComponentMobility::Movable);
-	Rider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Rider->SetSkeletalMesh(Mesh);
-	Rider->SetupAttachment(Bike);
-	Rider->SetRelativeLocation(PartsOrigin); // its origin is the bike's: the ground under the BB
-	Rider->SetVisibility(false);
-	Rider->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-	Rider->RegisterComponent();
-	Rider->SetAnimation(Loop);
-	Rider->Stop(); // PoseBike scrubs it
+	RiderBody = NewObject<USkeletalMeshComponent>(this, TEXT("RiderBody"));
+	RiderBody->SetMobility(EComponentMobility::Movable);
+	RiderBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RiderBody->SetSkeletalMesh(Mesh);
+	RiderBody->SetupAttachment(Bike);
+	RiderBody->SetRelativeLocation(PartsOrigin); // its origin is the bike's: the ground under the BB
+	RiderBody->SetVisibility(false);
+	RiderBody->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	RiderBody->RegisterComponent();
+	RiderBody->SetAnimation(Loop);
+	RiderBody->Stop(); // PoseBike scrubs it
 	RiderPedal = Loop;
 	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, Pedal %.3f s"), Mesh->GetRefSkeleton().GetNum(), Loop->GetPlayLength());
 }

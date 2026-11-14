@@ -68,7 +68,7 @@ public:
 	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
 	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind only: its
 	// one Pedal loop (a crank revolution) scrubbed to Crank, so the feet stay on the pedals.
-	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> Rider;
+	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderBody;
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
