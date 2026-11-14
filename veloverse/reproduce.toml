@@ -1,0 +1,108 @@
+# How to rebuild Veloverse's world from scratch: every input pinned, every step declared.
+#
+#     uv run -q --no-project python -I scripts/reproduce.py            # all stages, in order
+#     uv run -q --no-project python -I scripts/reproduce.py --list     # name each stage
+#     uv run -q --no-project python -I scripts/reproduce.py --from world --to stills
+#     uv run -q --no-project python -I scripts/reproduce.py --dry-run  # print, run nothing
+#
+# Inputs, and where each is pinned:
+#   code     this repository at a commit.
+#   engine   Unreal Engine 5.8.4 (changelist 58902052), the base of the unreal-devcontainer image,
+#            pinned by digest in tools/containers/unreal/Dockerfile. Epic's EULA keeps the image
+#            private: link a GitHub account to Epic (https://www.unrealengine.com/ue-on-github) and
+#            build it yourself with `docker buildx bake unreal-devcontainer` from the monorepo root.
+#   assets   assets.lock.toml: every downloaded or generated file the world is built from, pinned
+#            by hash. Poly Haven's are CC0 and fetched by script. Fab's Megascans are free but on
+#            Fab's Standard licence, which forbids republishing them, so the `assets` stage lists
+#            each listing to download by hand into $ROOT/fab/<biome>/<slug>.
+#
+# Every stage runs in the image, as `bash -c` in $ROOT with the [env] below plus its own `env`,
+# its commands in order, stopping at the first that fails. scripts/ and VeloverseUE/ in $ROOT are
+# this repository's (the image's compose.yaml mounts and links them).
+
+[env]
+ROOT = "/workspace/ue"
+PY = "uv run -q --no-project --with numpy --with scipy --with pillow python -I"
+OC_SRC = "/workspace/ue/world_gen/ride_hub"
+OC_LEVEL = "/Game/World/L_World"
+OC_STILLS = "/workspace/ue/out/reproduce"
+
+[[stage]]
+name = "assets"
+doc = """Fetch the CC0 downloads, then check every locked asset. A Fab listing that's missing or
+changed is printed with its URL; download its FBX "Raw" zip at the largest size, unzip it into the
+path printed, and run this stage again until it passes."""
+run = [
+  "python3 -I scripts/fetch_assets.py",
+  "uv run -q --no-project --python 3.12 python -I scripts/assets_lock.py check $ROOT",
+]
+
+[[stage]]
+name = "textures"
+doc = "The leaf cards and sea normals our own scripts draw, into textures/."
+run = [
+  "$PY scripts/make_bamboo.py",
+  "$PY scripts/make_sugi.py",
+  "$PY scripts/make_village.py",
+  "$PY scripts/make_wave.py",
+]
+
+[[stage]]
+name = "megascans"
+doc = """Shrink the Fab downloads' maps to 2K packed sets in fab_prep/, import them into
+/Game/Megascans, assign their materials, and warm their textures in the derived data cache."""
+run = [
+  "python3 -I scripts/prep_megascans.py",
+  "OC_STAGE=import bash scripts/ue_run.sh megascans.py megascans_import.log",
+  "OC_STAGE=assign bash scripts/ue_run.sh megascans.py megascans_assign.log",
+  "OC_STAGE=warm bash scripts/ue_run.sh megascans.py megascans_warm.log",
+]
+
+[[stage]]
+name = "world"
+doc = "Generate the world from its seeds: the route chain, the level plan, its features, the menu map."
+run = [
+  "$PY scripts/make_chain.py",
+  "$PY scripts/make_world_level.py",
+  "$PY scripts/make_features.py",
+  "$PY scripts/make_menu_map.py",
+]
+
+[[stage]]
+name = "ground"
+doc = "Rebuild the landscape's ground material and grass, on the empty map."
+run = [
+  "scripts/oc.py restart",
+  "scripts/oc.py rebuild-ground --rebuild-grass --timeout 2400",
+]
+
+[[stage]]
+name = "level"
+doc = "Build the level from world_gen: landscape, roads, bridges, features, foliage."
+run = [
+  "scripts/oc.py restart",
+  "scripts/oc.py build-level --timeout 10800",
+  "scripts/oc.py road-look",
+]
+
+[[stage]]
+name = "stills"
+doc = "Render the review stills into $OC_STILLS, in the clear-day grade the releases use."
+env.LOOK = """--post ev=-2.6 --post exposure=-0.15 --post sky=1.5 --post temp=6500 --post sky_warm=0 \
+--post sun_pitch=-50 --post sun_yaw=43.7 --post contrast=1.1 --post saturation=1.05 \
+--post vignette=0.3 --post fog_start=150 --post volumetric=0 --post contact=0.05 --post clouds=-0.2 \
+--post cloud_wind=0 --post shafts=1 --post aerial=1 --post sun=6 --post sky_lum=1 \
+--post fog_inscatter=0.6 --post cloud_bottom=5 --post cloud_density=0.008 --fog 0.008 0.02 \
+--post clouds=0.6 --post cloud_density=0.03 --post sun=2 --post ev=-2.2 --post saturation=1.03"""
+env.SHOTS = """ride_00_greenwood,ride_01_the coast,ride_02_vael,ride_03_the coast,ride_04_the moor,\
+ride_05_the coast,ride_06_red sands,ride_07_the coast,above,ride_cliffs,sea_cliffs,road_kept,trail,\
+roundabout,feat_bridge"""
+run = [
+  "scripts/oc.py restart",
+  'scripts/oc.py look $LOOK --shots "$SHOTS" --timeout 1200',
+]
+
+[[stage]]
+name = "package"
+doc = "Package a standalone Linux build from a frozen copy of the project, into out/package."
+run = ["scripts/package_snapshot.sh"]
