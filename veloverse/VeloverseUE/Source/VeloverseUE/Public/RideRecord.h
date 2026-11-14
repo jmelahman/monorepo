@@ -25,7 +25,7 @@ struct FRideProfile
 	bool bErg = true;          // a workout's targets go to the trainer
 	int32 Weather = 0;         // 0 the route's own, 1 clear, 2 overcast, 3 rain
 	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening
-	float Grass = 100.f;       // how far the grass reaches, % of its own distance
+	float Grass = 150.f;       // how far the grass reaches, % of its own distance (100 before 14 Nov)
 	float LookSpeed = 100.f;   // how fast the mouse turns the view, % of 0.12 degrees per count
 	float HeadSway = 100.f;    // how much the head moves with the pedalling and the road, %
 	int32 View = 0;            // ERideView: the eyes, over the bars, behind, or steady
