@@ -41,6 +41,8 @@ add)
 		# After the header comments, so a "# needs:" line still reads first.
 		body=$(awk -v t="$tar" '!done && !/^#/ {print "tar -xf " t " -C /workspace/ue --no-same-owner"; done=1} {print}' <<<"$body")
 	fi
+	# A reused name starts fresh, so `wait` doesn't find the last attempt's result.
+	on_pod "for d in done failed skipped; do [ -e $Q/\$d/$name.sh ] && mv $Q/\$d/$name.sh $Q/\$d/$name.\$(date +%s).txt; done; true"
 	on_pod "mkdir -p $Q && cat > $Q/$name.sh.tmp && bash -n $Q/$name.sh.tmp && mv $Q/$name.sh.tmp $Q/$name.sh" <<<"$body"
 	start_runner
 	echo "queued $name on the pod${sha:+ (source ${sha:0:8})}"
