@@ -125,13 +125,22 @@ def get_json(url):
         return json.load(response)
 
 
-def download(url, path):
+def download(url, path, tries=4):
+    """Fetch url to path unless it's there. The timeout is per read, so a stalled transfer fails
+    within a minute and starts over, as does a dropped one."""
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return False
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with opened(url, 600) as response, open(path + ".part", "wb") as out:
-        while chunk := response.read(1 << 20):
-            out.write(chunk)
+    for attempt in range(tries):
+        try:
+            with opened(url, 60) as response, open(path + ".part", "wb") as out:
+                while chunk := response.read(1 << 20):
+                    out.write(chunk)
+            break
+        except OSError:
+            if attempt == tries - 1:
+                raise
+            time.sleep(2**attempt)
     os.replace(path + ".part", path)
     return True
 
