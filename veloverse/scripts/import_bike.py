@@ -14,6 +14,9 @@ import unreal
 
 SRC = os.environ.get("OC_BIKE_OUT", "/workspace/ue/world_gen/rider")
 FOLDER = "/Game/Rider"
+# The glTF importer puts a file's assets in <folder>/<file name>/StaticMeshes/..., so the meshes
+# are imported here, then moved up to FOLDER, where RidePawn looks for them.
+STAGING = f"{FOLDER}/Import"
 here = os.path.dirname(os.path.abspath(globals().get("__file__") or "/workspace/ue/scripts/x.py"))
 spec = importlib.util.spec_from_file_location("ue_lib", os.path.join(here, "ue_lib.py"))
 lib = importlib.util.module_from_spec(spec)
@@ -56,7 +59,7 @@ def master():
 def import_mesh(name, file):
     task = unreal.AssetImportTask()
     task.filename = f"{SRC}/{file}"
-    task.destination_path = FOLDER
+    task.destination_path = STAGING
     task.destination_name = name
     task.replace_existing = True
     task.automated = True
@@ -68,6 +71,10 @@ def import_mesh(name, file):
 
 
 def main():
+    # Clear the last import, including v1's, which left its meshes in bike/ and cockpit/.
+    for old in (STAGING, f"{FOLDER}/bike", f"{FOLDER}/cockpit"):
+        if lib.assets.does_directory_exist(old):
+            lib.assets.delete_directory(old)
     parent = master()
     paints = {
         part: lib.instance(
@@ -98,12 +105,19 @@ def main():
         for stray in strays:
             if stray.get_path_name() not in mine:
                 lib.assets.delete_asset(stray.get_path_name())
+        final = f"{FOLDER}/{name}"
+        if lib.assets.does_asset_exist(final):
+            lib.assets.delete_asset(final)
+        if not lib.assets.rename_asset(mesh.get_path_name().split(".")[0], final):
+            raise RuntimeError(f"could not move {mesh.get_path_name()} to {final}")
+        mesh = unreal.load_asset(final)
         box = mesh.get_bounding_box()
         lib.log(
-            f"BIKE {name}: {len(mesh.get_editor_property('static_materials'))} slots, "
+            f"BIKE {final}: {len(mesh.get_editor_property('static_materials'))} slots, "
             f"bounds {box.min} .. {box.max}, unpainted {missing or 'none'}"
         )
     lib.assets.save_directory(FOLDER, only_if_is_dirty=False, recursive=True)
+    lib.assets.delete_directory(STAGING)
     lib.log("BIKE done")
 
 
