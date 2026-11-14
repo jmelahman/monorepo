@@ -14,8 +14,17 @@ sha=$(grep -oP 'merge -q --ff-only \K[0-9a-f]{7,40}' "$job" || true)
 stills=$(grep -oP '^export OC_STILLS=\K\S+' "$job" || true)
 here=$(cd "$(dirname "$0")" && pwd -P)
 
-echo "== $(date +%T) sync the project"
-bash "$here/pod_sync.sh" "$host" "$port"
+echo "== $(date +%T) the pod pulls the project from R2"
+# Push this machine's changes to R2 first (only what changed goes up), then the pod pulls at
+# datacenter speed: SSH to a pod is slow from here. The pod gets the key on its local disk for the
+# pull and loses it after; a read-only key ($R2_POD_ENV) is preferred when there is one.
+bash "$here/r2_sync.sh" push
+r2_env=${R2_POD_ENV:-$HOME/.config/opencycle/r2-read.env}
+[ -r "$r2_env" ] || r2_env=$HOME/.config/opencycle/r2.env
+on_pod "umask 077 && mkdir -p /root/.config/opencycle && cat > /root/.config/opencycle/r2.env" <"$r2_env"
+on_pod "cat > /root/r2_sync.sh" <"$here/r2_sync.sh"
+on_pod "bash /root/r2_sync.sh pull /workspace/ue; rc=\$?; rm -f /root/.config/opencycle/r2.env; \
+mkdir -p /workspace/ddc; chown -R ue4 /workspace/ue /workspace/ddc 2>/dev/null; exit \$rc"
 
 if [ -n "$sha" ]; then
 	echo "== $(date +%T) source at ${sha:0:8}"
