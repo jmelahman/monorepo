@@ -36,8 +36,8 @@ RIDER_HEIGHT = 1.780  # crown of the head, standing, barefoot
 MACROS = {
     "gender": 1.0,  # male
     "age": 0.5,  # 25 years
-    "muscle": 0.68,
-    "weight": 0.30,  # lean
+    "muscle": 0.55,
+    "weight": 0.12,  # lean, a climber's build
     "proportions": 1.0,  # MakeHuman's "ideal" proportions
     "cupsize": 0.5,
     "firmness": 0.5,
@@ -45,13 +45,19 @@ MACROS = {
 RACE = {"asian": 0.2, "caucasian": 0.6, "african": 0.2}
 # Extra MPFB targets for a cyclist's build: (path under mpfb/data/targets, weight)
 BODY_TARGETS = [
-    ("torso/torso-vshape-decr.target.gz", 0.25),  # narrower upper body than a gym build
-    ("arms/l-upperarm-muscle-decr.target.gz", 0.30),
-    ("arms/r-upperarm-muscle-decr.target.gz", 0.30),
-    ("legs/l-upperleg-muscle-incr.target.gz", 0.45),  # quads
-    ("legs/r-upperleg-muscle-incr.target.gz", 0.45),
-    ("legs/l-lowerleg-muscle-incr.target.gz", 0.35),  # calves
-    ("legs/r-lowerleg-muscle-incr.target.gz", 0.35),
+    # a slim, narrow silhouette that sits inside the bike's width rather than over it
+    ("torso/torso-vshape-decr.target.gz", 0.50),
+    ("torso/measure-shoulder-dist-decr.target.gz", 0.80),
+    ("torso/torso-scale-horiz-decr.target.gz", 0.40),
+    ("torso/torso-scale-depth-decr.target.gz", 0.20),
+    ("torso/measure-hips-circ-decr.target.gz", 0.90),
+    ("buttocks/buttocks-volume-decr.target.gz", 1.00),
+    ("arms/l-upperarm-muscle-decr.target.gz", 0.40),
+    ("arms/r-upperarm-muscle-decr.target.gz", 0.40),
+    ("legs/l-upperleg-muscle-incr.target.gz", 0.20),  # quads
+    ("legs/r-upperleg-muscle-incr.target.gz", 0.20),
+    ("legs/l-lowerleg-muscle-incr.target.gz", 0.20),  # calves
+    ("legs/r-lowerleg-muscle-incr.target.gz", 0.20),
     ("stomach/stomach-tone-incr.target.gz", 0.5),
 ]
 # Proportion targets: a positive weight loads the "-incr" target, a negative one the "-decr".
@@ -83,7 +89,9 @@ KNEE_AT_BDC = 145.0  # deg interior knee angle at the bottom of the stroke
 ELBOW_BEND = 17.0  # deg short of straight
 HIP_ROCK_ROLL = 1.5  # deg each way
 HIP_ROCK_DROP = 0.003  # m, over each downstroke
-SHOULDER_COUNTER = 1.2  # deg of upper-torso counter-roll
+# deg of upper-torso counter-roll: just enough to hold the shoulders still over the rocking
+# pelvis, so the arms stay quiet between the fixed hands and the torso
+SHOULDER_COUNTER = 0.25
 
 # Ankling: sole pitch, toe-down positive, against phi (deg past top dead centre, in the
 # direction of travel): about +4 at the top, the heel ~10 deg lower through the downstroke,
@@ -679,10 +687,10 @@ class Rider:
         rolls = (0.3 * roll + 0.7 * upper, upper, upper)
         for i, name in enumerate(("spine_01", "spine_02", "spine_03")):
             acc += (T - pp) * SPINE_SHARE[i]
-            D = (rot_z(0.6 * upper) @ rot_x(rolls[i]) @ rot_y(acc)).to_3x3()
+            D = (rot_x(rolls[i]) @ rot_y(acc)).to_3x3()
             self.chain_X(name, D, self.X[self.parent[name]])
             self.set_basis(name)
-        D3 = (rot_z(0.6 * upper) @ rot_x(upper) @ rot_y(acc)).to_3x3()
+        D3 = (rot_x(upper) @ rot_y(acc)).to_3x3()
         for s, side in SIDES:
             D = (
                 D3
@@ -1667,20 +1675,20 @@ def paint_body(rider, out, size):
         m = lab_img == k
         base[m] = c
     skin = lab_img == SKIN_L
-    base[skin] *= (1 + 0.05 * lo[skin] + 0.02 * fine[skin])[:, None]
+    base[skin] *= (1 + 0.015 * lo[skin] + 0.004 * fine[skin])[:, None]
     hair = lab_img == HAIR_L
     base[hair] = (
         base[hair] * 0.8 + 0.2 * np.array(SKIN) * (0.5 + 0.5 * np.clip(fine[hair], 0, 1))[:, None]
     )
     kit = np.isin(lab_img, KIT_LABELS)
-    base[kit] *= (1 + 0.025 * lo[kit] + 0.015 * fine[kit])[:, None]
+    base[kit] *= (1 + 0.01 * lo[kit] + 0.004 * fine[kit])[:, None]
     base = dilate(base, cov, 8)
     # normals: a fine knit on the kit, pores on the skin, streaks in the hair
     Y, X = np.mgrid[0:size, 0:size].astype(np.float32)
     knit = 0.5 * np.abs(np.sin(np.pi * X / 3.0 + 0.6 * np.sin(np.pi * Y / 3.0))) + 0.15 * fine
     pores = blur(fine, 1)
     streak = blur(np.roll(fine, 1, 0) + fine + np.roll(fine, -1, 0), 1)
-    h = np.where(kit, 0.35 * knit, np.where(hair, 0.6 * streak, 0.25 * pores))
+    h = np.where(kit, 0.15 * knit, np.where(hair, 0.4 * streak, 0.05 * pores))
     nrm = normal_from_height(h, 1.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     nrm = dilate(nrm, cov, 8)
@@ -1758,13 +1766,14 @@ def paint_shoes(shoes, rider, out, size):
 # =============================================================================================
 # name: (base colour or texture prefix, roughness, extra Principled inputs)
 MATERIALS = {
-    "M_Skin": ("T_Body", 0.50, {"Subsurface Weight": 0.12}),
-    "M_Kit": ("T_Body", 0.62, {"Sheen Weight": 0.06}),
-    "M_Helmet": ("T_Helmet", 0.30, {"Coat Weight": 0.4}),
-    "M_Lens": ((0.010, 0.011, 0.014), 0.05, {"Metallic": 0.55}),
-    "M_Shoe": ("T_Shoe", 0.38, {}),
-    "M_Strap": (BLACK, 0.70, {}),
-    "M_Hair": ((0.030, 0.019, 0.012), 0.60, {}),
+    # matte throughout: a simple, flat-shaded look that sits in the world
+    "M_Skin": ("T_Body", 0.70, {"Subsurface Weight": 0.05}),
+    "M_Kit": ("T_Body", 0.85, {}),
+    "M_Helmet": ("T_Helmet", 0.55, {}),
+    "M_Lens": ((0.010, 0.011, 0.014), 0.15, {"Metallic": 0.3}),
+    "M_Shoe": ("T_Shoe", 0.60, {}),
+    "M_Strap": (BLACK, 0.80, {}),
+    "M_Hair": ((0.030, 0.019, 0.012), 0.80, {}),
 }
 
 

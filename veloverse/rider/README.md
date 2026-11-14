@@ -6,7 +6,7 @@ The bike is loaded only as reference geometry: `../bike/bike.blend` if it exists
 `../bike/build_bike.py` builds it into `out/bike_ref/`. The bike is never exported or modified.
 
 ```sh
-blender -b -P build_rider.py                        # full build + renders (~4.5 min, 24-core CPU)
+blender -b -P build_rider.py                        # full build + renders (~5.5 min, 24-core CPU)
 blender -b -P build_rider.py -- --no-render         # mesh, FBX, textures and stats only
 blender -b -P build_rider.py -- --quick             # 1K textures, low-sample half-size renders
 blender -b -P build_rider.py -- --out /some/dir     # write outputs elsewhere (default: ./out)
@@ -62,11 +62,13 @@ The pedal geometry follows the bike:
 
 The body is MPFB 2's base human, built with these settings:
 
-- **Macros:** male, 25 years, muscle 0.68, weight 0.30, "ideal" proportions.
-- **Cyclist targets:** less V-taper and upper-arm mass, more quads and calves, a toned stomach.
+- **Macros:** male, 25 years, muscle 0.55, weight 0.12, "ideal" proportions.
+- **Build targets:** a slim, narrow climber's silhouette that sits inside the bike's width:
+  - narrower shoulders, torso and hips, a smaller seat and less V-taper;
+  - slimmer upper arms, a little more quad and calf, a toned stomach.
 - **Height:** scaled uniformly to exactly 1.780 m standing.
 - **Fit:** the rider's proportions change to fit the bike. The saddle and bars never move.
-  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.142. That puts
+  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.152. That puts
     the knee at the bottom of the stroke at 144.6° (target 145°).
   - The hip joint ends up at x −0.215, z 1.064. The thigh is 0.446 m and the calf 0.461 m.
 - **Helpers:** MPFB's helper geometry is removed. Only the eyeballs and eyelashes are kept, as
@@ -80,7 +82,7 @@ The body is MPFB 2's base human, built with these settings:
 |---|---|
 | Back, hip joint to the base of the neck | 42.0° from horizontal |
 | Torso pitch | 48.7° |
-| Shoulder protraction | 13.2° |
+| Shoulder protraction | 16.6° |
 | Elbows | 17° short of straight |
 | Sit bones | on the saddle top, sunk 3 mm into the pad |
 | Palms | on the hoods 0.538 m forward of the BB |
@@ -144,26 +146,29 @@ There is one action, `Pedal`, the FBX take of the same name:
 - **Upper body:**
   - The hands are fixed in the world.
   - The pelvis rolls ±1.5° and drops 3 mm with each downstroke.
-  - The upper torso counter-rolls 1.2°.
+  - The upper torso counter-rolls only 0.25°, just enough to hold the shoulders still. The
+    upper arms then swing at most 2.7° in a stroke, and the forearms 2°.
   - The head stays level on the road, 10 m ahead.
 - **Loop seam:** every bone's step from frame 59 back to frame 0 is checked against the largest
-  step between consecutive frames. It's 18.1 mm and 2.3°, against 19.5 mm and 2.6°, so the
+  step between consecutive frames. It's 18.1 mm and 2.3°, against 19.4 mm and 2.6°, so the
   loop has no pop.
 
 ## Materials
 
 There are 7 slots on the one mesh. The textures are 2048², with the normal maps in OpenGL
-convention (green up). The roughness is a constant per material.
+convention (green up). The roughness is a constant per material. Everything is kept matte and
+simple, with flat colours and faint surface detail, so the rider sits in the world rather than
+looking like a studio scan.
 
 | Slot | Textures | Roughness | Other | Used on |
 |---|---|---|---|---|
-| `M_Skin` | `T_Body_BaseColor`, `T_Body_Normal` | 0.50 | subsurface 0.12 | skin, the short hair on the scalp |
-| `M_Kit` | `T_Body_BaseColor`, `T_Body_Normal` (same as skin) | 0.62 | sheen 0.06 | jersey, bib shorts, socks (painted on the body) |
-| `M_Helmet` | `T_Helmet_BaseColor`, `T_Helmet_Normal` | 0.30 | clear coat 0.4 | helmet shell |
-| `M_Lens` | none: base (0.010, 0.011, 0.014) | 0.05 | metallic 0.55 | glasses lens, eyeballs |
-| `M_Shoe` | `T_Shoe_BaseColor`, `T_Shoe_Normal` | 0.38 | | shoe uppers, soles, cleats |
-| `M_Strap` | none: base (0.012, 0.012, 0.013) | 0.70 | | helmet straps and buckle, the helmet's inner liner, glasses frame |
-| `M_Hair` | none: base (0.030, 0.019, 0.012) | 0.60 | | brows, eyelashes |
+| `M_Skin` | `T_Body_BaseColor`, `T_Body_Normal` | 0.70 | subsurface 0.05 | skin, the short hair on the scalp |
+| `M_Kit` | `T_Body_BaseColor`, `T_Body_Normal` (same as skin) | 0.85 | | jersey, bib shorts, socks (painted on the body) |
+| `M_Helmet` | `T_Helmet_BaseColor`, `T_Helmet_Normal` | 0.55 | | helmet shell |
+| `M_Lens` | none: base (0.010, 0.011, 0.014) | 0.15 | metallic 0.3 | glasses lens, eyeballs |
+| `M_Shoe` | `T_Shoe_BaseColor`, `T_Shoe_Normal` | 0.60 | | shoe uppers, soles, cleats |
+| `M_Strap` | none: base (0.012, 0.012, 0.013) | 0.80 | | helmet straps and buckle, the helmet's inner liner, glasses frame |
+| `M_Hair` | none: base (0.030, 0.019, 0.012) | 0.80 | | brows, eyelashes |
 
 The kit is a texture on the body, not cloth. Colours are given in linear RGB:
 
@@ -172,7 +177,7 @@ The kit is a texture on the body, not cloth. Colours are given in linear RGB:
 - **Bib shorts:** black, ending just above the knee.
 - **Socks:** short and white.
 - **No marks:** there are no brands, logos or text anywhere.
-- **Normal map:** a subtle knit on the kit and pores on the skin.
+- **Normal map:** a faint knit on the kit and barely any pore detail on the skin.
 
 The gear:
 
@@ -184,14 +189,14 @@ The gear:
 
 | | |
 |---|---|
-| Triangles | **49,632**: Skin 17,036, Kit 5,672, Helmet 6,664, Strap 9,680, Shoe 8,376, Lens 1,804, Hair 400 |
+| Triangles | **49,632**: Skin 17,040, Kit 5,668, Helmet 6,664, Strap 9,680, Shoe 8,376, Lens 1,804, Hair 400 |
 | Bones | 53 |
 | Most influences per vertex | 4 |
 | Largest cleat-to-axle distance | 0.1 mm |
-| Knee angle, min / max | 70.0° / 144.6°, both legs |
+| Knee angle, min / max | 70.1° / 144.6°, both legs |
 | Largest hand-to-hood distance | 0.0 mm (to the palm point) |
-| Interpenetration deeper than 5 mm | index knuckles on the brake levers, 9.6 mm (40 vertices); shorts into the saddle pad, 6.9 mm (16 vertices) |
-| Eye point, frame 0 | (0.361, −0.004, 1.529) |
+| Interpenetration deeper than 5 mm | index knuckles on the brake levers, 9.6 mm (39 vertices); shorts into the saddle pad, 7.5 mm (16 vertices) |
+| Eye point, frame 0 | (0.359, −0.004, 1.530) |
 | Game's assumed eye point | (0.18, ·, 1.50) |
 
 The eye point is 0.18 m further forward and 0.03 m higher than the game assumes. A 178 cm
