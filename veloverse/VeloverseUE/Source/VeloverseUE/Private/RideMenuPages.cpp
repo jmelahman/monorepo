@@ -1542,7 +1542,14 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	}
 	P.Text(X0, 80.f, P.Fit(Kicker.ToUpper(), P.Font("Bold", 14.f, 0.2f), Bx - X0 - 24.f), P.Font("Bold", 14.f, 0.2f),
 	       C.Accent);
-	const float Tw = P.Text(X0, 140.f, P.Fit(Review.Route, P.Serif(56.f), Bx - X0 - 260.f), P.Serif(56.f), Ink);
+	// A ride over several routes ("A, then B") steps the title down before it cuts the last route.
+	const float TitleRoom = Bx - X0 - 260.f;
+	float TitleSize = 56.f;
+	while (TitleSize > 36.f && P.Width(Review.Route, P.Serif(TitleSize)) > TitleRoom)
+	{
+		TitleSize -= 4.f;
+	}
+	const float Tw = P.Text(X0, 140.f, P.Fit(Review.Route, P.Serif(TitleSize), TitleRoom), P.Serif(TitleSize), Ink);
 	FString Saved;
 	if (Review.bJustRidden)
 	{
