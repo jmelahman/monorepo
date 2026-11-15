@@ -63,8 +63,9 @@ SPACING = EXTENT / (RES - 1)  # 7 m for the chain, 14 for the island
 # samples, so the bank rose over the road (11 Nov): it takes at least a sample's width.
 FLAT = max(mi.SHOULDER, SPACING * 1.1)
 # The island's layers and Verge, the bare sand beside the road in the desert and on the beaches:
-# a layer of its own because Desert and Sand grow plants (paint_band).
-LAYERS = {**mi.LAYERS, "Verge": (215, 180, 130)}
+# a layer of its own because Desert and Sand grow plants (paint_band). Heath is the Moor's open
+# ground, heather and sedge rather than the meadows' turf (gap 8: the Moor read as a lawn).
+LAYERS = {**mi.LAYERS, "Verge": (215, 180, 130), "Heath": (125, 95, 90)}
 # The road's earth bank, cm down (road_mesh.section): clear_road sinks whole 14 m cells, so
 # beside the road the ground can sit tens of cm low, and a bare slab edge cast a dark band.
 BANK = 80.0
@@ -468,7 +469,10 @@ def paint_band(x, y, h, slope, d, w, inland):
     }
     green = soft * (1 - beach) * (1 - desert)
     out["Forest"] = green * wooded
-    out["Grass"] = green * (1 - wooded)
+    # The Moor's open ground is heath, with patches of turf a hundred metres or so across.
+    heath = w["heath"] * (0.3 + 0.7 * mi.smoothstep(0.38, 0.58, n(130, 7)))
+    out["Grass"] = green * (1 - wooded) * (1 - heath)
+    out["Heath"] = green * (1 - wooded) * heath
     out["Rock"] = rock * (1 - shoulder)
     out["Snow"] = snow * (1 - shoulder)
     out["Dirt"] = shoulder * (1 - dry)

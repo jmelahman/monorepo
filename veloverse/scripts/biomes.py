@@ -193,8 +193,12 @@ PRESETS["world"] = {
         # Verge is the bare sand beside the road in the desert and on the beaches
         # (make_world_level.py): Desert's sand with no mix and no GRASS row, so nothing grows.
         "Verge": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
+        # The Moor's heath (make_world_level.py): a dull moss floor under the heather, as the
+        # alpine preset's "Desert" is, with gravel and bare soil through it.
+        "Heath": ("forest", "mossy_forest_floor", (1.0, 1.0, 1.0)),
     },
     "MIXES": {
+        "Heath": ("shared", "gravel_on_soil", "patches", 6.0, (-2.6, 1.6)),
         "Desert": ("desert", "dry_mud_ground", "patches", 30.0),
         # Wet sand along the water (the sea is at 0): below 1.2 m, fading over the next 0.6 m.
         "Sand": ("coast", "thai_wet_beach_sand", "wet", 120.0),
@@ -207,6 +211,9 @@ PRESETS["world"] = {
         # 15 Nov: nearer the sand, as its patches read as dark blotches on the dunes (wf_70000).
         "Desert mix": (0.16, 0.115, 0.07),
         "Verge": (0.2, 0.15, 0.09),
+        # Heath: the alpine heath's floor, a little browner, and its grey-brown gravel.
+        "Heath": (0.24, 0.21, 0.1),
+        "Heath mix": (0.28, 0.25, 0.2),
         "Sand": (0.28, 0.24, 0.17),
         "Sand mix": (0.2, 0.18, 0.16),
     },
@@ -218,7 +225,13 @@ PRESETS["world"] = {
         "Sand mix": 0.3,
         "Dirt": 0.0,
         "Dirt mix": 0.0,
+        "Heath": 0.2,
+        "Heath mix": 0.3,
     },
+    # Past the heather's cull the heath takes its colour (MI_Heath's olive and rust, a little
+    # straw), as the meadow takes its blades'.
+    "CANOPY": {"Heath": (0.075, 0.066, 0.03)},
+    "CANOPY_SLOPE": {"Grass": 0.6, "Heath": 0.7},
     # Rock's steep faces darker and bedded (gap 7): Vael's and the Moor's cuts read as pale
     # plaster in the sun (vael_still_30300).
     "STEEP": {
@@ -233,7 +246,6 @@ PRESETS["world"] = {
     # larger far off, as the tops' are (SIDE_FAR, below).
     "MIX_EDGE": {"Desert": 0.15},
     "EDGE_NOISE": {"Rock": 1.6},
-    "CANOPY_SLOPE": {"Grass": 0.6},
     "SIDE_FAR": True,
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
@@ -251,6 +263,20 @@ PRESETS["world"] = {
             ("desert", "desert_american_plant_cactus_medium_11", 0.08, 9000, 12000, (1.0, 2.2)),
             ("desert", "canyon_sandstone_boulder", 0.1, 9000, 12000, (0.8, 2.5)),
             ("desert", "rock_sandstone", 0.4, 6000, 8000, (0.8, 2.0)),
+        ),
+        # The Moor's heath (gap 8): heather cushions and tussocks (MI_Heath), crowberry,
+        # lingonberry, sedge and cotton grass, a little turf, and stones.
+        "Heath": (
+            ("climb", "heath_low", 240.0, 3000, 5000, (0.8, 1.4)),
+            ("climb", "heath_tuft", 50.0, 3000, 5000, (0.8, 1.3)),
+            ("climb", "blade_short", 30.0, 2500, 4000, (0.7, 1.1)),
+            ("mountain", "crowberry", 1.5, 3000, 4500),
+            ("forest", "lingonberry", 1.0, 2500, 4000),
+            ("shared", "tundra_grass", 3.0, 3000, 4500),
+            ("shared", "dense_flat_sedge", 0.8, 3000, 4500),
+            ("mountain", "cotton_grass", 0.6, 3000, 4500),
+            ("forest", "nordic_forest_rock_small", 0.5, 6000, 8000),
+            ("mountain", "tundra_boulder", 0.05, 12000, 15000),
         ),
         "Sand": (
             ("coast", "marram_grass", 3.0, 3000, 5000, (1.0, 1.8)),
@@ -278,6 +304,7 @@ LAID_OVER = (
     "EDGE_NOISE",
     "CANOPY_SLOPE",
     "STRATA",
+    "CANOPY",
 )
 
 
