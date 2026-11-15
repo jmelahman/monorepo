@@ -93,11 +93,34 @@ FRAMES = 60  # one crank revolution, frames 0..59; frame 60 would be frame 0 aga
 # ahead). The hands stay on the hoods, so a lower back brings the shoulders nearer them and
 # bends the elbows. "Pedal", the default, is the aero one: a low back on the hoods.
 EFFORTS = {
-    "Pedal_Easy": (42.0, 0.6, 12.0),
-    "Pedal": (34.0, 1.0, 10.0),
-    "Pedal_Hard": (30.0, 1.8, 8.0),
+    "Pedal_Easy": (40.0, 0.6, 12.0),
+    "Pedal": (32.0, 1.0, 10.0),
+    "Pedal_Hard": (28.0, 1.8, 8.0),
 }
 DEFAULT_EFFORT = "Pedal"
+# The first-person action: Pedal's crank timing, hands and finger curls, with the upper body
+# sunk down and back so that from the game's cockpit camera the forearms reach in from the
+# frame's bottom corners to the hoods. The game hides the head and legs; the head folds down
+# out of view anyway. Hip joints (x, z), torso pitch, clavicles, elbow pole, neck and gaze, as
+# in Rider.pose. Found by a search that kept the back, shoulders, upper arms and head out of
+# the camera's view.
+COCKPIT_ACTION = "Cockpit"
+COCKPIT = {
+    "hip": (-0.42, 0.78),
+    "torso": 80.0,
+    "clav": 20.0,
+    "arm_pole": (-0.20, 0.20, -0.20),
+    "neck_extra": 60.0,
+    "gaze": 90.0,
+}
+# The game's cameras (16:9, GAME_HFOV wide): the cockpit camera, pitched down to put the bars
+# in the frame's bottom third, and the chase camera, CHASE_DISTANCE back from its target.
+GAME_HFOV = 61.0
+COCKPIT_CAMERA = (-0.27, 0.0, 1.12)
+COCKPIT_PITCH = 5.0  # deg down
+CHASE_TARGET = (0.18, 0.0, 1.62)
+CHASE_DISTANCE = 5.1
+CHASE_PITCH = 2.0  # deg down
 # deg short of straight: the shoulders protract until the elbows bend this much, or, once they
 # are fully drawn back (a low back), the elbows bend more to take up the reach
 ELBOW_BEND = 17.0
@@ -543,15 +566,15 @@ SIDES = (("l", 1), ("r", -1))  # MPFB's left is the bike's non-drive side, +Y
 TORSO = ("pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head")
 PELVIS_SHARE = 0.8  # of the torso's forward pitch taken by the pelvis; the spine takes the rest
 SPINE_SHARE = (0.30, 0.35, 0.35)
-# The grip (place_hands, then solve_grip). The palm point first moves over the hood, within
-# these offsets, to rest the palm and knuckles on it. Then each joint, knuckle first, closes
-# from its relaxed curl about its bone's X until the skin comes GRIP_GAP off the hood, lever or
-# bar, within its (open, closed) range in degrees.
-HOOD_SEARCH_X = (-0.025, 0.010)  # m, along the hood
-HOOD_SEARCH_OUT = (-0.006, 0.020)  # m, toward the outside of the hood
-HOOD_SEARCH_UP = (0.0, 0.010)  # m, above HOOD_LIFT
-HOOD_SEARCH_STEP = 0.0025
-GRIP_RANGE = {"01": (-10.0, 60.0), "02": (0.0, 80.0), "03": (0.0, 55.0)}
+# The grip (place_hands, then solve_grip). The palm point sits over the hood's body and lifts
+# until the palm and knuckles rest on it. Then each joint, knuckle first, closes from its
+# relaxed curl about its bone's X until the skin comes GRIP_GAP off the hood, lever or bar,
+# within its (open, closed) range in degrees.
+HOOD_CONTACT_X = 0.553  # m, the palm point along the hood: on its body, behind the horn
+HOOD_OUT = 0.0  # m, the palm point outboard of the hood's middle
+HOOD_LIFT = 0.009  # m, palm point above the hood's top: the thenar pad bulges below it
+HOOD_LIFT_RANGE = (-0.015, 0.045)  # m, the lift searched on top of HOOD_LIFT
+GRIP_RANGE = {"01": (-10.0, 85.0), "02": (0.0, 100.0), "03": (0.0, 70.0)}
 THUMB_RANGE = {"01": (-10.0, 30.0), "02": (0.0, 45.0), "03": (0.0, 50.0)}
 GRIP_OPEN = 15.0  # deg, the most a joint opens from its relaxed curl to clear the hood
 THUMB_CURL = {"01": 8.0, "02": 18.0, "03": 20.0}  # before the grip is solved
@@ -559,12 +582,22 @@ GRIP_REST = {"01": 8.0, "02": 12.0, "03": 8.0}  # before the grip is solved
 GRIP_GAP = 0.0015  # m, skin to the hood or lever
 GRIP_STEP = 1.0  # deg
 FINGERS = ("index", "middle", "ring", "pinky")
-HAND_AXIS = (1.0, 0.0, -0.10)  # wrist to knuckles on the hood, world
-HAND_PALM_IN = 1.0  # tan of the palm's turn from facing down toward the bike's centre (45 deg)
-ARM_POLE = (-0.20, 0.20, -0.20)  # elbow direction from the shoulder-wrist midpoint (x, out, z)
-CLAV_MAX = 20.0  # deg, the most the shoulders protract
-HOOD_CONTACT_X = 0.538  # m, where the middle of the palm rests on the hood's top
-HOOD_LIFT = 0.009  # m, palm point above the hood's top: the thenar pad bulges below it
+# The hand on the hood (deg): the wrist-to-knuckle line turned out from straight ahead and
+# pitched down, and the palm rolled from facing down toward the bike's centre. A handshake
+# grip: the hood's top in the web of the thumb, the palm round its outside, the fingers over
+# the lever and the thumb round the inside. Found by a search that every finger touch the hood
+# or lever with its tip below its knuckle, and the thumb's tip inside the hood.
+HAND_YAW = 10.0
+HAND_PITCH = 5.0
+HAND_ROLL = 75.0
+# the elbows' direction from the shoulder-wrist midpoint (x, out, z): back, down and in, so
+# they tuck under the chest and the arms barely show beside the back from behind
+ARM_POLE = (-0.20, -0.20, -0.20)
+CLAV_MIN = 16.0  # deg, the least the shoulders protract: rounded, not braced back
+CLAV_MAX = 30.0  # deg, the most the shoulders protract
+HIP_X = -0.24  # m, the hip joints behind the BB
+NECK_EXTRA = 30.0  # deg, the neck pitched down past halfway between back and gaze: head low
+CLAV_DROP = 8.0  # deg, the shoulders' drop about the clavicles' line
 
 
 def angle_at(a, b, c):
@@ -585,6 +618,13 @@ def frame_from(axis, normal):
     m.col[1] = n.cross(a)
     m.col[2] = n
     return m
+
+
+def hand_frame(side):
+    """The hand's world frame on the hood (columns: wrist to knuckles, across, palm normal)."""
+    y, p, r = (math.radians(a) for a in (HAND_YAW, HAND_PITCH, HAND_ROLL))
+    axis = (math.cos(p) * math.cos(y), side * math.cos(p) * math.sin(y), -math.sin(p))
+    return frame_from(axis, (0.0, -side * math.sin(r), -math.cos(r)))
 
 
 class Rider:
@@ -726,13 +766,13 @@ class Rider:
             D = (
                 D3
                 @ rot_z(-side * P["clav"]).to_3x3()
-                @ rot_x(side * P.get("clav_drop", 0.0)).to_3x3()
+                @ rot_x(-side * P.get("clav_drop", CLAV_DROP)).to_3x3()
             )
             self.chain_X(f"clavicle_{s}", D, self.X["spine_03"])
             self.set_basis(f"clavicle_{s}")
         # neck: between the back and the head; head: fixed in the world, looking down the road
         gaze = P["gaze"]
-        neck_pitch = 0.5 * (acc + gaze) + P.get("neck_extra", 0.0)
+        neck_pitch = 0.5 * (acc + gaze) + P.get("neck_extra", NECK_EXTRA)
         self.chain_X("neck_01", rot_y(neck_pitch).to_3x3(), self.X["spine_03"])
         self.set_basis("neck_01")
         self.chain_X("head", rot_y(gaze).to_3x3(), self.X["neck_01"])
@@ -751,7 +791,7 @@ class Rider:
             tgt, pole, con = self.targets[("arm", s)]
             hp = self.palm[s]
             Fr = frame_from(hp["axis"], hp["normal"])
-            Fd = frame_from(HAND_AXIS, (0.0, -side * HAND_PALM_IN, -1.0))
+            Fd = hand_frame(side)
             Dh = Fd @ Fr.transposed()
             contact = Vector(self.hood[s])
             wrist = contact - Dh @ (hp["point"] - hp["wrist"])
@@ -759,7 +799,8 @@ class Rider:
             tgt.matrix_world = Matrix.Translation(wrist) @ (Dh @ rest_rot).to_4x4()
             sh = self.X[f"clavicle_{s}"] @ self.head_rest[f"upperarm_{s}"]
             mid = (sh + wrist) / 2
-            pole.location = mid + Vector((ARM_POLE[0], side * ARM_POLE[1], ARM_POLE[2]))
+            ax, ay, az = P.get("arm_pole", ARM_POLE)
+            pole.location = mid + Vector((ax, side * ay, az))
             con.pole_angle = P["pole"][("arm", s)]
         # legs: cleat on the pedal axle, sole pitched by the ankling curve
         for s, side in SIDES:
@@ -983,11 +1024,10 @@ def solve_fit(rider, bike, effort=DEFAULT_EFFORT, P0=None, iters=8):
         return _fit_loop(rider, copy.deepcopy(P0), effort, iters)
     hood = {}
     for s, side in SIDES:
-        z, y = bike.hood_top(side, HOOD_CONTACT_X)
-        hood[s] = (HOOD_CONTACT_X, y, z + HOOD_LIFT)
+        hood[s] = hood_point(bike, HOOD_CONTACT_X, side)
     rider.hood = hood
     P: dict[str, Any] = {
-        "hip": [-0.215, 1.13],
+        "hip": [HIP_X, 1.13],
         "torso": 48.0,
         "clav": 8.0,
         "gaze": 8.5,
@@ -1026,7 +1066,7 @@ def _fit_loop(rider, P, effort, iters):
         # arms: protract the shoulders until the elbows bend ELBOW_BEND
         P["clav"] = bisect(
             "clav",
-            -5.0,
+            CLAV_MIN,
             CLAV_MAX,
             lambda: 0.5 * (rider.elbow_bend("l") + rider.elbow_bend("r")) - ELBOW_BEND,
         )
@@ -1051,25 +1091,17 @@ def _fit_loop(rider, P, effort, iters):
     return P
 
 
-def hood_point(bike, base, side, dx, dout, dz=0.0):
-    """The palm point moved dx along the hood, dout outboard and dz up, from HOOD_LIFT over
-    the hood's top."""
-    x, y, _ = base
-    h = bike.hood_verts[side][:, 0]
-    z, _ = bike.hood_top(side, float(np.clip(x + dx, h.min() + 0.004, h.max() - 0.004)))
-    return (x + dx, y + side * dout, z + HOOD_LIFT + dz)
+def hood_point(bike, x, side, dz=0.0):
+    """The palm point over the hood at x: HOOD_OUT outboard of the hood's middle and
+    HOOD_LIFT + dz above its top."""
+    z, y = bike.hood_top(side, x)
+    return (x, y + side * HOOD_OUT, z + HOOD_LIFT + dz)
 
 
 def place_hands(rider, P):
-    """Move each palm point over its hood, within HOOD_SEARCH_*, to the smallest move that
-    rests the palm, knuckles and the fingers' first segments on it (GRIP_GAP off it, to the
-    millimetre): the hood's horn then sits in front of the knuckles, not through a finger.
-    The arms follow by IK. Then the fingers and thumbs close on the hood (solve_grip)."""
-    base = dict(rider.hood)
-    rng = [
-        np.arange(lo, hi + 1e-9, HOOD_SEARCH_STEP)
-        for lo, hi in (HOOD_SEARCH_X, HOOD_SEARCH_OUT, HOOD_SEARCH_UP)
-    ]
+    """Lift each palm point off its hood until the palm, knuckles and the fingers' first
+    segments rest GRIP_GAP off the cockpit (bisected to a tenth of a millimetre). The arms
+    follow by IK. Then the fingers and thumbs close on the hood (solve_grip)."""
     names = [b.name for b in rider.rig.data.bones]
     W = vertex_weights(rider.mesh, names)
     dom = np.array(names)[W.argmax(1)]
@@ -1081,27 +1113,23 @@ def place_hands(rider, P):
         )
         first = np.isin(dom, [f"{f}_01_{s}" for f in FINGERS])
         rigid[s] = np.where((dom == f"hand_{s}") | (fing & (hand > 0.3)) | first)[0]
-    best = None
-    for dx in rng[0]:
-        for do in rng[1]:
-            for dz in rng[2]:
-                for s, side in SIDES:
-                    rider.hood[s] = hood_point(rider.bike, base[s], side, dx, do, dz)
-                rider.pose(0, P)
-                co = mesh_co(rider.mesh, evaluated=True, world=False)
-                worst = min(rider.cockpit_clearance(co[rigid[s]]).min() for s, _ in SIDES)
-                # resting on it: the palm and knuckles GRIP_GAP off it, to the millimetre
-                score = (-round(abs(worst - GRIP_GAP) * 1000), -abs(dx) - abs(do) - abs(dz))
-                if best is None or score > best[0]:
-                    best = (score, dx, do, dz, worst)
-    assert best is not None
-    _, dx, do, dz, worst = best
-    for s, side in SIDES:
-        rider.hood[s] = hood_point(rider.bike, base[s], side, dx, do, dz)
-    log(
-        f"hands: palm moved {1000 * dx:+.1f} mm along, {1000 * do:+.1f} mm out,"
-        f" {1000 * dz:+.1f} mm up; palm and knuckles {1000 * worst:+.1f} mm off the cockpit"
-    )
+
+    def clearance(dz):
+        for s, side in SIDES:
+            rider.hood[s] = hood_point(rider.bike, HOOD_CONTACT_X, side, dz)
+        rider.pose(0, P)
+        co = mesh_co(rider.mesh, evaluated=True, world=False)
+        return min(rider.cockpit_clearance(co[rigid[s]]).min() for s, _ in SIDES)
+
+    lo, hi = HOOD_LIFT_RANGE
+    for _ in range(10):
+        mid = 0.5 * (lo + hi)
+        if clearance(mid) > GRIP_GAP:
+            hi = mid
+        else:
+            lo = mid
+    worst = clearance(hi)
+    log(f"hands: palm lifted {1000 * hi:+.1f} mm; palm and knuckles {1000 * worst:+.1f} mm off")
     P["hood"] = {s: list(rider.hood[s]) for s, _ in SIDES}
     rider.calibrate_poles(P)
     rider.pose(0, P)
@@ -1159,8 +1187,80 @@ def solve_efforts(rider, bike, P):
             f" {0.5 * (rider.elbow_bend('l') + rider.elbow_bend('r')):.1f},"
             f" shoulders {Q['clav']:.1f}, knee at BDC {max_knee(rider, Q):.1f}"
         )
+    fits[COCKPIT_ACTION] = fit_cockpit(rider, P)
     rider.pose(0, P)
     return fits
+
+
+def fit_cockpit(rider, P):
+    """The Cockpit action's fit: Pedal's, with COCKPIT's upper body. The hands keep Pedal's
+    palm points and grip, and the crank keeps its timing and hip rock."""
+    Q = copy.deepcopy(P)
+    Q.update({k: (list(v) if isinstance(v, tuple) else v) for k, v in COCKPIT.items()})
+    Q["action"] = COCKPIT_ACTION
+    rider.calibrate_poles(Q)
+    views = []
+    for k in range(0, FRAMES, 4):
+        rider.pose(k, Q)
+        views.append(cockpit_view(rider))
+    worst = max(views, key=lambda v: v["seen_upper_body_verts"])
+    worst = dict(worst, camera_to_arms_m=min(v["camera_to_arms_m"] for v in views))
+    log(f"cockpit, the worst of every 4th frame: {worst}")
+    Q["view"] = worst
+    return Q
+
+
+def game_camera(cam, loc, pitch_down):
+    """The game's camera: at loc, looking down the road (+X), pitched down, GAME_HFOV wide."""
+    cam.location = loc
+    cam.rotation_euler = (math.radians(90.0 - pitch_down), 0.0, math.radians(-90.0))
+    cam.data.type = "PERSP"
+    cam.data.sensor_fit = "HORIZONTAL"
+    cam.data.angle = math.radians(GAME_HFOV)
+
+
+def chase_camera_location():
+    p = math.radians(CHASE_PITCH)
+    return Vector(CHASE_TARGET) - CHASE_DISTANCE * Vector((math.cos(p), 0.0, -math.sin(p)))
+
+
+def cockpit_view(rider):
+    """What the cockpit camera sees of the rider as posed: the vertices of the back, shoulders,
+    upper arms and head inside its frustum (16:9), the forearm vertices it sees, where they
+    enter the frame (the lowest and most outboard, in -1..1 of the half-frame), and the camera's
+    distance to the nearest clavicle or arm vertex."""
+    names = [b.name for b in rider.rig.data.bones]
+    if not hasattr(rider, "cockpit_groups"):
+        W = vertex_weights(rider.mesh, names)
+        dom = np.array(names)[W.argmax(1)].astype(str)
+        upper = np.isin(dom, ["pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head"])
+        upper |= np.char.startswith(dom, "clavicle") | np.char.startswith(dom, "upperarm")
+        fore = np.char.startswith(dom, "lowerarm")
+        arms = np.char.startswith(dom, "clavicle") | np.char.startswith(dom, "upperarm") | fore
+        rider.cockpit_groups = (upper, fore, arms)
+    upper, fore, arms = rider.cockpit_groups
+    co = mesh_co(rider.mesh, evaluated=True)
+    c = np.array(COCKPIT_CAMERA)
+    th = math.radians(COCKPIT_PITCH)
+    fwd = np.array([math.cos(th), 0.0, -math.sin(th)])
+    up = np.array([math.sin(th), 0.0, math.cos(th)])
+    tx = math.tan(math.radians(GAME_HFOV / 2))
+    ty = tx * 9 / 16
+    d = co - c
+    z = d @ fwd
+    zs = np.maximum(z, 1e-6)
+    x = -d[:, 1] / zs / tx  # +Y is the frame's left
+    y = (d @ up) / zs / ty
+    seen = (z > 0.02) & (np.abs(x) < 1) & (np.abs(y) < 1)
+    f = seen & fore
+    return {
+        "seen_upper_body_verts": int((seen & upper).sum()),
+        "seen_forearm_verts": int(f.sum()),
+        "forearm_entry": [round(float(np.abs(x[f]).max()), 2), round(float(y[f].min()), 2)]
+        if f.any()
+        else None,
+        "camera_to_arms_m": round(float(np.linalg.norm(d[arms], axis=1).min()), 3),
+    }
 
 
 def fit_report(rider, P):
@@ -2089,10 +2189,10 @@ def record_pedal(rider, P):
 
 
 def bake_efforts(rider, fits):
-    """Record every effort, drop the IK, and key one cyclic action per effort, ending with the
-    default effort's action assigned. Returns {action: recorded frames}."""
+    """Record every effort and the Cockpit action, drop the IK, and key one cyclic action each,
+    ending with the default effort's action assigned. Returns {action: recorded frames}."""
     rig = rider.rig
-    recs = {name: record_pedal(rider, fits[name]) for name in EFFORTS}
+    recs = {name: record_pedal(rider, fits[name]) for name in fits}
     for pb in rig.pose.bones:
         for c in list(pb.constraints):
             pb.constraints.remove(c)
@@ -2100,7 +2200,7 @@ def bake_efforts(rider, fits):
     rider.dispose()
     bpy.context.preferences.edit.keyframe_new_interpolation_type = "LINEAR"
     rig.animation_data_create()
-    for name in (*[n for n in EFFORTS if n != DEFAULT_EFFORT], DEFAULT_EFFORT):
+    for name in (*[n for n in fits if n != DEFAULT_EFFORT], DEFAULT_EFFORT):
         key_action(rig, name, recs[name])
     sc = bpy.context.scene
     sc.frame_start, sc.frame_end = 0, FRAMES - 1
@@ -2220,6 +2320,23 @@ def seam_check(rec):
     }
 
 
+def inside(tree, p):
+    """Whether a local point is inside a mesh: an odd number of crossings along each of three
+    rays. The nearest face's normal alone misreads open air under an overhang, such as a
+    fingertip in the hollow between a hood and its lever blade."""
+    odd = 0
+    for d in (Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, -1))):
+        o, n = Vector(p), 0
+        while n < 64:
+            hit = tree.ray_cast(o, d, 2.0)
+            if hit[0] is None:
+                break
+            n += 1
+            o = hit[0] + d * 1e-5
+        odd += n % 2
+    return odd >= 2
+
+
 def penetration(rider_ob, bike, bike_objs, slot_of_vertex):
     """Rider vertices more than 5 mm inside a bike part, over all frames."""
     names = [
@@ -2249,7 +2366,7 @@ def penetration(rider_ob, bike, bike_objs, slot_of_vertex):
                 if hit[0] is None:
                     continue
                 dvec = Vector(loc[i]) - hit[0]
-                if dvec.dot(hit[1]) < 0 and hit[3] > 0.005:
+                if dvec.dot(hit[1]) < 0 and hit[3] > 0.005 and inside(tree, loc[i]):
                     key = (n, slot_of_vertex[i])
                     w = worst.get(key, {"verts": set(), "max_mm": 0.0, "frames": set()})
                     w["verts"].add(int(i))
@@ -2284,10 +2401,12 @@ def collect_stats(rider, fits, rider_ob, bike, bike_objs, recs):
     for p in me.polygons:
         for v in p.vertices:
             slot[v] = me.materials[p.material_index].name
-    efforts = {}
-    for name in EFFORTS:
+    efforts, frame0 = {}, {}
+    for name in fits:
         use_action(rider.rig, bpy.data.actions[name])
         efforts[name] = effort_stats(rider, fits[name], rider_ob, bike, bike_objs, recs[name], slot)
+        frame0[name] = frame0_stats(rider, bike)
+    efforts[COCKPIT_ACTION]["cockpit_view"] = fits[COCKPIT_ACTION]["view"]
     use_action(rider.rig, bpy.data.actions[DEFAULT_EFFORT])
     names = list(EFFORTS)
     drift = {
@@ -2310,6 +2429,19 @@ def collect_stats(rider, fits, rider_ob, bike, bike_objs, recs):
             "thigh_m": round((leg["thigh_l"].tail_local - leg["thigh_l"].head_local).length, 4),
             "calf_m": round((leg["calf_l"].tail_local - leg["calf_l"].head_local).length, 4),
             "palm_points": {s: [round(c, 4) for c in rider.hood[s]] for s, _ in SIDES},
+        },
+        # per action at frame 0, for the game to check its import against (m; "l" is the
+        # non-drive side, +Y)
+        "frame0": frame0,
+        "cameras": {
+            "hfov_deg": GAME_HFOV,
+            "aspect": "16:9",
+            "cockpit": {"location": list(COCKPIT_CAMERA), "pitch_down_deg": COCKPIT_PITCH},
+            "chase": {
+                "location": [round(c, 4) for c in chase_camera_location()],
+                "target": list(CHASE_TARGET),
+                "pitch_down_deg": CHASE_PITCH,
+            },
         },
         "efforts": efforts,
         # a halfway blend of neighbouring efforts' local transforms: the hands' and feet's
@@ -2350,8 +2482,26 @@ def effort_stats(rider, P, rider_ob, bike, bike_objs, rec, slot):
         "eye_point_frame0": [round(c, 4) for c in eye],
         "loop_seam": seam_check(rec),
     }
-    log(f"{P['effort']}: " + ", ".join(f"{k} {v}" for k, v in out.items()))
+    log(f"{P.get('action', P['effort'])}: " + ", ".join(f"{k} {v}" for k, v in out.items()))
     return out
+
+
+def frame0_stats(rider, bike):
+    """The assigned action at frame 0: the back, the eye point, the palm points, the head
+    bone's head, and the hood points under the palms (the hood's top at the palm's x, across
+    the hood's middle)."""
+    bpy.context.scene.frame_set(0)
+    hood = {}
+    for s, side in SIDES:
+        z, y = bike.hood_top(side, HOOD_CONTACT_X)
+        hood[s] = [round(HOOD_CONTACT_X, 4), round(float(y), 4), round(float(z), 4)]
+    return {
+        "back_deg_hip_to_neck_base": round(rider.back_angle(), 2),
+        "eye_point": [round(c, 4) for c in rider.eye_point()],
+        "palm_points": {s: [round(c, 4) for c in rider.palm_world(s)] for s, _ in SIDES},
+        "head_bone": [round(c, 4) for c in rider.rig.pose.bones["head"].head],
+        "hood_contact": hood,
+    }
 
 
 # =============================================================================================
@@ -2431,6 +2581,7 @@ def aim(cam, loc, target, lens):
     cam.location = loc
     cam.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
     cam.data.type = "PERSP"
+    cam.data.sensor_fit = "AUTO"
     cam.data.lens = lens
 
 
@@ -2451,6 +2602,44 @@ def render_all(out, quick, bike_objs, rig):
         t0 = time.time()
         bpy.ops.render.render(write_still=True)
         log(f"{name}: {time.time() - t0:.0f}s")
+    # the game's views (16:9) and the hands on the hoods from above and behind
+    res = sc.render.resolution_x, sc.render.resolution_y
+    sc.render.resolution_x, sc.render.resolution_y = 1280, 720
+    clip = cam.data.clip_start
+    cam.data.clip_start = 0.02
+    shots = (
+        (
+            "render_game_chase",
+            DEFAULT_EFFORT,
+            lambda: game_camera(cam, chase_camera_location(), CHASE_PITCH),
+        ),
+        (
+            "render_game_cockpit",
+            COCKPIT_ACTION,
+            lambda: game_camera(cam, COCKPIT_CAMERA, COCKPIT_PITCH),
+        ),
+        (
+            "render_hands_top",
+            DEFAULT_EFFORT,
+            lambda: aim(cam, (0.26, 0.0, 1.28), (0.56, 0.0, 0.90), 32),
+        ),
+    )
+    for name, action, place in shots:
+        use_action(rig, bpy.data.actions[action])
+        # the game hides the head in the cockpit view: shrink it to a point (unkeyed channel)
+        head = rig.pose.bones["head"]
+        head.scale = (1e-3,) * 3 if action == COCKPIT_ACTION else (1.0,) * 3
+        sc.frame_set(0)
+        place()
+        sc.render.filepath = os.path.join(out, name + ".png")
+        t0 = time.time()
+        bpy.ops.render.render(write_still=True)
+        log(f"{name}: {time.time() - t0:.0f}s")
+    rig.pose.bones["head"].scale = (1.0, 1.0, 1.0)
+    use_action(rig, bpy.data.actions[DEFAULT_EFFORT])
+    sc.frame_set(0)
+    cam.data.clip_start = clip
+    sc.render.resolution_x, sc.render.resolution_y = res
     # contact sheet: drive side, legs and drivetrain, labelled with the crank angle
     sc.render.resolution_x, sc.render.resolution_y = 800, 520
     sc.render.resolution_percentage = 50 if quick else 100
