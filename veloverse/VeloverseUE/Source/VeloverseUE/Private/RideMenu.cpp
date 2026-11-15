@@ -77,8 +77,14 @@ void URideMenu::NativeTick(const FGeometry& Geometry, float DeltaTime)
 	CostGpu += FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
 	if (CostClock >= 10.f)
 	{
-		UE_LOG(LogTemp, Display, TEXT("RIDE menu frame %.1f ms, gpu %.1f ms, %s"), 1000.f * CostClock / CostFrames,
-		       CostGpu / CostFrames, bFrozen ? TEXT("still") : TEXT("live"));
+		const ARidePawn* Pawn = Rider();
+		UE_LOG(LogTemp, Display,
+		       TEXT("RIDE menu frame %.1f ms, gpu %.1f ms, %s (wanted %d, started %d, backdrop %d, settled %.0f s, quiet %.0f s, "
+		            "streaming %d, compiling %u, asked %d)"),
+		       1000.f * CostClock / CostFrames, CostGpu / CostFrames, bFrozen ? TEXT("still") : TEXT("live"),
+		       StillWanted(), Pawn && Pawn->bStarted, Pawn && Pawn->bOnBackdrop, SettleClock, QuietClock,
+		       IStreamingManager::Get().GetNumWantingResources(), FShaderPipelineCache::NumPrecompilesRemaining(),
+		       bStillAsked);
 		CostClock = CostGpu = 0.f;
 		CostFrames = 0;
 	}
