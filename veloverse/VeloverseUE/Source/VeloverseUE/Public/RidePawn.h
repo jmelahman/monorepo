@@ -244,6 +244,7 @@ private:
 	float Crank = 0.f;
 	float Sway = 0.f;
 	float Lean = 0.f;
+	float Steer = 0.f; // degrees the fork turns into a bend, right positive
 	// The rider's line: cm toward the inside of the bend, eased, on top of the drift across the
 	// lane (RideLine), and the speed's change, eased, which tips the head back on a surge.
 	float Apex = 0.f;

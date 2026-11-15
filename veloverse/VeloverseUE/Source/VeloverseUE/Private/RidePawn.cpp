@@ -1029,6 +1029,10 @@ void ARidePawn::Place()
 		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
 		const float Want = bMoves ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
+		// The fork turns to the bend's own angle, atan(wheelbase k), at most 3 degrees: the hands
+		// stay on the hoods, which move a centimetre at that.
+		const float Turning = bMoves ? FMath::RadiansToDegrees(FMath::Atan(0.988f * Curve)) : 0.f;
+		Steer = FMath::Lerp(Steer, FMath::Clamp(Turning, -3.f, 3.f), 1.f - FMath::Exp(-Dt / 0.35f));
 		// A surge tips the head back a little and easing off lets it drop, about half a degree
 		// for each m/s gained a second, up to a degree and a half.
 		const float Gain = LastSpeed >= 0.f && !bPaused ? (Speed - LastSpeed) / Dt : 0.f;
@@ -1113,6 +1117,10 @@ const TCHAR* const BikePartNames[PartCount] = {
 const FVector FrontHub(58.63f, 0.f, 33.9f);
 const FVector RearHub(-40.195f, 0.f, 33.9f);
 const FVector BottomBracket(0.f, 0.f, 26.9f);
+// The fork, bars and front wheel steer about the head tube's axis, through its centre
+// (bike/README.md's Fork pivot and axis: 73 degrees from the ground, up and back).
+const FVector HeadTube(41.193f, 0.f, 76.228f);
+const FVector SteerAxis(-0.2924f, 0.f, 0.9563f);
 constexpr float WheelRadius = 33.9f; // to the tyre's tread
 constexpr float CrankLength = 17.25f; // to the pedal's axle
 constexpr float RiderLoop = 2.f; // s: rider/README.md's Pedal, 60 frames at 30 fps a revolution
@@ -1171,7 +1179,12 @@ void ARidePawn::PoseBike()
 	};
 	const double Round = 2.0 * PI * WheelRadius;
 	const float Spin = float(FMath::Fmod(Distance, Round) / WheelRadius);
-	Turn(BikeWheelFront, FrontHub, Spin);
+	// Steered: the wheel spins about its hub, then turns with the fork about the head tube.
+	const FQuat Steered(SteerAxis.GetSafeNormal(), FMath::DegreesToRadians(Steer));
+	BikeParts[BikeFork]->SetRelativeLocationAndRotation(PartsOrigin + HeadTube - Steered.RotateVector(HeadTube), Steered);
+	const FQuat Rolled(FVector::YAxisVector, Spin);
+	BikeParts[BikeWheelFront]->SetRelativeLocationAndRotation(
+		PartsOrigin + HeadTube + Steered.RotateVector(FrontHub - Rolled.RotateVector(FrontHub) - HeadTube), Steered * Rolled);
 	Turn(BikeWheelRear, RearHub, Spin);
 	Turn(BikeCranks, BottomBracket, Crank);
 	// The pedals ride round on the cranks' ends but stay level, as a foot keeps them.
