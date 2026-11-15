@@ -274,6 +274,10 @@ GRASS = {
         ("shared", "goldenrods", 0.08, 3500, 5000),
         # 12 Nov Fab wave 2: low tufts that break up the blade carpet's even top.
         ("shared", "tufted_grass", 1.0, 3000, 4500),
+        # Gap 4: a sparse layer of big clumps out to 200 m, past the blades' 70-100 m, so the
+        # meadow doesn't stop at a line and run on as one flat sheet. About 9 per 100 m^2 over
+        # the three variants; culled past 9000, so GRASS_REACH leaves it be.
+        ("shared", "grass_clumps", 3.0, 14000, 20000, (1.6, 2.6)),
         ("mountain", "tundra_boulder", 0.03, 12000, 15000),
     ),
     # The woods' floor is two tables (v30). "Forest" grows only on the layer's grass patches (its
