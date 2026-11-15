@@ -429,8 +429,12 @@ def road_distance(lines):
     print(f"road distance: {near} samples within {DIST_NEAR:.0f} m", flush=True)
 
 
-def paint_band(x, y, h, slope, d, w, inland):
-    """Each layer's weight, 0..1, for one band."""
+# The cut banks' bare ground: fully bare where the cut is CUT_BARE m deep, within CUT_REACH m.
+CUT_BARE, CUT_REACH = 2.0, 45.0
+
+
+def paint_band(x, y, h, slope, d, w, inland, cut=None):
+    """Each layer's weight, 0..1, for one band; `cut` (m) is how far carve() lowered the ground."""
     n = lambda s, seed, octaves=3: mi.fbm(x, y, s, octaves, SEED + seed)  # noqa: E731
     shoulder = mi.smoothstep(mi.ROAD_HALF + 0.9, mi.ROAD_HALF + 0.2, d)
     rock = mi.smoothstep(0.75, 1.05, slope) * mi.smoothstep(10.0, 25.0, d)
@@ -442,6 +446,16 @@ def paint_band(x, y, h, slope, d, w, inland):
     snow = mi.smoothstep(SNOWLINE - 40, SNOWLINE + 40, h + 90 * (n(70, 1) - 0.5))
     snow *= 1 - mi.smoothstep(0.7, 1.1, slope)
     rock *= 1 - snow
+    # Gap 5, cut and fill: where the road was cut into a hill its bank is bare, earth in the low
+    # country and rock in the high (the Moor's cut read as a lime lawn, wf_55000); the fill
+    # below the road grows over. Patchy, with turf hanging over the bank's top.
+    face = np.zeros_like(h)
+    if cut is not None:
+        face = mi.smoothstep(0.5, CUT_BARE, cut) * mi.smoothstep(0.25, 0.5, slope)
+        face *= mi.smoothstep(CUT_REACH, CUT_REACH * 0.6, d) * (0.55 + 0.45 * n(9, 8))
+        face *= 1 - snow
+        rock = np.maximum(rock, face * np.clip(high + w["desert"], 0, 1))
+        face *= np.clip(1 - high - w["desert"], 0, 1)
     beach_top = 5.5 + 2.5 * n(300, 2)
     # A strip along the water, not a plain: 500..900 m painted the hub's low coast, and the coast
     # road 200 m in, as one sand flat like Red Sands (12 Nov stills); 120..260 m still reached
@@ -462,7 +476,7 @@ def paint_band(x, y, h, slope, d, w, inland):
     wooded = (w["forest"] + w["mountain"]) * (1 - clearing) + w["meadow"] * copse
     wooded = wooded + w["heath"] * mi.smoothstep(0.66, 0.72, n(200, 6))
     wooded = np.clip(wooded, 0, 1) * (1 - alpine)
-    soft = (1 - rock) * (1 - snow) * (1 - shoulder)
+    soft = (1 - rock) * (1 - snow) * (1 - shoulder) * (1 - face)
     out = {
         "Sand": soft * beach,
         "Desert": soft * (1 - beach) * desert,
@@ -475,7 +489,7 @@ def paint_band(x, y, h, slope, d, w, inland):
     out["Heath"] = green * (1 - wooded) * heath
     out["Rock"] = rock * (1 - shoulder)
     out["Snow"] = snow * (1 - shoulder)
-    out["Dirt"] = shoulder * (1 - dry)
+    out["Dirt"] = shoulder * (1 - dry) + face * (1 - rock) * (1 - shoulder)
     out["Verge"] = shoulder * dry
     return {k: out[k].astype(np.float32) for k in LAYERS}
 
@@ -601,7 +615,7 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert, whole):
     ]
 
 
-def paint_and_trees(plan, h, dist):
+def paint_and_trees(plan, h, dist, cut):
     """Writes each layer's .r8 band by band; returns the trees and the preview's colours."""
     rng = np.random.default_rng(SEED + 100)
     for k in LAYERS:
@@ -621,7 +635,7 @@ def paint_and_trees(plan, h, dist):
         hb, db = h[r0:r1], dist[r0:r1]
         w = weights(plan, x, y)
         inland = plan.at(plan.inland, x, y)
-        layers = paint_band(x, y, hb, slope, db, w, inland)
+        layers = paint_band(x, y, hb, slope, db, w, inland, cut[r0:r1])
         total = sum(layers.values()) + 1e-6
         q8 = {k: np.round(v / total * 255).astype(np.uint8) for k, v in layers.items()}
         for k in names:
@@ -1242,6 +1256,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     plan = Plan()
     h = ground(plan)
+    raw = h.copy()  # before the roads are carved in: their cut banks are painted bare
     print(f"ground {h.min():.0f}..{h.max():.0f} m", flush=True)
     routes = plan_routes()
     lines = {r["key"]: ring(plan, h, r) for r in routes}
@@ -1267,7 +1282,8 @@ def main():
     for ring_line, _ in rings.values():
         clear_road(h, ring_line)
     road_distance({**lines, **rings})
-    stems, small = paint_and_trees(plan, h, dist)
+    stems, small = paint_and_trees(plan, h, dist, raw - h)
+    del raw
     del dist
     q = np.clip(np.round(32768 + h * 100 * 128 / mi.Z_SCALE), 0, 65535).astype("<u2")
     q.tofile(f"{OUT}/height.r16")
