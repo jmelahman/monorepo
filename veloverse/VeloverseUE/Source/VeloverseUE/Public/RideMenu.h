@@ -124,7 +124,8 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UTexture2D> StillSoft;
 	mutable FSlateBrush StillBrush, StillSoftBrush;
 	FIntPoint StillSize = FIntPoint::ZeroValue;
-	float SettleClock = 0.f, QuietClock = 0.f;
+	float SettleClock = 0.f, QuietClock = 0.f, CostClock = 0.f, CostGpu = 0.f;
+	int32 CostFrames = 0;
 	bool bFrozen = false, bStillAsked = false;
 	FDelegateHandle StillShot;
 	bool StillWanted() const;

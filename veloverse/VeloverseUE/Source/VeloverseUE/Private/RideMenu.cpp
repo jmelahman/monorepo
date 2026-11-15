@@ -16,6 +16,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "RHI.h"
 #include "RideMenuStyle.h"
 #include "RidePawn.h"
 #include "RidePlayerController.h"
@@ -70,6 +71,17 @@ void URideMenu::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
 	Freeze(DeltaTime);
+	// What the menu costs, every 10 s: the frame and the GPU's share of it.
+	CostClock += DeltaTime;
+	++CostFrames;
+	CostGpu += FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
+	if (CostClock >= 10.f)
+	{
+		UE_LOG(LogTemp, Display, TEXT("RIDE menu frame %.1f ms, gpu %.1f ms, %s"), 1000.f * CostClock / CostFrames,
+		       CostGpu / CostFrames, bFrozen ? TEXT("still") : TEXT("live"));
+		CostClock = CostGpu = 0.f;
+		CostFrames = 0;
+	}
 	RefreshClock += DeltaTime;
 	if (RefreshClock < 0.25f)
 	{
