@@ -37,8 +37,4 @@ report("ref", unreal.AnimPoseExtensions.get_reference_pose(skeleton))
 opts = unreal.AnimPoseEvaluationOptions()
 for name in ("A_Rider_Pedal_Easy", "A_Rider_Pedal", "A_Rider_Pedal_Hard"):
     anim = unreal.load_asset(f"{FOLDER}/{name}")
-    log(
-        f"{name} frames {anim.get_editor_property('number_of_sampled_frames')} rate "
-        f"{anim.get_editor_property('target_frame_rate')}"
-    )
     report(name, unreal.AnimPoseExtensions.get_anim_pose_at_time(anim, 0.0, opts))
