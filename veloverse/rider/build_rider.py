@@ -106,18 +106,19 @@ DEFAULT_EFFORT = "Pedal"
 # the camera's view.
 COCKPIT_ACTION = "Cockpit"
 COCKPIT = {
-    "hip": (-0.42, 0.78),
-    "torso": 80.0,
-    "clav": 20.0,
-    "arm_pole": (-0.20, 0.20, -0.20),
+    "hip": (-0.42, 0.76),
+    "torso": 88.0,
+    "clav": 0.0,
+    "arm_pole": (-0.25, 0.40, -0.10),
     "neck_extra": 60.0,
     "gaze": 90.0,
+    "head_down": 0.0,
 }
 # The game's cameras (16:9, GAME_HFOV wide): the cockpit camera, pitched down to put the bars
 # in the frame's bottom third, and the chase camera, CHASE_DISTANCE back from its target.
 GAME_HFOV = 61.0
 COCKPIT_CAMERA = (-0.27, 0.0, 1.12)
-COCKPIT_PITCH = 5.0  # deg down
+COCKPIT_PITCH = 8.0  # deg down: the game's CockpitTilt (RidePawn.cpp)
 CHASE_TARGET = (0.18, 0.0, 1.62)
 CHASE_DISTANCE = 5.1
 CHASE_PITCH = 2.0  # deg down
@@ -590,13 +591,14 @@ FINGERS = ("index", "middle", "ring", "pinky")
 HAND_YAW = 10.0
 HAND_PITCH = 5.0
 HAND_ROLL = 75.0
-# the elbows' direction from the shoulder-wrist midpoint (x, out, z): back, down and in, so
-# they tuck under the chest and the arms barely show beside the back from behind
-ARM_POLE = (-0.20, -0.20, -0.20)
-CLAV_MIN = 16.0  # deg, the least the shoulders protract: rounded, not braced back
+# the elbows' direction from the shoulder-wrist midpoint (x, out, z): back and down, in the
+# plane of the arm, so from behind each arm runs straight from the shoulder to the hood
+ARM_POLE = (-0.25, 0.0, -0.15)
+CLAV_MIN = -5.0  # deg, the least the shoulders protract (drawn back to keep the arms long)
 CLAV_MAX = 30.0  # deg, the most the shoulders protract
 HIP_X = -0.24  # m, the hip joints behind the BB
-NECK_EXTRA = 30.0  # deg, the neck pitched down past halfway between back and gaze: head low
+HEAD_DOWN = 30.0  # deg, the head tipped down from the gaze line (the eyes look up the road)
+NECK_EXTRA = 0.0  # deg, the neck pitched past halfway between the back and the head
 CLAV_DROP = 8.0  # deg, the shoulders' drop about the clavicles' line
 
 
@@ -772,10 +774,13 @@ class Rider:
             self.set_basis(f"clavicle_{s}")
         # neck: between the back and the head; head: fixed in the world, looking down the road
         gaze = P["gaze"]
-        neck_pitch = 0.5 * (acc + gaze) + P.get("neck_extra", NECK_EXTRA)
+        head_pitch = gaze + P.get("head_down", HEAD_DOWN)
+        neck_pitch = 0.5 * (acc + head_pitch) + P.get("neck_extra", NECK_EXTRA)
         self.chain_X("neck_01", rot_y(neck_pitch).to_3x3(), self.X["spine_03"])
         self.set_basis("neck_01")
-        self.chain_X("head", rot_y(gaze).to_3x3(), self.X["neck_01"])
+        self.chain_X(
+            "head", rot_y(gaze + P.get("head_down", HEAD_DOWN)).to_3x3(), self.X["neck_01"]
+        )
         self.set_basis("head")
         # fingers
         pb = self.rig.pose.bones
@@ -1171,6 +1176,8 @@ def solve_proportions(bike, iters=8):
         w = float(np.clip(w_next, -1.0, 1.0))
     P["props"] = {"leg": hist[-1][0]}
     place_hands(rider, P)
+    # the hands moved: fit the shoulders again so the elbows keep ELBOW_BEND
+    P = solve_fit(rider, bike, P0=P)
     return rider, P
 
 
@@ -2397,7 +2404,7 @@ def collect_stats(rider, fits, rider_ob, bike, bike_objs, recs):
     for i, m in enumerate(me.materials):
         tris[m.name] = tris.get(m.name, 0) + int((lt[mi == i] - 2).sum())
     # vertex -> slot name for the penetration report
-    slot = np.empty(len(me.vertices), object)
+    slot = np.full(len(me.vertices), "loose", object)
     for p in me.polygons:
         for v in p.vertices:
             slot[v] = me.materials[p.material_index].name
