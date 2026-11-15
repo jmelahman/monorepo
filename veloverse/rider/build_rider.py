@@ -124,7 +124,7 @@ COCKPIT = {
     "torso": 88.0,
     "clav": 0.0,
     "arm_pole": (-0.25, 0.40, -0.10),
-    "neck_extra": 60.0,
+    "neck_extra": 70.0,
     "gaze": 90.0,
     "head_down": 0.0,
 }
@@ -1672,8 +1672,8 @@ def cockpit_view(rider):
             e, _w, length, a, _u, _v = forearm_frame(rider.rig, s)
             m = arms & (np.sign(rest[:, 1]) == side)
             t_fore[m] = (rest[m] - e) @ a / length
-        rider.cockpit_groups = (upper, fore, arms, t_fore)
-    upper, fore, arms, t_fore = rider.cockpit_groups
+        rider.cockpit_groups = (upper, fore, arms, t_fore, dom)
+    upper, fore, arms, t_fore, dom = rider.cockpit_groups
     co = mesh_co(rider.mesh, evaluated=True)
     c = np.array(COCKPIT_CAMERA)
     th = math.radians(COCKPIT_PITCH)
@@ -1690,6 +1690,7 @@ def cockpit_view(rider):
     f = seen & fore
     return {
         "seen_upper_body_verts": int((seen & upper).sum()),
+        "seen_upper_body_bones": sorted(set(dom[seen & upper].tolist())),
         "seen_forearm_verts": int(f.sum()),
         "forearm_entry": [round(float(np.abs(x[f]).max()), 2), round(float(y[f].min()), 2)]
         if f.any()

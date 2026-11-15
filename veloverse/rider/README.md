@@ -22,7 +22,7 @@ Outputs go to `out/`. They are regenerated and not committed:
 - `rider.fbx`: the armature, the one mesh and the `Pedal_Easy`, `Pedal`, `Pedal_Hard` and
   `Cockpit` actions. No bike.
 - `rider.blend`: the rider plus the bike for reference. The IK constraints are already removed.
-- `T_*.png`: textures, 2048² (1024² with `--quick`).
+- `T_*.png`: textures, 2048² (1024² with `--quick`), including the tint masks (see Materials).
 - `render_*.png`: renders with the bike: 1600 px wide, or 1280×720 for the game's views.
 - `stats.json`: the checks listed below.
 
@@ -66,9 +66,11 @@ The body is MPFB 2's base human, built with these settings:
 
 - **Macros:** male, 25 years, muscle 0.55, weight 0.12, "ideal" proportions.
 - **Build targets:** a lean road rider who sits inside the bike's width:
-  - narrower shoulders, torso and hips, a smaller seat and less V-taper;
-  - flatter deltoids and slimmer upper arms, so the shoulders run into the arms instead of
-    standing off them like pads;
+  - narrower shoulders, torso and hips, a smaller seat and less V-taper, with the lats
+    flattened so the upper back doesn't bulge from behind;
+  - a shorter neck;
+  - flatter deltoids, so the shoulders run into the arms instead of standing off them like
+    pads, with defined biceps and triceps;
   - a rider's legs: more thigh and calf muscle and girth, with little fat on them;
   - a toned stomach.
 - **The kit is cloth, not skin** (it's painted on the body, so the body is shaped for it):
@@ -76,38 +78,39 @@ The body is MPFB 2's base human, built with these settings:
     span it;
   - `drape_kit` smooths the jersey and shorts in the riding pose, mostly outward, so they
     bridge the spine's furrow, the shoulder blades and the armpits. The legs are left alone.
+    The kit is painted from where the skin was before the drape, so its hems stay straight.
 - **Height:** scaled uniformly to exactly 1.780 m standing.
 - **Fit:** the rider's proportions change to fit the bike. The saddle and bars never move.
-  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.227, solved
-    in the default pose. That puts the knee at the bottom of the stroke at 145.1° (target 145°).
+  - Leg length uses MPFB's `upperlegs-height` and `lowerlegs-height` targets at +0.165, solved
+    in the default pose. That puts the knee at the bottom of the stroke at 144.2° (target 145°).
   - The hip joint starts the fit at x −0.24 (sat back on the saddle, which opens the elbows a
-    little) and ends at z 1.066. The thigh is 0.451 m and the calf 0.464 m.
+    little) and ends at z 1.076. The thigh is 0.454 m and the calf 0.470 m.
 - **Helpers:** MPFB's helper geometry is removed. Only the eyeballs and eyelashes are kept, as
   cheap meshes.
 - **Forearms:** remodelled for the cockpit view (`shape_arms`), in the hoods grip with the palm
   in and the thumb up. Each forearm gets one level of subdivision, and each section is remapped
-  to a flattened oval, wider across than deep. It tapers from 9.5 × 6.4 cm just below the elbow
+  to a flattened oval, wider across than deep. It tapers from 9.2 × 6.5 cm just below the elbow
   to 5.4 × 4.0 cm at the wrist. The brachioradialis bulges along the thumb side, which is the
   top edge from the cockpit, and the flexors fill the palm side. The forearm is straight from
   elbow to wrist: the skin passes from the lower arm to the hand within 12 mm each side of the
   wrist joint, so the bend sits at the wrist. The knuckles' ridge is raised 1.5 mm on the back
   of each hand. Each hand, fingers included, is about 3.4k triangles.
 - **Hair and brows:** the hair is short and painted on the scalp in the body texture, under the
-  helmet. The brows are thin strips. There's no particle hair.
+  helmet. In the riding crouch the helmet's rim covers the hairline from behind. The brows are thin strips. There's no particle hair.
 
 **Pose on the hoods**, the default `Pedal` effort, measured at frame 0. It's a compact aero
 position, built to read well from the game's chase camera straight behind:
 
 | Measure | Value |
 |---|---|
-| Back, hip joint to the base of the neck | 32.0° from horizontal |
-| Torso pitch | 61.6° |
-| Shoulders | dropped 8°, protracted 11.4° |
-| Elbows | 26° bent, relaxed, with the forearms running to the outside of the hoods |
+| Back, hip joint to the base of the neck | 25.0° from horizontal |
+| Torso pitch | 69.7° |
+| Shoulders | dropped 8°, drawn back 5° |
+| Elbows | 48° bent, with the forearms running to the outside of the hoods |
 | Sit bones | on the saddle top, sunk 3 mm into the pad |
 | Palms | on top of the hood bodies, 0.542 m forward of the BB |
 | Fingers | solved against the hoods (below) |
-| Head | low, tipped 30° down from the line of sight, which runs up the road to 10 m ahead; the neck sits halfway between the back and the head |
+| Head | lifted to look up the road to 10 m ahead, tipped 10° down from that line of sight; the neck sits 15° past halfway between the back and the head |
 
 The back is rounded: the pelvis takes 62% of the torso's pitch and the spine curls the rest,
 mostly low down, so the lower back doesn't hollow and the seat doesn't stick out. From
@@ -118,8 +121,9 @@ in under the chest nor flare out.
 The hands are fixed on the hoods, so a lower back can only come from bending the elbows. The
 fit sets the back angle. The shoulders move between 5° drawn back and 30° protracted to keep
 the elbows 24° bent, and the arms take up the rest. The fit runs again after the grip lifts
-the palms (below). In `Pedal_Easy` the shoulders reach their 30° limit, so its elbows open to
-16°.
+the palms (below). `Pedal_Easy` holds that bend with the shoulders 9° forward. In `Pedal`
+and `Pedal_Hard` the shoulders are drawn back to their limit and the elbows bend further, to
+48° and 77°.
 
 **The grip** is fitted to the bike's hoods in two steps, once the proportions are settled.
 The hands are fixed in the world, so one solve holds for every frame, and Unreal only plays it.
@@ -139,7 +143,7 @@ The hands are fixed in the world, so one solve holds for every frame, and Unreal
 The result, checked from above, behind, outside, inside and in front: the palm sits on top of
 the hood body, and the index and middle fingers wrap the hood's body. The ring finger rests on
 the hood's lower edge and the little finger curls round the bar below it, and the thumb wraps
-under the hood's inside. Every fingertip rests within 1.5–2.7 mm of the hood or bar tape. `Cockpit` has its own grip, in the drops (below).
+under the hood's inside. Every fingertip rests within 1.5–3.6 mm of the hood or bar tape. `Cockpit` has its own grip, in the drops (below).
 
 ## Skeleton
 
@@ -180,10 +184,10 @@ timing, so the efforts blend frame for frame:
 
 | Action | Back | Elbows | Pelvis roll | Head aims | Use for |
 |---|---|---|---|---|---|
-| `Pedal_Easy` | 40° | 16° | ±0.9° | 12 m ahead | recovery, low power |
-| `Pedal` (default) | 32° | 26° | ±1.5° | 10 m ahead | steady riding |
-| `Pedal_Hard` | 28° | 28° | ±2.7° | 8 m ahead | efforts, sprints, steep climbs |
-| `Cockpit` | (8°) | 5° | ±1.5° | hidden | the first-person camera only |
+| `Pedal_Easy` | 35° | 25° | ±0.9° | 12 m ahead | recovery, low power |
+| `Pedal` (default) | 25° | 48° | ±1.5° | 10 m ahead | steady riding |
+| `Pedal_Hard` | 15° | 77° | ±2.7° | 8 m ahead | efforts, sprints, steep climbs |
+| `Cockpit` | (8°) | 64° | ±1.5° | hidden | the first-person camera only |
 
 Each effort is a full fit: the same hands on the hoods (`Cockpit`: in the drops), the same
 cleats on the pedals, and the
@@ -196,28 +200,29 @@ others as fake-user actions. The FBX exports all four as takes named `Armature|<
   16:9. The bars sit in the bottom third.
 - **Hands:** in the hooks of the drops (`place_drops`), not on the hoods. From this camera
   the hoods grip showed only the thumb's edge of a hand over a small hood; a fist round the
-  bar reads at a glance. The palm rests against the outside of the hook at z 0.802, thumb
-  up, the knuckles raised 25° in line with the forearm. The middle and ring fingers wrap the
-  front of the bar, the thumb closes behind it, the index finger lies up the bar toward the
-  lever, and the little finger closes under the others where the hook curves away. The palm
-  points are (0.531, ±0.225, 0.810).
+  bar reads at a glance. The palm rests against the outside of the hook, thumb up. The
+  middle and ring fingers wrap the front of the bar and the index finger lies up the bar
+  toward the lever. The hook curves away from the little finger, so it curls like the ring
+  finger rather than closing on air. The thumb's first joint swings 20° away from the bar
+  and the thumb closes behind it; its base still sits 8 mm into the bar tape, on the side the
+  camera can't see. The palm points are (0.573, ±0.224, 0.799).
 - **Arms:** the shoulders are drawn down and back (the pelvis dropped to z 0.76 behind the
   saddle, the torso pitched 88°, the shoulders square and the elbows out), so the forearms
   reach in from the bottom corners of the frame to the drops.
 - **Checked every 4th frame:** the camera sees no vertex of the torso, the upper arms or the
-  head, the arm and shoulder skin stays 0.39 m from the camera, and the forearms enter at
-  the bottom edge, 69% of the way out to the sides.
+  head, the arm and shoulder skin stays 0.46 m from the camera, and the forearms enter at
+  the bottom edge, 76% of the way out to the sides.
 - **The rest is folded away and must be hidden:** the head is pulled down to the top tube
-  (the helmet sits 17 mm into the frame), the pelvis is behind and below the saddle, and the
-  knees bend 41–93°. Hide the head and legs in the game (`render_game_cockpit.png` shrinks
+  (the helmet sits 20 mm into the frame), the pelvis is behind and below the saddle, and the
+  knees bend 34–84°. Hide the head and legs in the game (`render_game_cockpit.png` shrinks
   the `head` bone to a point for the same reason). Don't blend `Cockpit` with the efforts.
 
 **Driving it from power in Unreal:** import the takes as three animation sequences and put
 them in a 1D blend space on W/kg, for example Easy at 1.5, Pedal at 3.0 and Hard at 5.0.
 Scale the play rate by cadence / 60, since one loop is one revolution at 60 rpm. Keep every
 sample's crank phase in sync (a sync group, or one shared time), as the blend assumes it.
-Blending halfway between two efforts moves the hands and feet off the bike by at most 8.2 mm
-(Easy to Pedal) and 1.1 mm (Pedal to Hard). That's too small to see; a two-bone IK on the
+Blending halfway between two efforts moves the hands and feet off the bike by at most 3.8 mm
+(Easy to Pedal) and 5.6 mm (Pedal to Hard). That's too small to see; a two-bone IK on the
 hands in the Anim Blueprint would remove it if it ever shows.
 
 Every action:
@@ -235,16 +240,16 @@ Every action:
   0.1 mm on every frame, with the pedals level.
 - **Ankling:** pitch = 5° − 2° cos φ − 10° sin φ + 1° cos 2φ, with φ the crank angle from
   forward. The heel drops about 10° on the downstroke and the toe dips through the bottom.
-- **Knees:** from about 70° at the top to 144–145° at the bottom of the stroke, the same on both
-  legs, in every effort. They never lock.
+- **Knees:** from about 70–72° at the top to 141–147° at the bottom of the stroke, the same on both
+  legs, by effort. They never lock.
 - **Upper body:**
   - The hands are fixed in the world.
   - The pelvis rolls (±0.9° to ±2.7°, by effort) and drops with each downstroke.
   - The upper torso counter-rolls only 0.25°, just enough to hold the shoulders still.
   - The head stays aimed at the road, 8–12 m ahead by effort.
 - **Loop seam:** every bone's step from frame 59 back to frame 0 is checked against the largest
-  step between consecutive frames. In every action it is 18.3 mm and 2.3° at most, against
-  19.5 mm and 2.6° (23.6 mm and 3.0° in `Cockpit`), so the loop has no pop.
+  step between consecutive frames. In every action it is 18.6 mm and 2.3° at most, against
+  19.1–20.0 mm and 2.6° (28.4 mm and 3.6° in `Cockpit`), so the loop has no pop.
 
 ## Materials
 
@@ -266,9 +271,11 @@ looking like a studio scan.
 
 The kit is a texture on the body, not cloth. Colours are given in linear RGB:
 
-- **Jersey:** navy (0.010, 0.024, 0.075), with short sleeves that end 4 cm above the elbow
-  with a hem: a fold in the normal map, slightly darker.
-- **Accents:** orange (0.80, 0.22, 0.05) on the side panels and the sleeve cuffs.
+- **Jersey:** navy (0.010, 0.024, 0.075), with a collar that covers the base of the neck and
+  short sleeves that end 4 cm above the elbow with a hem: a fold in the normal map, slightly
+  darker.
+- **Accents:** orange (0.80, 0.22, 0.05) on the sleeve cuffs and the side panels, each a
+  straight round-ended stripe 56 mm wide from the hem to the armpit.
 - **Bib shorts:** black, ending just above the knee (90% of the way down the thigh).
 - **Socks:** white, mid-calf.
 - **No marks:** there are no brands, logos or text anywhere.
@@ -286,42 +293,74 @@ The gear:
 
 - **Helmet:** a smooth aero road shell in plain navy that wraps the skull: the rim sits above
   the brow, level over the ears and well down the back of the head, with a short tail and
-  slimmer sides. The vents are painted and normal-mapped slots, not cut. Black rim and
-  straps.
+  slimmer sides. It is smooth shaded. The vents are shallow dips (6 mm) in the shell, painted
+  black and normal-mapped; the paint is wider than the dip, so the slot's edge stays clean.
+  Black rim and straps.
 - **Shoes:** white uppers with perforations, a black sole, heel cup and strap, and a cleat.
 
-## Stats (full build)
+### Tint masks: skin tone, kit colours and swaps
+
+The base colour textures bake one look. To change colours in Unreal without new textures, the
+build also writes masks (linear, not sRGB), one region per channel:
+
+| Texture | R | G | B |
+|---|---|---|---|
+| `T_Body_Mask` | jersey | accent (side panels, cuffs) | shorts |
+| `T_Body_Mask2` | socks | hair | skin |
+| `T_Helmet_Mask` | shell | rim | vents |
+| `T_Shoe_Mask` | upper | trim (sole, heel cup, strap) | cleat |
+
+- **Channels sum to 1** on the body, and edges are antialiased, so a region's colour is a
+  plain weighted sum: `colour = Σ channel × its colour parameter`.
+- **`T_Body_Shade`** is greyscale: the baked colour's brightness over its region's flat
+  colour, with 0.5 meaning no change. It carries the skin's mottling, the darker hems and the
+  tan line. Multiply the tinted colour by `T_Body_Shade / 0.5`.
+- **Defaults:** `stats.json` lists each channel's linear colour under `masks`. With those as
+  the parameters, the tinted material closely matches `T_*_BaseColor`.
+- **In Unreal:** import the masks with sRGB off (compression "Masks"). Make one material per
+  slot with a vector parameter per channel, and set them on a dynamic material instance:
+  skin tone and hair on `M_Skin`, the kit colours on `M_Kit`. Both slots use the same body
+  textures, so both can share one parent material.
+- **Other uniforms:** a design that keeps these regions is only a new set of colours. A new
+  cut (longer sleeves, a different panel) is a change to `BodyMap.labels` in
+  `build_rider.py` and a rebuild; the UVs and skeleton don't change, so a new set of body
+  textures drops onto the same mesh.
+- **Accessories:** the helmet, glasses, straps and shoes are separate material slots joined
+  into the one mesh. To swap them in game they would export as their own skinned meshes on
+  the same skeleton; that split isn't built yet.
+
+## Stats (full build)## Stats (full build)
 
 | | |
 |---|---|
-| Triangles | **53,352**: Skin 19,732, Kit 6,200, Helmet 7,344, Strap 9,496, Shoe 8,376, Lens 1,804, Hair 400 |
+| Triangles | **65,212**: Skin 19,632, Kit 6,256, Helmet 13,272, Strap 15,472, Shoe 8,376, Lens 1,804, Hair 400 |
 | Bones | 53 |
 | Most influences per vertex | 4 |
 | Largest cleat-to-axle distance | 0.1 mm |
-| Knee angle, min / max | 71.3° / 144.7° in `Pedal`; 72.0° / 147.1° in `Pedal_Easy` |
+| Knee angle, min / max | 70.8° / 144.2° in `Pedal`; 71.8° / 147.4° in `Pedal_Easy`; 69.8° / 141.3° in `Pedal_Hard` |
 | Largest hand-to-grip distance | 0.0 mm (to the palm point: the hoods, or the drops in `Cockpit`), every action |
-| Interpenetration deeper than 5 mm | kit into the frame (the inner thighs on the top tube), 6.9–8.2 mm in the efforts; `Cockpit` also has its folded head, helmet and legs in the frame and rear wheel, up to 17.1 mm (hidden in game) |
-| Hand and foot drift at a halfway blend | 5.9 mm Easy/Pedal, 1.1 mm Pedal/Hard |
-| Forearm, width × depth (`forearm_m`) | 9.5 × 6.4 cm below the elbow (t 0.12), 8.1 × 5.5 cm mid (t 0.5), 5.4 × 4.0 cm at the wrist (t 0.95), both sides |
+| Interpenetration deeper than 5 mm | kit into the frame (the inner thighs on the top tube), 6.9–8.2 mm in the efforts; `Cockpit` also has its folded head, helmet and legs in the frame and fork, up to 20.3 mm (hidden in game) |
+| Hand and foot drift at a halfway blend | 3.8 mm Easy/Pedal, 5.6 mm Pedal/Hard |
+| Forearm, width × depth (`forearm_m`) | 9.2 × 6.5 cm below the elbow (t 0.12), 8.1 × 5.5 cm mid (t 0.5), 5.4 × 4.0 cm at the wrist (t 0.95), both sides |
 
 **Frame 0, per action.** Unreal can check itself against these; `stats.json` has them under
 `frame0`, and the game cameras under `cameras`. The palms and hood contacts are the same in
 every effort: palm L (0.542, 0.199, 0.923), R (0.542, −0.199, 0.923); hood contact (the top of
 the hood under the palm) L (0.542, 0.199, 0.892), R (0.542, −0.199, 0.892). `Cockpit`'s palms
-are in the drops, at (0.531, ±0.225, 0.810).
+are in the drops, at (0.573, ±0.224, 0.799).
 
 | Action | Back | Eye point | `head` bone |
 |---|---|---|---|
-| `Pedal_Easy` | 39.9° | (0.347, −0.003, 1.452) | (0.259, −0.003, 1.468) |
-| `Pedal` | 32.0° | (0.391, −0.004, 1.376) | (0.303, −0.004, 1.393) |
-| `Pedal_Hard` | 28.0° | (0.409, −0.008, 1.330) | (0.322, −0.008, 1.350) |
-| `Cockpit` | 7.9° | (0.156, 0.004, 0.651) | (0.116, 0.004, 0.730) |
+| `Pedal_Easy` | 34.9° | (0.382, −0.003, 1.427) | (0.291, −0.003, 1.411) |
+| `Pedal` | 25.0° | (0.427, −0.004, 1.325) | (0.336, −0.004, 1.311) |
+| `Pedal_Hard` | 15.1° | (0.456, −0.008, 1.216) | (0.364, −0.008, 1.203) |
+| `Cockpit` | 8.4° | (0.221, 0.004, 0.663) | (0.179, 0.004, 0.745) |
 
 The penetration check confirms each candidate vertex with ray-parity counts. The nearest face's
 normal alone misread a fingertip in the hollow between the hood and the lever as 27.6 mm inside.
 
-The game's assumed eye point is (0.18, ·, 1.50). On this bike, at a 32° back, the real one is
-0.23 m further forward and 0.13 m lower. The game's camera should take the eye point from
+The game's assumed eye point is (0.18, ·, 1.50). On this bike, at a 25° back, the real one is
+0.25 m further forward and 0.17 m lower. The game's camera should take the eye point from
 `stats.json` (or from the `head` bone) rather than the constant.
 
 ## Assets and licences
