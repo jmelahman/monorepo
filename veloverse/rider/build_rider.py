@@ -119,6 +119,7 @@ COCKPIT = {
 GAME_HFOV = 61.0
 COCKPIT_CAMERA = (-0.27, 0.0, 1.12)
 COCKPIT_PITCH = 8.0  # deg down: the game's CockpitTilt (RidePawn.cpp)
+CLOSEUP_HFOV = 30.0  # deg, render_cockpit_closeup: the cockpit camera zoomed on the right hand
 CHASE_TARGET = (0.18, 0.0, 1.62)
 CHASE_DISTANCE = 5.1
 CHASE_PITCH = 2.0  # deg down
@@ -501,6 +502,7 @@ def build_body(props):
         if m.type != "ARMATURE":
             basemesh.modifiers.remove(m)
     seat_weights(basemesh, rig)
+    shape_arms(basemesh, rig)
     log(f"body {props}: standing height {h * s:.3f} m (scale {s:.4f}), {time.time() - t0:.1f}s")
     return basemesh, rig, eyes
 
@@ -557,6 +559,183 @@ def seat_weights(mesh, rig):
     set_vertex_weights(mesh, names, W, sorted(set(rows)))
 
 
+# The forearms, modelled for the hoods grip (palm in, thumb up). Each section is a flattened
+# oval, wider across (radius to ulna, the thumb side up on the hoods) than deep (palm to back),
+# tapering from the muscle mass below the elbow to the wrist. Widths in m at t (0 elbow, 1
+# wrist) along the lower arm bone; the taper runs between FOREARM_TAPER.
+FOREARM_WIDTH = (0.099, 0.055)
+FOREARM_DEPTH = (0.064, 0.040)
+FOREARM_TAPER = (0.15, 0.95)
+FOREARM_SECTIONS = {"elbow": 0.12, "mid": 0.5, "wrist": 0.95}  # where stats.json measures
+# muscle bellies on the oval: (angle from the thumb side toward the palm side in deg, angular
+# width in deg, peak t, t span, outward share of the radius). The brachioradialis runs along
+# the thumb side (the top edge on the hoods); the flexors fill the palm-and-little-finger side.
+FOREARM_BELLIES = ((-10.0, 40.0, 0.25, 0.30, 0.10), (140.0, 45.0, 0.22, 0.30, 0.05))
+WRIST_BLEND = 0.012  # m each side of the wrist joint over which the skin passes to the hand
+KNUCKLE_RISE = 0.0015  # m, the knuckles' ridge raised on the back of the hand
+KNUCKLE_RADIUS = 0.007  # m
+
+
+def forearm_frame(rig, s):
+    """The lower arm's rest frame: elbow, wrist, length and the unit axis, the thumb side
+    (radial, across the palm) and the palm side, both perpendicular to the axis."""
+    bones = rig.data.bones
+    e = np.array(bones[f"lowerarm_{s}"].head_local)
+    w = np.array(bones[f"lowerarm_{s}"].tail_local)
+    length = float(np.linalg.norm(w - e))
+    a = (w - e) / length
+    R = np.array(bones[f"hand_{s}"].matrix_local.to_3x3())
+    u = R[:, 0] - (R[:, 0] @ a) * a
+    u /= np.linalg.norm(u)
+    if u @ (np.array(bones[f"thumb_01_{s}"].head_local) - w) < 0:
+        u = -u
+    v = R[:, 2] - (R[:, 2] @ a) * a - (R[:, 2] @ u) * u  # bone +Z: the palm side
+    v /= np.linalg.norm(v)
+    return e, w, length, a, u, v
+
+
+def forearm_target(t, phi):
+    """The section's radius (m) at t along the forearm and angle phi (rad, from the thumb side
+    toward the palm side)."""
+    k = 1.0 - smoothstep(*FOREARM_TAPER, t)
+    half_w = 0.5 * (FOREARM_WIDTH[1] + k * (FOREARM_WIDTH[0] - FOREARM_WIDTH[1]))
+    half_d = 0.5 * (FOREARM_DEPTH[1] + k * (FOREARM_DEPTH[0] - FOREARM_DEPTH[1]))
+    bulge = np.zeros_like(t)
+    for ang, width, peak, span, amp in FOREARM_BELLIES:
+        dphi = np.angle(np.exp(1j * (phi - math.radians(ang))))
+        along = np.clip(1.0 - ((t - peak) / span) ** 2, 0.0, 1.0) ** 2
+        bulge += amp * along * np.exp(-((dphi / math.radians(width)) ** 2))
+    # the bellies add to the oval; shrink it so the overall width stays FOREARM_WIDTH
+    across = sum(
+        amp * np.clip(1.0 - ((t - peak) / span) ** 2, 0.0, 1.0) ** 2
+        for _ang, _w, peak, span, amp in FOREARM_BELLIES
+    )
+    half_w = half_w / (1.0 + 0.5 * across)
+    r = half_w * half_d / np.hypot(half_d * np.cos(phi), half_w * np.sin(phi))
+    return r * (1.0 + bulge)
+
+
+def arm_rows(W, names, s, co, rig, t_range, max_r=0.075):
+    """Vertices of the arm (upper arm, lower arm and hand weights over half) within max_r of
+    the lower arm's axis and inside t_range along it."""
+    e, _w, length, a, u, v = forearm_frame(rig, s)
+    cols = [names.index(f"{b}_{s}") for b in ("upperarm", "lowerarm", "hand")]
+    d = co - e
+    t = d @ a / length
+    x, y = d @ u, d @ v
+    m = (W[:, cols].sum(1) > 0.5) & (t > t_range[0]) & (t < t_range[1]) & (np.hypot(x, y) < max_r)
+    return m, t, x, y
+
+
+def shape_arms(mesh, rig):
+    """Model the forearms and the backs of the hands in the rest pose: one level of
+    subdivision on the forearms, each section remapped to the tapered oval of forearm_target,
+    the skin passed from the lower arm to the hand within WRIST_BLEND of the wrist (so the
+    forearm stays straight and the bend is at the wrist), and the knuckles' ridge raised."""
+    names = [b.name for b in rig.data.bones]
+    # subdivide: MPFB has about ten rings along each forearm, too few for the taper
+    W = vertex_weights(mesh, names)
+    co = mesh_co(mesh, world=False)
+    sel = np.zeros(len(co), bool)
+    for s, _side in SIDES:
+        sel |= arm_rows(W, names, s, co, rig, (-0.04, 1.04))[0]
+    bm = bmesh.new()
+    bm.from_mesh(mesh.data)
+    edges = [e for e in bm.edges if sel[e.verts[0].index] and sel[e.verts[1].index]]
+    bmesh.ops.subdivide_edges(bm, edges=edges, cuts=1, use_grid_fill=True)
+    bm.to_mesh(mesh.data)
+    bm.free()
+    mesh.data.update()
+    W = vertex_weights(mesh, names)
+    co = mesh_co(mesh, world=False)
+    new = co.copy()
+    for s, _side in SIDES:
+        e, _w, length, a, u, v = forearm_frame(rig, s)
+        m, t, x, y = arm_rows(W, names, s, co, rig, (-0.06, 1.10))
+        # the section's middle and half-extents along the thumb and palm axes, per 2 cm of
+        # length, smoothed along the arm
+        edges_t = np.arange(-0.06, 1.12, 0.06)
+        mids = 0.5 * (edges_t[:-1] + edges_t[1:])
+        cx, cy, hx, hy = (np.zeros(len(mids)) for _ in range(4))
+        for i, (t0, t1) in enumerate(itertools.pairwise(edges_t)):
+            b = m & (t >= t0) & (t < t1)
+            cx[i] = 0.5 * (x[b].max() + x[b].min())
+            cy[i] = 0.5 * (y[b].max() + y[b].min())
+            hx[i] = 0.5 * (x[b].max() - x[b].min())
+            hy[i] = 0.5 * (y[b].max() - y[b].min())
+        rows = np.where(m)[0]
+        tr = t[rows]
+        ox = np.interp(tr, mids, cx)
+        oy = np.interp(tr, mids, cy)
+        px, py = x[rows] - ox, y[rows] - oy
+        phi = np.arctan2(py, px)
+        rho = np.hypot(px, py)
+        hx0, hy0 = np.interp(tr, mids, hx), np.interp(tr, mids, hy)
+        r0 = hx0 * hy0 / np.hypot(hy0 * np.cos(phi), hx0 * np.sin(phi))
+        # keep the mesh's own relief (rho / r0) on the new oval; blend in past the elbow and
+        # out over the heel of the hand
+        g = smoothstep(0.0, 0.12, tr) * (1.0 - smoothstep(0.97, 1.08, tr))
+        rho_new = rho + g * (rho * forearm_target(tr, phi) / r0 - rho)
+        new[rows] = (
+            e
+            + np.outer(tr * length, a)
+            + np.outer(ox + rho_new * np.cos(phi), u)
+            + np.outer(oy + rho_new * np.sin(phi), v)
+        )
+        # the wrist: lower arm to hand within WRIST_BLEND of the joint
+        jl, jh = names.index(f"lowerarm_{s}"), names.index(f"hand_{s}")
+        pair = W[:, jl] + W[:, jh]
+        wr = np.where(m & (t > 0.6) & (pair > 0.98 * W.sum(1)))[0]
+        share = smoothstep(-WRIST_BLEND, WRIST_BLEND, (t[wr] - 1.0) * length)
+        W2 = np.zeros((len(co), 2))
+        W2[wr, 0] = pair[wr] * (1.0 - share)
+        W2[wr, 1] = pair[wr] * share
+        set_vertex_weights(mesh, [f"lowerarm_{s}", f"hand_{s}"], W2, wr)
+        # the knuckles: a ridge on the back of the hand over each finger's first joint
+        palm = np.array(rig.data.bones[f"hand_{s}"].matrix_local.to_3x3().col[2])
+        for f in FINGERS:
+            k = np.array(rig.data.bones[f"{f}_01_{s}"].head_local)
+            d = co - k
+            back = -(d @ palm)
+            lateral = np.linalg.norm(d + np.outer(back, palm), axis=1)
+            near = (back > 0) & (lateral < 3 * KNUCKLE_RADIUS) & (W[:, jh] + W[:, jl] < 0.99)
+            lift = KNUCKLE_RISE * np.exp(-((lateral[near] / KNUCKLE_RADIUS) ** 2))
+            new[near] -= np.outer(lift, palm)
+    mesh.data.vertices.foreach_set("co", new.ravel())
+    mesh.data.update()
+
+
+def forearm_sections(mesh, rig):
+    """Each forearm's width (across, thumb side to little finger side) and depth (palm to back)
+    in m at FOREARM_SECTIONS, from where the rest mesh's arm edges cross each section's plane.
+    The lower arm is one rigid bone, so the posed forearm keeps these between the joints."""
+    names = [b.name for b in rig.data.bones]
+    W = vertex_weights(mesh, names)
+    co = mesh_co(mesh, world=False)
+    ed = np.empty(len(mesh.data.edges) * 2, np.int64)
+    mesh.data.edges.foreach_get("vertices", ed)
+    ed = ed.reshape(-1, 2)
+    res = {}
+    for s, _side in SIDES:
+        m, t, x, y = arm_rows(W, names, s, co, rig, (-0.2, 1.2))
+        e2 = ed[m[ed].all(1)]
+        sec = {}
+        for name, t0 in FOREARM_SECTIONS.items():
+            ta, tb = t[e2[:, 0]], t[e2[:, 1]]
+            cross = (ta - t0) * (tb - t0) < 0
+            f = ((t0 - ta) / (tb - ta))[cross]
+            i, j = e2[cross, 0], e2[cross, 1]
+            px = x[i] + f * (x[j] - x[i])
+            py = y[i] + f * (y[j] - y[i])
+            sec[name] = {
+                "t": t0,
+                "width": round(float(px.max() - px.min()), 4),
+                "depth": round(float(py.max() - py.min()), 4),
+            }
+        res[s] = sec
+    return res
+
+
 MACRO_HEIGHT = 0.517  # MPFB height macro that gives about RIDER_HEIGHT; scaled exactly after
 
 
@@ -571,7 +750,7 @@ SPINE_SHARE = (0.30, 0.35, 0.35)
 # until the palm and knuckles rest on it. Then each joint, knuckle first, closes from its
 # relaxed curl about its bone's X until the skin comes GRIP_GAP off the hood, lever or bar,
 # within its (open, closed) range in degrees.
-HOOD_CONTACT_X = 0.553  # m, the palm point along the hood: on its body, behind the horn
+HOOD_CONTACT_X = 0.542  # m, the palm point along the hood: on its body, behind the horn
 HOOD_OUT = 0.0  # m, the palm point outboard of the hood's middle
 HOOD_LIFT = 0.009  # m, palm point above the hood's top: the thenar pad bulges below it
 HOOD_LIFT_RANGE = (-0.015, 0.045)  # m, the lift searched on top of HOOD_LIFT
@@ -588,9 +767,9 @@ FINGERS = ("index", "middle", "ring", "pinky")
 # grip: the hood's top in the web of the thumb, the palm round its outside, the fingers over
 # the lever and the thumb round the inside. Found by a search that every finger touch the hood
 # or lever with its tip below its knuckle, and the thumb's tip inside the hood.
-HAND_YAW = 10.0
-HAND_PITCH = 5.0
-HAND_ROLL = 75.0
+HAND_YAW = 0.0
+HAND_PITCH = 2.0
+HAND_ROLL = 88.0
 # the elbows' direction from the shoulder-wrist midpoint (x, out, z): back and down, in the
 # plane of the arm, so from behind each arm runs straight from the shoulder to the hood
 ARM_POLE = (-0.25, 0.0, -0.15)
@@ -1211,7 +1390,11 @@ def fit_cockpit(rider, P):
         rider.pose(k, Q)
         views.append(cockpit_view(rider))
     worst = max(views, key=lambda v: v["seen_upper_body_verts"])
-    worst = dict(worst, camera_to_arms_m=min(v["camera_to_arms_m"] for v in views))
+    worst = dict(
+        worst,
+        camera_to_arms_m=min(v["camera_to_arms_m"] for v in views),
+        forearm_entry_t=max(v["forearm_entry_t"] for v in views if v["forearm_entry_t"]),
+    )
     log(f"cockpit, the worst of every 4th frame: {worst}")
     Q["view"] = worst
     return Q
@@ -1244,8 +1427,15 @@ def cockpit_view(rider):
         upper |= np.char.startswith(dom, "clavicle") | np.char.startswith(dom, "upperarm")
         fore = np.char.startswith(dom, "lowerarm")
         arms = np.char.startswith(dom, "clavicle") | np.char.startswith(dom, "upperarm") | fore
-        rider.cockpit_groups = (upper, fore, arms)
-    upper, fore, arms = rider.cockpit_groups
+        # each arm vertex's rest place along its lower arm (0 elbow, 1 wrist)
+        rest = mesh_co(rider.mesh, world=False)
+        t_fore = np.full(len(rest), np.nan)
+        for s, side in SIDES:
+            e, _w, length, a, _u, _v = forearm_frame(rider.rig, s)
+            m = arms & (np.sign(rest[:, 1]) == side)
+            t_fore[m] = (rest[m] - e) @ a / length
+        rider.cockpit_groups = (upper, fore, arms, t_fore)
+    upper, fore, arms, t_fore = rider.cockpit_groups
     co = mesh_co(rider.mesh, evaluated=True)
     c = np.array(COCKPIT_CAMERA)
     th = math.radians(COCKPIT_PITCH)
@@ -1267,6 +1457,10 @@ def cockpit_view(rider):
         if f.any()
         else None,
         "camera_to_arms_m": round(float(np.linalg.norm(d[arms], axis=1).min()), 3),
+        # the forearm's first point in frame, along it from the elbow (0) to the wrist (1)
+        "forearm_entry_t": round(float(np.nanmin(t_fore[seen & arms])), 3)
+        if (seen & arms).any()
+        else None,
     }
 
 
@@ -1784,8 +1978,14 @@ def smart_uv(ob):
 # =============================================================================================
 SKIN_L, JERSEY_L, ORANGE_L, SHORTS_L, SOCK_L, HAIR_L = range(6)
 KIT_LABELS = (JERSEY_L, ORANGE_L, SHORTS_L, SOCK_L)
-SLEEVE_END = 0.55  # of the upper arm, shoulder joint to elbow
-CUFF = 0.08
+SLEEVE_ABOVE_ELBOW = 0.04  # m, the jersey sleeve's end above the elbow joint
+CUFF = 0.08  # of the upper arm: the orange band at the sleeve's end
+HEM = 0.004  # m, the sleeve's folded hem: a ridge in the normals, a little darker
+# The sleeve stays out of the cockpit view, so a tan line marks it there instead: the skin
+# under the sleeve is paler, and the pale skin reaches TAN_LINE into the frame along the forearm.
+TAN_LINE = 0.01  # m
+TAN_PALE = 0.80  # of the tanned skin's colour, mixed toward PALE_SKIN
+PALE_SKIN = (0.62, 0.46, 0.37)
 SHORTS_END = 0.82  # of the thigh, hip joint to knee
 SOCK_TOP = 0.78  # of the calf, knee to ankle
 HEM_ABOVE_HIP = 0.05  # m, the jersey's hem above the hip joints (standing)
@@ -1891,6 +2091,9 @@ class BodyMap:
         self.co = mesh_co(mesh, world=False)
         self.E = np.array((rider.eyes_rest[0] + rider.eyes_rest[1]) / 2)
         self.hip_z = self.bones["thigh_l"][0][2]
+        h, t = self.bones["upperarm_l"]
+        self.upperarm_len = float(np.linalg.norm(t - h))
+        self.sleeve_end = 1.0 - SLEEVE_ABOVE_ELBOW / self.upperarm_len
         self.armpit_z = self.bones["upperarm_l"][0][2] - 0.07
         # torso centre line per height
         tor = (self.arm < 0.5) & (self.leg < 0.5) & (self.head < 0.5) & group_mask(mesh, "body")
@@ -1924,9 +2127,10 @@ class BodyMap:
         tua = self.t_along(p, "upperarm")
         tth = self.t_along(p, "thigh")
         tca = self.t_along(p, "calf")
-        jersey = (torso & (z > hem) & below_collar) | (is_arm & (tua < SLEEVE_END))
+        sleeve = self.sleeve_end
+        jersey = (torso & (z > hem) & below_collar) | (is_arm & (tua < sleeve))
         lab[jersey] = JERSEY_L
-        cuff = is_arm & (tua > SLEEVE_END - CUFF) & (tua < SLEEVE_END)
+        cuff = is_arm & (tua > sleeve - CUFF) & (tua < sleeve)
         cxz = np.interp(z, self.cz, self.cx)
         ang = np.abs(np.arctan2(np.abs(y), x - cxz) - math.pi / 2)
         panel = jersey & torso & (ang < math.radians(15)) & (z > hem + 0.02) & (z < self.armpit_z)
@@ -1949,7 +2153,82 @@ class BodyMap:
         return self.labels(self.co, self.arm, self.leg, self.head)
 
 
-def paint_body(rider, out, size):
+def ridge(d, width):
+    return np.exp(-((d / width) ** 2))
+
+
+def arm_relief(p, rig):
+    """Height (texel units for normal_from_height) and a gloss share (0..1, lowers roughness)
+    for skin at rest positions p: the wrist's flexor tendons, two forearm veins, the extensor
+    tendons fanning over the back of the hand, the knuckles' bumps and the creases over the
+    finger joints."""
+    h = np.zeros(len(p), np.float32)
+    gloss = np.zeros(len(p), np.float32)
+    bones = rig.data.bones
+    for s, side in SIDES:
+        m = np.sign(p[:, 1]) == side
+        e, _w, length, a, u, v = forearm_frame(rig, s)
+        d = p - e
+        t = d @ a / length
+        x, y = d @ u, d @ v
+        r = np.hypot(x, y)
+        phi = np.arctan2(y, x)  # 0 the thumb side, +90 deg the palm side, -90 the back
+        fore = m & (t > 0.0) & (t < 1.04) & (r < 0.06)
+        # flexor tendons over the palm side of the wrist, raised and slightly glossy
+        k = smoothstep(0.68, 0.86, t) * (1.0 - smoothstep(0.98, 1.03, t))
+        for ang, amp in ((62.0, 0.8), (88.0, 1.0), (112.0, 0.7)):
+            dphi = np.angle(np.exp(1j * (phi - math.radians(ang))))
+            h += np.where(fore, amp * k * ridge(dphi * r, 0.0025), 0.0)
+        # veins: the cephalic up the thumb side's back edge, and a branch across the back
+        for c0, c1, wob, t0, t1, amp in (
+            (-0.30, -0.45, 0.10, 0.18, 0.92, 1.0),
+            (-1.25, -0.55, 0.08, 0.35, 0.80, 0.7),
+        ):
+            span = (t - t0) / (t1 - t0)
+            cphi = c0 + (c1 - c0) * span + wob * np.sin(9.0 * t + 1.3 * c0)
+            dphi = np.angle(np.exp(1j * (phi - cphi)))
+            k = smoothstep(0.0, 0.15, span) * (1.0 - smoothstep(0.85, 1.0, span))
+            vein = np.where(fore, amp * k * ridge(dphi * r, 0.0018), 0.0)
+            h += vein
+            gloss += 0.5 * vein
+        # the back of the hand, in the hand bone's frame (X across, Y along, Z to the palm)
+        hb = bones[f"hand_{s}"]
+        R = np.array(hb.matrix_local.to_3x3())
+        q = (p - np.array(hb.head_local)) @ R
+        hand = m & (np.linalg.norm(q, axis=1) < 0.13)
+        for f in FINGERS:
+            kb = bones[f"{f}_01_{s}"]
+            kq = (np.array(kb.head_local) - np.array(hb.head_local)) @ R
+            # the extensor tendon: wrist to knuckle on the back, fading in from the wrist
+            seg = kq[:2] - np.array([0.0, 0.01])
+            rel = q[:, :2] - np.array([0.0, 0.01])
+            along = np.clip(rel @ seg / (seg @ seg), 0.0, 1.0)
+            dist = np.linalg.norm(rel - np.outer(along, seg), axis=1)
+            back = hand & (q[:, 2] < kq[2] + 0.004)
+            k = smoothstep(0.15, 0.45, along) * (1.0 - smoothstep(0.85, 1.0, along))
+            h += np.where(back, 0.7 * k * ridge(dist, 0.0018), 0.0)
+            # the knuckle's bump, and creases across each joint's back
+            for j in ("01", "02", "03"):
+                jb = bones[f"{f}_{j}_{s}"]
+                Rj = np.array(jb.matrix_local.to_3x3())
+                dj = (p - np.array(jb.head_local)) @ Rj
+                near = m & (np.abs(dj[:, 0]) < 0.010) & (dj[:, 2] < 0) & (np.abs(dj[:, 1]) < 0.012)
+                lat = 1.0 - smoothstep(0.004, 0.009, np.abs(dj[:, 0]))
+                if j == "01":
+                    bump = 1.5 * ridge(np.hypot(dj[:, 0], dj[:, 1]), 0.006)
+                    h += np.where(near, bump, 0.0)
+                    gloss += np.where(near, 0.3 * bump, 0.0)
+                    off, amp = (-0.0045, 0.0045), 0.5
+                else:
+                    off, amp = (-0.0016, 0.0, 0.0016), 0.6
+                crease = sum(ridge(dj[:, 1] - o, 0.0007) for o in off)
+                h -= np.where(near, amp * lat * crease, 0.0)
+    return h, np.clip(gloss, 0.0, 1.0)
+
+
+def paint_body(rider, out, size, tan_t):
+    """The body's colour, normal and roughness textures. tan_t: where along the forearm (0
+    elbow, 1 wrist) the cockpit view's frame first cuts it, for the tan line."""
     bmap = BodyMap(rider)
     me = rider.mesh.data
     vi, uv, _ = tri_arrays(me)
@@ -1982,6 +2261,25 @@ def paint_body(rider, out, size):
         base[m] = c
     skin = lab_img == SKIN_L
     base[skin] *= (1 + 0.015 * lo[skin] + 0.004 * fine[skin])[:, None]
+    # the tan line: paler skin from the sleeve down to TAN_LINE past the frame's edge
+    pimg = np.zeros((size, size, 3), np.float32)
+    pimg[cov] = p
+    arm_img = np.zeros((size, size), np.float32)
+    arm_img[cov] = img[cov][:, 3]
+    t_fore = bmap.t_along(pimg[cov], "lowerarm")
+    fore_len = float(np.linalg.norm(np.subtract(*bmap.bones["lowerarm_l"])))
+    pale = np.zeros((size, size), np.float32)
+    pale[cov] = 1.0 - smoothstep(-0.002, 0.002, (t_fore - tan_t) * fore_len - TAN_LINE)
+    pale *= (arm_img > 0.5) & skin
+    base = base * (1 - TAN_PALE * pale[..., None]) + TAN_PALE * pale[..., None] * np.array(
+        PALE_SKIN, np.float32
+    )
+    # the sleeve's hem: a little darker over its last few mm
+    t_up = np.zeros((size, size), np.float32)
+    t_up[cov] = bmap.t_along(pimg[cov], "upperarm")
+    from_end = (bmap.sleeve_end - t_up) * bmap.upperarm_len  # m above the sleeve's end
+    hem = (arm_img > 0.5) & (from_end > 0) & (from_end < HEM) & np.isin(lab_img, KIT_LABELS)
+    base[hem] *= 0.85
     hair = lab_img == HAIR_L
     base[hair] = (
         base[hair] * 0.8 + 0.2 * np.array(SKIN) * (0.5 + 0.5 * np.clip(fine[hair], 0, 1))[:, None]
@@ -1995,11 +2293,24 @@ def paint_body(rider, out, size):
     pores = blur(fine, 1)
     streak = blur(np.roll(fine, 1, 0) + fine + np.roll(fine, -1, 0), 1)
     h = np.where(kit, 0.15 * knit, np.where(hair, 0.4 * streak, 0.05 * pores))
+    # the hem's fold, and the forearms' and hands' tendons, veins and knuckles
+    h = h + 0.8 * ((arm_img > 0.5) & (np.abs(from_end - 0.5 * HEM) < 0.5 * HEM))
+    relief, gloss = np.zeros((size, size), np.float32), np.zeros((size, size), np.float32)
+    relief[cov], gloss[cov] = arm_relief(p, rider.rig)
+    relief *= skin
+    gloss *= skin
+    h = h + 0.4 * blur(relief, 1)  # faint: the geometry and lighting carry the forms
     nrm = normal_from_height(h, 1.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     nrm = dilate(nrm, cov, 8)
+    # roughness: the kit's knit, and skin a little oilier over the knuckles, veins and tendons
+    rough = np.full((size, size), MATERIALS["M_Kit"][1], np.float32)
+    rough[skin] = MATERIALS["M_Skin"][1] + 0.04 * lo[skin] / 6 - 0.10 * blur(gloss, 2)[skin]
+    rough[kit] += 0.03 * knit[kit] - 0.015
+    rough = dilate(np.repeat(np.clip(rough, 0.3, 1.0)[..., None], 3, -1), cov, 8)
     save_png(os.path.join(out, "T_Body_BaseColor.png"), to_srgb(base), "sRGB")
     save_png(os.path.join(out, "T_Body_Normal.png"), nrm, "Non-Color")
+    save_png(os.path.join(out, "T_Body_Roughness.png"), rough, "Non-Color")
     return bmap
 
 
@@ -2122,6 +2433,12 @@ def hook_textures(mats, out):
         nmap = nt.nodes.new("ShaderNodeNormalMap")
         nt.links.new(nm.outputs["Color"], nmap.inputs["Color"])
         nt.links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+        path = os.path.join(out, f"{prefix}_Roughness.png")
+        if os.path.exists(path):
+            rt = nt.nodes.new("ShaderNodeTexImage")
+            rt.image = bpy.data.images.load(path, check_existing=True)
+            rt.image.colorspace_settings.name = "Non-Color"
+            nt.links.new(rt.outputs["Color"], bsdf.inputs["Roughness"])
         if name == "M_Skin":
             bsdf.inputs["Subsurface Radius"].default_value = (0.010, 0.004, 0.002)
             bsdf.inputs["Subsurface Scale"].default_value = 0.01
@@ -2592,6 +2909,18 @@ def aim(cam, loc, target, lens):
     cam.data.lens = lens
 
 
+def closeup_camera(cam, rig):
+    """From the cockpit camera, CLOSEUP_HFOV wide on the right hand (posed)."""
+    pb = rig.pose.bones
+    w = rig.matrix_world
+    tgt = 0.4 * (w @ pb["hand_r"].head) + 0.6 * (w @ pb["middle_01_r"].head)
+    cam.location = COCKPIT_CAMERA
+    cam.rotation_euler = (tgt - Vector(COCKPIT_CAMERA)).to_track_quat("-Z", "Y").to_euler()
+    cam.data.type = "PERSP"
+    cam.data.sensor_fit = "HORIZONTAL"
+    cam.data.angle = math.radians(CLOSEUP_HFOV)
+
+
 def render_all(out, quick, bike_objs, rig):
     sc = bpy.context.scene
     cam, _ = bike_mod().setup_render_scene(quick)
@@ -2630,6 +2959,7 @@ def render_all(out, quick, bike_objs, rig):
             DEFAULT_EFFORT,
             lambda: aim(cam, (0.26, 0.0, 1.28), (0.56, 0.0, 0.90), 32),
         ),
+        ("render_cockpit_closeup", COCKPIT_ACTION, lambda: closeup_camera(cam, rig)),
     )
     for name, action, place in shots:
         use_action(rig, bpy.data.actions[action])
@@ -2770,6 +3100,8 @@ def stage_all(opts):
     rider, P = solve_proportions(bike)
     fit_report(rider, P)
     fits = solve_efforts(rider, bike, P)
+    forearm = forearm_sections(rider.mesh, rider.rig)
+    log(f"forearm sections: {forearm}")
     # gear, built on the rest pose and skinned to the rig
     mats = make_materials(out)
     gear = Gear(rider, mats)
@@ -2779,7 +3111,7 @@ def stage_all(opts):
     parts.append(shoes)
     gear.remove_hidden_feet()
     tex = 1024 if opts["quick"] else 2048
-    bmap = paint_body(rider, out, tex)
+    bmap = paint_body(rider, out, tex, fits[COCKPIT_ACTION]["view"]["forearm_entry_t"])
     paint_helmet(helmet, gear.C, out, min(tex, 1024))
     paint_shoes(shoes, rider, out, min(tex, 1024))
     hook_textures(mats, out)
@@ -2793,6 +3125,8 @@ def stage_all(opts):
     log(f"gear and textures done, {time.time() - t0:.0f}s")
     recs = bake_efforts(rider, fits)
     stats = collect_stats(rider, fits, rider_ob, bike, bike_objs, recs)
+    stats["forearm_m"] = forearm
+    stats["forearm_m"]["tan_line_t"] = fits[COCKPIT_ACTION]["view"]["forearm_entry_t"]
     log(json.dumps(stats, indent=1, default=str))
     fbx = os.path.join(out, "rider.fbx")
     export_fbx(rider.rig, rider_ob, fbx)
