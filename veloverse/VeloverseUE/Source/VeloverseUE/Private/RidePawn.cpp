@@ -66,6 +66,10 @@ const FVector CockpitEye(-45.f, 0.f, -38.f);
 // Over the Blender bike: the camera in the bike's frame (cm, from the ground under the bottom
 // bracket), where rider/README.md's Cockpit action is made to be seen from.
 const FVector CockpitCamera(-27.f, 0.f, 112.f);
+// The Blender bike's origin is the road under the rider's eyes, with its bottom bracket 40.8 cm
+// behind them: the Pedal effort's eye point, (0.408, 0, 1.375) m from the bottom bracket's ground
+// (rider/README.md). Before the rider, the eyes were a guess at 18 cm ahead and 150 cm up.
+const FVector PartsOrigin(-40.8f, 0.f, 0.f);
 constexpr float CockpitTilt = -8.f;
 
 // A mesh by path, or none when it isn't in the project: no warning for a bike not yet made.
@@ -1077,8 +1081,8 @@ void ARidePawn::Place()
 		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
 		Bike->SetWorldLocationAndRotation(Eye + Lift - Body.RotateVector(FVector(0.f, 0.f, EyeHeight)), Body);
 		PoseBike();
-		const FVector Camera = PartsOrigin + CockpitCamera - FVector(0.f, 0.f, EyeHeight);
-		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(Camera), (Body * Look).Rotator());
+		const FVector CameraAt = PartsOrigin + CockpitCamera - FVector(0.f, 0.f, EyeHeight);
+		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CameraAt), (Body * Look).Rotator());
 		return;
 	}
 	if (Seen == ERideView::Cockpit)
@@ -1124,10 +1128,6 @@ const FVector SteerAxis(-0.2924f, 0.f, 0.9563f);
 constexpr float WheelRadius = 33.9f; // to the tyre's tread
 constexpr float CrankLength = 17.25f; // to the pedal's axle
 constexpr float RiderLoop = 2.f; // s: rider/README.md's Pedal, 60 frames at 30 fps a revolution
-// The Blender bike's origin is the road under the rider's eyes, with its bottom bracket 40.8 cm
-// behind them: the Pedal effort's eye point, (0.408, 0, 1.375) m from the bottom bracket's ground
-// (rider/README.md). Before the rider, the eyes were a guess at 18 cm ahead and 150 cm up.
-const FVector PartsOrigin(-40.8f, 0.f, 0.f);
 } // namespace
 
 void ARidePawn::MakeBikeParts()
