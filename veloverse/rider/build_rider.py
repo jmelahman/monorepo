@@ -103,9 +103,9 @@ FRAMES = 60  # one crank revolution, frames 0..59; frame 60 would be frame 0 aga
 # ahead). The hands stay on the hoods, so a lower back brings the shoulders nearer them and
 # bends the elbows. "Pedal", the default, is the aero one: a low back on the hoods.
 EFFORTS = {
-    "Pedal_Easy": (32.0, 0.6, 12.0),
-    "Pedal": (14.0, 1.0, 10.0),
-    "Pedal_Hard": (8.0, 1.8, 8.0),
+    "Pedal_Easy": (35.0, 0.6, 12.0),
+    "Pedal": (25.0, 1.0, 10.0),
+    "Pedal_Hard": (15.0, 1.8, 8.0),
 }
 DEFAULT_EFFORT = "Pedal"
 # The first-person action: Pedal's crank timing, hands and finger curls, with the upper body
