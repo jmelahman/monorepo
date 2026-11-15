@@ -220,44 +220,41 @@ struct URideMenu::FPaintContext
 	            bool bSerif = false, float R = 12.f, bool bIconAfter = false) const
 	{
 		using namespace VeloverseMenu;
-		// Hovered, the button grows 4% about its middle as it brightens (the hit stays put, so its
-		// edge can't flicker under the pointer).
+		// Hovered, the button's plate grows 4% about its middle as it brightens. The words and icon
+		// keep their size and place: scaling the font re-rasterised it every frame of the ease, so
+		// the label swelled and shifted. The hit stays put, so the edge can't flicker under the pointer.
 		Hit(Key, X, Y, Wd, H).OnClick = MoveTemp(Click);
 		const float L = Lift(Key);
 		const float Grow = 1.f + 0.04f * L;
-		X -= Wd * (Grow - 1.f) * 0.5f;
-		Y -= H * (Grow - 1.f) * 0.5f;
-		Wd *= Grow;
-		H *= Grow;
-		R *= Grow;
-		Px *= Grow;
+		const float Gw = Wd * Grow, Gh = H * Grow, Gr = R * Grow;
+		const float Gx = X - (Gw - Wd) * 0.5f, Gy = Y - (Gh - H) * 0.5f;
 		FLinearColor Fg = Ink;
 		switch (Style)
 		{
 		case EButton::Primary:
-			P.Round(X, Y, Wd, H, R, Accent * (1.f + 0.12f * L));
+			P.Round(Gx, Gy, Gw, Gh, Gr, Accent * (1.f + 0.12f * L));
 			Fg = OnAccent;
 			break;
 		case EButton::Outline:
-			P.Round(X, Y, Wd, H, R, InkA(0.1f * L));
-			P.Border(X, Y, Wd, H, R, InkA(0.28f + 0.14f * L));
+			P.Round(Gx, Gy, Gw, Gh, Gr, InkA(0.1f * L));
+			P.Border(Gx, Gy, Gw, Gh, Gr, InkA(0.28f + 0.14f * L));
 			break;
 		case EButton::Quiet:
-			P.Round(X, Y, Wd, H, R, InkA(0.1f * L));
+			P.Round(Gx, Gy, Gw, Gh, Gr, InkA(0.1f * L));
 			break;
 		}
 		const FSlateFontInfo F = bSerif ? P.Serif(Px) : P.Font(Style == EButton::Primary ? "Bold" : "Medium", Px);
 		const float TextW = P.Width(Label, F);
-		const float IconW = (Icon ? 30.f : 0.f) * Grow;
-		const float Left = X + (Wd - TextW - IconW) * 0.5f;
+		const float IconW = Icon ? 30.f : 0.f;
+		const float Left = FMath::RoundToFloat(X + (Wd - TextW - IconW) * 0.5f);
 		if (Icon)
 		{
 			// Before the words, or after them for a way on; an arrow after them leans on 3 px.
-			const float IconPx = 22.f * Grow;
-			P.Icon(Icon, bIconAfter ? Left + TextW + 8.f * Grow + 3.f * L : Left, Y + (H - IconPx) * 0.5f, IconPx, Fg, 2.2f);
+			const float IconPx = 22.f;
+			P.Icon(Icon, bIconAfter ? Left + TextW + 8.f + 3.f * L : Left, Y + (H - IconPx) * 0.5f, IconPx, Fg, 2.2f);
 		}
 		P.Text(bIconAfter ? Left : Left + IconW, Mid(Y + H * 0.5f, Px), Label, F, Fg);
-		Ring(Key, X, Y, Wd, H, R);
+		Ring(Key, Gx, Gy, Gw, Gh, Gr);
 	}
 
 	// The round back button at the top left of every page but the start.
