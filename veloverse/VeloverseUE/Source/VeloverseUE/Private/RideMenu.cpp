@@ -627,8 +627,8 @@ bool URideMenu::StillWanted() const
 	int32 On = 1;
 	FParse::Value(FCommandLine::Get(), TEXT("RideMenuFreeze="), On);
 	const ARidePawn* Pawn = Rider();
-	return On != 0 && IsInViewport() && Pawn && !Pawn->bStarted && Pawn->bOnBackdrop &&
-	       Current != ERideMenuPage::Settings;
+	// Paused before the ride the camera stands still, on the backdrop or at the route's start.
+	return On != 0 && IsInViewport() && Pawn && !Pawn->bStarted && Current != ERideMenuPage::Settings;
 }
 
 void URideMenu::ApplyBlur()
