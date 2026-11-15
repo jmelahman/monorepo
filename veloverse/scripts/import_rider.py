@@ -7,8 +7,9 @@ Two stages, as import_bike_parts.py, because Interchange rewrites a mesh's slots
 returns. The FBX is regenerated, not committed: OC_RIDER_FBX names its folder (default
 /workspace/ue/fab_prep/rider), which also holds the T_*.png textures.
 
-The skeletal mesh lands as SK_Rider and its three efforts as A_Rider_Pedal_Easy, A_Rider_Pedal
-(aero, the default) and A_Rider_Pedal_Hard: each a crank revolution, frames 0-59 at 30 fps, sharing
+The skeletal mesh lands as SK_Rider, its three efforts as A_Rider_Pedal_Easy, A_Rider_Pedal
+(aero, the default) and A_Rider_Pedal_Hard, and the arms' view over the bars as A_Rider_Cockpit:
+each a crank revolution, frames 0-59 at 30 fps, sharing
 crank timing, which RidePawn plays at its crank angle and blends by W/kg (rider/README.md). The
 rider keeps the bike's frame (the ground under the bottom bracket, +X forward, the drive side +Y),
 so it sits under Bike at the bike parts' origin. The assign stage logs the mesh's bounds, bones
@@ -152,10 +153,13 @@ def assign_stage():
     named = {}
     for path, _ in takes:
         low = path.rsplit("/", 1)[-1].lower()
-        if "pedal" not in low:
+        if "cockpit" in low:
+            name = "A_Rider_Cockpit"  # the arms over the bars, not blended with the efforts
+        elif "pedal" in low:
+            kind = "Easy" if "easy" in low else "Hard" if "hard" in low else ""
+            name = f"A_Rider_Pedal_{kind}" if kind else "A_Rider_Pedal"
+        else:
             continue
-        kind = "Easy" if "easy" in low else "Hard" if "hard" in low else ""
-        name = f"A_Rider_Pedal_{kind}" if kind else "A_Rider_Pedal"
         if name in named:
             raise RuntimeError(f"two takes for {name}: {named[name]} and {path}")
         named[name] = path

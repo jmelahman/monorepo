@@ -65,6 +65,9 @@ public:
 	static constexpr const TCHAR* RiderTakes[3] = {TEXT("/Game/Rider/Body/A_Rider_Pedal_Easy.A_Rider_Pedal_Easy"),
 	                                               TEXT("/Game/Rider/Body/A_Rider_Pedal.A_Rider_Pedal"),
 	                                               TEXT("/Game/Rider/Body/A_Rider_Pedal_Hard.A_Rider_Pedal_Hard")};
+	// The arms' own loop for the camera over the bars: the hands as in Pedal, the shoulders drawn
+	// down and back out of the frame, the head and legs folded away to be hidden.
+	static constexpr const TCHAR* RiderCockpit = TEXT("/Game/Rider/Body/A_Rider_Cockpit.A_Rider_Cockpit");
 	// The Blender bike's parts (/Game/Rider/Bike, import_bike_parts.py), under Bike in place of
 	// its one mesh when all are there: the wheels turn with the distance, the cranks with Crank
 	// and the pedals stay level. In EBikePart's order.
@@ -73,12 +76,15 @@ public:
 	// pedal loops (a crank revolution each) played at Crank, so the feet stay on the pedals, and
 	// blended by W/kg (URiderAnim): Easy at 1.5, Pedal at 3, Hard at 5. Over
 	// the bars it is hidden but casts its shadow, and RiderArms shows instead: a copy without the
-	// head or legs, tipped back ArmsTilt degrees about the hands, so the hands stay on the hoods
-	// while the shoulders drop below the frame and the forearms reach in from its foot.
+	// head or legs playing the Cockpit loop, whose forearms reach in from the frame's foot. An
+	// import without Cockpit plays Pedal tipped back ArmsTilt degrees about the hands instead.
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderBody;
 	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> RiderArms;
 	// From stills of the aero rider at 25, 40 and 55: below 50 its shoulders show along the bottom.
+	// 0 with Cockpit; -RideArmsTilt= sets it either way, below 0 no arms.
 	float ArmsTilt = 55.f;
+	bool bArmsTiltGiven = false;
+	bool bArmsCockpit = false; // RiderArms plays Cockpit, not the efforts
 	float RiderEffort = 1.f; // 0 Easy, 1 Pedal, 2 Hard, eased; -RideEffort= pins it for stills
 	float PinnedEffort = -1.f; // chosen from stills at 40, 57 and 75: past 50 the fingers stand up off the hoods
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;

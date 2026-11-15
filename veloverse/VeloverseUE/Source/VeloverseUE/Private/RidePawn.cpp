@@ -580,6 +580,7 @@ void ARidePawn::ReadCommandLine()
 	}
 	if (FParse::Value(Line, TEXT("RideArmsTilt="), ArmsTilt))
 	{
+		bArmsTiltGiven = true;
 		UE_LOG(LogTemp, Display, TEXT("RIDE arms tilt %.0f"), ArmsTilt);
 	}
 	FString From;
@@ -1180,10 +1181,10 @@ void ARidePawn::PoseBike()
 			if (URiderAnim* Anim = C ? Cast<URiderAnim>(C->GetAnimInstance()) : nullptr)
 			{
 				Anim->Time = At;
-				Anim->Effort = RiderEffort;
+				Anim->Effort = C == RiderArms && bArmsCockpit ? 0.f : RiderEffort; // Cockpit isn't blended
 			}
 		}
-		if (RiderArms && RiderArms->IsVisible())
+		if (RiderArms && RiderArms->IsVisible() && ArmsTilt != 0.f)
 		{
 			// Tipped back about the knuckles, which hold the hoods all round the loop; the turn's
 			// top goes back, so it is negative in this frame.
@@ -1212,14 +1213,14 @@ void ARidePawn::MakeRider()
 		return; // not imported yet, or no bike to sit on
 	}
 	// Both copies play the efforts through URiderAnim; PoseBike sets its time and effort.
-	auto Animate = [&Takes](USkeletalMeshComponent* C)
+	auto Animate = [](USkeletalMeshComponent* C, const TArray<UAnimSequence*>& Plays)
 	{
 		C->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 		C->SetAnimInstanceClass(URiderAnim::StaticClass());
 		C->RegisterComponent();
 		if (URiderAnim* Anim = Cast<URiderAnim>(C->GetAnimInstance()))
 		{
-			Anim->Takes = Takes;
+			Anim->Takes = Plays;
 		}
 	};
 	RiderBody = NewObject<USkeletalMeshComponent>(this, TEXT("RiderBody"));
@@ -1229,7 +1230,7 @@ void ARidePawn::MakeRider()
 	RiderBody->SetupAttachment(Bike);
 	RiderBody->SetRelativeLocation(PartsOrigin); // its origin is the bike's: the ground under the BB
 	RiderBody->SetVisibility(false);
-	Animate(RiderBody);
+	Animate(RiderBody, Takes);
 	// Hidden over the bars, it still poses for its shadow and for RiderArms' grip.
 	RiderBody->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 	RiderPedal = Loop;
@@ -1240,14 +1241,21 @@ void ARidePawn::MakeRider()
 	RiderArms->SetupAttachment(Bike);
 	RiderArms->SetRelativeLocation(PartsOrigin);
 	RiderArms->SetVisibility(false);
-	RiderArms->SetCastShadow(false); // tipped back, its shadow would be wrong: RiderBody casts
-	Animate(RiderArms);
+	RiderArms->SetCastShadow(false); // folded or tipped back, its shadow would be wrong: RiderBody casts
+	UAnimSequence* Arms = Cast<UAnimSequence>(FSoftObjectPath(RiderCockpit).TryLoad());
+	bArmsCockpit = Arms != nullptr;
+	if (bArmsCockpit && !bArmsTiltGiven)
+	{
+		ArmsTilt = 0.f; // Cockpit's shoulders are already out of the frame
+	}
+	Animate(RiderArms, bArmsCockpit ? TArray<UAnimSequence*>{Arms} : Takes);
 	for (const TCHAR* Bone : {TEXT("neck_01"), TEXT("thigh_l"), TEXT("thigh_r")})
 	{
 		RiderArms->HideBoneByName(Bone, EPhysBodyOp::PBO_None); // and all below it
 	}
-	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, %d takes, Pedal %.3f s"), Mesh->GetRefSkeleton().GetNum(), Takes.Num(),
-	       Loop->GetPlayLength());
+	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, %d takes, Pedal %.3f s, arms %s, tilt %.0f"),
+	       Mesh->GetRefSkeleton().GetNum(), Takes.Num(), Loop->GetPlayLength(),
+	       bArmsCockpit ? TEXT("Cockpit") : TEXT("Pedal"), ArmsTilt);
 }
 
 void ARidePawn::PlaceRain(float Dt)
