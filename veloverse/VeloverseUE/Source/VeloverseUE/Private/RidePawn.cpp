@@ -650,6 +650,7 @@ void ARidePawn::ReadCommandLine()
 		}
 		ShotTimes.Sort();
 	}
+	FParse::Value(Line, TEXT("RideView="), ShotView);
 	if (!FParse::Value(Line, TEXT("RideShotDir="), ShotDir))
 	{
 		ShotDir = FPaths::ProjectSavedDir() / TEXT("Ride");
@@ -1336,7 +1337,12 @@ TArray<ERideView> ARidePawn::Views() const
 ERideView ARidePawn::View() const
 {
 	const ERideView Wanted = static_cast<ERideView>(FMath::Clamp(Profile.View, 0, 3));
-	return !Automated() && Views().Contains(Wanted) ? Wanted : ERideView::Eyes;
+	if (Automated())
+	{
+		const ERideView Shot = static_cast<ERideView>(FMath::Clamp(ShotView, 0, 3));
+		return Views().Contains(Shot) ? Shot : ERideView::Eyes;
+	}
+	return Views().Contains(Wanted) ? Wanted : ERideView::Eyes;
 }
 
 void ARidePawn::CycleView()

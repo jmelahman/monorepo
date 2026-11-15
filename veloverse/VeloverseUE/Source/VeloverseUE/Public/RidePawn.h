@@ -237,6 +237,8 @@ private:
 	// apart, so following it rigidly turns the view in small kinks several times a second.
 	FRotator Head;
 	bool bHeadSet = false;
+	// The view an automated launch rides in (-RideView=N, ERideView's order); the eyes otherwise.
+	int32 ShotView = 0;
 	// The body on the bike: the crank's angle (radians), which drives a pedalling sway, and the
 	// roll into a bend, eased, both in degrees. The sway's size follows the effort. In every view
 	// but Steady; tests and stills ride steady unless they start with -RideSway.
