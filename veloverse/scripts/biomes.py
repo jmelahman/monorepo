@@ -204,7 +204,8 @@ PRESETS["world"] = {
         "Dirt": (0.14, 0.23, 0.04),
         "Dirt mix": (0.14, 0.22, 0.04),
         "Desert": (0.2, 0.15, 0.09),
-        "Desert mix": (0.14, 0.1, 0.06),
+        # 15 Nov: nearer the sand, as its patches read as dark blotches on the dunes (wf_70000).
+        "Desert mix": (0.16, 0.115, 0.07),
         "Verge": (0.2, 0.15, 0.09),
         "Sand": (0.28, 0.24, 0.17),
         "Sand mix": (0.2, 0.18, 0.16),
@@ -219,6 +220,14 @@ PRESETS["world"] = {
         "Dirt mix": 0.0,
     },
     "STEEP": {"Desert": (0.85, 0.7, 0.55), "Sand": (0.9, 0.85, 0.75)},
+    # 15 Nov (gap 10, out/qa/wf_*): Red Sands' mud patches fade at their edge, not chequered by
+    # the mud scan's tiled height; the rock's border wanders off the paint's 7 m samples; the far
+    # grass is dimmer on slopes, where it read lime in the sun; and the faces' scans are sampled
+    # larger far off, as the tops' are (SIDE_FAR, below).
+    "MIX_EDGE": {"Desert": 0.15},
+    "EDGE_NOISE": {"Rock": 1.6},
+    "CANOPY_SLOPE": {"Grass": 0.6},
+    "SIDE_FAR": True,
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
         # The verge (12 Nov): short turf to the tarmac's edge, now that the road fold works. Bare,
@@ -250,7 +259,18 @@ PRESETS["world"] = {
         ),
     },
 }
-LAID_OVER = ("SURFACES", "MIXES", "LOOK_TINTS", "LOOK_GREYS", "STEEP", "BLADE_LOOK", "PROP_LOOK")
+LAID_OVER = (
+    "SURFACES",
+    "MIXES",
+    "LOOK_TINTS",
+    "LOOK_GREYS",
+    "STEEP",
+    "BLADE_LOOK",
+    "PROP_LOOK",
+    "MIX_EDGE",
+    "EDGE_NOISE",
+    "CANOPY_SLOPE",
+)
 
 
 def apply(name, tables):
@@ -258,6 +278,8 @@ def apply(name, tables):
     preset = PRESETS[name]
     for key in LAID_OVER:
         tables[key].update(preset.get(key, {}))
+    if "SIDE_FAR" in preset:
+        tables["SIDE_FAR"] = preset["SIDE_FAR"]
     if "FLAT" in preset:
         tables["FLAT"].clear()
         tables["FLAT"].update(preset["FLAT"])

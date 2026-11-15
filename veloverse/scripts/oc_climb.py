@@ -58,6 +58,8 @@ STILL_SETTLE_MAX = 1500
 GRASS_STEADY = 4
 STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
+# And on steep faces too (Ground.surface): the world's (biomes.py), not the climb's.
+SIDE_FAR = False
 
 
 def log(message):
@@ -176,6 +178,17 @@ STEEP = {
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
+# How far a "patches" mix's edge follows the two surfaces' heights ("<layer> mix edge"), 1 by
+# default: 0 is the noise's own soft fade. Red Sands' dry mud patches traced the mud scan's height
+# map, which tiles, so from the road every patch had a chequered edge (15 Nov, out/qa/wf_70000).
+MIX_EDGE = {}
+# Noise added to a layer's height in the landscape's height blend ("<layer> edge noise", 0 for
+# none), so its border with the next layer wanders over a few metres instead of following the
+# paint's 7 m samples: the Moor's rock met its grass in long straight seams (wf_55000).
+EDGE_NOISE = {}
+# A layer's far canopy colour on sloped ground ("<layer> canopy slope", 1 for none): flat paint
+# lit full on by the sun, where blades shade themselves, so a far grassy cut read lime (wf_55000).
+CANOPY_SLOPE = {}
 # The colour a layer's grass reads as from past its blades' cull (Ground.layer), faded in from
 # "<layer> canopy start" cm over "<layer> canopy span": about M_Blade's root and tip colours,
 # averaged as a far meadow shows them. Try values with `look --ground-param`.
@@ -423,6 +436,7 @@ class Ground:
 
     def __init__(self):
         self.g = g = _graph(MATERIAL, GROUND)
+        self.side_far = SIDE_FAR
         world = g.node(unreal.MaterialExpressionWorldPosition)
         camera = g.node(unreal.MaterialExpressionCameraPositionWS)
         distance = g.node(unreal.MaterialExpressionDistance)
@@ -446,7 +460,7 @@ class Ground:
         self.patch = {}
         # Steep ground is sampled from the side as well, on whichever of the XZ and YZ planes it
         # faces more, or a top-down sample streaks down a cut bank. 0 up to 32 degrees, 1 past 50.
-        up = g.node(unreal.MaterialExpressionVertexNormalWS)
+        self.up = up = g.node(unreal.MaterialExpressionVertexNormalWS)
         self.steep = g.saturate(g.mul(g.add(g.mask(up, "b"), -0.85), -4.5))
 
         # Triplanar: each surface is sampled on the XZ and YZ planes too, weighted by the normal's
@@ -481,7 +495,13 @@ class Ground:
 
         masks = g.sample(m, near_uv, "masks")
         top = g.lerp(near_d, far_d, g.mul(self.far, 0.7))
-        side_d = blend(top, g.mask(g.sample(d, xz_uv), "rgb"), g.mask(g.sample(d, yz_uv), "rgb"))
+        side = [g.mask(g.sample(d, uv), "rgb") for uv in (xz_uv, yz_uv)]
+        if self.side_far:
+            # Far off, the faces' scans are sampled larger too, as the top's are: a cut's cracks
+            # repeated every tile across the Moor's rock (wf_55000).
+            far_side = [g.mask(g.sample(d, g.mul(uv, 1.0 / FAR)), "rgb") for uv in (xz_uv, yz_uv)]
+            side = [g.lerp(a, b, g.mul(self.far, 0.7)) for a, b in zip(side, far_side, strict=True)]
+        side_d = blend(top, *side)
         colour = g.mul(side_d, g.param(f"{label} tint", tint))
         # "<label> grey", 0 to 1, takes the scan's own hue out: a tint can darken warm gravel but
         # not make it grey.
@@ -514,8 +534,11 @@ class Ground:
                 self.patch[name] = g.saturate(alpha)
             else:  # wet below a height
                 alpha = g.mul(g.add(g.mul(self.height, -1.0), size), 1 / 60)
-            # The mix follows the surfaces' own heights at its edge, not a soft fade.
-            alpha = g.saturate(g.add(alpha, g.add(other["height"], g.mul(base["height"], -1.0))))
+            # The mix follows the surfaces' own heights at its edge, not a soft fade (MIX_EDGE).
+            relief = g.add(other["height"], g.mul(base["height"], -1.0))
+            if name in MIX_EDGE:
+                relief = g.mul(relief, g.param(f"{name} mix edge", MIX_EDGE[name]))
+            alpha = g.saturate(g.add(alpha, relief))
             base = {k: g.lerp(base[k], other[k], alpha) for k in base}
         if name in FLAT:
             low, high = FLAT[name]
@@ -535,6 +558,12 @@ class Ground:
             # metres as a meadow is, so the far ground reads as grass and not as paint.
             mottle = g.world_noise(1.0 / 300, 0.7, 1.25, 2)
             canopy = g.mul(g.mask(g.param(f"{name} canopy", CANOPY[name]), "rgb"), mottle)
+            if name in CANOPY_SLOPE:
+                # 0 on the flat, 1 from about 37 degrees (the normal's z below 0.8).
+                slope = g.saturate(g.mul(g.add(g.mask(self.up, "b"), -0.97), -5.9))
+                dim = g.param(f"{name} canopy slope", CANOPY_SLOPE[name])
+                dim = g.lerp(g.const(1.0), dim, slope)
+                canopy = g.mul(canopy, dim)
             reach = _grass_reach(g)
             start = g.mul(g.param(f"{name} canopy start", 4000.0 * GRASS_REACH), reach)
             fade = g.op(
@@ -550,6 +579,13 @@ class Ground:
     def build(self, grass_types):
         g = self.g
         layers = {name: self.layer(name) for name in SURFACES}
+        # EDGE_NOISE: at 6 m and finer, so a border wanders a few metres either way.
+        edges = {}
+        for name in EDGE_NOISE:
+            if name in layers:
+                amount = g.param(f"{name} edge noise", EDGE_NOISE[name])
+                wander = g.mul(g.world_noise(1.0 / 600, -0.5, 0.5, 3), amount)
+                edges[name] = g.add(layers[name]["height"], wander)
         outputs = {}
         for prop in ("colour", "normal", "rough"):
             blend = g.node(unreal.MaterialExpressionLandscapeLayerBlend)
@@ -564,7 +600,7 @@ class Ground:
             blend.set_editor_property("layers", rows)
             for name, parts in layers.items():
                 g.link(parts[prop], blend, f"Layer {name}")
-                g.link(parts["height"], blend, f"Height {name}")
+                g.link(edges.get(name, parts["height"]), blend, f"Height {name}")
             outputs[prop] = blend
         colour = g.mul(outputs["colour"], self.macro)
         g.output(colour, outputs["normal"], outputs["rough"], specular=0.3)
