@@ -113,7 +113,7 @@ DEFAULT_EFFORT = "Pedal"
 # the camera's view.
 COCKPIT_ACTION = "Cockpit"
 COCKPIT = {
-    "hip": (-0.42, 0.76),
+    "hip": (-0.34, 0.76),
     "torso": 88.0,
     "clav": 0.0,
     "arm_pole": (-0.25, 0.40, -0.10),
@@ -1567,10 +1567,13 @@ def fit_cockpit(rider, P):
     Q["action"] = COCKPIT_ACTION
     rider.calibrate_poles(Q)
     place_drops(rider, Q)
-    views = []
+    views, miss = [], 0.0
     for k in range(0, FRAMES, 4):
         rider.pose(k, Q)
         views.append(cockpit_view(rider))
+        for s, _side in SIDES:
+            miss = max(miss, (rider.palm_world(s) - Vector(Q["hood"][s])).length)
+    log(f"cockpit: the palms miss their grip points by up to {1000 * miss:.1f} mm")
     worst = max(views, key=lambda v: v["seen_upper_body_verts"])
     worst = dict(
         worst,
@@ -1697,7 +1700,7 @@ HELMET_AZ, HELMET_ROWS = 144, 26
 # c cos(phi)^2, phi the azimuth from straight ahead: above the brow in front, level over the
 # ears, and well down the back of the head, so the shell wraps the skull instead of sitting on
 # it like a cap.
-HELMET_RIM = (2.0, 14.0, -8.0)
+HELMET_RIM = (1.0, 18.0, -13.0)
 HELMET_TAIL = 0.030  # m, the shell's extra reach at the upper rear: a short aero tail
 HELMET_NOSE = 0.006  # m, and over the brow
 HELMET_SLIM = 0.006  # m, off the shell's sides
@@ -2324,7 +2327,7 @@ class BodyMap:
         zline = np.interp(
             r[:, 0],
             [-0.20, -0.15, -0.11, -0.07, -0.04, 0.0],
-            [-0.085, -0.075, -0.03, -0.01, 0.045, 0.055],
+            [-0.030, -0.025, 0.005, 0.02, 0.05, 0.055],
         )
         ear = (np.abs(r[:, 1]) > 0.074) & (r[:, 2] < 0.03)
         lab[(head > 0.5) & (r[:, 2] > zline) & ~ear & ~below_collar] = HAIR_L
