@@ -175,6 +175,10 @@ STEEP = {
     "Sand": (0.7, 0.6, 0.48),
     "Dirt": (0.7, 0.6, 0.48),
 }
+# Steep faces on these layers are banded lighter and darker by height ("<layer> strata", how far
+# each band strays from 1), as bedded rock is, the bands wandering a metre or two up and down: a
+# cut through one even grey reads as plaster in the sun (gap 7).
+STRATA = {}
 # Snow keeps wet sand's relief but not its colour: shaded from the first colour in its hollows to
 # the second on its crests.
 FLAT = {"Snow": ((0.62, 0.68, 0.78), (0.86, 0.89, 0.93))}
@@ -557,6 +561,14 @@ class Ground:
                 g.const((1.0, 1.0, 1.0)), g.param(f"{name} steep", STEEP[name]), self.steep
             )
             base["colour"] = g.mul(base["colour"], shade)
+        if name in STRATA:
+            # Two sines of the height, 1.7 m and 0.6 m apart, about -1 to 1 together.
+            z = g.add(self.height, g.world_noise(1.0 / 2500, -180.0, 180.0, 2))
+            wide = g.link(z, g.node(unreal.MaterialExpressionSine, period=170.0))
+            thin = g.link(g.add(z, 40.0), g.node(unreal.MaterialExpressionSine, period=63.0))
+            bands = g.add(g.mul(wide, 0.65), g.mul(thin, 0.35))
+            amount = g.mul(g.param(f"{name} strata", STRATA[name]), self.steep)
+            base["colour"] = g.mul(base["colour"], g.add(g.mul(bands, amount), 1.0))
         if name in CANOPY:
             # Past the blades' cull the layer takes the blades' own colour, mottled over a few
             # metres as a meadow is, so the far ground reads as grass and not as paint.

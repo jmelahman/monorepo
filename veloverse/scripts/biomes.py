@@ -219,7 +219,14 @@ PRESETS["world"] = {
         "Dirt": 0.0,
         "Dirt mix": 0.0,
     },
-    "STEEP": {"Desert": (0.85, 0.7, 0.55), "Sand": (0.9, 0.85, 0.75)},
+    # Rock's steep faces darker and bedded (gap 7): Vael's and the Moor's cuts read as pale
+    # plaster in the sun (vael_still_30300).
+    "STEEP": {
+        "Desert": (0.85, 0.7, 0.55),
+        "Sand": (0.9, 0.85, 0.75),
+        "Rock": (0.7, 0.68, 0.64),
+    },
+    "STRATA": {"Rock": 0.25},
     # 15 Nov (gap 10, out/qa/wf_*): Red Sands' mud patches fade at their edge, not chequered by
     # the mud scan's tiled height; the rock's border wanders off the paint's 7 m samples; the far
     # grass is dimmer on slopes, where it read lime in the sun; and the faces' scans are sampled
@@ -270,6 +277,7 @@ LAID_OVER = (
     "MIX_EDGE",
     "EDGE_NOISE",
     "CANOPY_SLOPE",
+    "STRATA",
 )
 
 
