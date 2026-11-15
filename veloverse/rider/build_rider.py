@@ -2966,7 +2966,8 @@ def effort_stats(rider, P, rider_ob, bike, bike_objs, rec, slot):
         sc.frame_set(k)
         for s, side in SIDES:
             cleat = max(cleat, (rider.cleat_world(s) - Vector(pedal_axle(k, side))).length)
-            hood = max(hood, (rider.palm_world(s) - Vector(rider.hood[s])).length)
+            grip = P["hood"][s] if "hood" in P else rider.hood[s]
+            hood = max(hood, (rider.palm_world(s) - Vector(grip)).length)
             knee[s].append(rider.knee_angle(s))
     sc.frame_set(0)
     eye = rider.eye_point()
