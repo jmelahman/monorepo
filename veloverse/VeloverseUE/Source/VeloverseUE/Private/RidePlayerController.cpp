@@ -3,6 +3,7 @@
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/GameUserSettings.h"
+#include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/CommandLine.h"
@@ -35,6 +36,25 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 		Scalability::FQualityLevels Levels;
 		Levels.SetFromSingleQualityLevel(FMath::Clamp(Quality, 0, 3));
 		Scalability::SetQualityLevels(Levels);
+		// -RideCVars=name=value,name=value: console variables over the preset, for A/B stills. Set
+		// here, after the preset, as -dpcvars and -ExecCmds didn't survive it in a package.
+		FString CVars;
+		if (FParse::Value(FCommandLine::Get(), TEXT("RideCVars="), CVars, false))
+		{
+			TArray<FString> Pairs;
+			CVars.ParseIntoArray(Pairs, TEXT(","));
+			for (const FString& Pair : Pairs)
+			{
+				FString Name, Value;
+				IConsoleVariable* Var = Pair.Split(TEXT("="), &Name, &Value)
+					? IConsoleManager::Get().FindConsoleVariable(*Name.TrimStartAndEnd()) : nullptr;
+				if (Var)
+				{
+					Var->Set(*Value.TrimStartAndEnd(), ECVF_SetByConsole);
+				}
+				UE_LOG(LogTemp, Display, TEXT("RIDE cvar %s: %s"), *Pair, Var ? *Var->GetString() : TEXT("no such variable"));
+			}
+		}
 		return;
 	}
 	DetectQualityOnFirstLaunch();
