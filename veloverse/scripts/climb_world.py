@@ -151,6 +151,9 @@ def pick_tree(variants, kind, x, y):
 
 NEAR = float(os.environ.get("OC_NEAR") or "60") * 100.0
 TREE_CULL = 200000.0  # cm: instanced trees past this aren't drawn (the map is 2 km across)
+# Past this the trees' wind (M_Tree_Bark and M_Tree_Leaf's world position offset) isn't
+# evaluated; the materials fade it out before then, from 80 to 140 m, so nothing snaps still.
+TREE_WIND_TO = 15000.0  # cm
 FAR_CULL = 800000.0  # cm: the world's far forest (trees_far.json), seen to 8 km
 RAIL_HEIGHT = 85.0  # cm, the fence rail's middle above the path
 # Grass per layer, as island_world.GRASS: grasses and flowers in the verges and clearings, ferns
@@ -591,7 +594,7 @@ def trees():
             for part in group:
                 instances.add(part, (x, y, z - base * size), yaw, size)
         placed[kind] = placed.get(kind, 0) + 1
-    instances.commit(cull=TREE_CULL)
+    instances.commit(cull=TREE_CULL, wpo=TREE_WIND_TO)
     log(f"trees: {placed}")
     far_trees(variants)
 
@@ -611,7 +614,7 @@ def far_trees(variants):
             group, fit, base = picked
             for part in group:
                 instances.add(part, (x, y, z - base * scale * fit), yaw, scale * fit)
-    instances.commit(cull=FAR_CULL, shadows=False)
+    instances.commit(cull=FAR_CULL, shadows=False, wpo=False)
 
 
 def _noise_at(g, position, scale, low, high, levels=3):
@@ -1352,6 +1355,9 @@ def feature_materials():
     master = g.finish(two_sided=True)
     out = {}
     for slot, (r, gr, b, rough, metal) in spec["paints"].items():
+        if slot == "concrete":
+            out[slot] = _feature_concrete(folder)
+            continue
         out[slot] = lib.instance(
             f"MI_Feature_{slot}",
             master,
@@ -1360,6 +1366,39 @@ def feature_materials():
             vectors={"colour": (r, gr, b, 1.0)},
         )
     return out
+
+
+# The features' concrete (bridge decks and parapets, the quay): Poly Haven's concrete_pavement
+# box-mapped from the world, so the parapets' sides carry it as well as their tops. As a flat
+# 0.42 paint it read as cream plaster in the low sun, the parapets blown out white beside the road
+# up to Vael (the user's Cinematic shot, 14 Nov). The scan is about 0.2 linear; "Tint" greys it.
+CONCRETE_TILE = 260.0  # cm
+
+
+def _feature_concrete(folder):
+    g = lib.Graph("M_FeatureConcrete", folder)
+    world = g.node(unreal.MaterialExpressionWorldPosition)
+    face = g.node(unreal.MaterialExpressionVertexNormalWS)
+    tex = lib.texture("concrete_pavement_diff_2k")
+    rough_tex = lib.texture("concrete_pavement_rough_2k", "mask")
+    # Each axis' weight: the normal's share along it, sharpened so the seams stay narrow.
+    square = g.mul(face, face)
+    weights = g.mul(square, square)
+    total = g.op(unreal.MaterialExpressionDotProduct, weights, g.const((1.0, 1.0, 1.0)))
+    weights = g.op(unreal.MaterialExpressionDivide, weights, total)
+    colour = rough = None
+    for axis, plane in (("r", "gb"), ("g", "rb"), ("b", "rg")):
+        uv = g.mul(g.mask(world, plane), 1.0 / CONCRETE_TILE)
+        w = g.mask(weights, axis)
+        c = g.mul(g.mask(g.sample(tex, uv), "rgb"), w)
+        r = g.mul(g.mask(g.sample(rough_tex, uv, "mask"), "r"), w)
+        colour = c if colour is None else g.add(colour, c)
+        rough = r if rough is None else g.add(rough, r)
+    # Weathering over metres: some slabs a shade darker, as cast concrete is.
+    colour = g.mul(colour, g.world_noise(0.0025, 0.75, 1.05, 3))
+    colour = g.mul(colour, g.mask(g.param("Tint", (0.92, 0.96, 1.04)), "rgb"))
+    g.output(colour, rough=g.saturate(g.add(rough, 0.1)), specular=0.4)
+    return g.finish(two_sided=True)
 
 
 def _feature_mesh(name, folder):

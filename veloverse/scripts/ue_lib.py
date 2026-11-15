@@ -364,9 +364,10 @@ class Instances:
             )
         )
 
-    def commit(self, cull=None, shadows=True, materials=None):
+    def commit(self, cull=None, shadows=True, materials=None, wpo=None):
         """Builds the components. `cull` is a draw distance in cm; `materials` maps mesh path ->
-        {slot: material}."""
+        {slot: material}. `wpo` is the distance in cm past which the material's world position
+        offset (wind) stops being evaluated, or False for none at all."""
         total = 0
         for path, (mesh, transforms) in self.pending.items():
             actor = spawn(
@@ -387,6 +388,10 @@ class Instances:
             component.set_editor_property("cast_shadow", shadows)
             if cull:
                 component.set_editor_property("instance_end_cull_distance", int(cull))
+            if wpo is False:
+                component.set_editor_property("evaluate_world_position_offset", False)
+            elif wpo:
+                component.set_editor_property("world_position_offset_disable_distance", int(wpo))
             for index, material in ((materials or {}).get(path) or {}).items():
                 component.set_material(index, material)
             component.add_instances(transforms, False, True)

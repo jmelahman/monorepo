@@ -4,6 +4,7 @@ bark and leaf textures, and an instance of M_Tree_Bark or M_Tree_Leaf on each sl
 Two stages, as megascans.py, because Interchange rewrites a mesh's slots after the import returns:
     OC_STAGE=import bash scripts/ue_run.sh import_trees.py trees_import.log
     OC_STAGE=assign bash scripts/ue_run.sh import_trees.py trees_assign.log
+OC_STAGE=wind rebuilds the two masters in place, their instances kept (to change the wind).
 OC_ONLY narrows either to a comma list of kinds. The assign stage logs each mesh kept as
 "TREES mesh /Game/Trees/<kind>/<name> W x D x H cm", which climb_world.py's trees read back from
 the folder itself.
@@ -97,11 +98,65 @@ def import_one(record):
             log(f"imported {path} slots {slots}")
 
 
+def graph_in_place(name):
+    """A Graph on the master as it stands, emptied, or a new one: deleting it would orphan the
+    instances on every tree's slots."""
+    path = f"{ROOT}/Materials/{name}"
+    if not assets.does_asset_exist(path):
+        return Graph(name, f"{ROOT}/Materials")
+    g = Graph.__new__(Graph)
+    g.material, g.name, g.y = unreal.load_asset(path), name, 0
+    unreal.MaterialEditingLibrary.delete_all_material_expressions(g.material)
+    return g
+
+
+def wind(g, rnd, leaf):
+    """The tree swaying: the whole crown leans with slow gusts rolling across the land, more the
+    higher it is above the tree's own base (height squared, so the trunk's foot stays put), each
+    tree a little out of step. Leaves add a quick flutter of their own. Bark and leaf share the
+    lean, or the crown would part from its branches. Faded out from 80 to 140 m: the components
+    stop evaluating it at 150 (climb_world.TREE_WIND_TO)."""
+    place = g.node(unreal.MaterialExpressionWorldPosition)
+    base = g.node(unreal.MaterialExpressionObjectPositionWS)
+    up = g.add(g.mask(place, "b"), g.mul(g.mask(base, "b"), -1.0))
+    rise = g.saturate(
+        g.mul(
+            up, g.op(unreal.MaterialExpressionDivide, g.const(1.0), g.param("Wind height", 1800.0))
+        )
+    )
+    time = g.mul(g.node(unreal.MaterialExpressionTime), g.param("Tree wind speed", 0.12))
+    along = g.add(g.mul(g.mask(base, "r"), 1.0 / 4100), g.mul(g.mask(base, "g"), 1.0 / 6300))
+    phase = g.add(g.add(time, along), g.mul(rnd, 0.35))
+    gust = g.link(phase, g.node(unreal.MaterialExpressionSine, period=1.0))
+    sway = g.link(g.add(g.mul(phase, 2.7), rnd), g.node(unreal.MaterialExpressionSine, period=1.0))
+    # Leaning with the wind (+x, a little +y) and rocking about that lean.
+    push = g.add(g.add(g.mul(gust, 0.45), g.mul(sway, 0.25)), 0.55)
+    lean = g.mul(g.mul(push, g.mul(rise, rise)), g.param("Tree wind", 22.0))
+    offset = g.mul(g.const((0.85, 0.5, 0.0)), lean)
+    if leaf:
+        quick = g.add(
+            g.mul(g.node(unreal.MaterialExpressionTime), g.param("Leaf flutter speed", 1.7)),
+            g.op(unreal.MaterialExpressionDotProduct, place, g.const((1 / 140, 1 / 190, 1 / 230))),
+        )
+        flutter = g.link(quick, g.node(unreal.MaterialExpressionSine, period=1.0))
+        shake = g.mul(g.mul(flutter, rise), g.param("Leaf flutter", 3.0))
+        offset = g.add(offset, g.mul(g.const((0.4, 0.3, 0.6)), shake))
+    eye = g.node(unreal.MaterialExpressionCameraPositionWS)
+    far = g.op(unreal.MaterialExpressionDistance, place, eye)
+    near = g.saturate(g.add(g.mul(far, -1.0 / 6000), 14000 / 6000))
+    offset = g.mul(offset, near)
+    if not lib.edit.connect_material_property(
+        offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET
+    ):
+        raise RuntimeError(f"{g.name}: could not wire the world position offset")
+
+
 def master(kind):
     """M_Tree_Bark: opaque. M_Tree_Leaf: masked two-sided foliage, lit through by its own colour.
-    Both take D and N and vary each tree's brightness and warmth a little."""
+    Both take D and N and vary each tree's brightness and warmth a little, and sway in the
+    wind."""
     name = {"bark": "M_Tree_Bark", "leaf": "M_Tree_Leaf"}[kind]
-    g = Graph(name, f"{ROOT}/Materials")
+    g = graph_in_place(name)
     d = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-900, parameter_name="D")
     d.set_editor_property("texture", unreal.load_asset("/Engine/EngineResources/DefaultTexture"))
     n = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-900, parameter_name="N")
@@ -133,8 +188,11 @@ def master(kind):
         material.set_editor_property("opacity_mask_clip_value", 0.4)
     else:
         g.output(colour, g.mask(n, "rgb"), g.param("Roughness", 0.85), specular=0.3)
+    wind(g, rnd, kind == "leaf")
     material.set_editor_property("used_with_instanced_static_meshes", True)
     material.set_editor_property("used_with_nanite", True)
+    # Nanite culls by the mesh's bounds, so it needs to know how far the wind can move it.
+    material.set_editor_property("max_world_position_offset_displacement", 60.0)
     return g.finish()
 
 
@@ -210,6 +268,10 @@ def main():
     if STAGE == "import":
         for record in records:
             import_one(record)
+    elif STAGE == "wind":
+        # The masters rebuilt where they stand (their wind added), every instance kept.
+        for kind in ("bark", "leaf"):
+            master(kind)
     elif STAGE == "assign":
         masters = {
             kind: unreal.load_asset(path) if assets.does_asset_exist(path) else master(kind)
