@@ -450,13 +450,44 @@ def sea_level():
 
 
 def sea_material():
-    """Dark, smooth water. Built before the level loads, like the road's material."""
+    """Dark water under drifting wind waves. Built before the level loads, like the road's
+    material. The waves are make_sea_waves.py's normal map at three scales, each drifting with
+    the wind at its own pace, flattening into a mirror with distance as a real sea's chop does."""
     if sea_level() is None:
         return None
     g = lib.Graph("M_ClimbSea", f"{FOLDER}/Sea")
+    tex = lib.texture(
+        "T_SeaWaves_N", "normal", source=f"{lib.TEXTURES}/T_SeaWaves_N.png", folder=f"{FOLDER}/Sea"
+    )
+    time = g.node(unreal.MaterialExpressionTime)
+    # (tile cm, drift in tiles a second along x and y, weight): a broad swell, the main chop and
+    # a fine ripple, each a little off the others' heading so their patterns never lock.
+    layers = (
+        (7300.0, (0.004, 0.0015), 0.6),
+        (1800.0, (0.06, 0.02), 1.0),
+        (470.0, (0.07, 0.045), 0.55),
+    )
+    slopes = None
+    for i, (tile, drift, weight) in enumerate(layers):
+        speed = g.node(unreal.MaterialExpressionConstant2Vector, r=drift[0], g=drift[1])
+        uv = g.add(g.world_uv(tile, (0.37 * i, 0.61 * i)), g.mul(time, speed))
+        xy = g.mul(g.mask(g.sample(tex, uv, "normal"), "rg"), weight)
+        slopes = xy if slopes is None else g.add(slopes, xy)
+    slopes = g.mul(slopes, g.param("Sea waves", 1.0))
+    camera = g.node(unreal.MaterialExpressionCameraPositionWS)
+    far = g.op(
+        unreal.MaterialExpressionDistance, g.node(unreal.MaterialExpressionWorldPosition), camera
+    )
+    # Full chop to 150 m, a fifth of it by 1.2 km: far off the sea reads as sky, not texture.
+    calm = g.lerp(g.const(1.0), g.const(0.2), g.saturate(g.mul(g.add(far, -15000.0), 1.0 / 105000)))
+    slopes = g.mul(slopes, calm)
+    normal = g.link(
+        g.op(unreal.MaterialExpressionAppendVector, slopes, g.const(1.0)),
+        g.node(unreal.MaterialExpressionNormalize),
+    )
     swell = g.world_noise(0.0015, 0.0, 1.0, 3)
     colour = g.lerp(g.const((0.006, 0.03, 0.04)), g.const((0.012, 0.06, 0.07)), swell)
-    g.output(colour, rough=g.lerp(g.const(0.04), g.const(0.12), swell), specular=0.5)
+    g.output(colour, normal=normal, rough=g.lerp(g.const(0.04), g.const(0.12), swell), specular=0.5)
     return g.finish()
 
 
