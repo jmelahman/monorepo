@@ -4,6 +4,8 @@
 // -RideTour=DIR shows the menus unattended: the start screen, the routes, the sensors, the graphics
 // and rider settings, the stats, some riding (-RideTourRide=SECONDS, 40 by default), the pause menu
 // and the ride's review, each saved with its screenshot into DIR as menu_*.png, then quits.
+// -RideTourRoute=N also changes route halfway through the ride, as the dock's button does: the
+// routes page over the ride (menu_8_change.png), then route N, the ride going on along it.
 #pragma once
 
 #include "CoreMinimal.h"
@@ -42,7 +44,10 @@ private:
 	FString TourDir;
 	int32 TourStep = 0;
 	float TourRide = 40.f;
+	int32 TourRoute = -1;
+	int32 TourChange = 0; // the route change's steps: open, shot, pick
 	FTimerHandle TourTimer;
+	bool TourChangeRoute();
 	void Tour();
 	void DetectQualityOnFirstLaunch();
 	void UseCursor();

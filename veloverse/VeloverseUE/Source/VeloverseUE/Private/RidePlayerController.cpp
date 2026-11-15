@@ -14,6 +14,7 @@
 #include "UnrealClient.h"
 #include "RideMenu.h"
 #include "RidePawn.h"
+#include "RideTrack.h"
 #include "Scalability.h"
 
 ARidePawn* ARidePlayerController::Rider() const { return Cast<ARidePawn>(GetPawn()); }
@@ -42,6 +43,7 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 	if (FParse::Value(FCommandLine::Get(), TEXT("RideTour="), TourDir))
 	{
 		FParse::Value(FCommandLine::Get(), TEXT("RideTourRide="), TourRide);
+		FParse::Value(FCommandLine::Get(), TEXT("RideTourRoute="), TourRoute);
 		GetWorldTimerManager().SetTimer(TourTimer, this, &ARidePlayerController::Tour, 2.f, true);
 	}
 }
@@ -55,6 +57,35 @@ void ARidePlayerController::UseCursor()
 	UGameViewportClient* Viewport = GEngine ? GEngine->GameViewport : nullptr;
 	const bool bSet = Viewport && Viewport->SetHardwareCursor(EMouseCursor::Default, TEXT("Menu/Cursors/Arrow"), FVector2D(1.5 / 24.0, 1.5 / 24.0));
 	UE_LOG(LogTemp, Display, TEXT("RIDE cursor: %s"), bSet ? TEXT("ours") : TEXT("the system's"));
+}
+
+bool ARidePlayerController::TourChangeRoute()
+{
+	ARidePawn* Pawn = Rider();
+	if (TourRoute < 0 || TourChange > 2 || !Pawn || Pawn->Elapsed < TourRide * 0.5f)
+	{
+		return false;
+	}
+	if (TourChange == 0)
+	{
+		ShowRoutes(); // as the dock's Change route
+	}
+	else if (TourChange == 1)
+	{
+		const FString File = TourDir / TEXT("menu_8_change.png");
+		FScreenshotRequest::RequestScreenshot(File, true, false);
+		UE_LOG(LogTemp, Display, TEXT("RIDE shot %s"), *File);
+	}
+	else
+	{
+		const FString Was = Pawn->Track ? Pawn->Track->Title : FString();
+		Pawn->UseRoute(TourRoute);
+		Resume();
+		UE_LOG(LogTemp, Display, TEXT("RIDE tour changed route at %.0f s: %s to %s (%s)"), Pawn->Elapsed, *Was,
+		       Pawn->Track ? *Pawn->Track->Title : TEXT("none"), *Pawn->RideRoutes);
+	}
+	++TourChange;
+	return true;
 }
 
 void ARidePlayerController::DetectQualityOnFirstLaunch()
@@ -93,6 +124,7 @@ void ARidePlayerController::Tour()
 		const ARidePawn* Pawn = Rider();
 		if (Page == Riding && Pawn && Pawn->Elapsed < TourRide)
 		{
+			TourChangeRoute();
 			return;
 		}
 		// The start page waits for the world's light and textures to settle, as a rider would see it.
