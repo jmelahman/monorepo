@@ -59,6 +59,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeTick(const FGeometry& Geometry, float DeltaTime) override;
+	virtual void NativeDestruct() override;
 	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& Culling,
 	                          FSlateWindowElementList& Out, int32 Layer, const FWidgetStyle& Style,
 	                          bool bParentEnabled) const override;
@@ -114,6 +115,23 @@ private:
 	void ReadMap();
 
 	UPROPERTY(Transient) TObjectPtr<UBackgroundBlur> Blur;
+	float BlurWanted = 0.f;
+
+	// The start screen's still. Before the ride the camera doesn't move, so once the world behind the
+	// menu has settled one frame of it is kept, sharp and blurred, and the world stops drawing until
+	// the ride or the settings (whose changes show behind them). -RideMenuFreeze=0 keeps it live.
+	UPROPERTY(Transient) TObjectPtr<UTexture2D> Still;
+	UPROPERTY(Transient) TObjectPtr<UTexture2D> StillSoft;
+	mutable FSlateBrush StillBrush, StillSoftBrush;
+	FIntPoint StillSize = FIntPoint::ZeroValue;
+	float SettleClock = 0.f, QuietClock = 0.f;
+	bool bFrozen = false, bStillAsked = false;
+	FDelegateHandle StillShot;
+	bool StillWanted() const;
+	void Freeze(float DeltaTime);
+	void Thaw();
+	void TookStill(int32 W, int32 H, const TArray<FColor>& Pixels);
+	void ApplyBlur();
 
 	// The saved rides, newest first, read as the stats or a review opens.
 	TArray<FRideEntry> History;

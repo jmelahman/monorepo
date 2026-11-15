@@ -4,7 +4,9 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/BackgroundBlur.h"
+#include "ContentStreaming.h"
 #include "Dom/JsonObject.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/FileManager.h"
@@ -20,6 +22,9 @@
 #include "RideTrack.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "ShaderPipelineCache.h"
+#include "UnrealClient.h"
+#include "WorldPartition/WorldPartitionSubsystem.h"
 
 using namespace VeloverseMenu;
 
@@ -64,6 +69,7 @@ ARidePawn* URideMenu::Rider() const
 void URideMenu::NativeTick(const FGeometry& Geometry, float DeltaTime)
 {
 	Super::NativeTick(Geometry, DeltaTime);
+	Freeze(DeltaTime);
 	RefreshClock += DeltaTime;
 	if (RefreshClock < 0.25f)
 	{
@@ -125,13 +131,8 @@ void URideMenu::Show(ERideMenuPage Page)
 	Dragging.Reset();
 	Focus = DefaultFocus();
 	TakeWidget(); // builds the blur on first use
-	if (Blur)
-	{
-		const float Strength = Page == ERideMenuPage::Start    ? 0.f
-		                       : Page == ERideMenuPage::Pause  ? 8.f
-		                                                       : 18.f;
-		Blur->SetBlurStrength(Strength);
-	}
+	BlurWanted = Page == ERideMenuPage::Start ? 0.f : Page == ERideMenuPage::Pause ? 8.f : 18.f;
+	ApplyBlur();
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -494,6 +495,10 @@ int32 URideMenu::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 		}
 	}
 	const FPainter P{Geometry, Out, Layer, Scale};
+	if (bFrozen)
+	{
+		P.Image(0.f, 0.f, Local.X / Scale, 1080.f, BlurWanted > 0.f ? &StillSoftBrush : &StillBrush);
+	}
 	ARidePawn* Pawn = Rider();
 	const FLinearColor Accent = Pawn ? Pawn->Profile.Accent() : Hex(0xFFAD50);
 	FPaintContext C{P, *const_cast<URideMenu*>(this), Pawn, Local.X / Scale, Accent, TextOn(Accent),
@@ -509,6 +514,195 @@ int32 URideMenu::NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, 
 	case ERideMenuPage::Summary: PaintReview(C); break;
 	}
 	return P.Layer;
+}
+
+// ---- The start screen's still -------------------------------------------------------------------
+
+namespace
+{
+constexpr float StillBlur = 18.f; // the blur of every frozen page but the start's
+
+UTexture2D* MakeStill(int32 W, int32 H, const TArray<FColor>& Pixels)
+{
+	const TConstArrayView64<uint8> Bytes(reinterpret_cast<const uint8*>(Pixels.GetData()), Pixels.Num() * sizeof(FColor));
+	UTexture2D* Texture = UTexture2D::CreateTransient(W, H, PF_B8G8R8A8, NAME_None, Bytes);
+	if (Texture)
+	{
+		Texture->SRGB = true; // the frame as it was shown, tone mapped
+		Texture->Filter = TF_Bilinear;
+		Texture->LODGroup = TEXTUREGROUP_UI;
+		Texture->UpdateResource();
+	}
+	return Texture;
+}
+
+// One pass of a box blur Radius wide along a row or column of Count values, Stride apart.
+void BoxPass(TArray<FVector3f>& Px, int32 First, int32 Count, int32 Stride, int32 Radius, TArray<FVector3f>& Line)
+{
+	Line.SetNumUninitialized(Count, EAllowShrinking::No);
+	for (int32 I = 0; I < Count; ++I)
+	{
+		Line[I] = Px[First + I * Stride];
+	}
+	const float Inv = 1.f / (2 * Radius + 1);
+	FVector3f Sum = FVector3f::ZeroVector;
+	for (int32 I = -Radius; I <= Radius; ++I)
+	{
+		Sum += Line[FMath::Clamp(I, 0, Count - 1)];
+	}
+	for (int32 I = 0; I < Count; ++I)
+	{
+		Px[First + I * Stride] = Sum * Inv;
+		Sum += Line[FMath::Min(I + Radius + 1, Count - 1)] - Line[FMath::Max(I - Radius, 0)];
+	}
+}
+
+// The frame at a quarter size, box-blurred three times each way: close to Slate's BackgroundBlur at
+// Strength, whose sigma is Strength pixels on a 1080-line screen.
+TArray<FColor> Soften(int32 W, int32 H, const TArray<FColor>& In, float Strength, int32& OutW, int32& OutH)
+{
+	OutW = FMath::Max(W / 4, 1);
+	OutH = FMath::Max(H / 4, 1);
+	TArray<FVector3f> Px;
+	Px.SetNumZeroed(OutW * OutH);
+	for (int32 Y = 0; Y < OutH * 4 && Y < H; ++Y)
+	{
+		for (int32 X = 0; X < OutW * 4 && X < W; ++X)
+		{
+			const FColor& C = In[Y * W + X];
+			Px[(Y / 4) * OutW + X / 4] += FVector3f(C.R, C.G, C.B) / 16.f;
+		}
+	}
+	const float Sigma = Strength * H / 1080.f / 4.f;
+	const int32 Radius = FMath::Max(1, FMath::RoundToInt32((FMath::Sqrt(4.f * Sigma * Sigma + 1.f) - 1.f) * 0.5f));
+	TArray<FVector3f> Line;
+	for (int32 Pass = 0; Pass < 3; ++Pass)
+	{
+		for (int32 Y = 0; Y < OutH; ++Y)
+		{
+			BoxPass(Px, Y * OutW, OutW, 1, Radius, Line);
+		}
+		for (int32 X = 0; X < OutW; ++X)
+		{
+			BoxPass(Px, X, OutH, OutW, Radius, Line);
+		}
+	}
+	TArray<FColor> Out;
+	Out.SetNumUninitialized(Px.Num());
+	for (int32 I = 0; I < Px.Num(); ++I)
+	{
+		Out[I] = FColor(FMath::Clamp(FMath::RoundToInt32(Px[I].X), 0, 255), FMath::Clamp(FMath::RoundToInt32(Px[I].Y), 0, 255),
+		                 FMath::Clamp(FMath::RoundToInt32(Px[I].Z), 0, 255), 255);
+	}
+	return Out;
+}
+} // namespace
+
+void URideMenu::NativeDestruct()
+{
+	Thaw(); // the ride, or a level change: the world draws again
+	Super::NativeDestruct();
+}
+
+bool URideMenu::StillWanted() const
+{
+	int32 On = 1;
+	FParse::Value(FCommandLine::Get(), TEXT("RideMenuFreeze="), On);
+	const ARidePawn* Pawn = Rider();
+	return On != 0 && IsInViewport() && Pawn && !Pawn->bStarted && Pawn->bOnBackdrop &&
+	       Current != ERideMenuPage::Settings;
+}
+
+void URideMenu::ApplyBlur()
+{
+	if (Blur)
+	{
+		Blur->SetBlurStrength(bFrozen ? 0.f : BlurWanted); // a frozen page paints its blurred still
+	}
+}
+
+void URideMenu::Freeze(float DeltaTime)
+{
+	UWorld* World = GetWorld();
+	UGameViewportClient* View = World ? World->GetGameViewport() : nullptr;
+	if (!View || !View->Viewport)
+	{
+		return;
+	}
+	if (!StillWanted() || (bFrozen && View->Viewport->GetSizeXY() != StillSize))
+	{
+		Thaw(); // a resized window takes a new still once it settles
+		return;
+	}
+	if (bFrozen || bStillAsked)
+	{
+		return;
+	}
+	// Settled: nothing streaming in or compiling for 3 s, after at least 4 s here and at most 40.
+	SettleClock += DeltaTime;
+	UWorldPartitionSubsystem* Partition = World->GetSubsystem<UWorldPartitionSubsystem>();
+	const bool bBusy = IStreamingManager::Get().GetNumWantingResources() > 0 ||
+	                   FShaderPipelineCache::NumPrecompilesRemaining() > 0 ||
+	                   (Partition && !Partition->IsAllStreamingCompleted());
+	QuietClock = bBusy ? 0.f : QuietClock + DeltaTime;
+	if (SettleClock < 4.f || (QuietClock < 3.f && SettleClock < 40.f) || FScreenshotRequest::IsScreenshotRequested())
+	{
+		return;
+	}
+	// The world without the menu, from the viewport: with the delegate bound nothing is saved.
+	bStillAsked = true;
+	StillShot = UGameViewportClient::OnScreenshotCaptured().AddUObject(this, &URideMenu::TookStill);
+	FScreenshotRequest::RequestScreenshot(FString(), false, false);
+}
+
+void URideMenu::TookStill(int32 W, int32 H, const TArray<FColor>& Pixels)
+{
+	UGameViewportClient::OnScreenshotCaptured().Remove(StillShot);
+	bStillAsked = false;
+	UWorld* World = GetWorld();
+	UGameViewportClient* View = World ? World->GetGameViewport() : nullptr;
+	if (!View || !StillWanted() || W <= 0 || H <= 0 || Pixels.Num() != W * H)
+	{
+		SettleClock = QuietClock = 0.f;
+		return;
+	}
+	int32 SoftW, SoftH;
+	const TArray<FColor> Soft = Soften(W, H, Pixels, StillBlur, SoftW, SoftH);
+	Still = MakeStill(W, H, Pixels);
+	StillSoft = MakeStill(SoftW, SoftH, Soft);
+	if (!Still || !StillSoft)
+	{
+		return;
+	}
+	StillBrush.SetResourceObject(Still);
+	StillBrush.ImageSize = FVector2D(W, H);
+	StillSoftBrush.SetResourceObject(StillSoft);
+	StillSoftBrush.ImageSize = FVector2D(SoftW, SoftH);
+	StillSize = FIntPoint(W, H);
+	bFrozen = true;
+	View->bDisableWorldRendering = true;
+	ApplyBlur();
+	UE_LOG(LogTemp, Display, TEXT("RIDE menu still %dx%d after %.1f s: the world stops drawing"), W, H, SettleClock);
+}
+
+void URideMenu::Thaw()
+{
+	SettleClock = QuietClock = 0.f;
+	if (!bFrozen)
+	{
+		return;
+	}
+	bFrozen = false;
+	if (UGameViewportClient* View = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		View->bDisableWorldRendering = false;
+	}
+	StillBrush.SetResourceObject(nullptr);
+	StillSoftBrush.SetResourceObject(nullptr);
+	Still = nullptr;
+	StillSoft = nullptr;
+	ApplyBlur();
+	UE_LOG(LogTemp, Display, TEXT("RIDE menu still dropped: the world draws again"));
 }
 
 // ---- The routes ----------------------------------------------------------------------------------
