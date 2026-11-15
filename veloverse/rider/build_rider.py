@@ -74,6 +74,10 @@ BODY_TARGETS = [
     ("legs/measure-thigh-circ-incr.target.gz", 0.25),
     ("legs/measure-calf-circ-incr.target.gz", 0.35),
     ("stomach/stomach-tone-incr.target.gz", 0.5),
+    # flatter lats, so the back tapers to the waist under the jersey instead of flaring
+    ("torso/torso-muscle-dorsi-decr.target.gz", 0.80),
+    # a shorter neck: craned forward in the crouch, the default one reads as long
+    ("neck/neck-scale-vert-decr.target.gz", 1.00),
 ]
 # Proportion targets: a positive weight loads the "-incr" target, a negative one the "-decr".
 PROPORTION_TARGETS = {
@@ -157,6 +161,8 @@ ORANGE = (0.80, 0.22, 0.05)
 BLACK = (0.012, 0.012, 0.013)
 WHITE = (0.80, 0.80, 0.78)
 SKIN = (0.48, 0.30, 0.22)
+HAIR = (0.030, 0.019, 0.012)
+CLEAT = (0.03, 0.03, 0.032)
 
 
 # =============================================================================================
@@ -628,10 +634,11 @@ def fill_cleft(mesh, rig):
 # only ever posed for riding, so the cloth is draped in that pose: the kit's skin is smoothed
 # there (DRAPE_ITERS passes), with moves into the body scaled by DRAPE_IN so that folds fill and
 # the forms keep their size, and carried back to the rest pose through each vertex's skinning.
-DRAPE_ITERS = 24
+DRAPE_ITERS = 48
 DRAPE_STEP = 0.5
 DRAPE_IN = 0.35
 DRAPE_EDGE = 0.03  # m, from the kit's edges over which the drape fades in
+KIT_CO = "kit_co"  # mesh attribute: the rest positions before the drape
 
 
 def drape_kit(rider, P):
@@ -686,6 +693,10 @@ def drape_kit(rider, P):
         q += d
     Ai = np.linalg.inv(A)
     new = np.einsum("vij,vj->vi", Ai[:, :3, :3], q) + Ai[:, :3, 3]
+    # the kit is painted by where the skin was before the drape: draped in the riding pose,
+    # the rest shape is no longer smooth, and hems drawn on it come out ragged
+    attr = me.attributes.new(KIT_CO, "FLOAT_VECTOR", "POINT")
+    attr.data.foreach_set("vector", rest.ravel())
     moved = np.linalg.norm(q - posed, axis=1)
     me.vertices.foreach_set("co", new.ravel())
     me.update()
@@ -712,7 +723,7 @@ FOREARM_SECTIONS = {"elbow": 0.12, "mid": 0.5, "wrist": 0.95}  # where stats.jso
 # muscle bellies on the oval: (angle from the thumb side toward the palm side in deg, angular
 # width in deg, peak t, t span, outward share of the radius). The brachioradialis runs along
 # the thumb side (the top edge on the hoods); the flexors fill the palm-and-little-finger side.
-FOREARM_BELLIES = ((-10.0, 40.0, 0.25, 0.30, 0.10), (140.0, 45.0, 0.22, 0.30, 0.05))
+FOREARM_BELLIES = ((-10.0, 40.0, 0.25, 0.30, 0.13), (140.0, 45.0, 0.22, 0.30, 0.08))
 WRIST_BLEND = 0.012  # m each side of the wrist joint over which the skin passes to the hand
 KNUCKLE_RISE = 0.0015  # m, the knuckles' ridge raised on the back of the hand
 KNUCKLE_RADIUS = 0.007  # m
@@ -904,6 +915,8 @@ GRIP_OPEN = 15.0  # deg, the most a joint opens from its relaxed curl to clear t
 THUMB_CURL = {"01": 8.0, "02": 18.0, "03": 20.0}  # before the grip is solved
 GRIP_REST = {"01": 8.0, "02": 12.0, "03": 8.0}  # before the grip is solved
 GRIP_GAP = 0.0015  # m, skin to the hood or lever
+GRIP_MISS = 0.010  # m, a finger that closes no nearer than this has nothing to hold
+THUMB_SPREAD = 20.0  # deg, the most the thumb's first joint swings out of the bar's way
 GRIP_STEP = 1.0  # deg
 FINGERS = ("index", "middle", "ring", "pinky")
 # The hand on the hood (deg): the wrist-to-knuckle line turned out from straight ahead and
@@ -930,6 +943,13 @@ HIP_X = -0.24  # m, the hip joints behind the BB
 HEAD_DOWN = 10.0  # deg, the head tipped down from the gaze line (the eyes look up the road)
 NECK_EXTRA = 15.0  # deg, the neck pitched past halfway between the back and the head
 CLAV_DROP = 8.0  # deg, the shoulders' drop about the clavicles' line
+
+
+def joint_basis(grip, bone, default=0.0):
+    """A finger joint's pose: its curl about X, after any spread about Y and Z (the thumb's
+    first joint, keyed bone + ".y" and ".z")."""
+    spread = rot_y(grip.get(bone + ".y", 0.0)) @ rot_z(grip.get(bone + ".z", 0.0))
+    return spread @ rot_x(grip.get(bone, default))
 
 
 def angle_at(a, b, c):
@@ -1119,9 +1139,9 @@ class Rider:
         for s, _side in SIDES:
             for f in FINGERS:
                 for k, a in GRIP_REST.items():
-                    pb[f"{f}_{k}_{s}"].matrix_basis = rot_x(grip.get(f"{f}_{k}_{s}", a))
+                    pb[f"{f}_{k}_{s}"].matrix_basis = joint_basis(grip, f"{f}_{k}_{s}", a)
             for k, a in THUMB_CURL.items():
-                pb[f"thumb_{k}_{s}"].matrix_basis = rot_x(grip.get(f"thumb_{k}_{s}", a))
+                pb[f"thumb_{k}_{s}"].matrix_basis = joint_basis(grip, f"thumb_{k}_{s}", a)
         # arms: palm on the hood, hand fixed in the world
         for s, side in SIDES:
             tgt, pole, con = self.targets[("arm", s)]
@@ -1201,7 +1221,7 @@ class Rider:
         Ms = [np.array(M[hand] @ self.rest[hand].inverted())]
         for b in bones:
             par = self.parent[b]
-            M[b] = M[par] @ self.rest[par].inverted() @ self.rest[b] @ rot_x(curl[b])
+            M[b] = M[par] @ self.rest[par].inverted() @ self.rest[b] @ joint_basis(curl, b)
             Ms.append(np.array(M[b] @ self.rest[b].inverted()))
         out = sum(W[:, j : j + 1] * (V @ Ms[j].T) for j in range(len(Ms)))
         return out[:, :3]
@@ -1236,6 +1256,8 @@ class Rider:
                 _rows, W, V = self.hand_skin(s, bones)
                 relax = THUMB_CURL if f == "thumb" else GRIP_REST
                 curl = {b: relax[b.split("_")[1]] for b in bones}
+                if f == "thumb":
+                    self.spread_thumb(s, bones, curl, W, V)
                 for j, b in enumerate(bones):
                     moving = W[:, 1 + j :].sum(1) > 0.25
                     lo, hi = rng[b.split("_")[1]]
@@ -1256,14 +1278,42 @@ class Rider:
                     while i + 1 < len(angles) and clear[i + 1] >= floor:
                         i += 1  # close until the next step would touch
                     curl[b] = float(angles[i])
-                grip.update(curl)
                 c = self.cockpit_clearance(self.skin_chain(s, bones, curl, W, V)).min()
+                if c > GRIP_MISS and f != FINGERS[0] and f != "thumb":
+                    # nothing to close on (the hook curves away): curl like the finger beside it
+                    beside = FINGERS[FINGERS.index(f) - 1]
+                    like = {b: grip[b.replace(f, beside, 1)] for b in bones}
+                    c2 = self.cockpit_clearance(self.skin_chain(s, bones, like, W, V)).min()
+                    if c2 >= GRIP_GAP:
+                        curl, c = like, c2
+                grip.update(curl)
                 log(
                     f"grip {f}_{s}: "
                     + ", ".join(f"{curl[b]:.0f}" for b in bones)
+                    + (
+                        f", spread {curl[bones[0] + '.y']:.0f} {curl[bones[0] + '.z']:.0f}"
+                        if f == "thumb"
+                        else ""
+                    )
                     + f" deg, closest {1000 * c:+.1f} mm"
                 )
         return grip
+
+    def spread_thumb(self, s, bones, curl, W, V):
+        """Swing the thumb's first joint out of the cockpit if its relaxed curl leaves the
+        thumb's base inside: the least spread about Y and Z, up to THUMB_SPREAD each way, that
+        clears it, or failing that the clearest. Sets curl[bone + ".y"] and ".z"."""
+        b = bones[0]
+        best, trials = None, []
+        steps = np.arange(-THUMB_SPREAD, THUMB_SPREAD + 1e-6, 10.0)
+        for y in steps:
+            for z in steps:
+                trial = dict(curl, **{b + ".y": float(y), b + ".z": float(z)})
+                c = self.cockpit_clearance(self.skin_chain(s, bones, trial, W, V)).min()
+                trials.append((c, abs(y) + abs(z), y, z))
+        clear = [t for t in trials if t[0] >= GRIP_GAP]
+        best = min(clear, key=lambda t: t[1]) if clear else max(trials)
+        curl[b + ".y"], curl[b + ".z"] = float(best[2]), float(best[3])
 
     def eye_point(self):
         X = self.pose_mat("head")
@@ -1698,7 +1748,7 @@ ARM_PARTS = ("upperarm", "lowerarm", "hand", "thumb", "index", "middle", "ring",
 LEG_PARTS = ("thigh", "calf", "foot", "ball")
 HELMET_PAD = 0.010  # m, scalp to the helmet's inner shell (pads and hair)
 HELMET_SHELL = 0.022  # m, shell thickness at the crown
-HELMET_AZ, HELMET_ROWS = 144, 26
+HELMET_AZ, HELMET_ROWS = 168, 40
 # The rim's elevation from the helmet's centre, in degrees, as (a, b, c) of a + b cos(phi) +
 # c cos(phi)^2, phi the azimuth from straight ahead: above the brow in front, level over the
 # ears, and well down the back of the head, so the shell wraps the skull instead of sitting on
@@ -1707,16 +1757,33 @@ HELMET_RIM = (1.0, 18.0, -13.0)
 HELMET_TAIL = 0.030  # m, the shell's extra reach at the upper rear: a short aero tail
 HELMET_NOSE = 0.006  # m, and over the brow
 HELMET_SLIM = 0.006  # m, off the shell's sides
-# vent slots, painted and normal-mapped rather than cut: (centre of d.y, d.x from, d.x to,
-# half width in d.y), d the unit direction from the helmet's centre; mirrored for the +Y lanes
+# vent slots, sunk into the shell and painted dark: (centre of d.y, d.x from, d.x to, half
+# width in d.y), d the unit direction from the helmet's centre; mirrored for the +Y lanes
 HELMET_VENTS = [
-    (0.0, 0.32, 0.80, 0.035),
-    (0.0, -0.82, -0.30, 0.035),
-    (0.22, 0.26, 0.82, 0.040),
-    (0.22, -0.86, -0.24, 0.040),
-    (0.46, 0.16, 0.62, 0.034),
-    (0.46, -0.70, -0.20, 0.034),
+    (0.0, 0.32, 0.80, 0.045),
+    (0.0, -0.82, -0.30, 0.045),
+    (0.22, 0.26, 0.82, 0.048),
+    (0.22, -0.86, -0.24, 0.048),
+    (0.46, 0.16, 0.62, 0.042),
+    (0.46, -0.70, -0.20, 0.042),
 ]
+HELMET_VENT_DEPTH = 0.006  # m
+
+
+def vent_field(D, edge, scale=1.0):
+    """0..1 over unit directions D from the helmet's centre: 1 inside a vent slot, falling to 0
+    across its edge, `edge` the share of the slot's half width the fall takes. `scale` shrinks
+    the slots about their centre lines."""
+    D = np.asarray(D)
+    vent = np.zeros(D.shape[:-1], np.float32)
+    for yc, x0, x1, w in HELMET_VENTS:
+        for sgn in (1, -1) if yc else (1,):
+            xm, hl = 0.5 * (x0 + x1), 0.5 * (x1 - x0)
+            q = ((D[..., 1] - sgn * yc) / w) ** 2 + ((D[..., 0] - xm) / hl) ** 8
+            vent = np.maximum(vent, 1.0 - smoothstep(1.0 - edge, 1.0, q / scale**2))
+    return vent * (D[..., 2] > 0.3)
+
+
 LENS_R = 0.090  # m, radius of the wraparound lens's cylinder
 LENS_GAP = 0.017  # m, front of the eyeball to the lens
 SHOE_GAP = 0.004  # m, foot skin to the shoe's outer surface
@@ -1882,7 +1949,7 @@ class Gear:
             [[self.helmet_dir(2 * math.pi * j / A, i) for j in range(A)] for i in range(R)]
         )
         r = np.array([[self.skull(D[i, j]) for j in range(A)] for i in range(R)])
-        for _ in range(12):  # smooth out the hair and the ears' edges
+        for _ in range(24):  # smooth out the hair and the ears' edges
             up = np.vstack([r[1:], r[-1:]])
             dn = np.vstack([r[:1], r[:-1]])
             r = 0.5 * r + 0.125 * (np.roll(r, 1, 1) + np.roll(r, -1, 1) + up + dn)
@@ -1890,6 +1957,8 @@ class Gear:
         tail = HELMET_TAIL * np.clip(-D[..., 0], 0, 1) ** 1.5 * level
         nose = HELMET_NOSE * np.clip(D[..., 0], 0, 1) ** 2 * level
         rout = r + HELMET_PAD + HELMET_SHELL + tail + nose - HELMET_SLIM * D[..., 1] ** 2
+        # the dip stays inside the painted slot: the mesh is too coarse for a clean lit edge
+        rout = rout - HELMET_VENT_DEPTH * vent_field(D, 0.9, 0.8)
         self.helmet_r = r
         V = (self.C + D * rout[..., None]).reshape(-1, 3)
         top = np.array([self.C + np.array((0.0, 0.0, 1.0)) * (self.skull((0, 0, 1)) + 0.032)])
@@ -1906,7 +1975,7 @@ class Gear:
             F.append(((R - 1) * A + j, (R - 1) * A + (j + 1) % A, pole))
             UV.append(((j / A, 0.98), ((j + 1) / A, 0.98), ((j + 0.5) / A, 1.0)))
         rows = np.repeat(np.arange(R), A)
-        thick = np.append(np.clip(rows / 4.0, 0, 1), 1.0)
+        thick = np.append(np.clip(rows / 6.0, 0, 1), 1.0)
         ob = new_object(
             "Helmet",
             V,
@@ -1919,6 +1988,9 @@ class Gear:
         # shell inward; the inner foam and the vents' walls get M_Strap's black
         solidify(ob, HELMET_SHELL, -1.0, 1, "thick", 0.45)
         ob.vertex_groups.remove(ob.vertex_groups["thick"])
+        # a smooth shell with a crisp rim: flat faces showed as ridges
+        ob.data.polygons.foreach_set("use_smooth", [True] * len(ob.data.polygons))
+        ob.data.set_sharp_from_angle(angle=math.radians(50.0))
         return ob
 
     def helmet_inner(self, phi, el):
@@ -2176,6 +2248,18 @@ PALE_SKIN = (0.62, 0.46, 0.37)
 SHORTS_END = 0.90  # of the thigh, hip joint to knee
 SOCK_TOP = 0.62  # of the calf, knee to ankle
 HEM_ABOVE_HIP = 0.05  # m, the jersey's hem above the hip joints (standing)
+COLLAR = 0.035  # m, the collar's line above the neck joint at the nape; it falls to the front
+LABEL_SS = 2  # the kit's regions are sampled this many times per texel each way: clean edges
+PANEL_HALF = 0.028  # m, half the width of the jersey's side panel: a stripe with round ends
+# The mask textures' channels (R, G, B), for tinting the kit, skin and hair in the engine. Each
+# colour here is the one painted into the base colour texture.
+BODY_MASKS = {
+    "T_Body_Mask": ("jersey", "accent", "shorts"),
+    "T_Body_Mask2": ("socks", "hair", "skin"),
+}
+HELMET_MASK = ("shell", "rim", "vents")
+SHOE_MASK = ("upper", "trim", "cleat")
+SHADE_NEUTRAL = 0.5  # T_*_Shade's value where the painted colour is the flat one
 
 
 def tri_arrays(me):
@@ -2276,6 +2360,11 @@ class BodyMap:
         self.leg = share(LEG_PARTS)
         self.head = W[:, [col["neck_01"], col["head"]]].sum(1)
         self.co = mesh_co(mesh, world=False)
+        undraped = mesh.data.attributes.get(KIT_CO)
+        if undraped is not None:
+            flat = np.empty(3 * len(self.co), np.float32)
+            undraped.data.foreach_get("vector", flat)
+            self.co = flat.reshape(-1, 3).astype(float)
         self.E = np.array((rider.eyes_rest[0] + rider.eyes_rest[1]) / 2)
         self.hip_z = self.bones["thigh_l"][0][2]
         h, t = self.bones["upperarm_l"]
@@ -2292,6 +2381,9 @@ class BodyMap:
         cx = np.array([(x.min() + x.max()) / 2 for x, k in zip(xs, ok, strict=True) if k])
         cx = np.convolve(np.pad(cx, 3, mode="edge"), np.ones(7) / 7, mode="valid")
         self.cz, self.cx = bins[ok] + 0.005, cx
+        # the side panel's line: straight through the flanks, hem to armpit
+        flank = (self.cz > self.hip_z + HEM_ABOVE_HIP) & (self.cz < self.armpit_z)
+        self.panel_line = np.polyfit(self.cz[flank], self.cx[flank], 1)
 
     def t_along(self, p, bone):
         """Parameter along the bone (0 head, 1 tail), the side picked by the sign of y."""
@@ -2305,9 +2397,9 @@ class BodyMap:
 
     def labels(self, p, arm, leg, head):
         lab = np.full(len(p), SKIN_L)
-        x, y, z = p[:, 0], p[:, 1], p[:, 2]
+        x, z = p[:, 0], p[:, 2]
         neck = self.bones["neck_01"][0]
-        below_collar = z < neck[2] + 0.015 - 0.4 * (x - neck[0])
+        below_collar = z < neck[2] + COLLAR - 0.4 * (x - neck[0])
         is_arm, is_leg = arm > 0.5, leg > 0.5
         torso = ~is_arm & ~is_leg
         hem = self.hip_z + HEM_ABOVE_HIP
@@ -2318,9 +2410,10 @@ class BodyMap:
         jersey = (torso & (z > hem) & below_collar) | (is_arm & (tua < sleeve))
         lab[jersey] = JERSEY_L
         cuff = is_arm & (tua > sleeve - CUFF) & (tua < sleeve)
-        cxz = np.interp(z, self.cz, self.cx)
-        ang = np.abs(np.arctan2(np.abs(y), x - cxz) - math.pi / 2)
-        panel = jersey & torso & (ang < math.radians(15)) & (z > hem + 0.02) & (z < self.armpit_z)
+        # the side panel: a straight slab through the flanks, round-ended
+        z0, z1 = hem + 0.02 + PANEL_HALF, self.armpit_z - PANEL_HALF
+        off = x - np.polyval(self.panel_line, z)
+        panel = jersey & torso & (np.hypot(off, z - np.clip(z, z0, z1)) < PANEL_HALF)
         lab[cuff | panel] = ORANGE_L
         shorts = (torso & (z <= hem)) | (is_leg & (tth < SHORTS_END) & (z > 0.2))
         lab[shorts] = SHORTS_L
@@ -2416,8 +2509,15 @@ def arm_relief(p, rig):
 def paint_body(rider, out, size, tan_t):
     """The body's colour, normal and roughness textures. tan_t: where along the forearm (0
     elbow, 1 wrist) the cockpit view's frame first cuts it, for the tan line."""
-    bmap = BodyMap(rider)
     me = rider.mesh.data
+    # fix the quads' diagonals first: a renderer picks them on the posed mesh, and where its
+    # pick differs from the one painted through, the hems come out saw-toothed
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(me)
+    bm.free()
+    bmap = BodyMap(rider)
     vi, uv, _ = tri_arrays(me)
     body = group_mask(rider.mesh, "body")
     keep = body[vi].all(1)  # the helper eyes and lashes overlap the body's UVs
@@ -2438,14 +2538,30 @@ def paint_body(rider, out, size, tan_t):
         ORANGE_L: ORANGE,
         SHORTS_L: BLACK,
         SOCK_L: WHITE,
-        HAIR_L: (0.030, 0.019, 0.012),
+        HAIR_L: HAIR,
     }
-    base = np.zeros((size, size, 3), np.float32)
     lab_img = np.full((size, size), -1)
     lab_img[cov] = lab
-    for k, c in colours.items():
-        m = lab_img == k
-        base[m] = c
+    # each region's share of every texel, from a finer raster: hard labels stair-step the hems
+    fine_img, fine_cov = rasterize(uv, attrs.astype(np.float32), size * LABEL_SS)
+    q = fine_img[fine_cov]
+    del fine_img
+    fine_lab = np.full(fine_cov.shape, -1)
+    fine_lab[fine_cov] = bmap.labels(q[:, :3], q[:, 3], q[:, 4], q[:, 5])
+    del q
+    share = np.stack(
+        [
+            (fine_lab == k).reshape(size, LABEL_SS, size, LABEL_SS).mean((1, 3), dtype=np.float32)
+            for k in colours
+        ],
+        -1,
+    )
+    del fine_lab
+    total = share.sum(-1, keepdims=True)
+    hard = np.stack([lab_img == k for k in colours], -1)
+    share = np.where(total > 0, share / np.maximum(total, 1e-6), hard) * cov[..., None]
+    base = share @ np.array(list(colours.values()), np.float32)
+    flat = base.copy()
     skin = lab_img == SKIN_L
     base[skin] *= (1 + 0.015 * lo[skin] + 0.004 * fine[skin])[:, None]
     # the tan line: paler skin from the sleeve down to TAN_LINE past the frame's edge
@@ -2473,7 +2589,20 @@ def paint_body(rider, out, size, tan_t):
     )
     kit = np.isin(lab_img, KIT_LABELS)
     base[kit] *= (1 + 0.01 * lo[kit] + 0.004 * fine[kit])[:, None]
+    save_shade(os.path.join(out, "T_Body_Shade.png"), base, flat, cov)
     base = dilate(base, cov, 8)
+    channel = {
+        "jersey": JERSEY_L,
+        "accent": ORANGE_L,
+        "shorts": SHORTS_L,
+        "socks": SOCK_L,
+        "hair": HAIR_L,
+        "skin": SKIN_L,
+    }
+    order = list(colours)
+    for name, chans in BODY_MASKS.items():
+        picks = [share[..., order.index(channel[c])] for c in chans]
+        save_mask(os.path.join(out, f"{name}.png"), picks, cov)
     # normals: a fine knit on the kit, pores on the skin, streaks in the hair
     Y, X = np.mgrid[0:size, 0:size].astype(np.float32)
     knit = 0.5 * np.abs(np.sin(np.pi * X / 3.0 + 0.6 * np.sin(np.pi * Y / 3.0))) + 0.15 * fine
@@ -2486,7 +2615,7 @@ def paint_body(rider, out, size, tan_t):
     relief[cov], gloss[cov] = arm_relief(p, rider.rig)
     relief *= skin
     gloss *= skin
-    h = h + 0.4 * blur(relief, 1)  # faint: the geometry and lighting carry the forms
+    h = h + 0.6 * blur(relief, 1)  # light: the geometry and lighting carry the forms
     nrm = normal_from_height(h, 1.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     nrm = dilate(nrm, cov, 8)
@@ -2499,6 +2628,21 @@ def paint_body(rider, out, size, tan_t):
     save_png(os.path.join(out, "T_Body_Normal.png"), nrm, "Non-Color")
     save_png(os.path.join(out, "T_Body_Roughness.png"), rough, "Non-Color")
     return bmap
+
+
+def save_mask(path, channels, cov):
+    """A tint mask: one region per channel, 1 inside it, spread past the UV islands' edges."""
+    img = np.stack([np.asarray(c, np.float32) for c in channels], -1)
+    save_png(path, dilate(img, cov, 8), "Non-Color")
+
+
+def save_shade(path, base, flat, cov):
+    """The painted colour's brightness over its region's flat colour, SHADE_NEUTRAL where they
+    match: the mottling, hems and tan line, to lay over a colour tinted through the masks."""
+    lum = np.array((0.2126, 0.7152, 0.0722), np.float32)
+    shade = np.full(cov.shape, SHADE_NEUTRAL, np.float32)
+    shade[cov] = SHADE_NEUTRAL * (base[cov] @ lum) / np.maximum(flat[cov] @ lum, 1e-6)
+    save_png(path, dilate(np.repeat(np.clip(shade, 0, 1)[..., None], 3, -1), cov, 8), "Non-Color")
 
 
 def paint_helmet(helmet, C, out, size):
@@ -2514,27 +2658,43 @@ def paint_helmet(helmet, C, out, size):
     D = img[cov]
     base = np.zeros((size, size, 3), np.float32)
     col = np.tile(np.array(NAVY, np.float32), (len(D), 1))
-    # the vents: soft-edged dark slots, sunk in the normal map
-    vent = np.zeros(len(D), np.float32)
-    for yc, x0, x1, w in HELMET_VENTS:
-        for sgn in (1, -1) if yc else (1,):
-            xm, hl = 0.5 * (x0 + x1), 0.5 * (x1 - x0)
-            q = ((D[:, 1] - sgn * yc) / w) ** 2 + ((D[:, 0] - xm) / hl) ** 8
-            vent = np.maximum(vent, 1.0 - smoothstep(0.75, 1.0, q))
-    vent *= D[:, 2] > 0.3
+    # the vents: dark slots, their edges sharpened in the normal map
+    vent = vent_field(D, 0.25)
     col = col * (1 - vent[:, None]) + np.array(BLACK, np.float32) * vent[:, None]
     el = np.degrees(np.arcsin(np.clip(D[:, 2], -1, 1)))
     c = np.cos(np.arctan2(D[:, 1], D[:, 0]))
     a, b, q = HELMET_RIM
-    col[el < a + b * c + q * c * c + 3.0] = BLACK  # Gear.rim_el
+    rim = el < a + b * c + q * c * c + 3.0  # Gear.rim_el
+    col[rim] = BLACK
     base[cov] = col
+    mask = np.zeros((size, size, 3), np.float32)
+    mask[cov] = np.stack([(1 - vent) * ~rim, rim, vent * ~rim], -1)
+    save_png(os.path.join(out, "T_Helmet_Mask.png"), dilate(mask, cov, 8), "Non-Color")
     base = dilate(base, cov, 8)
     h = np.zeros((size, size), np.float32)
     h[cov] = -vent
-    nrm = normal_from_height(blur(h, 1), 4.0)
+    nrm = normal_from_height(blur(h, 1), 2.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     save_png(os.path.join(out, "T_Helmet_BaseColor.png"), to_srgb(base), "sRGB")
     save_png(os.path.join(out, "T_Helmet_Normal.png"), dilate(nrm, cov, 8), "Non-Color")
+
+
+def mask_stats():
+    """The mask textures' channels and the linear colours painted through them."""
+    body = {
+        "jersey": NAVY,
+        "accent": ORANGE,
+        "shorts": BLACK,
+        "socks": WHITE,
+        "hair": HAIR,
+        "skin": SKIN,
+    }
+    return {
+        **{k: {c: body[c] for c in v} for k, v in BODY_MASKS.items()},
+        "T_Helmet_Mask": dict(zip(HELMET_MASK, (NAVY, BLACK, BLACK), strict=True)),
+        "T_Shoe_Mask": dict(zip(SHOE_MASK, (WHITE, BLACK, CLEAT), strict=True)),
+        "shade_neutral": SHADE_NEUTRAL,
+    }
 
 
 def paint_shoes(shoes, rider, out, size):
@@ -2552,9 +2712,13 @@ def paint_shoes(shoes, rider, out, size):
         (z < 0.009) | ((rx < -0.035) & (z < 0.058)) | ((np.abs(rx - 0.062) < 0.011) & (z > 0.032))
     )
     col[black] = BLACK
-    col[z < -SOLE_THICKNESS - 0.0005] = (0.03, 0.03, 0.032)  # the cleat
+    cleat = z < -SOLE_THICKNESS - 0.0005
+    col[cleat] = CLEAT
     base = np.zeros((size, size, 3), np.float32)
     base[cov] = col
+    mask = np.zeros((size, size, 3), np.float32)
+    mask[cov] = np.stack([~black & ~cleat, black & ~cleat, cleat], -1)
+    save_png(os.path.join(out, "T_Shoe_Mask.png"), dilate(mask, cov, 8), "Non-Color")
     # perforations on the toe box
     Y, X = np.mgrid[0:size, 0:size]
     holes = ((X % 7 < 2) & (Y % 7 < 2)).astype(np.float32)
@@ -2580,7 +2744,7 @@ MATERIALS = {
     "M_Lens": ((0.010, 0.011, 0.014), 0.15, {"Metallic": 0.3}),
     "M_Shoe": ("T_Shoe", 0.60, {}),
     "M_Strap": (BLACK, 0.80, {}),
-    "M_Hair": ((0.030, 0.019, 0.012), 0.80, {}),
+    "M_Hair": (HAIR, 0.80, {}),
 }
 
 
@@ -2667,6 +2831,8 @@ def join_rider(rider, parts):
     ):
         bpy.ops.object.join()
     body.name = body.data.name = "Rider"
+    if body.data.attributes.get(KIT_CO) is not None:
+        body.data.attributes.remove(body.data.attributes[KIT_CO])
     bones = {b.name for b in rider.rig.data.bones}
     for g in list(body.vertex_groups):
         if g.name not in bones:
@@ -3319,6 +3485,7 @@ def stage_all(opts):
     stats = collect_stats(rider, fits, rider_ob, bike, bike_objs, recs)
     stats["forearm_m"] = forearm
     stats["forearm_m"]["tan_line_t"] = fits[COCKPIT_ACTION]["view"]["forearm_entry_t"]
+    stats["masks"] = mask_stats()
     log(json.dumps(stats, indent=1, default=str))
     fbx = os.path.join(out, "rider.fbx")
     export_fbx(rider.rig, rider_ob, fbx)
