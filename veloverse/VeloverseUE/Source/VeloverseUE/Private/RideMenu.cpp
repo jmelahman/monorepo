@@ -7,6 +7,7 @@
 #include "ContentStreaming.h"
 #include "Dom/JsonObject.h"
 #include "Engine/GameViewportClient.h"
+#include "HAL/IConsoleManager.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
 #include "HAL/FileManager.h"
@@ -699,6 +700,12 @@ void URideMenu::TookStill(int32 W, int32 H, const TArray<FColor>& Pixels)
 	StillSize = FIntPoint(W, H);
 	bFrozen = true;
 	View->bDisableWorldRendering = true;
+	// With nothing but the menu to draw the frame rate would run to hundreds: 60 is plenty.
+	if (IConsoleVariable* Cap = IConsoleManager::Get().FindConsoleVariable(TEXT("t.MaxFPS")))
+	{
+		CapBefore = Cap->GetFloat();
+		Cap->Set(60.f, ECVF_SetByCode);
+	}
 	ApplyBlur();
 	UE_LOG(LogTemp, Display, TEXT("RIDE menu still %dx%d after %.1f s: the world stops drawing"), W, H, SettleClock);
 }
@@ -714,6 +721,10 @@ void URideMenu::Thaw()
 	if (UGameViewportClient* View = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
 	{
 		View->bDisableWorldRendering = false;
+	}
+	if (IConsoleVariable* Cap = IConsoleManager::Get().FindConsoleVariable(TEXT("t.MaxFPS")))
+	{
+		Cap->Set(CapBefore, ECVF_SetByCode);
 	}
 	StillBrush.SetResourceObject(nullptr);
 	StillSoftBrush.SetResourceObject(nullptr);

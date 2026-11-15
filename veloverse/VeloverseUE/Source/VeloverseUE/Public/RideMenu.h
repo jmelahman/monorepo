@@ -126,6 +126,7 @@ private:
 	FIntPoint StillSize = FIntPoint::ZeroValue;
 	float SettleClock = 0.f, QuietClock = 0.f, CostClock = 0.f, CostGpu = 0.f;
 	int32 CostFrames = 0;
+	float CapBefore = 0.f; // t.MaxFPS before the still
 	bool bFrozen = false, bStillAsked = false;
 	FDelegateHandle StillShot;
 	bool StillWanted() const;
