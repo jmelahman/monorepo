@@ -47,22 +47,29 @@ MACROS = {
 RACE = {"asian": 0.2, "caucasian": 0.6, "african": 0.2}
 # Extra MPFB targets for a cyclist's build: (path under mpfb/data/targets, weight)
 BODY_TARGETS = [
-    # a slim, narrow silhouette that sits inside the bike's width rather than over it
-    ("torso/torso-vshape-decr.target.gz", 0.50),
-    ("torso/measure-shoulder-dist-decr.target.gz", 0.80),
-    ("torso/torso-scale-horiz-decr.target.gz", 0.40),
+    # a slim silhouette that sits inside the bike's width, with the shoulders left wide enough
+    # to slope into the arms: narrowed further, the deltoids stand off the torso like pads
+    ("torso/torso-vshape-decr.target.gz", 0.30),
+    ("torso/measure-shoulder-dist-decr.target.gz", 0.40),
+    ("torso/torso-scale-horiz-decr.target.gz", 0.30),
     ("torso/torso-scale-depth-decr.target.gz", 0.20),
-    ("torso/measure-hips-circ-decr.target.gz", 0.90),
+    ("torso/measure-hips-circ-decr.target.gz", 0.70),
     ("buttocks/buttocks-volume-decr.target.gz", 1.00),
-    ("arms/l-upperarm-muscle-decr.target.gz", 0.40),
-    ("arms/r-upperarm-muscle-decr.target.gz", 0.40),
-    # slim legs: smaller thigh and calf girth, little fat, lean muscle
-    ("legs/measure-thigh-circ-decr.target.gz", 0.60),
-    ("legs/measure-calf-circ-decr.target.gz", 0.50),
+    ("arms/l-upperarm-shoulder-muscle-decr.target.gz", 0.60),
+    ("arms/r-upperarm-shoulder-muscle-decr.target.gz", 0.60),
+    ("arms/l-upperarm-muscle-decr.target.gz", 0.20),
+    ("arms/r-upperarm-muscle-decr.target.gz", 0.20),
+    # a rider's legs: little fat, full quads and calves
     ("legs/l-upperleg-fat-decr.target.gz", 0.50),
     ("legs/r-upperleg-fat-decr.target.gz", 0.50),
     ("legs/l-lowerleg-fat-decr.target.gz", 0.50),
     ("legs/r-lowerleg-fat-decr.target.gz", 0.50),
+    ("legs/l-upperleg-muscle-incr.target.gz", 0.70),
+    ("legs/r-upperleg-muscle-incr.target.gz", 0.70),
+    ("legs/l-lowerleg-muscle-incr.target.gz", 0.80),
+    ("legs/r-lowerleg-muscle-incr.target.gz", 0.80),
+    ("legs/measure-thigh-circ-incr.target.gz", 0.25),
+    ("legs/measure-calf-circ-incr.target.gz", 0.35),
     ("stomach/stomach-tone-incr.target.gz", 0.5),
 ]
 # Proportion targets: a positive weight loads the "-incr" target, a negative one the "-decr".
@@ -125,7 +132,7 @@ CHASE_DISTANCE = 5.1
 CHASE_PITCH = 2.0  # deg down
 # deg short of straight: the shoulders protract until the elbows bend this much, or, once they
 # are fully drawn back (a low back), the elbows bend more to take up the reach
-ELBOW_BEND = 17.0
+ELBOW_BEND = 24.0
 SADDLE_COMPRESSION = 0.003  # m of shorts and saddle-padding compression under the sit bones
 KNEE_AT_BDC = 145.0  # deg interior knee angle at the bottom of the stroke
 HIP_ROCK_ROLL = 1.5  # deg each way
@@ -284,6 +291,8 @@ class BikeRef:
         hood = self.material_verts(fork, "M_BlackPlastic")
         hood = hood[hood[:, 2] > 0.7]
         self.hood_verts = {s: hood[np.sign(hood[:, 1]) == s] for s in (-1, 1)}
+        tape = self.material_verts(fork, "M_BarTape")
+        self.tape_verts = {s: tape[np.sign(tape[:, 1]) == s] for s in (-1, 1)}
         self.trees = {}
 
     @staticmethod
@@ -313,6 +322,15 @@ class BikeRef:
         h = self.hood_verts[side]
         near = h[np.abs(h[:, 0] - x) < r]
         return near[:, 2].max(), 0.5 * (near[:, 1].max() + near[:, 1].min())
+
+    def hook(self, side, z, r=0.004):
+        """The taped bar where the drop's hook passes height z: its centre (x, y, z) and its
+        radius. Between the bar's top and the drop's lower run only the hook is at z."""
+        t = self.tape_verts[side]
+        near = t[np.abs(t[:, 2] - z) < r]
+        lo, hi = near.min(0), near.max(0)
+        c = 0.5 * (lo + hi)
+        return np.array((c[0], c[1], z)), 0.25 * float(hi[0] - lo[0] + hi[1] - lo[1])
 
     def tree(self, name):
         """A BVH of the object's mesh in its own space (query with local points)."""
@@ -502,6 +520,7 @@ def build_body(props):
         if m.type != "ARMATURE":
             basemesh.modifiers.remove(m)
     seat_weights(basemesh, rig)
+    fill_cleft(basemesh, rig)
     shape_arms(basemesh, rig)
     log(f"body {props}: standing height {h * s:.3f} m (scale {s:.4f}), {time.time() - t0:.1f}s")
     return basemesh, rig, eyes
@@ -557,6 +576,126 @@ def seat_weights(mesh, rig):
         W[:, 0] += moved
         rows.extend(np.where(f > 0)[0].tolist())
     set_vertex_weights(mesh, names, W, sorted(set(rows)))
+
+
+# The shorts span the cleft between the buttocks: painted on the skin, they would follow it
+# in. Within CLEFT_HALF of the centre plane the skin moves out to the surface at that width,
+# around the arc of CLEFT_ARC (deg about the hip joints' line in the rest pose: 0 straight
+# back, 90 up, -90 down; faded in and out over the first and last pair).
+CLEFT_HALF = 0.05  # m
+CLEFT_ARC = (-125.0, -100.0, 40.0, 65.0)
+CLEFT_MAX = 0.04  # m, the most any point moves
+
+
+def fill_cleft(mesh, rig):
+    bones = rig.data.bones
+    hip = 0.5 * (np.array(bones["thigh_l"].head_local) + np.array(bones["thigh_r"].head_local))
+    co = mesh_co(mesh, world=False)
+    seat = vertex_weights(mesh, ["pelvis", "spine_01"]).sum(1) > 0.3
+    seat &= group_mask(mesh, "body")
+    dx, dz = co[:, 0] - hip[0], co[:, 2] - hip[2]
+    r = np.hypot(dx, dz)
+    th = np.degrees(np.arctan2(dz, -dx))
+    ay = np.abs(co[:, 1])
+    a0, a1, a2, a3 = CLEFT_ARC
+    step = 5.0
+    bins = np.arange(a0, a3 + step, step)
+    edge = seat & (np.abs(ay - CLEFT_HALF) < 0.012) & (r < 0.2)
+    r_edge = np.full(len(bins), np.nan)
+    for i, b in enumerate(bins):
+        m = edge & (np.abs(th - b) < step)
+        if m.any():
+            r_edge[i] = r[m].max()
+    ok = ~np.isnan(r_edge)
+    r_edge = np.interp(bins, bins[ok], r_edge[ok])
+    r_edge = np.convolve(np.pad(r_edge, 1, mode="edge"), np.ones(3) / 3, mode="valid")
+    f = 1.0 - smoothstep(0.55 * CLEFT_HALF, CLEFT_HALF, ay)
+    f *= smoothstep(a0, a1, th) * (1.0 - smoothstep(a2, a3, th))
+    rows = np.where(seat & (ay < CLEFT_HALF) & (f > 0) & (r > 0.02))[0]
+    gain = np.clip(np.interp(th[rows], bins, r_edge) - r[rows], 0.0, CLEFT_MAX) * f[rows]
+    scale = (r[rows] + gain) / r[rows]
+    co[rows, 0] = hip[0] + dx[rows] * scale
+    co[rows, 2] = hip[2] + dz[rows] * scale
+    mesh.data.vertices.foreach_set("co", co.ravel())
+    mesh.data.update()
+    log(f"cleft: {int((gain > 1e-4).sum())} points moved out, the most {1000 * gain.max():.0f} mm")
+
+
+# The kit is cloth, not skin: it spans creases rather than following them in. The body is
+# only ever posed for riding, so the cloth is draped in that pose: the kit's skin is smoothed
+# there (DRAPE_ITERS passes), with moves into the body scaled by DRAPE_IN so that folds fill and
+# the forms keep their size, and carried back to the rest pose through each vertex's skinning.
+DRAPE_ITERS = 24
+DRAPE_STEP = 0.5
+DRAPE_IN = 0.35
+DRAPE_EDGE = 0.03  # m, from the kit's edges over which the drape fades in
+
+
+def drape_kit(rider, P):
+    mesh, rig = rider.mesh, rider.rig
+    rider.pose(0, dict(P, rock=0.0))
+    names = [b.name for b in rig.data.bones]
+    W = vertex_weights(mesh, names)
+    W /= np.maximum(W.sum(1, keepdims=True), 1e-9)
+    M = np.array([np.array(rider.pose_mat(n)) for n in names])  # (bones, 4, 4)
+    A = np.einsum("vb,bij->vij", W, M)
+    rest = mesh_co(mesh, world=False)
+    posed = np.einsum("vij,vj->vi", A[:, :3, :3], rest) + A[:, :3, 3]
+    bmap = BodyMap(rider)
+    lab = bmap.vertex_labels()
+    kit = np.isin(lab, (JERSEY_L, ORANGE_L, SHORTS_L)) & group_mask(mesh, "body")
+    me = mesh.data
+    ed = np.empty(len(me.edges) * 2, np.int64)
+    me.edges.foreach_get("vertices", ed)
+    ed = ed.reshape(-1, 2)
+    n = len(rest)
+    deg = np.bincount(ed.ravel(), minlength=n).astype(float)
+
+    def mean_of_neighbours(x):
+        acc = np.zeros_like(x)
+        np.add.at(acc, ed[:, 0], x[ed[:, 1]])
+        np.add.at(acc, ed[:, 1], x[ed[:, 0]])
+        return acc / np.maximum(deg, 1.0)[(...,) + (None,) * (x.ndim - 1)]
+
+    # strength: 0 at the kit's edges (hems, collar) and outside, 1 DRAPE_EDGE inside them
+    dist = np.where(kit, 1.0, 0.0)
+    edge_len = np.linalg.norm(rest[ed[:, 0]] - rest[ed[:, 1]], axis=1).mean()
+    for _ in range(int(DRAPE_EDGE / edge_len) + 1):
+        dist = np.minimum(dist, mean_of_neighbours(dist))
+    g = smoothstep(0.0, 1.0, np.clip(dist * 2.0, 0.0, 1.0)) * kit
+    # the legs turn through the stroke, so their skin has no one pose to drape in
+    g = (g * (1.0 - smoothstep(0.05, 0.40, bmap.leg)))[:, None]
+    me.calc_loop_triangles()
+    q = posed.copy()
+    nrm = np.zeros_like(q)
+    tri = np.empty(len(me.loop_triangles) * 3, np.int64)
+    me.loop_triangles.foreach_get("vertices", tri)
+    tri = tri.reshape(-1, 3)
+    for _ in range(DRAPE_ITERS):
+        fn = np.cross(q[tri[:, 1]] - q[tri[:, 0]], q[tri[:, 2]] - q[tri[:, 0]])
+        nrm[:] = 0.0
+        for k in range(3):
+            np.add.at(nrm, tri[:, k], fn)
+        nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-12)
+        d = DRAPE_STEP * g * (mean_of_neighbours(q) - q)
+        along = (d * nrm).sum(1, keepdims=True)
+        d -= (1.0 - DRAPE_IN) * np.minimum(along, 0.0) * nrm
+        q += d
+    Ai = np.linalg.inv(A)
+    new = np.einsum("vij,vj->vi", Ai[:, :3, :3], q) + Ai[:, :3, 3]
+    moved = np.linalg.norm(q - posed, axis=1)
+    me.vertices.foreach_set("co", new.ravel())
+    me.update()
+    bpy.context.view_layer.update()
+    log(
+        f"drape: {int((moved > 1e-3).sum())} points moved over 1 mm,"
+        f" the most {1000 * moved.max():.0f} mm"
+    )
+
+
+def finish_body(rider, fits):
+    """The body's last shaping, once the fit is solved (it needs the riding pose)."""
+    drape_kit(rider, fits[DEFAULT_EFFORT])
 
 
 # The forearms, modelled for the hoods grip (palm in, thumb up). Each section is a flattened
@@ -744,8 +883,10 @@ MACRO_HEIGHT = 0.517  # MPFB height macro that gives about RIDER_HEIGHT; scaled 
 # =============================================================================================
 SIDES = (("l", 1), ("r", -1))  # MPFB's left is the bike's non-drive side, +Y
 TORSO = ("pelvis", "spine_01", "spine_02", "spine_03", "neck_01", "head")
-PELVIS_SHARE = 0.8  # of the torso's forward pitch taken by the pelvis; the spine takes the rest
-SPINE_SHARE = (0.30, 0.35, 0.35)
+# of the torso's forward pitch taken by the pelvis; the spine takes the rest, most of it low
+# down, so the back is one even curve from the saddle to the shoulders
+PELVIS_SHARE = 0.62
+SPINE_SHARE = (0.42, 0.35, 0.23)
 # The grip (place_hands, then solve_grip). The palm point sits over the hood's body and lifts
 # until the palm and knuckles rest on it. Then each joint, knuckle first, closes from its
 # relaxed curl about its bone's X until the skin comes GRIP_GAP off the hood, lever or bar,
@@ -770,6 +911,13 @@ FINGERS = ("index", "middle", "ring", "pinky")
 HAND_YAW = 0.0
 HAND_PITCH = 2.0
 HAND_ROLL = 88.0
+# The Cockpit action's hands, in the hooks of the drops: a fist round a tube reads at a glance
+# from the cockpit camera, where the hoods' handshake grip showed only the thumb's edge of a
+# hand hovering over a small hood. The palm meets the hook's outside at DROP_Z, DROP_BACK
+# behind the tube's middle so the fingers' roots reach round its front; (yaw, pitch, roll).
+DROP_Z = 0.802
+DROP_BACK = -0.012
+DROP_ANGLES = (0.0, -25.0, 90.0)
 # the elbows' direction from the shoulder-wrist midpoint (x, out, z): back and down, in the
 # plane of the arm, so from behind each arm runs straight from the shoulder to the hood
 ARM_POLE = (-0.25, 0.0, -0.15)
@@ -801,9 +949,10 @@ def frame_from(axis, normal):
     return m
 
 
-def hand_frame(side):
-    """The hand's world frame on the hood (columns: wrist to knuckles, across, palm normal)."""
-    y, p, r = (math.radians(a) for a in (HAND_YAW, HAND_PITCH, HAND_ROLL))
+def hand_frame(side, angles=None):
+    """The hand's world frame on the bars (columns: wrist to knuckles, across, palm normal),
+    from (yaw, pitch, roll) in degrees: the hoods' by default."""
+    y, p, r = (math.radians(a) for a in angles or (HAND_YAW, HAND_PITCH, HAND_ROLL))
     axis = (math.cos(p) * math.cos(y), side * math.cos(p) * math.sin(y), -math.sin(p))
     return frame_from(axis, (0.0, -side * math.sin(r), -math.cos(r)))
 
@@ -975,9 +1124,9 @@ class Rider:
             tgt, pole, con = self.targets[("arm", s)]
             hp = self.palm[s]
             Fr = frame_from(hp["axis"], hp["normal"])
-            Fd = hand_frame(side)
+            Fd = hand_frame(side, P.get("hand_angles"))
             Dh = Fd @ Fr.transposed()
-            contact = Vector(self.hood[s])
+            contact = Vector(P["hood"][s] if "hood" in P else self.hood[s])
             wrist = contact - Dh @ (hp["point"] - hp["wrist"])
             rest_rot = self.rest[f"hand_{s}"].to_3x3()
             tgt.matrix_world = Matrix.Translation(wrist) @ (Dh @ rest_rot).to_4x4()
@@ -1282,10 +1431,9 @@ def hood_point(bike, x, side, dz=0.0):
     return (x, y + side * HOOD_OUT, z + HOOD_LIFT + dz)
 
 
-def place_hands(rider, P):
-    """Lift each palm point off its hood until the palm, knuckles and the fingers' first
-    segments rest GRIP_GAP off the cockpit (bisected to a tenth of a millimetre). The arms
-    follow by IK. Then the fingers and thumbs close on the hood (solve_grip)."""
+def palm_rows(rider, first_segments):
+    """Per side, the vertices that rest on the bars before the fingers close: the palm and
+    knuckles, and with first_segments the fingers' first segments."""
     names = [b.name for b in rider.rig.data.bones]
     W = vertex_weights(rider.mesh, names)
     dom = np.array(names)[W.argmax(1)]
@@ -1295,17 +1443,23 @@ def place_hands(rider, P):
         fing = np.array(
             [d.endswith(f"_{s}") and d.split("_")[0] in (*FINGERS, "thumb") for d in dom]
         )
-        first = np.isin(dom, [f"{f}_01_{s}" for f in FINGERS])
+        first = np.isin(dom, [f"{f}_01_{s}" for f in FINGERS]) & first_segments
         rigid[s] = np.where((dom == f"hand_{s}") | (fing & (hand > 0.3)) | first)[0]
+    return rigid
 
-    def clearance(dz):
-        for s, side in SIDES:
-            rider.hood[s] = hood_point(rider.bike, HOOD_CONTACT_X, side, dz)
+
+def seat_palms(rider, P, point, span, rigid, label):
+    """Back each palm point off the bars (point(side, d), d in span) until the vertices in
+    `rigid` rest GRIP_GAP off the cockpit, bisected to a tenth of a millimetre. The arms follow
+    by IK. Then the fingers and thumbs close (solve_grip). Sets P's "hood" and "grip"."""
+
+    def clearance(d):
+        P["hood"] = {s: [float(c) for c in point(side, d)] for s, side in SIDES}
         rider.pose(0, P)
         co = mesh_co(rider.mesh, evaluated=True, world=False)
         return min(rider.cockpit_clearance(co[rigid[s]]).min() for s, _ in SIDES)
 
-    lo, hi = HOOD_LIFT_RANGE
+    lo, hi = span
     for _ in range(10):
         mid = 0.5 * (lo + hi)
         if clearance(mid) > GRIP_GAP:
@@ -1313,12 +1467,39 @@ def place_hands(rider, P):
         else:
             lo = mid
     worst = clearance(hi)
-    log(f"hands: palm lifted {1000 * hi:+.1f} mm; palm and knuckles {1000 * worst:+.1f} mm off")
-    P["hood"] = {s: list(rider.hood[s]) for s, _ in SIDES}
+    log(f"{label}: palm backed off {1000 * hi:+.1f} mm; palm and knuckles {1000 * worst:+.1f} mm")
     rider.calibrate_poles(P)
     rider.pose(0, P)
     P["grip"] = rider.solve_grip()
     rider.pose(0, P)
+
+
+def place_hands(rider, P):
+    """The hoods grip: each palm point lifts off its hood until the palm, knuckles and the
+    fingers' first segments rest on it, then the fingers close."""
+    seat_palms(
+        rider,
+        P,
+        lambda side, dz: hood_point(rider.bike, HOOD_CONTACT_X, side, dz),
+        HOOD_LIFT_RANGE,
+        palm_rows(rider, True),
+        "hoods",
+    )
+    rider.hood = {s: tuple(P["hood"][s]) for s, _ in SIDES}
+
+
+def place_drops(rider, P):
+    """The Cockpit action's grip, in the hooks of the drops: the palm against the outside of
+    the hook at DROP_Z, backed off along its own normal until it rests on the tape, then the
+    fingers close round the front of the bar and the thumb round the back."""
+    P["hand_angles"] = DROP_ANGLES
+
+    def point(side, d):
+        c, r = rider.bike.hook(side, DROP_Z)
+        F = hand_frame(side, DROP_ANGLES)
+        return Vector(c) - Vector(F.col[2]) * (r + d) - Vector(F.col[0]) * DROP_BACK
+
+    seat_palms(rider, P, point, (-0.015, 0.040), palm_rows(rider, False), "drops")
 
 
 def max_knee(rider, P, step=2):
@@ -1385,6 +1566,7 @@ def fit_cockpit(rider, P):
     Q.update({k: (list(v) if isinstance(v, tuple) else v) for k, v in COCKPIT.items()})
     Q["action"] = COCKPIT_ACTION
     rider.calibrate_poles(Q)
+    place_drops(rider, Q)
     views = []
     for k in range(0, FRAMES, 4):
         rider.pose(k, Q)
@@ -1511,8 +1693,16 @@ LEG_PARTS = ("thigh", "calf", "foot", "ball")
 HELMET_PAD = 0.010  # m, scalp to the helmet's inner shell (pads and hair)
 HELMET_SHELL = 0.022  # m, shell thickness at the crown
 HELMET_AZ, HELMET_ROWS = 144, 26
-# vent slots: (centre of d.y, d.x from, d.x to, half width in d.y), d the unit direction from
-# the helmet's centre; mirrored for the +Y lanes
+# The rim's elevation from the helmet's centre, in degrees, as (a, b, c) of a + b cos(phi) +
+# c cos(phi)^2, phi the azimuth from straight ahead: above the brow in front, level over the
+# ears, and well down the back of the head, so the shell wraps the skull instead of sitting on
+# it like a cap.
+HELMET_RIM = (2.0, 14.0, -8.0)
+HELMET_TAIL = 0.030  # m, the shell's extra reach at the upper rear: a short aero tail
+HELMET_NOSE = 0.006  # m, and over the brow
+HELMET_SLIM = 0.006  # m, off the shell's sides
+# vent slots, painted and normal-mapped rather than cut: (centre of d.y, d.x from, d.x to,
+# half width in d.y), d the unit direction from the helmet's centre; mirrored for the +Y lanes
 HELMET_VENTS = [
     (0.0, 0.32, 0.80, 0.035),
     (0.0, -0.82, -0.30, 0.035),
@@ -1672,21 +1862,13 @@ class Gear:
     @staticmethod
     def rim_el(phi):
         c = math.cos(phi)
-        return math.radians(5.0 + 14.0 * c - 2.0 * c * c)
+        a, b, q = HELMET_RIM
+        return math.radians(a + b * c + q * c * c)
 
     def helmet_dir(self, phi, i):
         e0 = self.rim_el(phi)
         el = e0 + (math.radians(86.0) - e0) * (i / (HELMET_ROWS - 1)) ** 0.9
         return np.array((math.cos(el) * math.cos(phi), math.cos(el) * math.sin(phi), math.sin(el)))
-
-    @staticmethod
-    def in_vent(d):
-        for yc, x0, x1, w in HELMET_VENTS:
-            for s in (1, -1) if yc else (1,):
-                xm, hl = 0.5 * (x0 + x1), 0.5 * (x1 - x0)
-                if ((d[1] - s * yc) / w) ** 2 + ((d[0] - xm) / hl) ** 8 < 1.0:
-                    return True
-        return False
 
     def build_helmet(self):
         A, R = HELMET_AZ, HELMET_ROWS
@@ -1694,12 +1876,14 @@ class Gear:
             [[self.helmet_dir(2 * math.pi * j / A, i) for j in range(A)] for i in range(R)]
         )
         r = np.array([[self.skull(D[i, j]) for j in range(A)] for i in range(R)])
-        for _ in range(4):  # smooth out the hair and the ears' edges
+        for _ in range(12):  # smooth out the hair and the ears' edges
             up = np.vstack([r[1:], r[-1:]])
             dn = np.vstack([r[:1], r[:-1]])
             r = 0.5 * r + 0.125 * (np.roll(r, 1, 1) + np.roll(r, -1, 1) + up + dn)
-        tail = 0.012 * np.clip(-D[..., 0], 0, 1) ** 1.5 * np.clip(1 - np.abs(D[..., 2]), 0, 1)
-        rout = r + HELMET_PAD + HELMET_SHELL + tail
+        level = np.clip(1 - np.abs(D[..., 2] - 0.25), 0, 1)
+        tail = HELMET_TAIL * np.clip(-D[..., 0], 0, 1) ** 1.5 * level
+        nose = HELMET_NOSE * np.clip(D[..., 0], 0, 1) ** 2 * level
+        rout = r + HELMET_PAD + HELMET_SHELL + tail + nose - HELMET_SLIM * D[..., 1] ** 2
         self.helmet_r = r
         V = (self.C + D * rout[..., None]).reshape(-1, 3)
         top = np.array([self.C + np.array((0.0, 0.0, 1.0)) * (self.skull((0, 0, 1)) + 0.032)])
@@ -1709,9 +1893,6 @@ class Gear:
         for i in range(R - 1):
             for j in range(A):
                 jn = (j + 1) % A
-                dc = unit(D[i, j] + D[i, (j + 1) % A] + D[i + 1, j] + D[i + 1, jn])
-                if i >= 3 and self.in_vent(dc):
-                    continue
                 F.append((i * A + j, i * A + jn, (i + 1) * A + jn, (i + 1) * A + j))
                 v0, v1 = i / (R - 1) * 0.98, (i + 1) / (R - 1) * 0.98
                 UV.append(((j / A, v0), ((j + 1) / A, v0), ((j + 1) / A, v1), (j / A, v1)))
@@ -1984,10 +2165,10 @@ HEM = 0.004  # m, the sleeve's folded hem: a ridge in the normals, a little dark
 # The sleeve stays out of the cockpit view, so a tan line marks it there instead: the skin
 # under the sleeve is paler, and the pale skin reaches TAN_LINE into the frame along the forearm.
 TAN_LINE = 0.01  # m
-TAN_PALE = 0.80  # of the tanned skin's colour, mixed toward PALE_SKIN
+TAN_PALE = 0.15  # of the tanned skin's colour, mixed toward PALE_SKIN
 PALE_SKIN = (0.62, 0.46, 0.37)
-SHORTS_END = 0.82  # of the thigh, hip joint to knee
-SOCK_TOP = 0.78  # of the calf, knee to ankle
+SHORTS_END = 0.90  # of the thigh, hip joint to knee
+SOCK_TOP = 0.62  # of the calf, knee to ankle
 HEM_ABOVE_HIP = 0.05  # m, the jersey's hem above the hip joints (standing)
 
 
@@ -2327,21 +2508,24 @@ def paint_helmet(helmet, C, out, size):
     D = img[cov]
     base = np.zeros((size, size, 3), np.float32)
     col = np.tile(np.array(NAVY, np.float32), (len(D), 1))
-    ay = np.abs(D[:, 1])
-    stripe = (ay > 0.315) & (ay < 0.355) & (D[:, 2] > 0.25)
-    tailband = (D[:, 0] < -0.80) & (D[:, 2] > -0.05) & (D[:, 2] < 0.20)
-    col[stripe | tailband] = ORANGE
+    # the vents: soft-edged dark slots, sunk in the normal map
+    vent = np.zeros(len(D), np.float32)
+    for yc, x0, x1, w in HELMET_VENTS:
+        for sgn in (1, -1) if yc else (1,):
+            xm, hl = 0.5 * (x0 + x1), 0.5 * (x1 - x0)
+            q = ((D[:, 1] - sgn * yc) / w) ** 2 + ((D[:, 0] - xm) / hl) ** 8
+            vent = np.maximum(vent, 1.0 - smoothstep(0.75, 1.0, q))
+    vent *= D[:, 2] > 0.3
+    col = col * (1 - vent[:, None]) + np.array(BLACK, np.float32) * vent[:, None]
     el = np.degrees(np.arcsin(np.clip(D[:, 2], -1, 1)))
     c = np.cos(np.arctan2(D[:, 1], D[:, 0]))
-    rim = 5.0 + 14.0 * c - 2.0 * c * c  # Gear.rim_el in degrees
-    col[el < rim + 3.0] = BLACK
+    a, b, q = HELMET_RIM
+    col[el < a + b * c + q * c * c + 3.0] = BLACK  # Gear.rim_el
     base[cov] = col
     base = dilate(base, cov, 8)
     h = np.zeros((size, size), np.float32)
-    hv = np.zeros(len(D), np.float32)
-    hv[stripe | tailband] = 0.3  # the accent is a raised decal
-    h[cov] = hv
-    nrm = normal_from_height(blur(h, 1), 2.0)
+    h[cov] = -vent
+    nrm = normal_from_height(blur(h, 1), 4.0)
     nrm[~cov] = (0.5, 0.5, 1.0)
     save_png(os.path.join(out, "T_Helmet_BaseColor.png"), to_srgb(base), "sRGB")
     save_png(os.path.join(out, "T_Helmet_Normal.png"), dilate(nrm, cov, 8), "Non-Color")
@@ -3100,6 +3284,7 @@ def stage_all(opts):
     rider, P = solve_proportions(bike)
     fit_report(rider, P)
     fits = solve_efforts(rider, bike, P)
+    finish_body(rider, fits)
     forearm = forearm_sections(rider.mesh, rider.rig)
     log(f"forearm sections: {forearm}")
     # gear, built on the rest pose and skinned to the rig
