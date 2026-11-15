@@ -57,8 +57,11 @@ BODY_TARGETS = [
     ("buttocks/buttocks-volume-decr.target.gz", 1.00),
     ("arms/l-upperarm-shoulder-muscle-decr.target.gz", 0.60),
     ("arms/r-upperarm-shoulder-muscle-decr.target.gz", 0.60),
-    ("arms/l-upperarm-muscle-decr.target.gz", 0.20),
-    ("arms/r-upperarm-muscle-decr.target.gz", 0.20),
+    # some biceps and triceps, lean enough to show them
+    ("arms/l-upperarm-muscle-incr.target.gz", 0.80),
+    ("arms/r-upperarm-muscle-incr.target.gz", 0.80),
+    ("arms/l-upperarm-fat-decr.target.gz", 0.50),
+    ("arms/r-upperarm-fat-decr.target.gz", 0.50),
     # a rider's legs: little fat, full quads and calves
     ("legs/l-upperleg-fat-decr.target.gz", 0.50),
     ("legs/r-upperleg-fat-decr.target.gz", 0.50),
@@ -100,9 +103,9 @@ FRAMES = 60  # one crank revolution, frames 0..59; frame 60 would be frame 0 aga
 # ahead). The hands stay on the hoods, so a lower back brings the shoulders nearer them and
 # bends the elbows. "Pedal", the default, is the aero one: a low back on the hoods.
 EFFORTS = {
-    "Pedal_Easy": (40.0, 0.6, 12.0),
-    "Pedal": (32.0, 1.0, 10.0),
-    "Pedal_Hard": (28.0, 1.8, 8.0),
+    "Pedal_Easy": (32.0, 0.6, 12.0),
+    "Pedal": (14.0, 1.0, 10.0),
+    "Pedal_Hard": (8.0, 1.8, 8.0),
 }
 DEFAULT_EFFORT = "Pedal"
 # The first-person action: Pedal's crank timing, hands and finger curls, with the upper body
@@ -917,15 +920,15 @@ HAND_ROLL = 88.0
 # behind the tube's middle so the fingers' roots reach round its front; (yaw, pitch, roll).
 DROP_Z = 0.802
 DROP_BACK = -0.012
-DROP_ANGLES = (0.0, -25.0, 90.0)
+DROP_ANGLES = (0.0, -10.0, 105.0)
 # the elbows' direction from the shoulder-wrist midpoint (x, out, z): back and down, in the
 # plane of the arm, so from behind each arm runs straight from the shoulder to the hood
 ARM_POLE = (-0.25, 0.0, -0.15)
 CLAV_MIN = -5.0  # deg, the least the shoulders protract (drawn back to keep the arms long)
 CLAV_MAX = 30.0  # deg, the most the shoulders protract
 HIP_X = -0.24  # m, the hip joints behind the BB
-HEAD_DOWN = 30.0  # deg, the head tipped down from the gaze line (the eyes look up the road)
-NECK_EXTRA = 0.0  # deg, the neck pitched past halfway between the back and the head
+HEAD_DOWN = 10.0  # deg, the head tipped down from the gaze line (the eyes look up the road)
+NECK_EXTRA = 15.0  # deg, the neck pitched past halfway between the back and the head
 CLAV_DROP = 8.0  # deg, the shoulders' drop about the clavicles' line
 
 
