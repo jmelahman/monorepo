@@ -93,6 +93,13 @@ render scale, a frame-rate cap, VSync and the window.
 - **The town's bike trail** (first pass). Out of the harbour and back in, the route rides a
   concrete trail with rubber shoulders, a yellow centre line, steel railings and swan-neck lamps.
   The town's buildings and planting aren't there yet.
+- **Real trees.** Beech, birch, pine, windswept pine and dead snags, planted by species: pine
+  climbs above the beech, birch grows in stands, and the windswept pines and snags gather toward
+  the treeline.
+- **A new bike and rider.** An aero road bike whose wheels roll, cranks turn and fork steers into
+  bends, and a rider whose effort shows: easy, steady or hard by your watts per kilo.
+- **Over the bars.** A cockpit view from the rider's eyes, with the bars and hands in front of you.
+  Pick it from the ride dock.
 - You ride, and the camera sits, in the right-hand lane.
 
 ## New in 0.2.0
@@ -134,3 +141,11 @@ render scale, a frame-rate cap, VSync and the window.
 - Coast water is flat, and a precision warning about the sea plane may show in the log.
 - Performance is 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings. Low is
   faster. There is no tuning yet.
+
+## Credits
+
+- **Five Birch trees pack (lowpoly, LODs)** by LOLIPOP,
+  https://www.fab.com/listings/b993c6a4-09bc-4cb4-a0a3-0cfa68299d29, licensed under
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Its bark and leaf textures were
+  resized and repacked, and its lower LODs dropped, for Nanite.
+- The other trees, plants, rocks and ground scans are from Fab under its Standard License.
