@@ -191,7 +191,7 @@ others as fake-user actions. The FBX exports all four as takes named `Armature|<
   saddle, the torso pitched 88°, the shoulders square and the elbows out), so the forearms
   reach in from the bottom corners of the frame to the hoods. A search at the game's 8° tilt
   picked the pose that keeps everything but the forearms out of view with the straightest
-  wrists (23° between the forearm and the hand, from 27°).
+  wrists (about 20° between the forearm and the hand with the current grip).
 - **Checked every 4th frame:** the camera sees no vertex of the torso, the upper arms or the
   head, the arm and shoulder skin stays 0.42 m from the camera, and the forearms enter at
   the bottom edge, 83% of the way out to the sides.
