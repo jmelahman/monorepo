@@ -1216,6 +1216,81 @@ def preview(g, road, out):
     im.save(f"{SRC}/features.png")
 
 
+# Cairns on the Moor (gap 12, signs of people): dry-stacked piles of flat stones on the knolls
+# by the road, a walker's waymarks. Each stone is the tundra boulder (287 x 212 cm, 178 tall, its
+# pivot 20 cm above its base) squashed flat; CAIRN_EVERY m of moor road apart at least.
+CAIRN_STONE = ms("mountain", "tundra_boulder")
+CAIRN_EVERY = 450.0
+CAIRN_REACH = (6.0, 220.0)  # m from the road
+
+
+def cairn(out, rng, x, y, z):
+    """One cairn round (x, y) on ground z (m): rings of stones narrowing up to a capstone."""
+    height = rng.uniform(1.2, 2.1)
+    base = rng.uniform(0.55, 0.8)
+    level, k = 0.0, 0
+    while level < height - 0.15:
+        r = base * (1 - level / height) ** 0.8
+        flat = rng.uniform(0.09, 0.13)  # of 178 cm
+        size = rng.uniform(0.15, 0.2)  # of 287 cm
+        count = max(1, round(2 * math.pi * r / (2.87 * size * 0.8)))
+        turn = rng.uniform(0, 2 * math.pi)
+        for i in range(count if r > 0.12 else 1):
+            a = turn + 2 * math.pi * i / count
+            reach = r * 0.8 if r > 0.12 else 0.0
+            out.add(
+                "Cairns",
+                CAIRN_STONE,
+                x + reach * math.cos(a),
+                y + reach * math.sin(a),
+                z + level + 0.198 * flat * rng.uniform(0.6, 1.0),
+                math.degrees(a) + 90 + rng.normal(0, 15),
+                (size, size * rng.uniform(0.85, 1.15), flat),
+                rng.normal(0, 4),
+                rng.normal(0, 4) - 5 * (reach > 0),  # leaning in
+            )
+        level += 1.78 * flat * 0.72
+        k += 1
+    s = rng.uniform(0.1, 0.13)
+    out.add("Cairns", CAIRN_STONE, x, y, z + level, rng.uniform(0, 360), (s, s * 0.8, s * 1.1))
+
+
+def cairns(out, g, bio, road, rng, taken):
+    """Cairns on the Moor's knolls near its roads, spaced along them."""
+    out.group("Cairns", cull=0)
+    pts = road.tree.data
+    moor = pts[bio.best(pts[:, 0], pts[:, 1]) == "heath"]
+    placed = []
+    for k in rng.permutation(len(moor)):
+        px, py = moor[k]
+        if any(math.hypot(px - cx, py - cy) < CAIRN_EVERY for cx, cy in placed):
+            continue
+        # The highest of a few spots off the road here, if it stands up from its surroundings.
+        best = None
+        for _ in range(24):
+            d = rng.uniform(*CAIRN_REACH)
+            a = rng.uniform(0, 2 * math.pi)
+            x, y = px + d * math.cos(a), py + d * math.sin(a)
+            if road.dist(x, y) < CAIRN_REACH[0] or bio.best(x, y) != "heath":
+                continue
+            if g.at(g.slope, x, y) > 0.25 or g.z(x, y) < 5:
+                continue
+            if any(math.hypot(x - tx, y - ty) < tr + 2 for tx, ty, tr in taken):
+                continue
+            rise = g.at(g.prominence, x, y)
+            if rise > 3 and (best is None or rise > best[0]):
+                best = (rise, x, y)
+        if best is None:
+            continue
+        _, x, y = best
+        z = min(g.z(x + dx, y + dy) for dx in (-0.8, 0.8) for dy in (-0.8, 0.8))
+        cairn(out, rng, x, y, z)
+        placed.append((px, py))
+        taken.append((x, y, 1.0))
+        out.marks.append((x, y, (240, 240, 240)))
+    print(f"cairns: {len(placed)}", flush=True)
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -1232,6 +1307,8 @@ def main():
     taken = taken + rocks(out, g, bio, road, rng)
     cliffs(out, g, bio, road, rng, taken)
     sea_stacks(out, g, bio, road, rng)
+    # Their own stream, so adding them moved nothing placed before.
+    cairns(out, g, bio, road, np.random.default_rng(SEED + 12), taken)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
         json.dump(
