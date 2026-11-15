@@ -679,9 +679,9 @@ void URideMenu::TookStill(int32 W, int32 H, const TArray<FColor>& Pixels)
 		return;
 	}
 	int32 SoftW, SoftH;
-	const TArray<FColor> Soft = Soften(W, H, Pixels, StillBlur, SoftW, SoftH);
+	const TArray<FColor> Blurred = Soften(W, H, Pixels, StillBlur, SoftW, SoftH);
 	Still = MakeStill(W, H, Pixels);
-	StillSoft = MakeStill(SoftW, SoftH, Soft);
+	StillSoft = MakeStill(SoftW, SoftH, Blurred);
 	if (!Still || !StillSoft)
 	{
 		return;
