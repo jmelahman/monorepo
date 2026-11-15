@@ -15,8 +15,11 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 rm -rf "$out" && mkdir -p "$out"
 name=Veloverse-$tag-linux-x86_64
 cp "$here/docs/release-notes.md" "$out/NOTES.md"
-# The tarball unpacks to one folder holding the game and the notes.
-tar -C "$build/.." --transform "s#^Linux#$name#" -cf - Linux \
+# The tarball unpacks to one folder holding the game and the notes. It leaves out the game's
+# debug info for gdb (0.17 GB) and the Vulkan API dump layer, a developer's tool (0.11 GB); the
+# .sym stays, so a crash log names its functions.
+tar --exclude='VeloverseUE.debug' --exclude='*VkLayer_api_dump*' \
+	-C "$build/.." --transform "s#^Linux#$name#" -cf - Linux \
 	--transform "s#^.*NOTES.md#$name/README.md#" -C "$out" NOTES.md |
 	xz -T0 -6 >"$out/$name.tar.xz"
 (cd "$out" && sha256sum "$name".tar.xz >SHA256SUMS)
