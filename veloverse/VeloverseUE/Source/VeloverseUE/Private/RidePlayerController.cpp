@@ -30,11 +30,11 @@ void ARidePlayerController::OnPossess(APawn* InPawn)
 	if (ARidePawn::Automated())
 	{
 		// Tests and stills look the same whatever a player chose: Epic, without saving it, unless
-		// -RideQuality=0..3 asks for another preset (scripts/pod_bench.sh rides each).
+		// -RideQuality=0..4 asks for another preset (scripts/pod_bench.sh rides each; 4 is Cinematic).
 		int32 Quality = 3;
 		FParse::Value(FCommandLine::Get(), TEXT("RideQuality="), Quality);
 		Scalability::FQualityLevels Levels;
-		Levels.SetFromSingleQualityLevel(FMath::Clamp(Quality, 0, 3));
+		Levels.SetFromSingleQualityLevel(FMath::Clamp(Quality, 0, 4));
 		Scalability::SetQualityLevels(Levels);
 		// -RideCVars=name=value,name=value: console variables over the preset, for A/B stills. Set
 		// here, after the preset, as -dpcvars and -ExecCmds didn't survive it in a package.
