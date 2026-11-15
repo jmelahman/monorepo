@@ -577,7 +577,12 @@ def trees():
     centre = road_points()
     instances = lib.Instances("Trees")
     placed = {}
+    # The hamlets' and the tower's ground (features.json "clear", m) kept clear of trees.
+    clear = [(x * 100, y * 100, r * 100) for x, y, r in (_features() or {}).get("clear", [])]
     for kind, x, y, z, yaw, scale in stems:
+        if any(math.hypot(x - cx, y - cy) < r for cx, cy, r in clear):
+            placed["cleared"] = placed.get("cleared", 0) + 1
+            continue
         picked = pick_tree(variants, kind, x, y)
         if picked is None:
             continue
@@ -1365,7 +1370,22 @@ def feature_materials():
             scalars={"rough": rough, "metal": metal},
             vectors={"colour": (r, gr, b, 1.0)},
         )
+    for slot, (source, metres, tint) in spec.get("textures", {}).items():
+        out[slot] = _feature_textured(slot, source, metres, tint, folder)
     return out
+
+
+def _feature_textured(slot, source, metres, tint, folder):
+    """A Poly Haven set on a feature mesh's own UVs, which make_features.py writes in metres
+    (the cottages' plaster, slate and stone): one repeat every `metres`, times `tint`."""
+    g = lib.Graph(f"M_Feature_{slot}", folder)
+    uv = g.mul(g.node(unreal.MaterialExpressionTextureCoordinate), 1.0 / metres)
+    t = g.texture_set(source, metres * 100, uv=uv)
+    # Weathering over metres, as on the concrete, so a row of houses isn't one print.
+    colour = g.mul(t["diff"], g.world_noise(0.003, 0.82, 1.06, 3))
+    colour = g.mul(colour, g.mask(g.param("Tint", tuple(tint)), "rgb"))
+    g.output(colour, t["nor"], g.saturate(t["rough"]), specular=0.4)
+    return g.finish(two_sided=True)
 
 
 # The features' concrete (bridge decks and parapets, the quay): Poly Haven's concrete_pavement

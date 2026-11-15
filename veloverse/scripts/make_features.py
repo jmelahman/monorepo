@@ -448,6 +448,7 @@ class Out:
         self.meshes, self.items, self.spin, self.groups = {}, [], [], {}
         self.marks = []  # (x, y, colour) for features.png
         self.views = []  # [name, eye, target] m: stills of the landmarks
+        self.clear = []  # [x, y, radius] m: ground the level's trees keep off
 
     def gltf(self, name, mesh):
         mesh.write(f"{SRC}/feat_{name}.gltf")
@@ -1291,6 +1292,375 @@ def cairns(out, g, bio, road, rng, taken):
     print(f"cairns: {len(placed)}", flush=True)
 
 
+# --- hamlets and the tower ----------------------------------------------------------------
+
+# Gap 12, signs of people: a hamlet of cottages and a barn on each island off the harbour, and a
+# ruined tower on a knoll of Vael. Their walls, roofs and stone are Poly Haven sets on the meshes'
+# own UVs (in metres), climb_world.py's M_Feature_<slot>: [set, metres a repeat, tint].
+TEXTURES = {
+    "plaster": ["worn_mossy_plasterwall", 2.5, [0.95, 0.95, 0.92]],
+    "ochre": ["worn_mossy_plasterwall", 2.5, [1.12, 0.88, 0.62]],
+    "slate": ["grey_roof_tiles", 2.6, [1.0, 1.0, 1.0]],
+    "clay": ["grey_roof_tiles_02", 2.4, [1.55, 0.8, 0.55]],
+    "stone": ["japanese_stone_wall", 2.4, [1.0, 1.0, 1.0]],
+    "siding": ["weathered_plank_siding", 1.8, [1.4, 1.35, 1.3]],
+    "boards": ["dark_wooden_planks", 1.5, [1.0, 1.0, 1.0]],
+}
+# Each island's hamlet: its stretch on the default ride, the walls and roof its cottages take,
+# and how many to try for.
+HAMLETS = {
+    "Greenwood": ("plaster", "slate", 7),
+    "Vael": ("stone", "slate", 5),
+    "The Moor": ("stone", "slate", 5),
+    "Red Sands": ("ochre", "clay", 6),
+}
+HAMLET_REACH = (30.0, 140.0)  # m from the road to the hamlet's middle
+HAMLET_SPREAD = 55.0  # m: the houses within this of the middle
+HOUSE_ROAD = 9.0  # m: no wall nearer the road
+TOWER_REACH = (40.0, 320.0)
+
+
+def quad_uv(part, corners, uvs, outward):
+    """A flat quad with its own UVs (m), turned to face `outward`."""
+    a, b, c = corners[:3]
+    n = _cross(_sub(b, a), _sub(c, a))
+    if _dot(n, outward) < 0:
+        corners, uvs = corners[::-1], uvs[::-1]
+        n = (-n[0], -n[1], -n[2])
+    length = math.sqrt(_dot(n, n)) or 1.0
+    n = (n[0] / length, n[1] / length, n[2] / length)
+    ids = [part.vertex(p, n, uv) for p, uv in zip(corners, uvs, strict=True)]
+    if len(ids) == 4:
+        part.quad(*ids)
+    else:
+        part.triangle(*ids)
+
+
+def cottage(rng, walls, roof, w, d, h, barn=False):
+    """A cottage (cm, its middle at the ground, the ridge along X): a stone plinth sunk into the
+    slope, walls, gables, a pitched roof with eaves, a chimney, a door, windows with shutters.
+    The barn: plank walls, a wide door, no chimney or windows."""
+    mesh = gltf_writer.Mesh()
+    base = 40.0
+    mesh.box("stone", (0, 0, (base - 160) / 2), (w + 12, d + 12, base + 160))
+    mesh.box(walls, (0, 0, base + (h - base) / 2), (w, d, h - base))
+    pitch = math.radians(rng.uniform(36, 44) if not barn else rng.uniform(26, 32))
+    rise = d / 2 * math.tan(pitch)
+    wall = mesh.part(walls)
+    for sx in (-1, 1):
+        x = sx * w / 2
+        quad_uv(
+            wall,
+            [(x, -d / 2, h), (x, d / 2, h), (x, 0, h + rise)],
+            [(-d / 200, -h / 100), (d / 200, -h / 100), (0, -(h + rise) / 100)],
+            (sx, 0, 0),
+        )
+    # The roof: each slope a slab 14 cm thick, out past the walls by its eaves.
+    over, eave_x = 45.0, w / 2 + 35.0
+    top = mesh.part(roof)
+    under = mesh.part("boards")
+    slope = math.hypot(d / 2 + over, (d / 2 + over) * math.tan(pitch))
+    for sy in (-1, 1):
+        ridge_z = h + rise + 14
+        eave_y, eave_z = sy * (d / 2 + over), h + rise - (d / 2 + over) * math.tan(pitch) + 14
+        corners = [
+            (-eave_x, 0, ridge_z),
+            (eave_x, 0, ridge_z),
+            (eave_x, eave_y, eave_z),
+            (-eave_x, eave_y, eave_z),
+        ]
+        uvs = [
+            (-eave_x / 100, 0),
+            (eave_x / 100, 0),
+            (eave_x / 100, slope / 100),
+            (-eave_x / 100, slope / 100),
+        ]
+        up = (0, sy * math.sin(pitch), math.cos(pitch))
+        quad_uv(top, corners, uvs, up)
+        low = [(x, y, z - 14) for x, y, z in corners]
+        quad_uv(under, low, uvs, (0, -up[1], -up[2]))
+        # The slab's edges: the eave's fascia and the verges at the gable ends.
+        quad_uv(
+            under,
+            [corners[2], corners[3], low[3], low[2]],
+            [(eave_x / 100, 0), (-eave_x / 100, 0), (-eave_x / 100, 0.14), (eave_x / 100, 0.14)],
+            (0, sy, 0),
+        )
+        for sx, (i, j) in ((-1, (0, 3)), (1, (1, 2))):
+            quad_uv(
+                under,
+                [corners[i], corners[j], low[j], low[i]],
+                [(0, 0), (slope / 100, 0), (slope / 100, 0.14), (0, 0.14)],
+                (sx, 0, 0),
+            )
+    if not barn:
+        cx = rng.choice((-1, 1)) * (w / 2 - 60)
+        mesh.box("stone", (cx, rng.uniform(-0.2, 0.2) * d, h + rise / 2 + 60), (70, 55, rise + 120))
+    # The door on the front (-Y) face and the windows either side, shuttered.
+    door_w = 260 if barn else 100
+    door_x = 0.0 if barn else rng.uniform(-0.15, 0.15) * w
+    door_h = 300 if barn else 205
+    mesh.box("boards", (door_x, -d / 2 - 4, base + door_h / 2), (door_w, 10, door_h))
+    if barn:
+        return mesh
+    for side in (-1, 1):
+        y = side * (d / 2 + 3)
+        spots = [
+            x
+            for x in np.linspace(-w / 2 + 110, w / 2 - 110, 3)
+            if abs(x - door_x) > 120 or side > 0
+        ]
+        for x in spots:
+            mesh.box("glass", (x, y, base + 150), (80, 8, 105))
+            mesh.box("boards", (x, y + side * 1, base + 150 + 60), (100, 10, 12))  # the lintel
+            for sx in (-1, 1):
+                mesh.box("boards", (x + sx * 62, y + side * 2, base + 150), (40, 6, 108))
+    return mesh
+
+
+def ruin_tower(rng):
+    """A round tower fallen in: a ring of stone 0.9 m thick, 13 m tall on its best side and down
+    to a stump on the other, its top ragged, a doorway and two window slits."""
+    mesh = gltf_writer.Mesh()
+    part = mesh.part("stone")
+    sides, r_out, r_in = 20, 340.0, 250.0
+    fall = rng.uniform(0, 2 * math.pi)
+    tops = []
+    for i in range(sides):
+        a = 2 * math.pi * (i + 0.5) / sides
+        lean = 0.5 + 0.5 * math.cos(a - fall)  # 1 on the standing side, 0 on the fallen
+        tops.append(250 + 1050 * lean**1.3 + rng.uniform(-90, 60))
+    gaps = {0: (0, 230), sides // 3: (520, 680), 2 * sides // 3: (780, 900)}
+    for i in range(sides):
+        a0, a1 = 2 * math.pi * i / sides, 2 * math.pi * (i + 1) / sides
+        top = tops[i]
+        spans = [(-150.0, top)]
+        if i in gaps and gaps[i][1] < top - 60:
+            lo, hi = gaps[i]
+            spans = [(-150.0, lo), (hi, top)] if lo > 0 else [(hi, top)]
+        for z0, z1 in spans:
+            o0 = (r_out * math.cos(a0), r_out * math.sin(a0))
+            o1 = (r_out * math.cos(a1), r_out * math.sin(a1))
+            i0 = (r_in * math.cos(a0), r_in * math.sin(a0))
+            i1 = (r_in * math.cos(a1), r_in * math.sin(a1))
+            u0, u1 = r_out * a0 / 100, r_out * a1 / 100
+            mid = (math.cos((a0 + a1) / 2), math.sin((a0 + a1) / 2), 0)
+            quad_uv(
+                part,
+                [(*o0, z0), (*o1, z0), (*o1, z1), (*o0, z1)],
+                [(u0, -z0 / 100), (u1, -z0 / 100), (u1, -z1 / 100), (u0, -z1 / 100)],
+                mid,
+            )
+            quad_uv(
+                part,
+                [(*i0, z0), (*i1, z0), (*i1, z1), (*i0, z1)],
+                [(u0, -z0 / 100), (u1, -z0 / 100), (u1, -z1 / 100), (u0, -z1 / 100)],
+                (-mid[0], -mid[1], 0),
+            )
+            for z, up in ((z1, 1), (z0, -1)):
+                quad_uv(
+                    part,
+                    [(*o0, z), (*o1, z), (*i1, z), (*i0, z)],
+                    [(u0, 0), (u1, 0), (u1, 0.9), (u0, 0.9)],
+                    (0, 0, up),
+                )
+        # A doorway's or slit's jambs: the neighbours' faces across the opening.
+        if len(spans) > 1 or spans[0][0] > -150:
+            lo, hi = (spans[0][1], spans[1][0]) if len(spans) > 1 else (-150.0, spans[0][0])
+            for a, sgn in ((a0, -1), (a1, 1)):
+                o = (r_out * math.cos(a), r_out * math.sin(a))
+                n = (r_in * math.cos(a), r_in * math.sin(a))
+                facing = (sgn * math.sin(a), -sgn * math.cos(a), 0)
+                quad_uv(
+                    part,
+                    [(*o, lo), (*n, lo), (*n, hi), (*o, hi)],
+                    [(0, -lo / 100), (0.9, -lo / 100), (0.9, -hi / 100), (0, -hi / 100)],
+                    facing,
+                )
+        # The ragged steps between neighbours' tops: close each side of the segment.
+        for a, j in ((a0, i - 1), (a1, i + 1)):
+            other = tops[j % sides]
+            if other < top:
+                o = (r_out * math.cos(a), r_out * math.sin(a))
+                n = (r_in * math.cos(a), r_in * math.sin(a))
+                side = (-math.sin(a), math.cos(a), 0) if j > i else (math.sin(a), -math.cos(a), 0)
+                quad_uv(
+                    part,
+                    [(*o, other), (*n, other), (*n, top), (*o, top)],
+                    [(0, -other / 100), (0.9, -other / 100), (0.9, -top / 100), (0, -top / 100)],
+                    side,
+                )
+    return mesh, fall
+
+
+def _stretch_range(name, road):
+    """[(first, last) index into road.line] of each run of the default ride's `name` stretch,
+    the line being about a metre a point."""
+    with open(f"{SRC}/info.json") as f:
+        runs = json.load(f)["ride"]["stretches"]
+    seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(road.line[:, :2], axis=0), axis=1))]
+    out, at = [], 0.0
+    for stretch, metres in runs:
+        if stretch == name:
+            out.append((int(np.searchsorted(seg, at)), int(np.searchsorted(seg, at + metres))))
+        at += metres
+    return out
+
+
+def _house_fits(g, road, taken, x, y, yaw, w, d, houses):
+    c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+    corners = [
+        (x + dx * c - dy * s, y + dx * s + dy * c)
+        for dx in (-w / 2 - 0.5, w / 2 + 0.5)
+        for dy in (-d / 2 - 0.5, d / 2 + 0.5)
+    ]
+    zs = [g.z(cx, cy) for cx, cy in corners]
+    if max(zs) - min(zs) > 1.2 or min(zs) < 2.5:
+        return None
+    if min(float(road.dist(cx, cy)) for cx, cy in corners) < HOUSE_ROAD:
+        return None
+    reach = math.hypot(w, d) / 2
+    if any(math.hypot(x - tx, y - ty) < tr + reach + 1 for tx, ty, tr in taken):
+        return None
+    if any(math.hypot(x - hx, y - hy) < hr + reach + 3.5 for hx, hy, hr in houses):
+        return None
+    return min(zs), reach
+
+
+def _hamlet_at(g, road, taken, rng, cx, cy, yaw0, want):
+    """Cottages round (cx, cy): turned to the road, or end on to it now and then."""
+    houses, placed = [], []
+    for _ in range(140):
+        if len(placed) >= want + 1:
+            break
+        barn = len(placed) == want
+        w = rng.uniform(11, 14) if barn else rng.uniform(7.5, 10.5)
+        d = rng.uniform(7, 8.5) if barn else rng.uniform(5.2, 6.4)
+        r = HAMLET_SPREAD * math.sqrt(rng.uniform(0.02, 1))
+        a = rng.uniform(0, 2 * math.pi)
+        x, y = cx + r * math.cos(a), cy + r * math.sin(a)
+        yaw = yaw0 + (90 if rng.random() < 0.3 else 0) + (180 if rng.random() < 0.5 else 0)
+        yaw += rng.normal(0, 5)
+        fit = _house_fits(g, road, taken, x, y, yaw, w, d, houses)
+        if fit is None:
+            continue
+        z, reach = fit
+        houses.append((x, y, reach))
+        placed.append((x, y, z, yaw, w, d, barn))
+    return placed
+
+
+def hamlets(out, g, bio, road, rng, taken):
+    """A hamlet on each island off the harbour: the open, level spot off its road that fits the
+    most cottages, a barn among them."""
+    out.group("Hamlets", cull=0)
+    kinds = {}
+    for island, (walls, roof, want) in HAMLETS.items():
+        best, best_score = [], -1.0
+        for first, last in _stretch_range(island, road):
+            if last - first < 3000:
+                continue
+            for _ in range(160):
+                k = int(rng.integers(first + 1000, last - 1000))
+                px, py = road.line[k, :2]
+                tx, ty = (
+                    road.line[min(k + 3, len(road.line) - 1), :2] - road.line[max(k - 3, 0), :2]
+                )
+                yaw0 = math.degrees(math.atan2(ty, tx))
+                off = rng.uniform(*HAMLET_REACH) * rng.choice((-1, 1))
+                nx, ny = -ty / (math.hypot(tx, ty) or 1), tx / (math.hypot(tx, ty) or 1)
+                cx, cy = px + nx * off, py + ny * off
+                if g.at(g.slope, cx, cy) > 0.12 or g.z(cx, cy) < 3 or g.at(g.inland, cx, cy) < 50:
+                    continue
+                placed = _hamlet_at(g, road, taken, rng, cx, cy, yaw0, want)
+                # The most houses, and of those the nearest the road, to be seen from it.
+                score = len(placed) - abs(off) / 200
+                if score > best_score:
+                    best, best_score = placed, score
+        if len(best) < 3:
+            print(f"hamlet {island}: no room", flush=True)
+            continue
+        for x, y, z, yaw, w, d, barn in best:
+            walls_here = "siding" if barn else walls
+            key = (walls_here, roof, round(w), round(d), barn)
+            if key not in kinds:
+                name = f"house_{len(kinds)}"
+                h = rng.uniform(380, 440) if barn else rng.uniform(300, 340)
+                out.gltf(name, cottage(rng, walls_here, roof, w * 100, d * 100, h, barn))
+                kinds[key] = name
+            out.add("Hamlets", kinds[key], x, y, z - 0.05, yaw, mark=(250, 140, 40))
+            taken.append((x, y, math.hypot(w, d) / 2))
+            # Its ground cleared of trees (climb_world.trees skips stems in out.clear), the
+            # ones between the houses kept, as a hamlet in a wood keeps its garden trees.
+            out.clear.append([round(x, 1), round(y, 1), round(math.hypot(w, d) / 2 + 4, 1)])
+        mx = float(np.mean([p[0] for p in best]))
+        my = float(np.mean([p[1] for p in best]))
+        _, k = road.tree.query([mx, my])
+        ex, ey = road.tree.data[k]
+        out.views.append(
+            [
+                f"feat_hamlet_{island.split()[-1].lower()}",
+                [float(ex), float(ey), g.z(ex, ey) + 1.7],
+                [mx, my, g.z(mx, my) + 3],
+            ]
+        )
+        print(f"hamlet {island}: {len(best)} houses round ({mx:.0f}, {my:.0f})", flush=True)
+
+
+def tower(out, g, bio, road, rng, taken):
+    """The ruined tower: on the knoll off Vael's road that stands highest over its surroundings,
+    with some of its fallen stone round its foot."""
+    out.group("Tower", cull=0)
+    best = None
+    for first, last in _stretch_range("Vael", road):
+        for _ in range(900):
+            k = int(rng.integers(first, last))
+            px, py = road.line[k, :2]
+            d, a = rng.uniform(*TOWER_REACH), rng.uniform(0, 2 * math.pi)
+            x, y = px + d * math.cos(a), py + d * math.sin(a)
+            if road.dist(x, y) < TOWER_REACH[0] or g.at(g.slope, x, y) > 0.3 or g.z(x, y) < 10:
+                continue
+            if any(math.hypot(x - tx, y - ty) < tr + 6 for tx, ty, tr in taken):
+                continue
+            rise = g.at(g.prominence, x, y)
+            if best is None or rise > best[0]:
+                best = (rise, x, y)
+    if best is None:
+        print("tower: no knoll", flush=True)
+        return
+    _, x, y = best
+    z = min(g.z(x + dx, y + dy) for dx in (-3.4, 3.4) for dy in (-3.4, 3.4))
+    mesh, fall = ruin_tower(rng)
+    out.gltf("ruin_tower", mesh)
+    out.add("Tower", "ruin_tower", x, y, z, 0, mark=(200, 60, 200))
+    taken.append((x, y, 4.0))
+    out.clear.append([round(x, 1), round(y, 1), 7.0])
+    # The fallen stone, thrown out on the side it fell to.
+    stone = ms("mountain", "limestone_rocks")
+    for _ in range(26):
+        a = fall + rng.normal(0, 0.6)
+        r = rng.uniform(3.8, 11.0)
+        sx, sy = x + r * math.cos(a), y + r * math.sin(a)
+        size = rng.uniform(0.18, 0.45)
+        out.add(
+            "Tower",
+            stone,
+            sx,
+            sy,
+            g.z(sx, sy) - 0.1 * size,
+            rng.uniform(0, 360),
+            (size, size * rng.uniform(0.8, 1.2), size * rng.uniform(0.5, 0.8)),
+        )
+    _, k = road.tree.query([x, y])
+    ex, ey = road.tree.data[k]
+    out.views.append(["feat_tower", [float(ex), float(ey), g.z(ex, ey) + 1.7], [x, y, z + 8]])
+    print(
+        f"tower: on a {best[0]:.0f} m knoll at ({x:.0f}, {y:.0f}),"
+        f" {float(road.dist(x, y)):.0f} m off the road",
+        flush=True,
+    )
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -1309,11 +1679,15 @@ def main():
     sea_stacks(out, g, bio, road, rng)
     # Their own stream, so adding them moved nothing placed before.
     cairns(out, g, bio, road, np.random.default_rng(SEED + 12), taken)
+    hamlets(out, g, bio, road, np.random.default_rng(SEED + 13), taken)
+    tower(out, g, bio, road, np.random.default_rng(SEED + 14), taken)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
         json.dump(
             {
                 "paints": PAINTS,
+                "textures": TEXTURES,
+                "clear": out.clear,
                 "meshes": out.meshes,
                 "groups": out.groups,
                 "items": out.items,
