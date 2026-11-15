@@ -48,7 +48,9 @@ constexpr float GradeSpan = 800.f; // cm over which the camera's pitch follows t
 // the rider's head (1.8 m), barely tipped (2 degrees), and at the game's 61 degree lens 5.1 m back.
 // Before: 4.2 m back aimed at the bike's middle, 9 degrees down; 3 m back at 1.8 m read as over
 // the bars, and 6.2 m back at 3 m, 12 degrees down, was a guess at Zwift's from memory.
-constexpr float ChaseBack = 510.f;
+// The eyes moved 22.8 cm up the bike to the rider's (40.8 cm ahead of the bottom bracket, from 18),
+// so the camera stays put over the bike with the aim 22.8 cm further along the same line.
+constexpr float ChaseBack = 532.8f;
 constexpr float ChaseAim = 162.f;
 constexpr float ChaseTilt = -2.f;
 constexpr float ChaseGrade = 0.35f; // the share of the road's pitch the camera follows (was 0.5)
@@ -58,8 +60,12 @@ const TCHAR* const GrassCollection = TEXT("/Game/Climb/Grass/MPC_Grass.MPC_Grass
 // down so the bars, hoods and computer sit in the bottom third with the horizon in the top third
 // at the default 61 degree field of view. Nearer the bars, the narrow view can't hold both: the bars
 // fall out of the frame's foot or the horizon out of its top. make_bike.py's COCKPIT_CAMERA holds
-// the same numbers for its preview.
+// the same numbers for its preview. That is for make_bike.py's front end, made for eyes 150 cm up
+// and 18 cm ahead of the bottom bracket; over the Blender bike the camera is CockpitCamera.
 const FVector CockpitEye(-45.f, 0.f, -38.f);
+// Over the Blender bike: the camera in the bike's frame (cm, from the ground under the bottom
+// bracket), where rider/README.md's Cockpit action is made to be seen from.
+const FVector CockpitCamera(-27.f, 0.f, 112.f);
 constexpr float CockpitTilt = -8.f;
 
 // A mesh by path, or none when it isn't in the project: no warning for a bike not yet made.
@@ -1067,7 +1073,8 @@ void ARidePawn::Place()
 		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
 		Bike->SetWorldLocationAndRotation(Eye + Lift - Body.RotateVector(FVector(0.f, 0.f, EyeHeight)), Body);
 		PoseBike();
-		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CockpitEye), (Body * Look).Rotator());
+		const FVector Camera = PartsOrigin + CockpitCamera - FVector(0.f, 0.f, EyeHeight);
+		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(Camera), (Body * Look).Rotator());
 		return;
 	}
 	if (Seen == ERideView::Cockpit)
@@ -1109,8 +1116,10 @@ const FVector BottomBracket(0.f, 0.f, 26.9f);
 constexpr float WheelRadius = 33.9f; // to the tyre's tread
 constexpr float CrankLength = 17.25f; // to the pedal's axle
 constexpr float RiderLoop = 2.f; // s: rider/README.md's Pedal, 60 frames at 30 fps a revolution
-// SM_Bike's origin is the road under the rider's eyes, with its bottom bracket 18 cm behind them.
-const FVector PartsOrigin(-18.f, 0.f, 0.f);
+// The Blender bike's origin is the road under the rider's eyes, with its bottom bracket 40.8 cm
+// behind them: the Pedal effort's eye point, (0.408, 0, 1.375) m from the bottom bracket's ground
+// (rider/README.md). Before the rider, the eyes were a guess at 18 cm ahead and 150 cm up.
+const FVector PartsOrigin(-40.8f, 0.f, 0.f);
 } // namespace
 
 void ARidePawn::MakeBikeParts()

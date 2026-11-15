@@ -99,7 +99,8 @@ public:
 	FString RideRoutes; // "Coast Loop, then Vael", once the route has changed
 	int32 RouteIndex() const { return Routes.IndexOfByKey(Track); }
 
-	UPROPERTY(EditAnywhere) float EyeHeight = 150.f; // cm above the road
+	// cm above the road: the rider's eyes at the Pedal effort (rider/README.md; 150 before the rider)
+	UPROPERTY(EditAnywhere) float EyeHeight = 137.5f;
 	UPROPERTY(EditAnywhere) float StartMetres = 0.f;
 
 	// Where a ride can start, for the start screen: the track's start, then each stretch's. The
