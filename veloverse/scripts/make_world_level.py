@@ -946,6 +946,108 @@ def trail_dressing(line, trail, bridges):
     return {"posts": posts, "spans": spans, "lamps": lamps}
 
 
+# Gap 12, signs of people: old timber fences (climb_world.rails) along the farmland's roads, in
+# fields of FIELD m each side, the odd one left open, a gate gap in some, and a boundary running
+# back from the road between neighbouring fields, so the open country reads as worked land.
+FENCE_OUT = 6.5  # m from the road's middle: past the verge, on the flat beside it
+FENCE_COUNTRY = ("meadow", "town")
+FENCE_FROM_HARBOUR = 1800.0  # m: the town's own streets have none
+FIELD = (80.0, 300.0)  # m along the road
+FENCED = 0.7  # of fields
+GATE = 4.0  # m
+SHORE_CLEAR = 120.0  # m inland: no fence between the road and the beach
+
+
+def field_fences(plan, h, lines, cover, stems):
+    """rails.json's runs, each [[x, y, z], ...] in cm a metre apart."""
+    rng = np.random.default_rng(SEED + 12)
+    road = cKDTree(np.vstack([line[:, :2] for line, _ in lines.values()]))
+    trunks = cKDTree(np.array([[t[1] / 100, t[2] / 100] for t in stems] or [[1e9, 1e9]]))
+    harbour = np.array(plan.harbour)
+
+    def ok(p):
+        x, y = p[:, 0], p[:, 1]
+        w = weights(plan, x, y)
+        farm = sum(w[k] for k in FENCE_COUNTRY if k in w)
+        z = ground_z(h, x, y)
+        return (
+            (farm > 0.6)
+            & (z > 2.0)
+            & (plan.at(plan.inland, x, y) > SHORE_CLEAR)
+            & (plan.at(plan.slope, x, y) < 0.3)
+            & (np.hypot(x - harbour[0], y - harbour[1]) > FENCE_FROM_HARBOUR)
+            & (road.query(p, workers=-1)[0] > FENCE_OUT - 1.0)
+            & (trunks.query(p, workers=-1)[0] > 2.5)
+        )
+
+    runs, placed = [], []
+
+    def keep(points):
+        if len(points) >= 15:
+            z = ground_z(h, points[:, 0], points[:, 1])
+            runs.append(
+                [
+                    [round(float(a) * 100, 1), round(float(b) * 100, 1), round(float(c) * 100, 1)]
+                    for (a, b), c in zip(points, z, strict=True)
+                ]
+            )
+
+    for key in cover:
+        line, bridge = lines[key]
+        n = len(line)
+        ahead = np.roll(line[:, :2], -2, 0) - np.roll(line[:, :2], 2, 0)
+        ahead /= np.maximum(np.hypot(ahead[:, 0], ahead[:, 1]), 1e-6)[:, None]
+        left = np.stack([ahead[:, 1], -ahead[:, 0]], 1)
+        earlier = cKDTree(np.vstack(placed)) if placed else None
+        for sign in (1.0, -1.0):
+            side = line[:, :2] + sign * left * FENCE_OUT
+            good = ok(side) & ~bridge
+            if earlier is not None:  # a road an earlier route already fenced
+                good &= earlier.query(side, workers=-1)[0] > 3.0
+            i = 0
+            while i < n:
+                j = min(n, i + int(rng.uniform(*FIELD)))
+                if rng.random() < FENCED:
+                    cuts = [i, j]
+                    if rng.random() < 0.5 and j - i > 30:
+                        g = int(rng.uniform(i + 10, j - 10 - GATE))
+                        cuts = [i, g, g + int(GATE), j]
+                    for a, b in zip(cuts[::2], cuts[1::2], strict=True):
+                        seg = np.flatnonzero(good[a:b]) + a
+                        # Each unbroken stretch of good ground in the field.
+                        for part in np.split(seg, np.flatnonzero(np.diff(seg) > 1) + 1):
+                            if len(part):
+                                keep(side[part])
+                                placed.append(side[part])
+                    # The field's boundary back from the road, from its start.
+                    if good[i] and rng.random() < 0.6:
+                        turn = math.radians(rng.normal(0, 8))
+                        out = sign * left[i]
+                        out = np.array(
+                            [
+                                out[0] * math.cos(turn) - out[1] * math.sin(turn),
+                                out[0] * math.sin(turn) + out[1] * math.cos(turn),
+                            ]
+                        )
+                        steps = np.arange(1, int(rng.uniform(60, 220)))[:, None]
+                        back = side[i] + out * steps
+                        fine = ok(back)
+                        stop = int(np.argmin(fine)) if not fine.all() else len(back)
+                        keep(np.vstack([side[i : i + 1], back[:stop]]))
+                        placed.append(back[:stop])
+                i = j
+    metres = sum(map(len, runs))
+    print(f"field fences: {len(runs)} runs, {metres / 1000:.1f} km", flush=True)
+    return runs
+
+
+def ground_z(h, x, y):
+    """The level's ground (m) under (x, y) m."""
+    return ndimage.map_coordinates(
+        h, [np.asarray(y) / SPACING + HALF, np.asarray(x) / SPACING + HALF], order=1, mode="nearest"
+    )
+
+
 def views(line, runs, plan):
     """Stills along the ride, [name, eye, target] in m: a rider's eye halfway along each
     stretch in the right lane looking 30 m up the road, and one from 120 m up over the first
@@ -1253,9 +1355,10 @@ def main():
         )
     with open(f"{OUT}/trees.json", "w") as f:
         json.dump(stems, f)
-    for name in ("rails", "props"):
-        with open(f"{OUT}/{name}.json", "w") as f:
-            json.dump([], f)
+    with open(f"{OUT}/rails.json", "w") as f:
+        json.dump(field_fences(plan, h, lines, cover, stems), f)
+    with open(f"{OUT}/props.json", "w") as f:
+        json.dump([], f)
     grade = np.diff(line[:, 2])
     kinds = {k: sum(t[0] == k for t in stems) for k in sorted({t[0] for t in stems})}
     print(
