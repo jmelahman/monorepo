@@ -1566,7 +1566,17 @@ void ARidePawn::ApplyWeather()
 		}
 		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
 		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
-		Sun->GetOwner()->SetActorRotation(FRotator(-W.Elevation, Azimuth, 0.f));
+		// Turned only on a real change: a sun that turns at all is a moving light to the virtual
+		// shadow maps, which then redraw their pages each frame at the moving light's coarser
+		// resolution. The route's rows ease the sun's height along it; steps of a quarter degree
+		// shift a bike's shadow by millimetres.
+		const FRotator Aim(-W.Elevation, Azimuth, 0.f);
+		if (!Aim.Equals(SunAim, 0.25f))
+		{
+			Sun->GetOwner()->SetActorRotation(Aim);
+			SunAim = Aim;
+			UE_LOG(LogTemp, Display, TEXT("RIDE sun turned to %.1f high, %.0f round"), W.Elevation, Azimuth);
+		}
 		// An overcast sky is grey-white to the zenith, not blue: the ride frames only the sky near
 		// the horizon, where the cloud layer never showed (out/qa/cloudy5, package 0454), so thin
 		// the atmosphere's blue scattering and thicken its haze instead.

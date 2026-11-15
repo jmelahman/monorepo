@@ -267,6 +267,7 @@ private:
 
 	TWeakObjectPtr<UDirectionalLightComponent> Sun;
 	float SunAngle = -1.f; // the level's own sun disc, degrees, read on the first weather
+	FRotator SunAim = FRotator(1000.f, 0.f, 0.f); // where the sun was last turned, none yet
 	TWeakObjectPtr<USkyLightComponent> SkyLight;
 	TWeakObjectPtr<UExponentialHeightFogComponent> Fog;
 	TWeakObjectPtr<class USkyAtmosphereComponent> Atmosphere;
