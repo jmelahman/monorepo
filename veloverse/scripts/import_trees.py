@@ -192,7 +192,10 @@ def master(kind):
     material.set_editor_property("used_with_instanced_static_meshes", True)
     material.set_editor_property("used_with_nanite", True)
     # Nanite culls by the mesh's bounds, so it needs to know how far the wind can move it.
-    material.set_editor_property("max_world_position_offset_displacement", 60.0)
+    try:
+        material.set_editor_property("max_world_position_offset_displacement", 60.0)
+    except Exception as error:  # the property's name has moved between engine versions
+        log(f"no max_world_position_offset_displacement: {error}")
     return g.finish()
 
 

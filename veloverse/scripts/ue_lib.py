@@ -388,10 +388,15 @@ class Instances:
             component.set_editor_property("cast_shadow", shadows)
             if cull:
                 component.set_editor_property("instance_end_cull_distance", int(cull))
-            if wpo is False:
-                component.set_editor_property("evaluate_world_position_offset", False)
-            elif wpo:
-                component.set_editor_property("world_position_offset_disable_distance", int(wpo))
+            try:
+                if wpo is False:
+                    component.set_editor_property("evaluate_world_position_offset", False)
+                elif wpo:
+                    component.set_editor_property(
+                        "world_position_offset_disable_distance", int(wpo)
+                    )
+            except Exception as error:  # a renamed property costs the wind's limit, not the build
+                unreal.log_warning(f"instances {self.folder}: wpo {wpo}: {error}")
             for index, material in ((materials or {}).get(path) or {}).items():
                 component.set_material(index, material)
             component.add_instances(transforms, False, True)
