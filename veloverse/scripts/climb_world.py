@@ -615,7 +615,7 @@ def trees():
         log("trees: none")
         return
     variants = tree_variants()
-    if any(isinstance(g[0], unreal.SkeletalMesh) for v in variants.values() for g, _, _ in v):
+    if any(isinstance(g[0], unreal.SkeletalMesh) for v in variants.values() for g, *_ in v):
         # The plugin's materials read wind and tree data from this actor; without it the trees
         # fall back to proxy cards.
         bp = unreal.load_asset(
