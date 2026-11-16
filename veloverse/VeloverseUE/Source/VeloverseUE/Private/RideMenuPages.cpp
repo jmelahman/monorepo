@@ -938,7 +938,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		if (Pawn)
 		{
 			Slide(TEXT("grass"), Row(TEXT("Grass reach"), TEXT("How far the blades grow before the ground takes over")),
-			      &FRideProfile::Grass, 25.f, 200.f, 5.f, TEXT("%"));
+			      &FRideProfile::Grass, 20.f, 160.f, 5.f, TEXT("%"));
 		}
 	}
 	else if (Tab == ERideSettingsTab::World && Pawn)

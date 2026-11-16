@@ -61,6 +61,9 @@ constexpr float ChaseBack = 532.8f;
 constexpr float ChaseAim = 162.f;
 constexpr float ChaseTilt = -2.f;
 constexpr float ChaseGrade = 0.35f; // the share of the road's pitch the camera follows (was 0.5)
+// The grass's reach at 100% on the slider: 1.25 of its own distance, the old 125% (the user, 15 Nov;
+// the default was 150% until then). Profiles saved before keep their reach (RideRecord.cpp).
+constexpr float GrassStandard = 1.25f;
 constexpr float ChaseGrassReach = 1.3f; // the grass reach from behind, times the rider's setting
 const TCHAR* const GrassCollection = TEXT("/Game/Climb/Grass/MPC_Grass.MPC_Grass");
 // Over the bars: the camera this far behind and below the eyes, in the bike's frame (cm), tipped
@@ -624,7 +627,7 @@ void ARidePawn::UseGrassReach()
 	}
 	// From behind the camera stands higher and sees more of the ground ahead, so the carpet
 	// reaches further there.
-	const float Share = Profile.Grass / 100.f * (View() == ERideView::Chase ? ChaseGrassReach : 1.f);
+	const float Share = Profile.Grass / 100.f * GrassStandard * (View() == ERideView::Chase ? ChaseGrassReach : 1.f);
 	GrassViewScale = FMath::Max(ViewScale->GetFloat(), 0.1f);
 	Reach->Set(Share / GrassViewScale, ECVF_SetByCode);
 	// The blades shrink away over the last stretch before their cull, and the ground takes their

@@ -186,9 +186,15 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.TimeOfDay = FMath::Clamp(static_cast<int32>(Value), 0, 3);
 		}
-		if (O->TryGetNumberField(TEXT("grass"), Value))
+		// "grass_reach" is % of the standard reach (1.25 of the grass's own distance, 15 Nov);
+		// "grass" before it was % of the grass's own distance, so 125 there is 100 here.
+		if (O->TryGetNumberField(TEXT("grass_reach"), Value))
 		{
-			Profile.Grass = FMath::Clamp(static_cast<float>(Value), 25.f, 200.f);
+			Profile.Grass = FMath::Clamp(static_cast<float>(Value), 20.f, 160.f);
+		}
+		else if (O->TryGetNumberField(TEXT("grass"), Value))
+		{
+			Profile.Grass = FMath::Clamp(FMath::RoundToFloat(static_cast<float>(Value) / 1.25f), 20.f, 160.f);
 		}
 		if (O->TryGetNumberField(TEXT("look_speed"), Value))
 		{
@@ -240,7 +246,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("difficulty"), Difficulty);
 	O->SetNumberField(TEXT("weather"), Weather);
 	O->SetNumberField(TEXT("time_of_day"), TimeOfDay);
-	O->SetNumberField(TEXT("grass"), Grass);
+	O->SetNumberField(TEXT("grass_reach"), Grass);
 	O->SetNumberField(TEXT("look_speed"), LookSpeed);
 	O->SetNumberField(TEXT("head_sway"), HeadSway);
 	O->SetNumberField(TEXT("bike_sway"), BikeSway);
