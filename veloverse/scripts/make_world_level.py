@@ -1081,6 +1081,24 @@ def field_fences(plan, h, lines, cover, stems):
     return runs, gates
 
 
+def gate_views(gates):
+    """[name, eye, target] m: the first shut gate and the first open one, from 9 m back along
+    the fence line and 3 m to one side, at a standing eye."""
+    out = []
+    for name, want in (("gate", False), ("gate_open", True)):
+        for _, x, y, z, yaw, width, swing, drop in gates:
+            if (swing != 0) == want:
+                r = math.radians(yaw)
+                mx, my = x / 100 + width / 200 * math.cos(r), y / 100 + width / 200 * math.sin(r)
+                eye = [
+                    mx - 9 * math.cos(r) - 3 * math.sin(r),
+                    my - 9 * math.sin(r) + 3 * math.cos(r),
+                ]
+                out.append([name, [*eye, z / 100 + 1.7], [mx, my, (z + drop / 2) / 100 + 0.7]])
+                break
+    return out
+
+
 def ground_z(h, x, y):
     """The level's ground (m) under (x, y) m."""
     return ndimage.map_coordinates(
@@ -1348,6 +1366,8 @@ def main():
         "views": views(line, rides[0]["stretches"], plan),
     }
     info["views"] += round_views(lines, centres, plan)
+    fences, gates = field_fences(plan, h, lines, cover, stems)
+    info["views"] += gate_views(gates)
     with open(f"{OUT}/info.json", "w") as f:
         json.dump(info, f)
     for name in os.listdir(OUT):
@@ -1397,7 +1417,6 @@ def main():
         )
     with open(f"{OUT}/trees.json", "w") as f:
         json.dump(stems, f)
-    fences, gates = field_fences(plan, h, lines, cover, stems)
     with open(f"{OUT}/rails.json", "w") as f:
         json.dump(fences, f)
     with open(f"{OUT}/props.json", "w") as f:
