@@ -77,11 +77,13 @@ ROCKS = {
         (ms("forest", "nordic_forest_cliff_large"), 13.3, (0.6, 1.0), 50, 0.8, 1, 0),
     ],
     "desert": [
-        (ms("desert", "huge_canyon_sandstone_mesa"), 16.6, (1.8, 3.5), 220, 0.8, 0, 0),
-        (ms("desert", "canyon_sandstone_hoodoo"), 20.9, (0.6, 1.1), 60, 1.2, 0, 0),
+        # Gap 6 (wf_70000, v59): at 30-58 m the mesas read as boulders and the 1.5-3.5 m
+        # boulders, six a km, as bricks on the sand. Mesas now stand 60-130 m across, 350 m out.
+        (ms("desert", "huge_canyon_sandstone_mesa"), 16.6, (3.6, 7.8), 350, 1.2, 0, 0),
+        (ms("desert", "canyon_sandstone_hoodoo"), 20.9, (0.8, 1.6), 70, 1.2, 0, 0),
         (ms("desert", "desert_western_spire_layered_xl_04"), 27.9, (0.5, 0.9), 80, 0.8, 0, 0),
-        (ms("desert", "sandstone_rock_formation"), 3.6, (1.0, 2.4), 12, 5.0, 0, 0),
-        (ms("desert", "canyon_sandstone_boulder"), 1.0, (1.5, 3.5), 8, 6.0, 0, 0),
+        (ms("desert", "sandstone_rock_formation"), 3.6, (1.6, 3.6), 14, 4.0, 0, 0),
+        (ms("desert", "canyon_sandstone_boulder"), 1.0, (2.0, 4.0), 10, 2.5, 0, 0),
         (ms("desert", "desert_western_cluster_rock_medium_05"), 3.0, (1.0, 2.0), 10, 3.0, 0, 0),
     ],
     "meadow": [
