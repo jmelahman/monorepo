@@ -860,7 +860,7 @@ def road_material():
 
 
 # The path's compacted earth, a little greyed so it sits on sand, turf and granite alike.
-PATH_TINT = (0.6, 0.58, 0.56)
+PATH_TINT = (0.5, 0.48, 0.46)  # 0.6 read brighter than the rock beside it (wc_55000, v59)
 # Its edge, m from the middle: the mesh's own (make_world_level.PATH_HALF), about 2.4 m across.
 PATH_HALF = 1.2
 # Its loose edge: the gravel, darker.
@@ -898,7 +898,8 @@ def path_material():
     colour = g.mul(colour, g.param("tint", PATH_TINT))
     # A dirt path is the country's own earth: part of its colour is the ground's here, from the
     # world's ground RVT, so it's grey on the heath and tan in the desert, not one bright sand.
-    colour = g.lerp(colour, g.mul(_rvt_colour(g), 0.82), g.param("ground share", 0.65))
+    # Packed and shaded by its ruts, darker than the open ground (0.82 glowed on the Moor).
+    colour = g.lerp(colour, g.mul(_rvt_colour(g), 0.66), g.param("ground share", 0.65))
     rough = g.lerp(g.const(0.95), g.const(0.88), worn)
     # The last 20-50 cm, raggedly: loose gravel, darker, rougher, so the edge isn't a clean line.
     ragged = g.add(g.world_noise(0.02, -0.15, 0.15, 2), g.world_noise(0.15, -0.08, 0.08, 2))
