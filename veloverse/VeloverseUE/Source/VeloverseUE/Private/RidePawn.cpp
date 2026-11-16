@@ -672,6 +672,7 @@ void ARidePawn::ReadCommandLine()
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
 	UseSettings();
+	ApplyKit(); // the rider was dressed before the profile was read, in the export's own colours
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
 	bSway = FParse::Param(Line, TEXT("RideSway"));
 	Ftp = FMath::Max(Ftp, 50.f);
