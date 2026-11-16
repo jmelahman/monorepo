@@ -14,6 +14,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "ImageUtils.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
@@ -1170,7 +1171,9 @@ void ARidePawn::Place()
 	}
 	if (Seen != ERideView::Chase)
 	{
-		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch, LookYaw, 0.f).Quaternion()).Rotator());
+		// The eyes, and Steady, look down the road as over the bars do, CockpitTilt below level
+		// (the user, 15 Nov), with no bike in the frame.
+		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion()).Rotator());
 		return;
 	}
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
@@ -1569,6 +1572,32 @@ void ARidePawn::TurnKitPreview(float Dt)
 	if (!bWant)
 	{
 		return;
+	}
+	// -RideKitDump=<file.png>: the capture's own picture, a second after it starts, for checking its
+	// light and exposure apart from the menu's drawing of it.
+	StudioRunFor += Dt;
+	FString Dump;
+	if (!bStudioDumped && StudioRunFor > 1.f && FParse::Value(FCommandLine::Get(), TEXT("RideKitDump="), Dump))
+	{
+		bStudioDumped = true;
+		FImage Picture;
+		if (FImageUtils::GetRenderTargetImage(StudioTarget, Picture))
+		{
+			FLinearColor Sum(0.f, 0.f, 0.f, 0.f);
+			const TArrayView64<FColor> Pixels = Picture.AsBGRA8();
+			for (const FColor& Px : Pixels)
+			{
+				Sum += FLinearColor(Px.R, Px.G, Px.B, Px.A) / 255.f;
+			}
+			Sum /= FMath::Max<int64>(Pixels.Num(), 1);
+			const bool bSaved = FImageUtils::SaveImageByExtension(*Dump, Picture);
+			UE_LOG(LogTemp, Display, TEXT("RIDE kit dump: mean %.3f %.3f %.3f alpha %.3f, %s %s"), Sum.R, Sum.G, Sum.B, Sum.A,
+			       bSaved ? TEXT("saved") : TEXT("not saved"), *Dump);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Display, TEXT("RIDE kit dump: no picture (resource %d)"), StudioTarget->GetResource() != nullptr);
+		}
 	}
 	// A slow turn, and an easy 60 rpm: the rider's loop and the cranks in step, as PoseBike keeps them.
 	StudioTurn = FMath::Fmod(StudioTurn + StudioSpin * Dt, 360.f);

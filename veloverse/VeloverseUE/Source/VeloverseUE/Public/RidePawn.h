@@ -321,4 +321,6 @@ private:
 	float StudioTurn = 200.f; // degrees: starts three-quarters on, the drive side toward the camera
 	float StudioCrank = 0.f;
 	bool bStudioOn = false;
+	float StudioRunFor = 0.f; // seconds the capture has run, for -RideKitDump
+	bool bStudioDumped = false;
 };
