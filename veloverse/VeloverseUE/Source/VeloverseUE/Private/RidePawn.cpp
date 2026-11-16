@@ -1528,8 +1528,7 @@ void ARidePawn::MakeKitPreview()
 }
 
 // The capture's show flags and grade. 0 is the Kit page's; -RideKitDump steps through the others
-// to compare: 1 the world's own (its volume's auto exposure), 2 the game's grade on a histogram
-// between EV100 -2 and 6 with no bloom, 3 that grade at a fixed exposure with eye adaptation on.
+// to compare, each the engine's own look at another exposure lift.
 void ARidePawn::StudioLook(int32 Variant)
 {
 	FEngineShowFlags& Show = StudioCapture->ShowFlags;
@@ -1541,14 +1540,20 @@ void ARidePawn::StudioLook(int32 Variant)
 	Show.SetMotionBlur(false);
 	// The engine's own exposure, lifted: the ride's grade (CameraLook) blew the card out to white
 	// at every exposure tried, and the plain look came out a stop or three dark (v65's dumps,
-	// 15 Nov). Variants 1..3 are the brighter and darker lifts -RideKitDump compares.
-	static const float Lifts[] = {1.5f, 0.5f, 2.5f, 3.5f};
+	// 15 Nov). Variants 1..3 are the darker and brighter lifts -RideKitDump compares; +2.5 read
+	// best in v66's. The eye adapts at once: the card opens with the page, and at the engine's
+	// pace it spent its first seconds pale and blue while the exposure settled (v66's Kit tour).
+	static const float Lifts[] = {2.5f, 0.5f, 1.5f, 3.5f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
 	Look.VignetteIntensity = 0.f;
 	Look.bOverride_AutoExposureBias = true;
 	Look.AutoExposureBias = Lifts[FMath::Clamp(Variant, 0, 3)];
+	Look.bOverride_AutoExposureSpeedUp = true;
+	Look.AutoExposureSpeedUp = 20.f;
+	Look.bOverride_AutoExposureSpeedDown = true;
+	Look.AutoExposureSpeedDown = 20.f;
 }
 
 void ARidePawn::TurnKitPreview(float Dt)
