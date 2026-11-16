@@ -1163,8 +1163,9 @@ void ARidePawn::Place()
 	}
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
 	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
+	// Its roll, the lean and the rock together, is 80% of what it was before 15 Nov, at the user's request.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
-	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, Lean * 3.f + Roll));
+	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, 0.8f * (Lean * 3.f + Roll)));
 	PoseBike();
 	const FRotator Look(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
 	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
@@ -1264,11 +1265,19 @@ void ARidePawn::PoseBike()
 		{
 			if (URiderAnim* Anim = C ? Cast<URiderAnim>(C->GetAnimInstance()) : nullptr)
 			{
-				Anim->Time = At;
-				Anim->Effort = C == RiderArms && bArmsCockpit ? 0.f : RiderEffort; // Cockpit isn't blended
+				// Over the bars the arms hold one pose: the take's elbows swing with the stroke while the
+				// bars, carried with the camera, stay put, and the hands read as shaking on them (15 Nov).
+				const bool bHeld = C == RiderArms && bArmsCockpit;
+				Anim->Time = bHeld ? 0.f : At;
+				Anim->Effort = bHeld ? 0.f : RiderEffort; // Cockpit isn't blended
 			}
 		}
-		if (RiderArms && RiderArms->IsVisible() && ArmsTilt != 0.f)
+		if (RiderArms && bArmsCockpit && ArmsTilt == 0.f)
+		{
+			// The hands grip the drops, so they turn with the fork about the head tube, as the bars do.
+			RiderArms->SetRelativeLocationAndRotation(PartsOrigin + HeadTube - Steered.RotateVector(HeadTube), Steered);
+		}
+		else if (RiderArms && RiderArms->IsVisible() && ArmsTilt != 0.f)
 		{
 			// Tipped back about the knuckles, which hold the hoods all round the loop; the turn's
 			// top goes back, so it is negative in this frame.
