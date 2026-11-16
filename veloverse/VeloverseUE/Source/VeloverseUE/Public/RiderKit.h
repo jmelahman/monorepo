@@ -58,11 +58,11 @@ inline const FSwatch Accents[] = {
 	{TEXT("Yellow"), {0.85f, 0.62f, 0.02f}}, {TEXT("Teal"), {0.02f, 0.40f, 0.35f}},
 	{TEXT("Pink"), {0.80f, 0.15f, 0.35f}},   {TEXT("Lime"), {0.35f, 0.75f, 0.05f}},
 };
-inline const FSwatch Shorts[] = {
+inline const FSwatch ShortsSwatches[] = {
 	{TEXT("Black"), {0.012f, 0.012f, 0.013f}}, {TEXT("Navy"), {0.010f, 0.024f, 0.075f}},
 	{TEXT("Grey"), {0.08f, 0.08f, 0.085f}},    {TEXT("White"), {0.80f, 0.80f, 0.78f}},
 };
-inline const FSwatch Socks[] = {
+inline const FSwatch SockSwatches[] = {
 	{TEXT("White"), {0.80f, 0.80f, 0.78f}}, {TEXT("Black"), {0.012f, 0.012f, 0.013f}},
 	{TEXT("Grey"), {0.25f, 0.25f, 0.26f}},  {TEXT("Navy"), {0.010f, 0.024f, 0.075f}},
 };
@@ -71,7 +71,7 @@ inline const FSwatch Helmets[] = {
 	{TEXT("White"), {0.80f, 0.80f, 0.78f}},   {TEXT("Red"), {0.45f, 0.02f, 0.02f}},
 	{TEXT("Yellow"), {0.85f, 0.62f, 0.02f}},  {TEXT("Sky"), {0.10f, 0.35f, 0.70f}},
 };
-inline const FSwatch Shoes[] = {
+inline const FSwatch ShoeSwatches[] = {
 	{TEXT("White"), {0.80f, 0.80f, 0.78f}}, {TEXT("Black"), {0.012f, 0.012f, 0.013f}},
 	{TEXT("Grey"), {0.25f, 0.25f, 0.26f}},  {TEXT("Red"), {0.45f, 0.02f, 0.02f}},
 };
@@ -83,10 +83,10 @@ inline const FPart& Part(int32 I)
 		{TEXT("hair"), TEXT("Hair"), TEXT("Brows and the hair under the helmet"), Hairs, 1},
 		{TEXT("jersey"), TEXT("Jersey"), TEXT("The body and sleeves"), Jerseys, 0},
 		{TEXT("accent"), TEXT("Accent"), TEXT("The jersey's side panels and cuffs"), Accents, 0},
-		{TEXT("shorts"), TEXT("Bib shorts"), TEXT("To just above the knee"), Shorts, 0},
-		{TEXT("socks"), TEXT("Socks"), TEXT("Mid-calf"), Socks, 0},
+		{TEXT("shorts"), TEXT("Bib shorts"), TEXT("To just above the knee"), ShortsSwatches, 0},
+		{TEXT("socks"), TEXT("Socks"), TEXT("Mid-calf"), SockSwatches, 0},
 		{TEXT("helmet"), TEXT("Helmet"), TEXT("The shell; the rim and vents stay black"), Helmets, 0},
-		{TEXT("shoes"), TEXT("Shoes"), TEXT("The uppers; the soles stay black"), Shoes, 0},
+		{TEXT("shoes"), TEXT("Shoes"), TEXT("The uppers; the soles stay black"), ShoeSwatches, 0},
 	};
 	return All[FMath::Clamp(I, 0, Parts - 1)];
 }
