@@ -850,7 +850,7 @@ void ARidePawn::Automate(float Dt)
 		const FString File = ShotDir / FString::Printf(TEXT("ride_%02d.png"), NextShot);
 		FScreenshotRequest::RequestScreenshot(File, true, false);
 		// The texture pool, for the engine's "TEXTURE STREAMING POOL OVER" warning (the user, 15 Nov).
-		const ITextureStreamingManager& Pool = IStreamingManager::Get().GetTextureStreamingManager();
+		const IRenderAssetStreamingManager& Pool = IStreamingManager::Get().GetTextureStreamingManager();
 		UE_LOG(LogTemp, Display, TEXT("RIDE shot %s at t=%.1f km=%.3f, texture pool %lld MB, wants %lld, over %lld"), *File, Elapsed,
 		       Distance / 100000.0, Pool.GetPoolSize() >> 20, Pool.GetRequiredPoolSize() >> 20, Pool.GetMemoryOverBudget() >> 20);
 		if (++NextShot == ShotTimes.Num())
