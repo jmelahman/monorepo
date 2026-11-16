@@ -308,6 +308,7 @@ public:
 
 private:
 	void MakeKitPreview();
+	void StudioLook(int32 Variant);
 	void TurnKitPreview(float Dt);
 	UPROPERTY(Transient) TObjectPtr<USceneComponent> Studio;
 	UPROPERTY(Transient) TObjectPtr<USceneComponent> Turntable;
@@ -322,5 +323,5 @@ private:
 	float StudioCrank = 0.f;
 	bool bStudioOn = false;
 	float StudioRunFor = 0.f; // seconds the capture has run, for -RideKitDump
-	bool bStudioDumped = false;
+	int32 StudioDumps = 0;
 };

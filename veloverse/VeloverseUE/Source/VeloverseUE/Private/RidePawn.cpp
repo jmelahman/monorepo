@@ -1512,28 +1512,7 @@ void ARidePawn::MakeKitPreview()
 	StudioCapture->bCaptureEveryFrame = false;
 	StudioCapture->bCaptureOnMovement = false;
 	StudioCapture->bAlwaysPersistRenderingState = true; // keeps the temporal AA's history between frames
-	FEngineShowFlags& Show = StudioCapture->ShowFlags;
-	Show.SetFog(false);
-	Show.SetVolumetricFog(false);
-	Show.SetAtmosphere(false);
-	Show.SetCloud(false);
-	Show.SetSkyLighting(false);
-	Show.SetMotionBlur(false);
-	Show.SetEyeAdaptation(false);
-	// The game's grade, at a fixed exposure, with no Lumen: the studio's light is all direct.
-	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
-	CameraLook(Look);
-	Look.bOverride_AutoExposureMethod = true;
-	Look.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
-	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
-	Look.AutoExposureApplyPhysicalCameraExposure = 0;
-	Look.AutoExposureBias = 0.f;
-	Look.bOverride_DynamicGlobalIlluminationMethod = true;
-	Look.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::None;
-	Look.bOverride_ReflectionMethod = true;
-	Look.ReflectionMethod = EReflectionMethod::ScreenSpace;
-	Look.bOverride_VignetteIntensity = true;
-	Look.VignetteIntensity = 0.f; // the card's own dark falls off by the light
+	StudioLook(0);
 	StudioCapture->PostProcessBlendWeight = 1.f;
 	StudioCapture->RegisterComponent();
 
@@ -1547,9 +1526,61 @@ void ARidePawn::MakeKitPreview()
 	UE_LOG(LogTemp, Display, TEXT("RIDE kit preview: %d parts, %d lights, %dx%d"), StudioParts.Num(), StudioLights.Num(), StudioW, StudioH);
 }
 
+// The capture's show flags and grade. 0 is the Kit page's; -RideKitDump steps through the others
+// to compare: 1 the world's own (its volume's auto exposure), 2 the game's grade on a histogram
+// between EV100 -2 and 6 with no bloom, 3 that grade at a fixed exposure with eye adaptation on.
+void ARidePawn::StudioLook(int32 Variant)
+{
+	FEngineShowFlags& Show = StudioCapture->ShowFlags;
+	Show = FEngineShowFlags(ESFIM_Game);
+	Show.SetFog(false);
+	Show.SetVolumetricFog(false);
+	Show.SetAtmosphere(false);
+	Show.SetCloud(false);
+	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
+	Look = FPostProcessSettings();
+	if (Variant == 1)
+	{
+		return;
+	}
+	CameraLook(Look);
+	Look.bOverride_VignetteIntensity = true;
+	Look.VignetteIntensity = 0.f; // the card's own dark falls off by the light
+	Show.SetMotionBlur(false);
+	if (Variant == 0)
+	{
+		// The game's grade, at a fixed exposure, with no Lumen: the studio's light is all direct.
+		Show.SetSkyLighting(false);
+		Show.SetEyeAdaptation(false);
+		Look.bOverride_AutoExposureMethod = true;
+		Look.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
+		Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+		Look.AutoExposureApplyPhysicalCameraExposure = 0;
+		Look.AutoExposureBias = 0.f;
+		Look.bOverride_DynamicGlobalIlluminationMethod = true;
+		Look.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::None;
+		Look.bOverride_ReflectionMethod = true;
+		Look.ReflectionMethod = EReflectionMethod::ScreenSpace;
+		return;
+	}
+	Look.bOverride_BloomIntensity = true;
+	Look.BloomIntensity = 0.f;
+	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+	Look.AutoExposureApplyPhysicalCameraExposure = 0;
+	Look.bOverride_AutoExposureMethod = true;
+	Look.AutoExposureMethod = Variant == 2 ? EAutoExposureMethod::AEM_Histogram : EAutoExposureMethod::AEM_Manual;
+	Look.bOverride_AutoExposureMinBrightness = true;
+	Look.AutoExposureMinBrightness = -2.f;
+	Look.bOverride_AutoExposureMaxBrightness = true;
+	Look.AutoExposureMaxBrightness = 6.f;
+	Look.AutoExposureBias = 0.f;
+}
+
 void ARidePawn::TurnKitPreview(float Dt)
 {
-	const bool bWant = StudioAsked >= 0.0 && FPlatformTime::Seconds() - StudioAsked < 0.25;
+	// -RideKitDump runs the studio from the start, menu or not, to dump its picture.
+	static const bool bDumping = FString(FCommandLine::Get()).Contains(TEXT("RideKitDump="));
+	const bool bWant = bDumping || (StudioAsked >= 0.0 && FPlatformTime::Seconds() - StudioAsked < 0.25);
 	if (bWant && !Studio)
 	{
 		MakeKitPreview();
@@ -1573,13 +1604,13 @@ void ARidePawn::TurnKitPreview(float Dt)
 	{
 		return;
 	}
-	// -RideKitDump=<file.png>: the capture's own picture, a second after it starts, for checking its
+	// -RideKitDump=<file.png>: the capture's own picture in each StudioLook, two seconds apart, for checking its
 	// light and exposure apart from the menu's drawing of it.
 	StudioRunFor += Dt;
 	FString Dump;
-	if (!bStudioDumped && StudioRunFor > 1.f && FParse::Value(FCommandLine::Get(), TEXT("RideKitDump="), Dump))
+	if (StudioDumps < 4 && StudioRunFor > 2.f * (StudioDumps + 1) && FParse::Value(FCommandLine::Get(), TEXT("RideKitDump="), Dump))
 	{
-		bStudioDumped = true;
+		Dump = FPaths::GetBaseFilename(Dump, false) + FString::Printf(TEXT("_%d.png"), StudioDumps);
 		FImage Picture;
 		if (FImageUtils::GetRenderTargetImage(StudioTarget, Picture))
 		{
@@ -1591,12 +1622,16 @@ void ARidePawn::TurnKitPreview(float Dt)
 			}
 			Sum /= FMath::Max<int64>(Pixels.Num(), 1);
 			const bool bSaved = FImageUtils::SaveImageByExtension(*Dump, Picture);
-			UE_LOG(LogTemp, Display, TEXT("RIDE kit dump: mean %.3f %.3f %.3f alpha %.3f, %s %s"), Sum.R, Sum.G, Sum.B, Sum.A,
+			UE_LOG(LogTemp, Display, TEXT("RIDE kit dump %d: mean %.3f %.3f %.3f alpha %.3f, %s %s"), StudioDumps, Sum.R, Sum.G, Sum.B, Sum.A,
 			       bSaved ? TEXT("saved") : TEXT("not saved"), *Dump);
 		}
 		else
 		{
 			UE_LOG(LogTemp, Display, TEXT("RIDE kit dump: no picture (resource %d)"), StudioTarget->GetResource() != nullptr);
+		}
+		if (++StudioDumps < 4)
+		{
+			StudioLook(StudioDumps);
 		}
 	}
 	// A slow turn, and an easy 60 rpm: the rider's loop and the cranks in step, as PoseBike keeps them.
