@@ -98,6 +98,13 @@ render scale, a frame-rate cap, VSync and the window.
   the treeline.
 - **A new bike and rider.** An aero road bike whose wheels roll, cranks turn and fork steers into
   bends, and a rider whose effort shows: easy, steady or hard by your watts per kilo.
+- **Your rider, your kit.** Settings has a new Kit page: pick a skin tone and hair colour, and the
+  colours of the jersey, its accent, bib shorts, socks, helmet and shoes. Your picks are kept in
+  your profile.
+- **Signs of people.** Fields fenced along the coast roads, with timber gates (some left open),
+  hamlets on each island, cairns on the Moor's knolls and a ruined tower on Vael.
+- **The Moor's heath:** heather, crowberry and sedge on its open ground.
+- **A moving sea.** Wind waves drift across the water.
 - **Over the bars.** A cockpit view from the rider's eyes, with the bars and hands in front of you.
   Pick it from the ride dock.
 - You ride, and the camera sits, in the right-hand lane.
@@ -138,7 +145,8 @@ render scale, a frame-rate cap, VSync and the window.
 - The bike trail's lamps are unlit, and the trail runs through open country: the town around it
   comes next.
 - The landscape is 7 m a sample, so far slopes are still a little coarse.
-- Coast water is flat, and a precision warning about the sea plane may show in the log.
+- The sea has no surf or foam at the shore yet, and a precision warning about the sea plane may
+  show in the log.
 - Performance is 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings. Low is
   faster. There is no tuning yet.
 
