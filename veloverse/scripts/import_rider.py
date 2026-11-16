@@ -19,6 +19,7 @@ and the takes' lengths.
 """
 
 import importlib.util
+import json
 import os
 
 import unreal
@@ -32,7 +33,25 @@ SRC = os.environ.get("OC_RIDER_FBX", "/workspace/ue/fab_prep/rider")
 FOLDER = "/Game/Rider/Body"
 STAGE = os.environ.get("OC_STAGE", "import")
 STEMS = ("Body", "Helmet", "Shoe")
-SUFFIX = {"D": "BaseColor", "N": "Normal", "R": "Roughness"}
+SUFFIX = {
+    "D": "BaseColor",
+    "N": "Normal",
+    "R": "Roughness",
+    "M": "Mask",
+    "M2": "Mask2",
+    "S": "Shade",
+}
+LINEAR = ("R", "M", "M2", "S")  # data, not colour: sRGB off, compressed as masks
+# The tint masks' channels per stem (rider/README.md's "Tint masks"), in the order RidePawn's
+# kit sets C1..C6: the body's T_Body_Mask then T_Body_Mask2, the helmet's and shoe's one mask.
+CHANNELS = {
+    "Body": (
+        ("T_Body_Mask", ("jersey", "accent", "shorts")),
+        ("T_Body_Mask2", ("socks", "hair", "skin")),
+    ),
+    "Helmet": (("T_Helmet_Mask", ("shell", "rim", "vents")),),
+    "Shoe": (("T_Shoe_Mask", ("upper", "trim", "cleat")),),
+}
 
 # Slot: (linear colour, roughness, metallic), from rider/README.md's materials table.
 FLAT = {
@@ -68,7 +87,7 @@ def texture(stem, kind):
         raise RuntimeError(f"could not import {task.filename}")
     normal = kind == "N"
     tex.set_editor_property("srgb", kind == "D")
-    if kind == "R":
+    if kind in LINEAR:
         tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_MASKS)
     if normal:
         tex.set_editor_property("flip_green_channel", True)  # Blender's are OpenGL (Y+)
@@ -85,8 +104,9 @@ def import_stage():
     for stem in STEMS:
         texture(stem, "D")
         texture(stem, "N")
-        if os.path.isfile(f"{SRC}/T_{stem}_Roughness.png"):
-            texture(stem, "R")
+        for kind in ("R", "M", "M2", "S"):
+            if os.path.isfile(f"{SRC}/T_{stem}_{SUFFIX[kind]}.png"):
+                texture(stem, kind)
     task = unreal.AssetImportTask()
     task.filename = f"{SRC}/rider.fbx"
     task.destination_path = FOLDER
@@ -128,6 +148,84 @@ def masters(rough_map):
     return flat, g.finish()
 
 
+LUMA = (0.2126, 0.7152, 0.0722)
+
+
+def tint_master(rough_map, mask_map):
+    """M_RiderTint: the textured master with its colour from the tint masks, so RidePawn can
+    recolour the skin, hair, kit, helmet and shoes (the profile's kit) with a dynamic instance and
+    no new textures. Colour = (M1.rgb, M2.rgb) . (C1..C6), times a shade that keeps the baked
+    detail: the body's T_Body_Shade / 0.5 (UseShade 1), or else the baked colour's luminance over
+    that of the same sum with the export's own colours (D1..D6), which the base colour holds."""
+    g = lib.Graph("M_RiderTint", FOLDER)
+
+    def sampler(name, default, kind=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS):
+        node = g.node(
+            unreal.MaterialExpressionTextureSampleParameter2D, x=-1400, parameter_name=name
+        )
+        node.set_editor_property("sampler_type", kind)
+        node.set_editor_property("texture", default)
+        return node
+
+    d = g.node(unreal.MaterialExpressionTextureSampleParameter2D, x=-1400, parameter_name="D")
+    d.set_editor_property("texture", unreal.load_asset("/Engine/EngineResources/DefaultTexture"))
+    n = sampler(
+        "N",
+        unreal.load_asset("/Engine/EngineMaterials/DefaultNormal"),
+        unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL,
+    )
+    m1 = sampler("M1", mask_map)
+    m2 = sampler("M2", mask_map)
+    shade_map = sampler("S", mask_map)
+    use_m2 = g.param("UseM2", 0.0)
+
+    channels = [(m1, c) for c in "rgb"] + [(m2, c) for c in "rgb"]
+    weights = []
+    for i, (tex, c) in enumerate(channels):
+        w = g.mask(tex, c)
+        weights.append(g.mul(w, use_m2) if i >= 3 else w)
+
+    def summed(prefix, defaults):
+        total = None
+        for i, w in enumerate(weights):
+            term = g.mul(w, g.param(f"{prefix}{i + 1}", defaults))
+            total = term if total is None else g.add(total, term)
+        return total
+
+    colour = summed("C", (0.5, 0.5, 0.5))
+    baked = summed("D", (0.5, 0.5, 0.5))
+    luma = g.const(LUMA)
+    ratio = g.op(
+        unreal.MaterialExpressionDivide,
+        g.op(unreal.MaterialExpressionDotProduct, g.mask(d, "rgb"), luma),
+        g.op(
+            unreal.MaterialExpressionMax,
+            g.op(unreal.MaterialExpressionDotProduct, baked, luma),
+            g.const(0.002),
+        ),
+    )
+    ratio = g.op(unreal.MaterialExpressionMin, ratio, g.const(3.0))
+    shade = g.lerp(ratio, g.mul(g.mask(shade_map, "r"), 2.0), g.param("UseShade", 0.0))
+    rough = g.param("Rough", 0.5)
+    if rough_map is not None:
+        r = sampler("R", rough_map)
+        rough = g.lerp(rough, g.mask(r, "r"), g.param("RMix", 0.0))
+    g.output(g.mul(colour, shade), g.mask(n, "rgb"), rough, specular=0.5)
+    g.material.set_editor_property("used_with_skeletal_mesh", True)
+    return g.finish()
+
+
+def kit_defaults():
+    """The export's own colour for each tint channel, from its stats.json: {stem: [rgb x 6]}."""
+    with open(f"{SRC}/stats.json") as f:
+        masks = json.load(f)["masks"]
+    out = {}
+    for stem, maps in CHANNELS.items():
+        colours = [tuple(masks[tex][name]) for tex, names in maps for name in names]
+        out[stem] = colours + [(0.0, 0.0, 0.0)] * (6 - len(colours))
+    return out
+
+
 def assign_stage():
     rmaps = {s: unreal.load_asset(f"{FOLDER}/T_Rider_{s}_R") for s in STEMS}
     rmaps = {s: t for s, t in rmaps.items() if isinstance(t, unreal.Texture)}
@@ -141,18 +239,43 @@ def assign_stage():
             scalars={"Rough": rough, "Metallic": metal},
             vectors={"Colour": (*colour, 1.0)},
         )
+    masks = {s: unreal.load_asset(f"{FOLDER}/T_Rider_{s}_M") for s in STEMS}
+    masks = {s: t for s, t in masks.items() if isinstance(t, unreal.Texture)}
+    tint = None
+    if set(masks) == set(STEMS) and os.path.isfile(f"{SRC}/stats.json"):
+        tint = tint_master(next(iter(rmaps.values()), None), masks["Body"])
+        defaults = kit_defaults()
     for slot, (stem, rough) in TEXTURED.items():
         textures = {k: unreal.load_asset(f"{FOLDER}/T_Rider_{stem}_{k}") for k in ("D", "N")}
         scalars = {"Rough": rough}
+        vectors = {}
         if stem in rmaps:
             textures["R"] = rmaps[stem]
             scalars["RMix"] = 1.0
+        if tint is not None:
+            textures["M1"] = masks[stem]
+            m2 = unreal.load_asset(f"{FOLDER}/T_Rider_{stem}_M2")
+            shade = unreal.load_asset(f"{FOLDER}/T_Rider_{stem}_S")
+            if isinstance(m2, unreal.Texture):
+                textures["M2"] = m2
+                scalars["UseM2"] = 1.0
+            if isinstance(shade, unreal.Texture):
+                textures["S"] = shade
+                scalars["UseShade"] = 1.0
+            for i, colour in enumerate(defaults[stem]):
+                vectors[f"C{i + 1}"] = (*colour, 1.0)
+                vectors[f"D{i + 1}"] = (*colour, 1.0)
         mis[slot] = lib.instance(
-            f"MI_Rider_{slot[2:]}", tex, FOLDER, textures=textures, scalars=scalars
+            f"MI_Rider_{slot[2:]}",
+            tex if tint is None else tint,
+            FOLDER,
+            textures=textures,
+            scalars=scalars,
+            vectors=vectors,
         )
     ours = {m.get_path_name().split(".")[0] for m in mis.values()}
     ours |= {f"{FOLDER}/T_Rider_{s}_{k}" for s in STEMS for k in SUFFIX}
-    ours |= {f"{FOLDER}/{name}" for name in ("M_RiderFlat", "M_RiderTex")}
+    ours |= {f"{FOLDER}/{name}" for name in ("M_RiderFlat", "M_RiderTex", "M_RiderTint")}
     meshes, takes, stray = [], [], []
     for path in lib.assets.list_assets(FOLDER, recursive=True):
         asset = unreal.load_asset(path)
@@ -204,7 +327,7 @@ def assign_stage():
     log(
         f"mesh centre ({c.x:.1f}, {c.y:.1f}, {c.z:.1f}) size ({2 * e.x:.1f}, {2 * e.y:.1f}, "
         f"{2 * e.z:.1f}) slots {len(slots)} unpainted {unpainted or 'none'} "
-        f"roughness maps {sorted(rmaps) or 'none'}"
+        f"roughness maps {sorted(rmaps) or 'none'} tint {'M_RiderTint' if tint else 'none'}"
     )
     for name in sorted(named):
         log(f"{name} {unreal.load_asset(f'{FOLDER}/{name}').get_play_length():.3f} s")
