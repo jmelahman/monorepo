@@ -134,6 +134,11 @@ public:
 	// turns the head on its own, with no cursor or dock, until Tab brings them back.
 	Veloverse::FDockReveal Dock;
 	int32 DockHover = -1; // the button under the pointer, or -1
+	// The HUD's weather pill, where the overlay last drew it in its 720-tall frame (empty while the
+	// panels are away): a click there steps the weather on (NextWeather).
+	mutable Veloverse::FDockBox WeatherPill;
+	bool bWeatherHover = false;
+	void NextWeather();
 	bool bFreeLook = false;
 	void SetFreeLook(bool bOn);
 	void PressDock(Veloverse::EDock Button);

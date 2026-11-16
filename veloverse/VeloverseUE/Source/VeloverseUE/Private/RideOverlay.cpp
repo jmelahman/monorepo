@@ -262,6 +262,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	}
 
 	// The panels, unless the rider has put them away (H).
+	Pawn->WeatherPill = {};
 	if (Pawn->Profile.bHud)
 	{
 		// ---- Top left: power ------------------------------------------------------------------------
@@ -454,6 +455,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			};
 			const ESky Now = SkyAt(Here);
 			FString Change;
+			const bool bRoutes = Fixed == 0 && !ARidePawn::Automated();
 			for (float Ahead = SampleM; Ahead <= 6000.f; Ahead += SampleM)
 			{
 				float M = Here + Ahead;
@@ -473,6 +475,10 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 					break;
 				}
 			}
+			if (Change.IsEmpty() && bRoutes)
+			{
+				Change = TEXT("as the route"); // so a click's next step, a fixed sky, reads as one
+			}
 			const TCHAR* Names[] = {TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
 			const FSlateFontInfo Big = P.Font("Bold", 14.f);
 			const FSlateFontInfo Small = P.Font("Regular", 12.f);
@@ -480,6 +486,12 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			                   (Change.IsEmpty() ? 0.f : 8.f + P.Width(Change, Small)) + 14.f;
 			const float X = W - 20.f - Wide, Y = WeatherTop;
 			P.Panel(X, Y, Wide, 36.f, 12.f);
+			// A click steps the weather on (ARidePawn::NextWeather); lit like a dock button under the pointer.
+			Pawn->WeatherPill = {X, Y, Wide, 36.f};
+			if (Pawn->bWeatherHover)
+			{
+				P.Round(X, Y, Wide, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
+			}
 			Icon(P, X + 10.f, Y + 7.f, Now);
 			const float NameW = P.Text(X + 40.f, Y + 23.f, Names[static_cast<int32>(Now)], Big, SkyText);
 			if (!Change.IsEmpty())

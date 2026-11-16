@@ -1755,6 +1755,15 @@ void ARidePawn::PressDock(Veloverse::EDock Button)
 	}
 }
 
+void ARidePawn::NextWeather()
+{
+	// The HUD's weather pill steps through Settings > World's choices (the user, 15 Nov): the
+	// route's own, then clear, overcast and rain, and round to the route's own again.
+	Profile.Weather = (Profile.Weather + 1) % 4;
+	Profile.Save();
+	ApplyWeather();
+}
+
 void ARidePawn::Docking(APlayerController& Player)
 {
 	using Veloverse::EDock;
@@ -1799,13 +1808,21 @@ void ARidePawn::Docking(APlayerController& Player)
 	const Veloverse::FDockLayout L =
 		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Dock.Shown);
 	DockHover = bOnScreen ? L.Hit(Now.X, Now.Y) : -1;
+	bWeatherHover = bOnScreen && DockHover < 0 && Profile.bHud && WeatherPill.Contains(Now.X, Now.Y);
 	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
 	if (Player.WasInputKeyJustPressed(EKeys::LeftMouseButton) || Player.WasInputKeyJustPressed(EKeys::RightMouseButton))
 	{
-		bPressOnDock = DockHover >= 0;
+		bPressOnDock = DockHover >= 0 || bWeatherHover;
 		if (bPressOnDock && Player.WasInputKeyJustPressed(EKeys::LeftMouseButton))
 		{
-			PressDock(static_cast<EDock>(DockHover));
+			if (DockHover >= 0)
+			{
+				PressDock(static_cast<EDock>(DockHover));
+			}
+			else
+			{
+				NextWeather();
+			}
 		}
 	}
 	else if (!bHeld)
