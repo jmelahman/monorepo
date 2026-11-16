@@ -300,6 +300,28 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	}
 	const int32 Chosen = Pawn->RouteIndex();
 
+	// Top right: the time of day to ride in, the same setting as Settings' (the user, 15 Nov).
+	{
+		const TArray<FString> Times = {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
+		const float Tw = C.SegmentedWidth(Times, 15.f, 96.f);
+		const float Tx = C.W - 64.f - Tw;
+		C.Segmented(TEXT("routetime"), Tx, 48.f, Times, Pawn->Profile.TimeOfDay,
+		            [M](int32 I)
+		            {
+			            if (ARidePawn* R = M->Rider())
+			            {
+				            FRideProfile Changed = R->Profile;
+				            Changed.TimeOfDay = I;
+				            R->SetProfile(Changed);
+			            }
+		            },
+		            42.f, 15.f, 96.f);
+		const FSlateFontInfo F = P.Font("Bold", 15.f, 0.14f);
+		const float Lw = P.Width(TEXT("TIME OF DAY"), F);
+		P.Text(Tx - 18.f - Lw, Mid(74.f, 15.f), TEXT("TIME OF DAY"), F, Muted);
+		P.Icon(Icons::Sun, Tx - 50.f - Lw, 62.f, 24.f, Muted);
+	}
+
 	// The list.
 	float Y = 140.f;
 	for (int32 I = 0; I < Pawn->Routes.Num() && Y + 88.f <= 1040.f; ++I)
