@@ -40,6 +40,8 @@ inline const FSwatch SkinTones[] = {
 	{TEXT("Fair"), {0.62f, 0.43f, 0.34f}},  {TEXT("Light"), {0.55f, 0.36f, 0.27f}},
 	{TEXT("Medium"), {0.48f, 0.30f, 0.22f}}, {TEXT("Tan"), {0.36f, 0.21f, 0.13f}},
 	{TEXT("Brown"), {0.22f, 0.12f, 0.07f}},  {TEXT("Deep"), {0.11f, 0.06f, 0.035f}},
+	// Darker still, at the user's request (15 Nov). Added at the end so saved picks keep their tone.
+	{TEXT("Umber"), {0.068f, 0.037f, 0.022f}}, {TEXT("Ebony"), {0.040f, 0.023f, 0.015f}},
 };
 inline const FSwatch Hairs[] = {
 	{TEXT("Black"), {0.012f, 0.010f, 0.009f}}, {TEXT("Dark brown"), {0.030f, 0.019f, 0.012f}},
