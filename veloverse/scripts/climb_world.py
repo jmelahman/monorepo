@@ -13,7 +13,8 @@ OC_STAGE picks what to build, so a change rebuilds only its part:
 - dress: the saved level's road, rails, trees and ride track, cleared and placed again from
   make_climb.py's output. The ground and its materials are kept, so it runs in minutes:
     OC_STAGE=dress OC_EDITOR=1 bash scripts/ue_run.sh climb_world.py climb_dress.log
-- stills: only the stills, from the saved level.
+- stills: only the stills, from the saved level;
+- feet: no level, only each tree mesh's trunk foot logged (tree_foot), to check the packs.
 Every stage but ground ends by rendering stills from fixed cameras along the road to OC_STILLS
 (default /workspace/ue/out/climb_stills), so each run ends in pictures.
 
@@ -104,11 +105,53 @@ TREE_ALIAS = {"spruce": "pine"}
 SEPARATE_TREES = {"birch"}
 
 
+def tree_foot(group):
+    """Where the trunk meets the ground in the meshes' own frame (cm, before scale): the median
+    of the trunk's vertices in its lowest metre. A pack's trees sit wherever the pack put them
+    (the birch pack's five stand metres apart in one frame), so placed by their origin they stood
+    metres off their stems, in the road or floating over a slope (the user, 15 Nov)."""
+    bark = [
+        m
+        for m in group
+        if any(
+            k in str(n).lower()
+            for n in m.get_editor_property("static_materials")
+            for k in ("bark", "trunk")
+        )
+    ] or group
+    xs, ys = [], []
+    for mesh in bark:
+        bottom = mesh.get_bounding_box().min.z
+        for section in range(mesh.get_num_sections(0)):
+            verts = unreal.ProceduralMeshLibrary.get_section_from_static_mesh(mesh, 0, section)[0]
+            for v in verts:
+                if v.z < bottom + 100.0:
+                    xs.append(v.x)
+                    ys.append(v.y)
+    if not xs:
+        boxes = [m.get_bounding_box() for m in bark]
+        return (
+            (min(b.min.x for b in boxes) + max(b.max.x for b in boxes)) / 2,
+            (min(b.min.y for b in boxes) + max(b.max.y for b in boxes)) / 2,
+        )
+    xs.sort()
+    ys.sort()
+    return xs[len(xs) // 2], ys[len(ys) // 2]
+
+
+def at_foot(x, y, z, yaw, size, foot, base):
+    """The mesh's origin that puts its trunk's foot (tree_foot) at the stem (x, y) and its lowest
+    point at z."""
+    c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+    fx, fy = foot[0] * size, foot[1] * size
+    return (x - (fx * c - fy * s), y - (fx * s + fy * c), z - base * size)
+
+
 def tree_variants():
-    """{kind: [(meshes, scale, base)]}: each kind's trees, as the parts placed together (a pack's
-    trunk and leaves are meshes of their own in one frame; the birch pack's are five trees), the
-    scale that makes one TREE_HEIGHT tall, and the height (cm, before scale) of its lowest point,
-    so its foot lands on the stem."""
+    """{kind: [(meshes, scale, base, foot)]}: each kind's trees, as the parts placed together (a
+    pack's trunk and leaves are meshes of their own in one frame; the birch pack's are five
+    trees), the scale that makes one TREE_HEIGHT tall, the height (cm, before scale) of its
+    lowest point, so its foot lands on the stem, and where its trunk stands (tree_foot)."""
     out = {}
     for kind, tall in TREE_HEIGHT.items():
         folder = f"{REAL_TREES}/{kind}"
@@ -126,7 +169,13 @@ def tree_variants():
         for group in groups:
             boxes = [m.get_bounding_box() for m in group]
             low, high = min(b.min.z for b in boxes), max(b.max.z for b in boxes)
-            found.append((group, tall / max(high - low, 1.0), low))
+            foot = tree_foot(group)
+            found.append((group, tall / max(high - low, 1.0), low, foot))
+            log(
+                f"tree {kind} {[m.get_name() for m in group]}: "
+                f"foot ({foot[0]:.0f}, {foot[1]:.0f}) cm base {low:.0f} "
+                f"x{tall / max(high - low, 1.0):.2f}"
+            )
         if found:
             out[kind] = found
             names = [m.get_name() for m in found[0][0]]
@@ -136,7 +185,7 @@ def tree_variants():
             mesh = unreal.load_asset(path)
             if mesh is None:
                 raise RuntimeError(f"no {kind} mesh at {path}")
-            out[kind] = [([mesh], 1.0, 0.0)]
+            out[kind] = [([mesh], 1.0, 0.0, (0.0, 0.0))]
             log(f"{kind}: no real tree, {path} ({type(mesh).__name__})")
     return out
 
@@ -586,7 +635,7 @@ def trees():
         picked = pick_tree(variants, kind, x, y)
         if picked is None:
             continue
-        group, fit, base = picked
+        group, fit, base, foot = picked
         size = scale * fit
         mesh = group[0]
         if isinstance(mesh, unreal.SkeletalMesh):
@@ -596,8 +645,9 @@ def trees():
             actor.skeletal_mesh_component.set_skeletal_mesh_asset(mesh)
             actor.set_actor_scale3d(unreal.Vector(size, size, size))
         else:
+            where = at_foot(x, y, z, yaw, size, foot, base)
             for part in group:
-                instances.add(part, (x, y, z - base * size), yaw, size)
+                instances.add(part, where, yaw, size)
         placed[kind] = placed.get(kind, 0) + 1
     instances.commit(cull=TREE_CULL, wpo=TREE_WIND_TO)
     log(f"trees: {placed}")
@@ -616,9 +666,10 @@ def far_trees(variants):
     for kind, x, y, z, yaw, scale in stems:
         picked = pick_tree(variants, kind, x, y)
         if picked is not None and isinstance(picked[0][0], unreal.StaticMesh):
-            group, fit, base = picked
+            group, fit, base, foot = picked
+            where = at_foot(x, y, z, yaw, scale * fit, foot, base)
             for part in group:
-                instances.add(part, (x, y, z - base * scale * fit), yaw, scale * fit)
+                instances.add(part, where, yaw, scale * fit)
     instances.commit(cull=FAR_CULL, shadows=False, wpo=False)
 
 
@@ -1676,8 +1727,11 @@ def main():
     """The build as steps. Each yield hands the editor frames (GAP, or the number yielded) before
     the next step."""
     log(f"stage {STAGE}")
-    if STAGE not in ("all", "ground", "dress", "stills"):
-        raise RuntimeError(f"OC_STAGE {STAGE!r}: use all, ground, dress or stills")
+    if STAGE not in ("all", "ground", "dress", "stills", "feet"):
+        raise RuntimeError(f"OC_STAGE {STAGE!r}: use all, ground, dress, stills or feet")
+    if STAGE == "feet":  # only where each tree's trunk stands in its mesh (tree_foot), logged
+        tree_variants()
+        return
     if STAGE == "stills":
         yield from stills(open_level())
         return
