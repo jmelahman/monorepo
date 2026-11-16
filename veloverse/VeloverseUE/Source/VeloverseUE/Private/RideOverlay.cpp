@@ -851,7 +851,7 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 	P.Round(L.Panel.X, L.Panel.Y, L.Panel.W, L.Panel.H, 16.f, Hex(0x0E1110, 0.78f * A));
 	P.Border(L.Panel.X, L.Panel.Y, L.Panel.W, L.Panel.H, 16.f, Hex(0xF4F1EA, 0.12f * A));
 	const TArray<ERideView> Views = Pawn->Views();
-	const TCHAR* ViewNames[] = {TEXT("Eyes"), TEXT("Over the bars"), TEXT("Behind"), TEXT("Steady")};
+	const TCHAR* ViewNames[] = {TEXT("Eyes"), TEXT("Over the bars"), TEXT("Behind"), TEXT("Dolly")};
 	struct FButton
 	{
 		const TCHAR* Icon;

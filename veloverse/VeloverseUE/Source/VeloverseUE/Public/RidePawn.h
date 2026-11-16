@@ -34,7 +34,7 @@ class ULocalLightComponent;
 
 // Where the camera rides. Eyes: the rider's, with the body's motion (a line that wanders across the
 // lane and takes the inside of bends, the lean into them, the pedalling and the pull of a surge).
-// Cockpit: the same over the bike's bars. Chase: behind the bike. Steady: the eyes on rails, none
+// Cockpit: the same over the bike's bars. Chase: behind the bike. Steady (named Dolly in the HUD, 15 Nov): the eyes on rails, none
 // of the motion. Cockpit and Chase need the bike's meshes (CockpitMesh and BikeMesh). The values
 // are saved in the profile, so new ones go at the end.
 enum class ERideView : uint8

@@ -1171,9 +1171,10 @@ void ARidePawn::Place()
 	}
 	if (Seen != ERideView::Chase)
 	{
-		// The eyes, and Steady, look down the road as over the bars do, CockpitTilt below level
-		// (the user, 15 Nov), with no bike in the frame.
-		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion()).Rotator());
+		// The eyes look down the road as over the bars do, CockpitTilt below level, with no bike in
+		// the frame; Dolly (ERideView::Steady) stays level (the user, 15 Nov).
+		const float Tilt = Seen == ERideView::Eyes ? CockpitTilt : 0.f;
+		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch + Tilt, LookYaw, 0.f).Quaternion()).Rotator());
 		return;
 	}
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
