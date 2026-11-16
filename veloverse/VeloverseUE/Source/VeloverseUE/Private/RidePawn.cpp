@@ -22,6 +22,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "HAL/FileManager.h"
@@ -520,6 +521,65 @@ void ARidePawn::SetProfile(const FRideProfile& Changed)
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
 	UseSettings();
 	ApplyWeather();
+	ApplyKit();
+}
+
+void ARidePawn::ApplyKit()
+{
+	using namespace Veloverse::Kit;
+	// import_rider.py's slots: the skin and the kit share the body's masks (C1..C6: jersey, accent,
+	// shorts, socks, hair, skin), the helmet's and shoe's own first channel is the shell and the
+	// upper, and the brows (M_Hair) are flat. A part left at -1 keeps the instance's own colour.
+	struct FSlot
+	{
+		const TCHAR* Instance;
+		const TCHAR* Parameter;
+		EPart Part;
+	};
+	static const FSlot Slots[] = {
+		{TEXT("MI_Rider_Skin"), TEXT("C1"), Jersey}, {TEXT("MI_Rider_Skin"), TEXT("C2"), Accent},
+		{TEXT("MI_Rider_Skin"), TEXT("C3"), Shorts}, {TEXT("MI_Rider_Skin"), TEXT("C4"), Socks},
+		{TEXT("MI_Rider_Skin"), TEXT("C5"), Hair},   {TEXT("MI_Rider_Skin"), TEXT("C6"), Skin},
+		{TEXT("MI_Rider_Kit"), TEXT("C1"), Jersey},  {TEXT("MI_Rider_Kit"), TEXT("C2"), Accent},
+		{TEXT("MI_Rider_Kit"), TEXT("C3"), Shorts},  {TEXT("MI_Rider_Kit"), TEXT("C4"), Socks},
+		{TEXT("MI_Rider_Kit"), TEXT("C5"), Hair},    {TEXT("MI_Rider_Kit"), TEXT("C6"), Skin},
+		{TEXT("MI_Rider_Helmet"), TEXT("C1"), Helmet}, {TEXT("MI_Rider_Shoe"), TEXT("C1"), Shoes},
+		{TEXT("MI_Rider_Hair"), TEXT("Colour"), Hair},
+	};
+	int32 Set = 0;
+	for (USkeletalMeshComponent* C : {RiderBody.Get(), RiderArms.Get()})
+	{
+		const USkeletalMesh* Mesh = C ? C->GetSkeletalMeshAsset() : nullptr;
+		if (!Mesh)
+		{
+			continue;
+		}
+		const TArray<FSkeletalMaterial>& Own = Mesh->GetMaterials();
+		for (int32 I = 0; I < Own.Num(); ++I)
+		{
+			const FString Name = Own[I].MaterialInterface ? Own[I].MaterialInterface->GetName() : FString();
+			UMaterialInstanceDynamic* Mid = nullptr;
+			for (const FSlot& S : Slots)
+			{
+				if (Name != S.Instance)
+				{
+					continue;
+				}
+				// Back to the instance's own colour: a fresh dynamic instance starts from it.
+				if (!Mid)
+				{
+					C->SetMaterial(I, Own[I].MaterialInterface);
+					Mid = C->CreateAndSetMaterialInstanceDynamic(I);
+				}
+				if (Mid && Profile.Kit[S.Part] >= 0)
+				{
+					Mid->SetVectorParameterValue(S.Parameter, Pick(S.Part, Profile.Kit[S.Part]).Colour);
+					++Set;
+				}
+			}
+		}
+	}
+	UE_LOG(LogTemp, Display, TEXT("RIDE kit: %d colours set"), Set);
 }
 
 void ARidePawn::UseSettings()
@@ -1279,6 +1339,7 @@ void ARidePawn::MakeRider()
 	UE_LOG(LogTemp, Display, TEXT("RIDE rider: %d bones, %d takes, Pedal %.3f s, arms %s, tilt %.0f"),
 	       Mesh->GetRefSkeleton().GetNum(), Takes.Num(), Loop->GetPlayLength(),
 	       bArmsCockpit ? TEXT("Cockpit") : TEXT("Pedal"), ArmsTilt);
+	ApplyKit();
 }
 
 void ARidePawn::PlaceRain(float Dt)

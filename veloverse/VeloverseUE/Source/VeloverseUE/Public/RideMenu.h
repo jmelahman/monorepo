@@ -39,6 +39,7 @@ enum class ERideSettingsTab : uint8
 	World,
 	Ride,
 	Rider,
+	Kit,
 	Count,
 };
 

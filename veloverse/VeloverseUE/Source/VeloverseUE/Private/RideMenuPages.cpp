@@ -768,8 +768,8 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 	// The tabs.
 	C.Panel(64.f, 150.f, 320.f, 866.f);
 	constexpr int32 Tabs = static_cast<int32>(ERideSettingsTab::Count);
-	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Rider")};
-	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Sliders, Icons::Globe, Icons::Bike, Icons::Rider};
+	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Rider"), TEXT("Kit")};
+	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Sliders, Icons::Globe, Icons::Bike, Icons::Rider, Icons::Kit};
 	const FLinearColor TabInk = FMath::Lerp(C.Accent, FLinearColor::White, 0.45f);
 	for (int32 I = 0; I < Tabs; ++I)
 	{
@@ -1069,6 +1069,40 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		{
 			C.Button(TEXT("done"), Right - 220.f, 940.f, 220.f, 56.f, TEXT("Done"), EButton::Primary,
 			         [M] { M->LeaveRider(); }, Icons::Check);
+		}
+	}
+	else if (Tab == ERideSettingsTab::Kit && Pawn)
+	{
+		// A row of swatches per part; the hint names the one under the pointer, else the one worn.
+		namespace K = Veloverse::Kit;
+		for (int32 Part = 0; Part < K::Parts; ++Part)
+		{
+			const K::FPart& Kp = K::Part(Part);
+			const int32 Worn = Pawn->Profile.Kit[Part] >= 0 ? Pawn->Profile.Kit[Part] : Kp.Default;
+			FString Named = Kp.Swatches[Worn].Name;
+			for (int32 I = 0; I < Kp.Swatches.Num(); ++I)
+			{
+				if (C.Hot(FString::Printf(TEXT("kit%s%d"), Kp.Key, I)))
+				{
+					Named = Kp.Swatches[I].Name;
+				}
+			}
+			const float Cy = Row(Kp.Name, FString::Printf(TEXT("%s: %s"), *Named, Kp.Hint));
+			float X = Right - Kp.Swatches.Num() * 52.f + 8.f;
+			for (int32 I = 0; I < Kp.Swatches.Num(); ++I)
+			{
+				const FString Key = FString::Printf(TEXT("kit%s%d"), Kp.Key, I);
+				if (I == Worn)
+				{
+					P.Border(X - 5.f, Cy - 27.f, 54.f, 54.f, 27.f, Ink, 2.f);
+				}
+				P.Disc(X + 22.f, Cy, 20.f, Kp.Swatches[I].Colour); // linear, as the painter takes it
+				P.Border(X + 2.f, Cy - 20.f, 40.f, 40.f, 20.f, InkA(0.18f), 1.f);
+				C.Ring(Key, X - 2.f, Cy - 24.f, 48.f, 48.f, 24.f);
+				C.Hit(Key, X - 2.f, Cy - 24.f, 48.f, 48.f).OnClick = [Edit, Part, I]
+				{ Edit([Part, I](FRideProfile& Pr) { Pr.Kit[Part] = I; }); };
+				X += 52.f;
+			}
 		}
 	}
 }

@@ -135,7 +135,8 @@ void ARidePlayerController::Tour()
 {
 	// Every other step screenshots the page, which lands a frame or two later, and the next moves on.
 	const TCHAR* Shots[] = {TEXT("start"), TEXT("routes"), TEXT("sensors"), TEXT("graphics"), TEXT("world"),
-		TEXT("riding"), TEXT("rider"), TEXT("stats"), TEXT("ride"), TEXT("pause"), TEXT("summary")};
+		TEXT("riding"), TEXT("rider"), TEXT("stats"), TEXT("ride"), TEXT("pause"), TEXT("summary"),
+		TEXT("kit")}; // last, so the earlier shots keep their numbers
 	constexpr int32 Riding = 8;
 	const int32 Page = TourStep / 2;
 	if (TourStep % 2 == 0)
@@ -176,6 +177,7 @@ void ARidePlayerController::Tour()
 	case 7: Ride(); break;
 	case 8: ShowPause(); break;
 	case 9: EndRide(); break;
+	case 10: Open(ERideMenuPage::Settings); Menu->SetTab(ERideSettingsTab::Kit); break;
 	default: Quit(); break;
 	}
 }

@@ -205,6 +205,17 @@ FRideProfile FRideProfile::Load()
 		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
 		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);
 		O->TryGetBoolField(TEXT("fps"), Profile.bFps);
+		const TSharedPtr<FJsonObject>* Kit = nullptr;
+		if (O->TryGetObjectField(TEXT("kit"), Kit) && Kit)
+		{
+			for (int32 I = 0; I < Veloverse::Kit::Parts; ++I)
+			{
+				const Veloverse::Kit::FPart& Part = Veloverse::Kit::Part(I);
+				Profile.Kit[I] = (*Kit)->TryGetNumberField(Part.Key, Value) && Part.Swatches.IsValidIndex(static_cast<int32>(Value))
+				                     ? static_cast<int32>(Value)
+				                     : -1;
+			}
+		}
 	}
 	return Profile;
 }
@@ -232,6 +243,15 @@ void FRideProfile::Save() const
 	O->SetBoolField(TEXT("hud"), bHud);
 	O->SetBoolField(TEXT("graphs"), bGraphs);
 	O->SetBoolField(TEXT("fps"), bFps);
+	TSharedRef<FJsonObject> KitO = MakeShared<FJsonObject>();
+	for (int32 I = 0; I < Veloverse::Kit::Parts; ++I)
+	{
+		if (Kit[I] >= 0)
+		{
+			KitO->SetNumberField(Veloverse::Kit::Part(I).Key, Kit[I]);
+		}
+	}
+	O->SetObjectField(TEXT("kit"), KitO);
 	WriteJson(ProfileFile(), O);
 }
 

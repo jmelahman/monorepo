@@ -78,6 +78,7 @@ inline const TCHAR* Screen = TEXT("\uE121"); // monitor
 inline const TCHAR* Sliders = TEXT("\uE29A"); // sliders-horizontal
 inline const TCHAR* Bike = TEXT("\uE1D2"); // bike
 inline const TCHAR* Rider = TEXT("\uE19F"); // user
+inline const TCHAR* Kit = TEXT("\uE1CA"); // shirt
 inline const TCHAR* Globe = TEXT("\uE0EB"); // globe
 inline const TCHAR* Lock = TEXT("\uE10F"); // lock
 inline const TCHAR* Eye = TEXT("\uE0BE"); // eye

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "RideReview.h"
 #include "RideStats.h"
+#include "RiderKit.h"
 
 #include <vector>
 
@@ -32,6 +33,8 @@ struct FRideProfile
 	bool bHud = true;          // the ride's panels shown (the dock's H)
 	bool bGraphs = false;      // power and heart rate across the foot of the screen (G)
 	bool bFps = false;         // the frame rate in the ride's bottom-right corner (Graphics)
+	// The rider's look (RiderKit.h): a swatch per part, -1 for the rider's own colour (Settings > Kit).
+	int32 Kit[Veloverse::Kit::Parts] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 	// The theme's colour, or Ember's when the theme isn't known or isn't unlocked.
 	FLinearColor Accent() const;
