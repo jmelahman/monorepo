@@ -12,6 +12,7 @@
 #include "RideSegments.h"
 #include "Workout.h"
 #include "Dock.h"
+#include "Styling/SlateBrush.h"
 #include "RidePawn.generated.h"
 
 class UCameraComponent;
@@ -26,6 +27,10 @@ class USkyLightComponent;
 class UExponentialHeightFogComponent;
 class APostProcessVolume;
 class APlayerController;
+class USceneComponent;
+class USceneCaptureComponent2D;
+class UTextureRenderTarget2D;
+class ULocalLightComponent;
 
 // Where the camera rides. Eyes: the rider's, with the body's motion (a line that wanders across the
 // lane and takes the inside of bends, the lean into them, the pedalling and the pull of a surge).
@@ -293,4 +298,27 @@ private:
 	void ApplyKit(); // the profile's skin tone, hair and kit colours on both copies of the rider
 	void UseGrassReach(); // grass.CullDistanceScale from the Grass setting, net of r.ViewDistanceScale
 	float GrassViewScale = -1.f; // the r.ViewDistanceScale it was set against
+
+public:
+	// The Kit page's turntable: the bike and a third copy of the rider in the profile's kit, pedalling
+	// as they turn in a studio of their own, high above the land and seen only by its capture. The page
+	// asks for it each frame it shows (Radius: the card's corners, in pixels); it renders only while
+	// asked, and is null until the first ask has built it.
+	const FSlateBrush* KitPreview(float Radius) const;
+
+private:
+	void MakeKitPreview();
+	void TurnKitPreview(float Dt);
+	UPROPERTY(Transient) TObjectPtr<USceneComponent> Studio;
+	UPROPERTY(Transient) TObjectPtr<USceneComponent> Turntable;
+	UPROPERTY(Transient) TObjectPtr<USceneCaptureComponent2D> StudioCapture;
+	UPROPERTY(Transient) TObjectPtr<UTextureRenderTarget2D> StudioTarget;
+	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> StudioParts;
+	UPROPERTY(Transient) TObjectPtr<USkeletalMeshComponent> StudioRider;
+	UPROPERTY(Transient) TArray<TObjectPtr<ULocalLightComponent>> StudioLights;
+	mutable FSlateBrush StudioBrush;
+	mutable double StudioAsked = -1.0; // FPlatformTime::Seconds() of the page's last ask
+	float StudioTurn = 200.f; // degrees: starts three-quarters on, the drive side toward the camera
+	float StudioCrank = 0.f;
+	bool bStudioOn = false;
 };

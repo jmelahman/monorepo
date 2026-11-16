@@ -9,7 +9,11 @@
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Animation/AnimSequence.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
@@ -409,6 +413,7 @@ float ARidePawn::TrackLength() const { return Track ? Track->Length() : 0.f; }
 void ARidePawn::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	TurnKitPreview(Dt);
 	ReadKeys();
 	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
 	if (!Automated() && ViewScale && GrassViewScale != FMath::Max(ViewScale->GetFloat(), 0.1f))
@@ -547,7 +552,7 @@ void ARidePawn::ApplyKit()
 		{TEXT("MI_Rider_Hair"), TEXT("Colour"), Hair},
 	};
 	int32 Set = 0;
-	for (USkeletalMeshComponent* C : {RiderBody.Get(), RiderArms.Get()})
+	for (USkeletalMeshComponent* C : {RiderBody.Get(), RiderArms.Get(), StudioRider.Get()})
 	{
 		const USkeletalMesh* Mesh = C ? C->GetSkeletalMeshAsset() : nullptr;
 		if (!Mesh)
@@ -1350,6 +1355,233 @@ void ARidePawn::MakeRider()
 	       Mesh->GetRefSkeleton().GetNum(), Takes.Num(), Loop->GetPlayLength(),
 	       bArmsCockpit ? TEXT("Cockpit") : TEXT("Pedal"), ArmsTilt);
 	ApplyKit();
+}
+
+namespace
+{
+// The Kit page's studio, in cm: 3 km above the world's origin, clear of the land, the weather and
+// every light in the level. Its meshes and lights share lighting channel 1 alone, so the sun (on 0)
+// doesn't reach them, and the capture leaves out the sky, the fog and the sky's light.
+const FVector StudioAt(0.f, 0.f, 300000.f);
+// The turntable turns about the middle of the wheelbase, 9 cm ahead of the bottom bracket.
+const FVector StudioOrigin(-9.f, 0.f, 0.f);
+// The camera, on a long lens from the non-drive side at yaw 0, a little above the saddle and looking
+// down at the bike's middle: side on, the bike and its margins fill the card's width.
+const FVector StudioEye(0.f, -440.f, 175.f);
+const FVector StudioAim(0.f, 0.f, 62.f);
+constexpr float StudioFov = 28.f;
+constexpr int32 StudioW = 780, StudioH = 1060; // 1.5x the card's 520 x 706
+constexpr float StudioSpin = 24.f; // degrees a second: a turn in 15 s
+} // namespace
+
+const FSlateBrush* ARidePawn::KitPreview(float Radius) const
+{
+	StudioAsked = FPlatformTime::Seconds();
+	if (!StudioTarget)
+	{
+		return nullptr;
+	}
+	StudioBrush.OutlineSettings.CornerRadii = FVector4(Radius, Radius, Radius, Radius);
+	return &StudioBrush;
+}
+
+void ARidePawn::MakeKitPreview()
+{
+	const URiderAnim* Riding = RiderBody ? Cast<URiderAnim>(RiderBody->GetAnimInstance()) : nullptr;
+	if (BikeParts.Num() != PartCount || !Riding)
+	{
+		return;
+	}
+	auto InStudio = [](UPrimitiveComponent* C)
+	{
+		C->SetMobility(EComponentMobility::Movable);
+		C->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		C->SetVisibleInSceneCaptureOnly(true);
+		C->SetLightingChannels(false, true, false);
+	};
+	Studio = NewObject<USceneComponent>(this, TEXT("Studio"));
+	Studio->SetMobility(EComponentMobility::Movable);
+	Studio->SetupAttachment(GetRootComponent());
+	Studio->SetUsingAbsoluteLocation(true);
+	Studio->SetUsingAbsoluteRotation(true);
+	Studio->SetUsingAbsoluteScale(true);
+	Studio->RegisterComponent();
+	Studio->SetWorldLocationAndRotation(StudioAt, FRotator::ZeroRotator);
+	Turntable = NewObject<USceneComponent>(this, TEXT("Turntable"));
+	Turntable->SetMobility(EComponentMobility::Movable);
+	Turntable->SetupAttachment(Studio);
+	Turntable->RegisterComponent();
+	StudioCapture = NewObject<USceneCaptureComponent2D>(this, TEXT("StudioCapture"));
+	for (int32 Part = 0; Part < PartCount; ++Part)
+	{
+		UStaticMeshComponent* C = NewObject<UStaticMeshComponent>(this, *FString::Printf(TEXT("Studio%s"), BikePartNames[Part]));
+		InStudio(C);
+		C->SetStaticMesh(BikeParts[Part]->GetStaticMesh());
+		C->SetupAttachment(Turntable);
+		C->SetRelativeLocation(StudioOrigin);
+		C->RegisterComponent();
+		StudioParts.Add(C);
+		StudioCapture->ShowOnlyComponent(C);
+	}
+	StudioRider = NewObject<USkeletalMeshComponent>(this, TEXT("StudioRider"));
+	InStudio(StudioRider);
+	StudioRider->SetSkeletalMesh(RiderBody->GetSkeletalMeshAsset());
+	StudioRider->SetupAttachment(Turntable);
+	StudioRider->SetRelativeLocation(StudioOrigin);
+	StudioRider->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	StudioRider->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	StudioRider->SetAnimInstanceClass(URiderAnim::StaticClass());
+	StudioRider->RegisterComponent();
+	if (URiderAnim* Anim = Cast<URiderAnim>(StudioRider->GetAnimInstance()))
+	{
+		Anim->Takes = Riding->Takes;
+		Anim->Effort = 1.f; // Pedal, the default
+	}
+	StudioCapture->ShowOnlyComponent(StudioRider);
+	// The floor: a dark disc of the engine's plane under a pool of light, for the shadow to land on.
+	if (UStaticMesh* Plane = MeshAt(TEXT("/Engine/BasicShapes/Plane.Plane")))
+	{
+		UStaticMeshComponent* Floor = NewObject<UStaticMeshComponent>(this, TEXT("StudioFloor"));
+		InStudio(Floor);
+		Floor->SetStaticMesh(Plane);
+		Floor->SetupAttachment(Studio);
+		Floor->SetRelativeScale3D(FVector(14.f, 14.f, 1.f));
+		Floor->RegisterComponent();
+		if (UMaterialInstanceDynamic* Mid = Floor->CreateAndSetMaterialInstanceDynamic(0))
+		{
+			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.09f, 0.09f, 0.095f));
+		}
+		StudioCapture->ShowOnlyComponent(Floor);
+	}
+	// Three-point light, on channel 1 only: a warm key high on the camera's left, a cool rim from
+	// behind for the outline, a soft fill from the right; and a pool from overhead for the floor.
+	// Candelas, for the capture's fixed exposure (StudioCapture's look, below).
+	auto Light = [this](ULocalLightComponent* L, const FVector& At, float Candelas, const FLinearColor& Colour, bool bShadow)
+	{
+		L->SetMobility(EComponentMobility::Movable);
+		L->SetupAttachment(Studio);
+		L->SetRelativeLocationAndRotation(At, (StudioAim - At).Rotation());
+		L->SetIntensityUnits(ELightUnits::Candelas);
+		L->SetIntensity(Candelas);
+		L->SetLightColor(Colour);
+		L->SetAttenuationRadius(1200.f);
+		L->SetCastShadows(bShadow);
+		L->SetLightingChannels(false, true, false);
+		L->SetVisibility(false);
+		L->RegisterComponent();
+		StudioLights.Add(L);
+	};
+	auto Spot = [this](const TCHAR* Name, float Inner, float Outer)
+	{
+		USpotLightComponent* L = NewObject<USpotLightComponent>(this, Name);
+		L->SetInnerConeAngle(Inner);
+		L->SetOuterConeAngle(Outer);
+		L->SetSourceRadius(30.f);
+		L->SetSoftSourceRadius(60.f);
+		return L;
+	};
+	Light(Spot(TEXT("StudioKey"), 20.f, 40.f), FVector(-260.f, -300.f, 330.f), 45.f, FLinearColor(1.f, 0.95f, 0.88f), true);
+	Light(Spot(TEXT("StudioRim"), 20.f, 40.f), FVector(240.f, 300.f, 270.f), 70.f, FLinearColor(0.82f, 0.9f, 1.f), false);
+	Light(Spot(TEXT("StudioPool"), 18.f, 46.f), FVector(0.f, 0.f, 430.f), 40.f, FLinearColor(1.f, 0.97f, 0.93f), true);
+	UPointLightComponent* Fill = NewObject<UPointLightComponent>(this, TEXT("StudioFill"));
+	Fill->SetSourceRadius(60.f);
+	Light(Fill, FVector(300.f, -360.f, 110.f), 8.f, FLinearColor(0.92f, 0.95f, 1.f), false);
+
+	StudioTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("StudioTarget"));
+	StudioTarget->RenderTargetFormat = RTF_RGBA8; // sRGB, for the capture's tone-mapped colour
+	StudioTarget->ClearColor = FLinearColor::Black;
+	StudioTarget->InitAutoFormat(StudioW, StudioH);
+	StudioTarget->UpdateResourceImmediate(true);
+	StudioCapture->SetupAttachment(Studio);
+	StudioCapture->SetRelativeLocationAndRotation(StudioEye, (StudioAim - StudioEye).Rotation());
+	StudioCapture->FOVAngle = StudioFov;
+	StudioCapture->TextureTarget = StudioTarget;
+	StudioCapture->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+	StudioCapture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+	StudioCapture->bCaptureEveryFrame = false;
+	StudioCapture->bCaptureOnMovement = false;
+	StudioCapture->bAlwaysPersistRenderingState = true; // keeps the temporal AA's history between frames
+	FEngineShowFlags& Show = StudioCapture->ShowFlags;
+	Show.SetFog(false);
+	Show.SetVolumetricFog(false);
+	Show.SetAtmosphere(false);
+	Show.SetCloud(false);
+	Show.SetSkyLighting(false);
+	Show.SetMotionBlur(false);
+	Show.SetEyeAdaptation(false);
+	// The game's grade, at a fixed exposure, with no Lumen: the studio's light is all direct.
+	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
+	CameraLook(Look);
+	Look.bOverride_AutoExposureMethod = true;
+	Look.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
+	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+	Look.AutoExposureApplyPhysicalCameraExposure = 0;
+	Look.AutoExposureBias = 0.f;
+	Look.bOverride_DynamicGlobalIlluminationMethod = true;
+	Look.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::None;
+	Look.bOverride_ReflectionMethod = true;
+	Look.ReflectionMethod = EReflectionMethod::ScreenSpace;
+	Look.bOverride_VignetteIntensity = true;
+	Look.VignetteIntensity = 0.f; // the card's own dark falls off by the light
+	StudioCapture->PostProcessBlendWeight = 1.f;
+	StudioCapture->RegisterComponent();
+
+	StudioBrush.SetResourceObject(StudioTarget);
+	StudioBrush.ImageSize = FVector2D(StudioW, StudioH);
+	StudioBrush.DrawAs = ESlateBrushDrawType::RoundedBox;
+	StudioBrush.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+	StudioBrush.OutlineSettings.Width = 0.f;
+	StudioBrush.TintColor = FSlateColor(FLinearColor::White);
+	ApplyKit();
+	UE_LOG(LogTemp, Display, TEXT("RIDE kit preview: %d parts, %d lights, %dx%d"), StudioParts.Num(), StudioLights.Num(), StudioW, StudioH);
+}
+
+void ARidePawn::TurnKitPreview(float Dt)
+{
+	const bool bWant = StudioAsked >= 0.0 && FPlatformTime::Seconds() - StudioAsked < 0.25;
+	if (bWant && !Studio)
+	{
+		MakeKitPreview();
+	}
+	if (!Studio || !StudioCapture)
+	{
+		return;
+	}
+	if (bWant != bStudioOn)
+	{
+		bStudioOn = bWant;
+		StudioCapture->bCaptureEveryFrame = bWant;
+		for (ULocalLightComponent* L : StudioLights)
+		{
+			L->SetVisibility(bWant);
+		}
+		StudioRider->VisibilityBasedAnimTickOption = bWant ? EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones
+		                                                   : EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	}
+	if (!bWant)
+	{
+		return;
+	}
+	// A slow turn, and an easy 60 rpm: the rider's loop and the cranks in step, as PoseBike keeps them.
+	StudioTurn = FMath::Fmod(StudioTurn + StudioSpin * Dt, 360.f);
+	Turntable->SetRelativeRotation(FRotator(0.f, StudioTurn, 0.f));
+	StudioCrank = FMath::Fmod(StudioCrank + 2.f * PI * Dt, 2.f * PI);
+	if (URiderAnim* Anim = Cast<URiderAnim>(StudioRider->GetAnimInstance()))
+	{
+		Anim->Time = FMath::Min(StudioCrank / (2.f * PI) * RiderLoop, RiderPedal ? RiderPedal->GetPlayLength() : RiderLoop);
+		Anim->Effort = 1.f;
+	}
+	const auto Turn = [this](int32 Part, const FVector& Pivot, float Angle)
+	{
+		const FQuat R(FVector::YAxisVector, Angle);
+		StudioParts[Part]->SetRelativeLocationAndRotation(StudioOrigin + Pivot - R.RotateVector(Pivot), R);
+	};
+	Turn(BikeCranks, BottomBracket, StudioCrank);
+	Turn(BikeWheelRear, RearHub, StudioCrank * 2.6f); // 50 x 19: the wheel turns with the cranks
+	const FQuat Pedal(FVector::YAxisVector, StudioCrank);
+	const FVector Arm(CrankLength, 0.f, 0.f);
+	StudioParts[BikePedalR]->SetRelativeLocation(StudioOrigin + Pedal.RotateVector(Arm) - Arm);
+	StudioParts[BikePedalL]->SetRelativeLocation(StudioOrigin + Pedal.RotateVector(-Arm) + Arm);
 }
 
 void ARidePawn::PlaceRain(float Dt)

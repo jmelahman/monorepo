@@ -1073,8 +1073,22 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 	}
 	else if (Tab == ERideSettingsTab::Kit && Pawn)
 	{
-		// A row of swatches per part; the hint names the one under the pointer, else the one worn.
+		// The rider on a turntable at the left, in what they wear; at the right a row of swatches per
+		// part, each named by the one under the pointer, else the one worn.
 		namespace K = Veloverse::Kit;
+		constexpr float CardW = 520.f, CardTop = 262.f, CardH = 706.f;
+		if (const FSlateBrush* Shot = Pawn->KitPreview(16.f * P.S))
+		{
+			P.Image(Left, CardTop, CardW, CardH, Shot);
+		}
+		else
+		{
+			P.Round(Left, CardTop, CardW, CardH, 16.f, FLinearColor(0.f, 0.f, 0.f, 0.5f));
+		}
+		P.Border(Left, CardTop, CardW, CardH, 16.f, InkA(0.1f));
+		const float RowLeft = Left + CardW + 48.f;
+		const float SwatchesW = 8 * 52.f;
+		float RowY = 250.f;
 		for (int32 Part = 0; Part < K::Parts; ++Part)
 		{
 			const K::FPart& Kp = K::Part(Part);
@@ -1087,7 +1101,13 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 					Named = Kp.Swatches[I].Name;
 				}
 			}
-			const float Cy = Row(Kp.Name, FString::Printf(TEXT("%s: %s"), *Named, Kp.Hint));
+			const float Cy = RowY + 46.f;
+			const FSlateFontInfo HintFont = P.Font("Medium", 15.f);
+			P.Text(RowLeft, Cy - 4.f, Kp.Name, P.Font("Bold", 20.f), Ink);
+			P.Text(RowLeft, Cy + 22.f, P.Fit(FString::Printf(TEXT("%s: %s"), *Named, Kp.Hint), HintFont, Right - SwatchesW - 24.f - RowLeft),
+			       HintFont, Muted);
+			P.Rect(RowLeft, RowY + 92.f, Right - RowLeft, 1.f, InkA(0.08f));
+			RowY += 92.f;
 			float X = Right - Kp.Swatches.Num() * 52.f + 8.f;
 			for (int32 I = 0; I < Kp.Swatches.Num(); ++I)
 			{
