@@ -264,10 +264,10 @@ struct URideMenu::FPaintContext
 		using namespace VeloverseMenu;
 		const FString Key = TEXT("back");
 		const float L = Lift(Key);
-		const float Rad = 26.f * (1.f + 0.08f * L); // grows about its middle, and the arrow leans back
+		const float Rad = 26.f * (1.f + 0.08f * L); // grows about its middle; the arrow stays put (the user, 15 Nov)
 		P.Round(90.f - Rad, 74.f - Rad, 2.f * Rad, 2.f * Rad, Rad, InkA(0.12f * L));
 		P.Border(90.f - Rad, 74.f - Rad, 2.f * Rad, 2.f * Rad, Rad, InkA(0.22f + 0.14f * L));
-		P.Icon(Icons::Back, 78.f - 3.f * L, 62.f, 24.f, Ink);
+		P.Icon(Icons::Back, 78.f, 62.f, 24.f, Ink);
 		Ring(Key, 64.f, 48.f, 52.f, 52.f, 26.f);
 		Hit(Key, 64.f, 48.f, 52.f, 52.f).OnClick = MoveTemp(Click);
 	}
