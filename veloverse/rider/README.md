@@ -203,15 +203,17 @@ others as fake-user actions. The FBX exports all four as takes named `Armature|<
   bar reads at a glance. The palm rests against the outside of the hook, thumb up. The
   middle and ring fingers wrap the front of the bar and the index finger lies up the bar
   toward the lever. The hook curves away from the little finger, so it curls like the ring
-  finger rather than closing on air. The thumb's first joint swings 20° away from the bar
-  and the thumb closes behind it; its base still sits 8 mm into the bar tape, on the side the
-  camera can't see. The palm points are (0.573, ±0.224, 0.799).
+  finger rather than closing on air. The palm sits 10 mm behind the tube's middle
+  (`DROP_BACK`), which leaves room for the thumb: its first joint swings 20° and it closes
+  round the inside of the bar, 2 mm clear of the tape. Further forward the thumb's base sat
+  in the tape and the thumb lay through the bar in this view. The palm points are
+  (0.551, ±0.228, 0.794).
 - **Arms:** the shoulders are drawn down and back (the pelvis dropped to z 0.76 behind the
   saddle, the torso pitched 88°, the shoulders square and the elbows out), so the forearms
   reach in from the bottom corners of the frame to the drops.
 - **Checked every 4th frame:** the camera sees no vertex of the torso, the upper arms or the
   head, the arm and shoulder skin stays 0.46 m from the camera, and the forearms enter at
-  the bottom edge, 76% of the way out to the sides.
+  the bottom edge, 74% of the way out to the sides.
 - **The rest is folded away and must be hidden:** the head is pulled down to the top tube
   (the helmet sits 20 mm into the frame), the pelvis is behind and below the saddle, and the
   knees bend 34–84°. Hide the head and legs in the game (`render_game_cockpit.png` shrinks
@@ -271,7 +273,7 @@ looking like a studio scan.
 
 The kit is a texture on the body, not cloth. Colours are given in linear RGB:
 
-- **Jersey:** navy (0.010, 0.024, 0.075), with a collar that covers the base of the neck and
+- **Jersey:** navy (0.010, 0.024, 0.075), with a crew neck that leaves the throat bare and
   short sleeves that end 4 cm above the elbow with a hem: a fold in the normal map, slightly
   darker.
 - **Accents:** orange (0.80, 0.22, 0.05) on the sleeve cuffs and the side panels, each a
@@ -333,7 +335,7 @@ build also writes masks (linear, not sRGB), one region per channel:
 
 | | |
 |---|---|
-| Triangles | **65,212**: Skin 19,632, Kit 6,256, Helmet 13,272, Strap 15,472, Shoe 8,376, Lens 1,804, Hair 400 |
+| Triangles | **65,212**: Skin 19,896, Kit 5,992, Helmet 13,272, Strap 15,472, Shoe 8,376, Lens 1,804, Hair 400 |
 | Bones | 53 |
 | Most influences per vertex | 4 |
 | Largest cleat-to-axle distance | 0.1 mm |
@@ -347,7 +349,7 @@ build also writes masks (linear, not sRGB), one region per channel:
 `frame0`, and the game cameras under `cameras`. The palms and hood contacts are the same in
 every effort: palm L (0.542, 0.199, 0.923), R (0.542, −0.199, 0.923); hood contact (the top of
 the hood under the palm) L (0.542, 0.199, 0.892), R (0.542, −0.199, 0.892). `Cockpit`'s palms
-are in the drops, at (0.573, ±0.224, 0.799).
+are in the drops, at (0.551, ±0.228, 0.794).
 
 | Action | Back | Eye point | `head` bone |
 |---|---|---|---|

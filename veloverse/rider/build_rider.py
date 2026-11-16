@@ -930,9 +930,11 @@ HAND_ROLL = 88.0
 # The Cockpit action's hands, in the hooks of the drops: a fist round a tube reads at a glance
 # from the cockpit camera, where the hoods' handshake grip showed only the thumb's edge of a
 # hand hovering over a small hood. The palm meets the hook's outside at DROP_Z, DROP_BACK
-# behind the tube's middle so the fingers' roots reach round its front; (yaw, pitch, roll).
+# behind the tube's middle: far enough back that the thumb's base clears the tape and the
+# thumb closes round the inside of the bar (further forward it lay through the tape); (yaw,
+# pitch, roll).
 DROP_Z = 0.802
-DROP_BACK = -0.012
+DROP_BACK = 0.010
 DROP_ANGLES = (0.0, -10.0, 105.0)
 # the elbows' direction from the shoulder-wrist midpoint (x, out, z): back and down, in the
 # plane of the arm, so from behind each arm runs straight from the shoulder to the hood
@@ -2249,7 +2251,10 @@ PALE_SKIN = (0.62, 0.46, 0.37)
 SHORTS_END = 0.90  # of the thigh, hip joint to knee
 SOCK_TOP = 0.62  # of the calf, knee to ankle
 HEM_ABOVE_HIP = 0.05  # m, the jersey's hem above the hip joints (standing)
-COLLAR = 0.035  # m, the collar's line above the neck joint at the nape; it falls to the front
+# a crew neck: the collar's line above the neck joint at the nape (m), and its fall to the
+# front (m per m forward), so the throat is bare
+COLLAR = 0.005
+COLLAR_FALL = 0.8
 LABEL_SS = 2  # the kit's regions are sampled this many times per texel each way: clean edges
 PANEL_HALF = 0.028  # m, half the width of the jersey's side panel: a stripe with round ends
 # The mask textures' channels (R, G, B), for tinting the kit, skin and hair in the engine. Each
@@ -2400,7 +2405,7 @@ class BodyMap:
         lab = np.full(len(p), SKIN_L)
         x, z = p[:, 0], p[:, 2]
         neck = self.bones["neck_01"][0]
-        below_collar = z < neck[2] + COLLAR - 0.4 * (x - neck[0])
+        below_collar = z < neck[2] + COLLAR - COLLAR_FALL * (x - neck[0])
         is_arm, is_leg = arm > 0.5, leg > 0.5
         torso = ~is_arm & ~is_leg
         hem = self.hip_z + HEM_ABOVE_HIP
