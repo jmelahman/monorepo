@@ -198,6 +198,10 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.HeadSway = FMath::Clamp(static_cast<float>(Value), 0.f, 200.f);
 		}
+		if (O->TryGetNumberField(TEXT("bike_sway"), Value))
+		{
+			Profile.BikeSway = FMath::Clamp(static_cast<float>(Value), 0.f, 200.f);
+		}
 		if (O->TryGetNumberField(TEXT("view"), Value))
 		{
 			Profile.View = FMath::Clamp(static_cast<int32>(Value), 0, 3);
@@ -239,6 +243,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("grass"), Grass);
 	O->SetNumberField(TEXT("look_speed"), LookSpeed);
 	O->SetNumberField(TEXT("head_sway"), HeadSway);
+	O->SetNumberField(TEXT("bike_sway"), BikeSway);
 	O->SetNumberField(TEXT("view"), View);
 	O->SetBoolField(TEXT("hud"), bHud);
 	O->SetBoolField(TEXT("graphs"), bGraphs);

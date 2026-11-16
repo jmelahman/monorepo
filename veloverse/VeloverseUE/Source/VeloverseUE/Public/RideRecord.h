@@ -29,6 +29,7 @@ struct FRideProfile
 	float Grass = 150.f;       // how far the grass reaches, % of its own distance (100 before 14 Nov)
 	float LookSpeed = 100.f;   // how fast the mouse turns the view, % of 0.12 degrees per count
 	float HeadSway = 100.f;    // how much the head moves with the pedalling and the road, %
+	float BikeSway = 100.f;    // how much the bike rolls with the pedalling and into bends, % (100: 80% of before 15 Nov)
 	int32 View = 0;            // ERideView: the eyes, over the bars, behind, or steady
 	bool bHud = true;          // the ride's panels shown (the dock's H)
 	bool bGraphs = false;      // power and heart rate across the foot of the screen (G)

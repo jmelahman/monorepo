@@ -1061,6 +1061,7 @@ void ARidePawn::Place()
 	float Judder = 0.f; // degrees of nod
 	float Roll = 0.f;
 	float Turn = 0.f;
+	float Rock = 0.f; // the pedalling's roll before the head's setting: the bike's, by its own
 	if (Dt > 0.f)
 	{
 		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
@@ -1072,9 +1073,9 @@ void ARidePawn::Place()
 			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
 		}
 		const float Effort = bMoving ? FMath::Clamp(static_cast<float>(Reading.Watts) / 250.f, 0.4f, 1.4f) : 0.f;
-		// The rider's own setting (Rider: Head sway) scales the pedalling and the road's judder, over
-		// a base of 60% of what it was before 14 Nov, at the user's request.
-		const float Strength = Profile.HeadSway / 100.f * 0.6f;
+		// The pedalling and the road's judder at a base of 60% of what they were before 14 Nov, at the
+		// user's request; the rider's settings (Rider: Head sway, Bike sway) scale them below.
+		const float Strength = 0.6f;
 		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
 		// The rider's effort by W/kg, rider/README.md's blend: Easy to 1.5, Pedal at 3, Hard from 5;
 		// eased over a couple of seconds so a surge doesn't snap the back down.
@@ -1097,6 +1098,12 @@ void ARidePawn::Place()
 		Lift.Z += Rough * (0.35f * Fine + 0.45f * Coarse);
 		Judder = Rough * (0.12f * FMath::PerlinNoise1D(S / 60.f + 41.f) + 0.06f * Coarse);
 		Roll += Rough * 0.1f * FMath::PerlinNoise1D(S / 90.f + 83.f);
+		Rock = Roll;
+		const float HeadScale = Profile.HeadSway / 100.f;
+		Lift.Z *= HeadScale;
+		Judder *= HeadScale;
+		Roll *= HeadScale;
+		Turn *= HeadScale;
 		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
 		const float Want = bMoves ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
 		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
@@ -1168,9 +1175,10 @@ void ARidePawn::Place()
 	}
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
 	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
-	// Its roll, the lean and the rock together, is 80% of what it was before 15 Nov, at the user's request.
+	// Its roll, the lean and the rock together, is 80% of what it was before 15 Nov, at the user's request,
+	// scaled by the rider's own setting (Rider: Bike sway) and apart from the head's.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
-	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, 0.8f * (Lean * 3.f + Roll)));
+	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, 0.8f * Profile.BikeSway / 100.f * (Lean * 3.f + Rock)));
 	PoseBike();
 	const FRotator Look(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
 	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
