@@ -762,9 +762,10 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 
 void URideOverlay::PaintGraphs(const FPainter& P, float W, float H) const
 {
-	// The last ten minutes across the whole foot of the screen, behind the dock: power as a white
-	// line, heart rate as a red one on its own scale. Lines only, no labels or backing; a faint dark
-	// under-stroke keeps them readable over bright ground. Newest on the right.
+	// Up to ten minutes across the whole foot of the screen, behind the dock: power as a line in the
+	// colour of each moment's zone, heart rate as a red one on its own scale. Lines only, no labels
+	// or backing; a faint dark under-stroke keeps them readable over bright ground. The ride starts
+	// at the left and runs right; past ten minutes the oldest scrolls off the left (the user, 15 Nov).
 	const ARidePawn* Pawn = Rider();
 	const std::vector<Veloverse::FSample>& Samples = Pawn->Recorder.Samples();
 	if (Samples.size() < 2)
@@ -772,7 +773,7 @@ void URideOverlay::PaintGraphs(const FPainter& P, float W, float H) const
 		return;
 	}
 	constexpr double Window = 600.0;
-	const float PlotTop = H - Veloverse::FDockLayout::GraphsTall + 12.f, PlotFoot = H - 12.f, PlotTall = PlotFoot - PlotTop;
+	const float PlotTop = H - Veloverse::FDockLayout::GraphsTall + 18.f, PlotFoot = H - 6.f, PlotTall = PlotFoot - PlotTop;
 	const double Now = Samples.back().Seconds;
 	double Peak = Pawn->Ftp * 1.5, HrLo = 1e9, HrHi = 0.0;
 	size_t First = Samples.size();
@@ -787,22 +788,43 @@ void URideOverlay::PaintGraphs(const FPainter& P, float W, float H) const
 			HrHi = FMath::Max(HrHi, S.HeartRate);
 		}
 	}
-	auto XAt = [&](double Seconds) { return W - static_cast<float>((Now - Seconds) / Window) * W; };
+	const double Start = FMath::Max(Samples.front().Seconds, Now - Window);
+	auto XAt = [&](double Seconds) { return static_cast<float>((Seconds - Start) / Window) * W; };
 	auto Stroke = [&](const TArray<FVector2f>& Line, const FLinearColor& Colour)
 	{
 		if (Line.Num() > 1)
 		{
-			P.Lines(Line, Hex(0x080A09, 0.35f), 4.f);
-			P.Lines(Line, Colour, 2.f);
+			P.Lines(Line, Hex(0x080A09, 0.35f), 3.f);
+			P.Lines(Line, Colour, 1.5f);
 		}
 	};
-	TArray<FVector2f> Power;
+	// Power, in runs of one zone: each step takes the zone of the sample it ends at, and a run
+	// shares its first point with the last one's end, so the line stays unbroken.
+	auto PowerAt = [&](const Veloverse::FSample& S)
+	{ return FVector2f(XAt(S.Seconds), PlotFoot - PlotTall * static_cast<float>(FMath::Clamp(S.Watts / Peak, 0.0, 1.0))); };
+	TArray<FVector2f> Run;
+	int32 RunZone = -1;
 	for (size_t I = First; I < Samples.size(); ++I)
 	{
 		const Veloverse::FSample& S = Samples[I];
-		Power.Add({XAt(S.Seconds), PlotFoot - PlotTall * static_cast<float>(FMath::Clamp(S.Watts / Peak, 0.0, 1.0))});
+		const int32 Zone = Pawn->Zone(static_cast<float>(S.Watts));
+		if (Zone != RunZone && Run.Num() > 0)
+		{
+			const FVector2f Joint = Run.Last();
+			if (Run.Num() > 1)
+			{
+				Stroke(Run, Hex(ZoneHex[RunZone]));
+			}
+			Run.Reset();
+			Run.Add(Joint);
+		}
+		RunZone = Zone;
+		Run.Add(PowerAt(S));
 	}
-	Stroke(Power, Hex(0xF4F1EA, 0.9f));
+	if (RunZone >= 0)
+	{
+		Stroke(Run, Hex(ZoneHex[RunZone]));
+	}
 	if (HrHi > 0.0)
 	{
 		// Its own scale, from a little under the lowest to a little over the highest.
