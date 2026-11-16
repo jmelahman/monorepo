@@ -1538,43 +1538,17 @@ void ARidePawn::StudioLook(int32 Variant)
 	Show.SetVolumetricFog(false);
 	Show.SetAtmosphere(false);
 	Show.SetCloud(false);
+	Show.SetMotionBlur(false);
+	// The engine's own exposure, lifted: the ride's grade (CameraLook) blew the card out to white
+	// at every exposure tried, and the plain look came out a stop or three dark (v65's dumps,
+	// 15 Nov). Variants 1..3 are the brighter and darker lifts -RideKitDump compares.
+	static const float Lifts[] = {1.5f, 0.5f, 2.5f, 3.5f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
-	if (Variant == 1)
-	{
-		return;
-	}
-	CameraLook(Look);
 	Look.bOverride_VignetteIntensity = true;
-	Look.VignetteIntensity = 0.f; // the card's own dark falls off by the light
-	Show.SetMotionBlur(false);
-	if (Variant == 0)
-	{
-		// The game's grade, at a fixed exposure, with no Lumen: the studio's light is all direct.
-		Show.SetSkyLighting(false);
-		Show.SetEyeAdaptation(false);
-		Look.bOverride_AutoExposureMethod = true;
-		Look.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
-		Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
-		Look.AutoExposureApplyPhysicalCameraExposure = 0;
-		Look.AutoExposureBias = 0.f;
-		Look.bOverride_DynamicGlobalIlluminationMethod = true;
-		Look.DynamicGlobalIlluminationMethod = EDynamicGlobalIlluminationMethod::None;
-		Look.bOverride_ReflectionMethod = true;
-		Look.ReflectionMethod = EReflectionMethod::ScreenSpace;
-		return;
-	}
-	Look.bOverride_BloomIntensity = true;
-	Look.BloomIntensity = 0.f;
-	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
-	Look.AutoExposureApplyPhysicalCameraExposure = 0;
-	Look.bOverride_AutoExposureMethod = true;
-	Look.AutoExposureMethod = Variant == 2 ? EAutoExposureMethod::AEM_Histogram : EAutoExposureMethod::AEM_Manual;
-	Look.bOverride_AutoExposureMinBrightness = true;
-	Look.AutoExposureMinBrightness = -2.f;
-	Look.bOverride_AutoExposureMaxBrightness = true;
-	Look.AutoExposureMaxBrightness = 6.f;
-	Look.AutoExposureBias = 0.f;
+	Look.VignetteIntensity = 0.f;
+	Look.bOverride_AutoExposureBias = true;
+	Look.AutoExposureBias = Lifts[FMath::Clamp(Variant, 0, 3)];
 }
 
 void ARidePawn::TurnKitPreview(float Dt)
