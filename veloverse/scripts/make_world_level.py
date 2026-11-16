@@ -973,7 +973,9 @@ SHORE_CLEAR = 120.0  # m inland: no fence between the road and the beach
 
 
 def field_fences(plan, h, lines, cover, stems):
-    """rails.json's runs, each [[x, y, z], ...] in cm a metre apart."""
+    """rails.json's runs, each [[x, y, z], ...] in cm a metre apart, and props.json's gates in
+    the gaps, each ["gate", x, y, z, yaw, width, open, drop] in cm and degrees: hung at (x, y, z),
+    shut along yaw onto a post `drop` higher, or swung `open` degrees into the field."""
     rng = np.random.default_rng(SEED + 12)
     road = cKDTree(np.vstack([line[:, :2] for line, _ in lines.values()]))
     trunks = cKDTree(np.array([[t[1] / 100, t[2] / 100] for t in stems] or [[1e9, 1e9]]))
@@ -994,7 +996,29 @@ def field_fences(plan, h, lines, cover, stems):
             & (trunks.query(p, workers=-1)[0] > 2.5)
         )
 
-    runs, placed = [], []
+    runs, placed, gates = [], [], []
+
+    def gate(a, b, into):
+        """A gate hung at side point a, shutting onto b, swinging `into` the field."""
+        (x0, y0), (x1, y1) = a, b
+        d = np.array([x1 - x0, y1 - y0])
+        sway = 1.0 if d[0] * into[1] - d[1] * into[0] > 0 else -1.0
+        swing = 0.0 if rng.random() < 0.65 else sway * rng.uniform(55, 105)
+        z, z1 = (float(v) for v in ground_z(h, [x0, x1], [y0, y1]))
+        if abs(z1 - z) > 0.4:  # too steep to hang
+            return
+        gates.append(
+            [
+                "gate",
+                round(float(x0) * 100, 1),
+                round(float(y0) * 100, 1),
+                round(z * 100, 1),
+                round(math.degrees(math.atan2(d[1], d[0])), 1),
+                round(float(np.hypot(*d)) * 100, 1),
+                round(swing, 1),
+                round((z1 - z) * 100, 1),
+            ]
+        )
 
     def keep(points):
         if len(points) >= 15:
@@ -1026,6 +1050,8 @@ def field_fences(plan, h, lines, cover, stems):
                     if rng.random() < 0.5 and j - i > 30:
                         g = int(rng.uniform(i + 10, j - 10 - GATE))
                         cuts = [i, g, g + int(GATE), j]
+                        if good[g - 1 : g + int(GATE) + 1].all():
+                            gate(side[g - 1], side[g + int(GATE)], sign * left[g])
                     for a, b in zip(cuts[::2], cuts[1::2], strict=True):
                         seg = np.flatnonzero(good[a:b]) + a
                         # Each unbroken stretch of good ground in the field.
@@ -1051,8 +1077,8 @@ def field_fences(plan, h, lines, cover, stems):
                         placed.append(back[:stop])
                 i = j
     metres = sum(map(len, runs))
-    print(f"field fences: {len(runs)} runs, {metres / 1000:.1f} km", flush=True)
-    return runs
+    print(f"field fences: {len(runs)} runs, {metres / 1000:.1f} km, {len(gates)} gates", flush=True)
+    return runs, gates
 
 
 def ground_z(h, x, y):
@@ -1371,10 +1397,11 @@ def main():
         )
     with open(f"{OUT}/trees.json", "w") as f:
         json.dump(stems, f)
+    fences, gates = field_fences(plan, h, lines, cover, stems)
     with open(f"{OUT}/rails.json", "w") as f:
-        json.dump(field_fences(plan, h, lines, cover, stems), f)
+        json.dump(fences, f)
     with open(f"{OUT}/props.json", "w") as f:
-        json.dump([], f)
+        json.dump(gates, f)
     grade = np.diff(line[:, 2])
     kinds = {k: sum(t[0] == k for t in stems) for k in sorted({t[0] for t in stems})}
     print(

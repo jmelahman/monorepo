@@ -1274,8 +1274,40 @@ def _turn(x, y, yaw):
     return x * math.cos(r) - y * math.sin(r), x * math.sin(r) + y * math.cos(r)
 
 
+def _gate(parts, cube, rng, x, y, z, yaw, width, swing, drop=0.0):
+    """A five-bar timber gate in a fence's gap: sawn posts at both ends, the second `drop` cm
+    higher, and the leaf hung from the first, following the ground's fall, shut along yaw onto
+    the second or swung `swing` degrees open into the field. Old hinges let its head sag."""
+    for lx, lz in ((0, 0), (width, drop)):
+        dx, dy = _turn(lx, 0, yaw)
+        parts.add(cube, (x + dx, y + dy, z + lz + 55), yaw, (0.18, 0.18, 1.7), roll=rng.gauss(0, 1))
+    leaf = width - 30
+    turn = yaw + swing
+    fall = drop / width - math.tan(math.radians(rng.uniform(0, 1.6)))
+
+    def bar(a, b, thick, deep):
+        (ax, az), (bx, bz) = a, b
+        az, bz = az + ax * fall, bz + bx * fall
+        dx, dy = _turn((ax + bx) / 2, 0, turn)
+        parts.add(
+            cube,
+            (x + dx, y + dy, z + (az + bz) / 2),
+            turn,
+            (math.hypot(bx - ax, bz - az) / 100, deep, thick),
+            pitch=math.degrees(math.atan2(bz - az, bx - ax)),
+        )
+
+    for sx in (16, 12 + leaf - 4):
+        bar((sx, 12), (sx + 0.01, 128), 0.08, 0.08)  # the stiles, upright
+    for bz in (24, 46, 68, 92):
+        bar((12, bz), (12 + leaf, bz), 0.07, 0.035)
+    bar((12, 120), (12 + leaf, 120), 0.11, 0.07)  # the top rail, heavier
+    bar((20, 26), (12 + leaf * 0.55, 116), 0.07, 0.04)  # the brace
+
+
 def props(timber, logs):
-    """props.json: a bench at the hairpin and stacks of cut logs by the path."""
+    """props.json: a bench at the hairpin, stacks of cut logs by the path, and the world's field
+    gates: [kind, x, y, z, yaw, ...] in cm and degrees."""
     path = f"{SRC}/props.json"
     if not os.path.exists(path):
         log("props: none")
@@ -1291,8 +1323,10 @@ def props(timber, logs):
         dx, dy = _turn(local[0], local[1], yaw)
         group.add(mesh, (x + dx, y + dy, z + local[2]), yaw, scale, pitch=pitch, roll=roll)
 
-    for kind, x, y, z, yaw in items:
-        if kind == "bench":
+    for kind, x, y, z, yaw, *rest in items:
+        if kind == "gate":
+            _gate(parts, cube, rng, x, y, z, yaw, *rest)
+        elif kind == "bench":
             # Seat 45 cm up, 180 cm long along local Y; the sitter looks along +X.
             for lx in (-18, 18):
                 for ly in (-75, 75):
