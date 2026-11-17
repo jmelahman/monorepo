@@ -125,35 +125,6 @@ require("lazy").setup({
       end
     },
     {
-      "hat0uma/csvview.nvim",
-      ft = { "csv", "tsv" },
-      config = function()
-        require("csvview").setup()
-      end,
-    },
-    {
-      "cgrindel/vim-bazelrc",
-      ft = "bazelrc",
-      event = "BufRead *.bazelrc",
-    },
-    {
-      "kawre/leetcode.nvim",
-      event = "CmdlineEnter",
-      build = ":TSUpdate html",
-      dependencies = {
-        "MunifTanjim/nui.nvim",
-        "nvim-lua/plenary.nvim",
-        "nvim-telescope/telescope.nvim",
-        "nvim-treesitter/nvim-treesitter",
-      },
-      opts = {
-        lang = "python3",
-        description = {
-          position = "top",
-        },
-      },
-    },
-    {
       "nvimtools/none-ls.nvim",
       config = function()
         local null_ls = require("null-ls")
