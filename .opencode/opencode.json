@@ -4,6 +4,7 @@
     {
       "package": "../extensions/opencode-model-cost",
       "options": { "separator": "", "padTo": 52 }
-    }
+    },
+    "../extensions/opencode-usage-summaries"
   ]
 }

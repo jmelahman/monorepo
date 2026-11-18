@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["bun"],
+    "jsxImportSource": "@opentui/solid",
+    "jsx": "preserve"
+  },
+  "include": ["src", "test"]
+}
