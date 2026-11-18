@@ -282,7 +282,7 @@ alias snap="sleep 2 && swaymsg -t get_tree | jq -r '.. | select(.focused?) | .re
 alias lights='smart-lights'
 alias awslogin="aws sso login"
 alias activate="source .venv/bin/activate"
-alias dot='/usr/bin/git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
+alias dot='git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
 
 # Functions
 function home() {
