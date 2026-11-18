@@ -1,7 +1,18 @@
+# Keep PATH entries unique, including when this file is reloaded.
+typeset -U path PATH
+
 # Enable completion
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
-compinit
+# Skip the completion security audit except once a day.
+zcompdump_stale=(~/.zcompdump(N.mh+24))
+if [[ -f ~/.zcompdump && $#zcompdump_stale -eq 0 ]]; then
+	compinit -C
+else
+	compinit
+	touch ~/.zcompdump
+fi
+unset zcompdump_stale
 
 # History
 HISTFILE=~/.zsh_history
@@ -344,15 +355,15 @@ function grb() {
 }
 
 # Kitty init
-KITTY_SHELL_INTEGRATION="${KITTY_INSTALLATION_DIR:=/usr/lib/kitty}/shell-integration/$(basename "${SHELL:-zsh}")/kitty.zsh"
+KITTY_SHELL_INTEGRATION="${KITTY_INSTALLATION_DIR:=/usr/lib/kitty}/shell-integration/${${SHELL:-zsh}##*/}/kitty.zsh"
 if [ -f "$KITTY_SHELL_INTEGRATION" ]; then
 	source "$KITTY_SHELL_INTEGRATION"
-elif [ -x "$(command -v kitty)" ]; then
+elif (($+commands[kitty])); then
 	source <(kitty +kitten shell-integration)
 fi
 
 # FZF init
-if [ -x "$(command -v fzf)" ] && [ -r /usr/share/fzf/key-bindings.zsh ]; then
+if (($+commands[fzf])) && [ -r /usr/share/fzf/key-bindings.zsh ]; then
 	source /usr/share/fzf/key-bindings.zsh
 fi
 
@@ -367,14 +378,16 @@ export LSCOLOR=""
 export PREK_ALLOW_NO_CONFIG=1
 
 # Fall back to less if the configured git pager isn't installed
-if ! command -v "$(git config --get core.pager 2>/dev/null | awk '{print $1}')" &>/dev/null; then
+git_pager=$(git config --get core.pager 2>/dev/null)
+if ! command -v "${git_pager%%[[:space:]]*}" &>/dev/null; then
 	export GIT_PAGER=less
 fi
+unset git_pager
 
 # Customize Path
 export GOPATH="$HOME/.go"
 export GOBIN="$GOPATH/bin"
-export PATH=$GOBIN:$HOME/.local/bin:$HOME/.bun/bin:$PATH:$PATH
+export PATH=$GOBIN:$HOME/.local/bin:$HOME/.bun/bin:$PATH
 
 export GRIM_DEFAULT_DIR="~/Pictures"
 
