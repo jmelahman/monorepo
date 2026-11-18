@@ -21,7 +21,7 @@ import { Capacitor } from "@capacitor/core"
  * - Not the APK. Asked of Capacitor, which knows, rather than of the screen:
  *   a tablet in landscape is a wide screen and still the phone product.
  * - A landscape screen with room for a table. A query about the *screen*, which
- *   CLAUDE.md is right to trust, never one about the input: a desktop browser
+ *   AGENTS.md is right to trust, never one about the input: a desktop browser
  *   narrowed to a column is a phone-shaped window and gets the phone's layout,
  *   and the Tauri window, which opens wide, gets the table.
  *

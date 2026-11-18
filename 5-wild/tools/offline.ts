@@ -23,7 +23,7 @@ import type { Plugin } from "vite"
  *
  * - `sw.js` is the worker; a worker that caches itself has pinned itself.
  * - `CNAME` is read by GitHub and `og.png` by link previews, neither by a page.
- * - `.md` is `public/words/CLAUDE.md`, which vite copies with its neighbours.
+ * - `.md` is `public/words/AGENTS.md`, which vite copies with its neighbours.
  * - `.woff` is each face's fallback for a browser without woff2, and every
  *   browser with service workers has woff2. They are 0.4MB that would be
  *   downloaded by every player and read by none.

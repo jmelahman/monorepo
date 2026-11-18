@@ -21,7 +21,7 @@ import { juiced, tactile, tween } from "../motion"
  * do the same.
  *
  * Nothing here animates `.grid`, its width or its font size. Tiles get
- * `transform`, `translate`, `opacity` and `filter`. See the long section of CLAUDE.md on the board flash before
+ * `transform`, `translate`, `opacity` and `filter`. See the long section of AGENTS.md on the board flash before
  * adding anything that measures or resizes.
  */
 

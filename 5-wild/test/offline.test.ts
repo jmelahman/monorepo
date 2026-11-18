@@ -19,7 +19,7 @@ describe("offline precache", () => {
     "index.html",
     "og.png",
     "sw.js",
-    "words/CLAUDE.md",
+    "words/AGENTS.md",
     "words/en/allowed.txt",
     "words/en/answers.txt",
   ]

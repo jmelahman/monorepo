@@ -21,7 +21,7 @@ const FRONTEND_PORT = 5174;
 // backend tries to spawn session containers via the host docker daemon.
 // `dockerd` resolves bind sources against the *host* filesystem, so any
 // `/tmp/kanban-e2e-…` path created inside this container is invisible to
-// it (CLAUDE.md "Spawning session containers from this devcontainer").
+// it (AGENTS.md "Spawning session containers from this devcontainer").
 //
 // To make the suite work both inside the devcontainer and on a bare host,
 // we:

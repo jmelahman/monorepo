@@ -129,7 +129,7 @@ build_type=workflow`), keep `base` in `docs/.vitepress/config.ts` in sync
 with the repo name (it's the URL prefix Pages serves the site under), and
 trigger the first deploy with `gh workflow run docs.yml`.
 
-See `CLAUDE.md` for the full development reference (tests, lint, E2E, docs
+See `AGENTS.md` for the full development reference (tests, lint, E2E, docs
 conventions).
 
 ## 📖 Documentation

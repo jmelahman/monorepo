@@ -1,6 +1,6 @@
 # Veloverse: engine notes
 
-How things work and the tips that save time. `CLAUDE.md` has the goal and the rules, and wins
+How things work and the tips that save time. `AGENTS.md` has the goal and the rules, and wins
 where the two differ. The old plans are in `docs/archive/`, for history only.
 
 ## The look and `oc.py look`

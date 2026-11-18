@@ -19,7 +19,7 @@ import { isTable } from "../table"
  * has to answer are answered once:
  *
  * - `reduced()`: the player asked for stillness. Motion is *stopped*, never
- *   compressed; see CLAUDE.md for the three bugs that taught that.
+ *   compressed; see AGENTS.md for the three bugs that taught that.
  * - `ms()`: a duration as authored, at the speed the player chose, by the same
  *   arithmetic the stylesheet's `calc(Xms * var(--pace))` does.
  * - `juiced()`: the table's extra effects may run. They are the desktop's alone

@@ -1,6 +1,6 @@
 # Contributing
 
-Everything here is about the code. The README is the game; `CLAUDE.md` is the
+Everything here is about the code. The README is the game; `AGENTS.md` is the
 design notes, and is worth reading before changing anything the engine owns.
 
 ## Running it

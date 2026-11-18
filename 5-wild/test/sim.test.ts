@@ -15,7 +15,7 @@
  *
  * The assertions are deliberately a wide band rather than a number. A tight one
  * would be a balance expectation pinned in a test nobody thinks of as a balance
- * test, which is the failure mode CLAUDE.md warns about. A shelf reshuffle
+ * test, which is the failure mode AGENTS.md warns about. A shelf reshuffle
  * would break it on seeds nobody was thinking about, and the repair would be to
  * renumber it, which teaches nothing.
  */

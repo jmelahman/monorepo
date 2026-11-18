@@ -17,7 +17,7 @@ off it, each on two bridges:
 
 `ROUTES` in `make_chain.py` lists the rides. Any set of islands makes a loop with no road ridden
 twice. `climb_world.py` writes the first route as `DA_RideTrack` and the rest as
-`DA_Route_<key>`. CLAUDE.md, "Building the world", has the pipeline.
+`DA_Route_<key>`. AGENTS.md, "Building the world", has the pipeline.
 
 ## Open problems (from the latest stills)
 

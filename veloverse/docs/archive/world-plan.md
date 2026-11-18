@@ -1,6 +1,6 @@
 # Veloverse: the world plan and the biome foundation
 
-Written 10 Nov for whoever continues (the user plans to hand this to Opus). Read `CLAUDE.md`
+Written 10 Nov for whoever continues (the user plans to hand this to Opus). Read `AGENTS.md`
 first for the loop, the crash rules and the vegetation rules; this file is the map of what
 exists beyond the alpine climb and what to do with it.
 
@@ -32,7 +32,7 @@ as DA_Route_<key>. The sections below are the history of how the biomes were fou
    it. It takes about 80 s to run and needs no editor.
 2. **Biome stretches** (`scripts/biomes.py`, `OC_BIOME` in `scripts/make_climb.py`). Each
    biome is proven as a 2 km stretch in the one level slot (L_Hero), on the same pipeline
-   and commands as the alpine climb, so every lesson in CLAUDE.md applies to all of them.
+   and commands as the alpine climb, so every lesson in AGENTS.md applies to all of them.
 
 Why not the old 8 km island level (`make_island.py`, `island_world.py`, L_Island)? It ran at
 3 to 4 fps and predates everything that made the climb look real (blade grass, the ground

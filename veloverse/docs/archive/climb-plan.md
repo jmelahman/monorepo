@@ -227,7 +227,7 @@ scanned meshes, Lumen and VSM. Don't build on that level or its look.
     0.5 on unchanged frames; trust the stills). The band is gone. Storybook v29 (img22).
   - **v30, the vegetation reset** (the user: "disappointed with the grass and ferns", worse than
     Skyrim's). v12-v29 tuned tints and densities; the faults were structural. See "Vegetation:
-    the approach" in CLAUDE.md for the rules. What changed:
+    the approach" in AGENTS.md for the rules. What changed:
     - `GRASS["Forest"]` grows only on the Forest layer's grass patches and `GRASS["Forest
       floor"]` (ferns, shrubs, logs, stones) on the litter between (`Ground.patch`; the MIXES
       row's fifth item is the patch noise's low and high).
