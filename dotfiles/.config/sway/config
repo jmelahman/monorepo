@@ -25,7 +25,7 @@ set $menu env PATH="$HOME/.local/bin:$PATH" wmenu-run
 # -a full: only trigger the pause for fullscreen windows
 # hwdec=vaapi: decode on the GPU (video must be yuv420p, not yuv444p)
 # profile=fast: cheap bilinear scaling instead of lanczos, fine for a wallpaper
-exec mpvpaper -f -p -a full -o "no-audio loop hwdec=vaapi profile=fast really-quiet" '*' ~/.backgrounds/divoom_optimized.mp4
+exec mpvpaper -f -p -a full -o "no-audio loop hwdec=vaapi profile=fast really-quiet" '*' ~/.backgrounds/divoom.mp4
 #
 # Example configuration:
 #
