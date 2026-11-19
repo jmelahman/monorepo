@@ -29,6 +29,20 @@ services:
       # The voice model, downloaded on first use
       - notebook_cache:/root/.cache/notebook
 
+  music:
+    # Built from ../music, or pulled once the image workflow publishes it.
+    image: ghcr.io/jmelahman/music
+    build: ../music
+    container_name: music
+    restart: unless-stopped
+    expose:
+      - 8095
+    volumes:
+      # The owned library, beside the media jellyfin serves, so it plays there
+      # too; synced to the phone by the host's Syncthing.
+      - ~/media/music:/music
+      - music_state:/state
+
   nginx:
     image: nginx
     container_name: nginx
@@ -135,6 +149,7 @@ volumes:
   jellyfin_data:
   notebook_state:
   notebook_cache:
+  music_state:
 
 networks:
   # Declared by the agentic-kanban compose project and shared with its

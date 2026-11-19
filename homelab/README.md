@@ -13,6 +13,7 @@
 | `/files`          | `..`, the monorepo, for `/write` to save                          |
 | `/design`         | `../.config/git-orchard/shared/design/design`, shared by them all |
 | `/notebook`       | notebook, built from `../notebook`                                |
+| `/music`          | music, built from `../music`                                       |
 | `/audiobookshelf` | audiobookshelf                                                    |
 | `/video`          | jellyfin                                                          |
 | `/pihole/admin`   | pihole                                                            |
@@ -62,6 +63,20 @@ docker compose up -d --build notebook
 Episodes are published to `podcasts/`; to see them, add a Podcast library on
 `/podcasts` in audiobookshelf once. Anyone who can reach the dashboard can use
 the notebook, and through it Claude on your subscription.
+
+### Music
+
+The music client at `/music` streams to discover and buys to own: purchases
+land in `~/media/music`, which the compose file mounts beside the media
+jellyfin serves, so what is bought is also what jellyfin plays. The image is
+published to ghcr.io/jmelahman/music on every push, so after a change,
+
+```shell
+docker compose up -d --build music
+```
+
+The page carries a manifest, so over Tailscale Serve the browser's
+"install app" puts it on a phone's home screen.
 
 ### Models
 

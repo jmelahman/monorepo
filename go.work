@@ -9,6 +9,7 @@ use (
 	./git-orchard
 	./kev-go
 	./local-preview
+	./music
 	./nature-sounds
 	./notebook
 	./pinsync

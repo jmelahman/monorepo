@@ -16,6 +16,12 @@
           "icon": "kanban"
         },
         {
+          "name": "Music",
+          "description": "Stream to discover, own what you keep",
+          "url": "/music/",
+          "icon": "music"
+        },
+        {
           "name": "Notebook",
           "description": "Sources into podcast episodes",
           "url": "/notebook/",

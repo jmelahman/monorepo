@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Music</title>
+  <link rel="stylesheet" href="design/design.css">
+  <link rel="stylesheet" href="design/toolbar.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- So the tailnet's "install app" works over Tailscale Serve's HTTPS. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <script src="design/theme.js"></script>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="group">
+      <h1>Music</h1>
+    </div>
+
+    <div class="group end">
+      <span id="status" class="status" role="status"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="tagline">
+      <h2 id="tagline" class="tagline">Stream to discover. Own what you keep.</h2>
+      <p>
+        Music for the homelab: mixes and search listened to from YouTube
+        Music, and an owned library that what is bought lands in &mdash;
+        through store providers, so where it buys from is configuration,
+        not code.
+      </p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -86,6 +86,12 @@
 	shared = base
 	shared = python
 	shared = pybuild
+[subtree "music"]
+	remote = git@github.com:jmelahman/music.git
+	branch = master
+	shared = base
+	shared = go
+	shared = design
 [subtree "nature-sounds"]
 	remote = git@github.com:jmelahman/nature-sounds.git
 	branch = master

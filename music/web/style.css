@@ -1,0 +1,73 @@
+/* Fonts and the shared tokens come from design/design.css. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--chalk);
+  font: 400 0.875rem/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Toolbar */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  min-width: 0;
+}
+
+.group.end {
+  margin-left: auto;
+}
+
+h1 {
+  margin: 0;
+  overflow: hidden;
+  font: 600 1rem/1.2 var(--sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  overflow: hidden;
+  color: var(--dim);
+  font: 400 0.6875rem/1.2 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The page so far: an intro, while mixes, streaming and purchases land. */
+
+main {
+  margin: 0 auto;
+  max-width: 34rem;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.intro .tagline {
+  margin: 0 0 1rem;
+  font: 600 1.5rem/1.2 var(--cond);
+  letter-spacing: 0.02em;
+}
+
+.intro p {
+  margin: 0;
+  color: var(--dim);
+  max-width: 26rem;
+}

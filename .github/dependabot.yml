@@ -73,6 +73,7 @@ updates:
   - package-ecosystem: "docker"
     directories:
       - /agentic-kanban/build/devcontainer
+      - /music
       - /templates/fullstack-template
       - /templates/fullstack-template/.devcontainer
     schedule:
