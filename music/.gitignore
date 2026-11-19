@@ -1,2 +1,5 @@
 # The built binary, from `go build` and wgo.
 /music
+
+# Store providers that stay out of the public mirror, with their credentials.
+/stores/_private/
