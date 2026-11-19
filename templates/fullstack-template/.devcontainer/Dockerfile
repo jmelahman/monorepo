@@ -1,11 +1,11 @@
 # Toolchains copied in below. Declared as stages (not inline COPY --from) so
 # Dependabot bumps their version and digest pins.
-FROM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS go
+FROM golang:1.27.3@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e AS go
 
 # Go tools are cross-compiled on the build platform so multi-arch builds don't
 # compile them under emulation. Cross-compiled `go install` output lands in
 # bin/<os>_<arch>/, hence the find.
-FROM --platform=$BUILDPLATFORM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS gotools
+FROM --platform=$BUILDPLATFORM golang:1.27.3@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e AS gotools
 ARG TARGETOS
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install github.com/bokwoon95/wgo@latest \
