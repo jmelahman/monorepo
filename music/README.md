@@ -1,6 +1,6 @@
 # music
 
-The homelab's music client: **stream to discover, own what you keep.**
+The homelab's music client: **stream to own.**
 
 A skeleton today. The shape it grows into:
 
