@@ -1,8 +1,0 @@
-services:
-  ollama:
-    environment:
-      OLLAMA_VULKAN: 1
-      OLLAMA_IGPU_ENABLE: 1
-    devices:
-      - /dev/kfd
-      - /dev/dri
