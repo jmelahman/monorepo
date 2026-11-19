@@ -10,6 +10,6 @@
   },
   "devDependencies": {
     "vitepress": "^2.0.0-alpha.21",
-    "vitepress-plugin-llms": "^1.14.0"
+    "vitepress-plugin-llms": "^1.15.0"
   }
 }
