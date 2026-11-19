@@ -51,3 +51,7 @@ makes the page installable as an app on a phone.
 `design/`, `.golangci.yml`, `.github/workflows/pre-commit.yml` and the marked
 blocks in `.pre-commit-config.yaml` are shared with the other projects in the
 monorepo: edit them there and `git orchard sync` copies them here.
+
+## License
+
+GPLv3, like the notebook; see [LICENSE](LICENSE).
