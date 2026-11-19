@@ -16,7 +16,7 @@ import urllib.request
 OUTPUT = Path(__file__).resolve().parent / "models.json"
 DEFAULT_URL = "http://llama:18080"
 # Unloaded presets report no n_ctx; models.ini serves every model at this size.
-DEFAULT_CONTEXT = 8192
+DEFAULT_CONTEXT = 65536
 
 
 class Model(NamedTuple):
