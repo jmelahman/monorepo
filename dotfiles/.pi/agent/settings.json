@@ -1,6 +1,6 @@
 {
   "defaultProvider": "llama",
-  "defaultModel": "qwen3.8:27b",
+  "defaultModel": "gemma4:26b",
   "lastChangelogVersion": "0.85.1",
   "theme": "dark",
   "npmCommand": ["bun"],
