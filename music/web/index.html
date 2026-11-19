@@ -34,8 +34,23 @@
         not code.
       </p>
     </section>
+
+    <section class="library" aria-labelledby="library-heading">
+      <h2 id="library-heading">Library</h2>
+      <div id="now-playing" class="now-playing" role="status" hidden>
+        <button type="button" id="playpause">Pause</button>
+        <span id="np-text"></span>
+      </div>
+      <nav id="crumbs" class="crumbs" hidden>
+        <button type="button" id="crumb-root">Artists</button>
+        <button type="button" id="crumb-artist"></button>
+        <span id="crumb-album"></span>
+      </nav>
+      <ul id="list" class="list" role="list"></ul>
+    </section>
   </main>
 
+  <audio id="player" preload="none"></audio>
   <script src="app.js"></script>
 </body>
 </html>

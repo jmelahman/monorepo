@@ -4,6 +4,7 @@
 package main
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -17,6 +18,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +66,29 @@ func main() {
 			Music string `json:"music"`
 		}{OK: true, Music: *music})
 	})
+	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
+		artists, err := walkLibrary(*music)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(artists)
+	})
+	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {
+		name, err := safeJoin(*music, r.URL.Query().Get("path"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if info, err := os.Stat(name); err != nil || info.IsDir() || !isAudio(name) {
+			http.NotFound(w, r)
+			return
+		}
+		// ServeFile answers range requests, so seeking works and the
+		// browser only pulls what it has played.
+		http.ServeFile(w, r, name)
+	})
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The page changes with the binary; don't let a browser hold an old one.
@@ -99,6 +125,165 @@ func defaultState() string {
 		return filepath.Join(os.TempDir(), "music")
 	}
 	return filepath.Join(home, ".local", "state", "music")
+}
+
+// track is one file of the owned library, with its path relative to the
+// library's root so the audio endpoint can ask for it by name.
+type track struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+// album groups its tracks.
+type album struct {
+	Name   string  `json:"name"`
+	Tracks []track `json:"tracks"`
+}
+
+// artist groups its albums. The library's folders carry the store's
+// Artist/Album layout, so the tree itself is the catalog; singles that
+// sit directly under an artist land in a "Singles" album.
+type artist struct {
+	Name   string  `json:"name"`
+	Albums []album `json:"albums"`
+}
+
+// walkLibrary reads the owned library as artists, albums and tracks,
+// sorted, one pass of the folders it is made of.
+func walkLibrary(root string) ([]artist, error) {
+	if root == "" {
+		return nil, errors.New("no library folder: pass --music")
+	}
+	artistDirs, err := os.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+	var artists []artist
+	for _, ad := range artistDirs {
+		if !ad.IsDir() {
+			continue
+		}
+		a := artist{Name: ad.Name()}
+		entries, err := os.ReadDir(filepath.Join(root, ad.Name()))
+		if err != nil {
+			continue
+		}
+		var singles album
+		singles.Name = "Singles"
+		for _, ed := range entries {
+			if ed.IsDir() {
+				files, err := os.ReadDir(filepath.Join(root, ad.Name(), ed.Name()))
+				if err != nil {
+					continue
+				}
+				var al album
+				al.Name = ed.Name()
+				for _, fd := range files {
+					if t, ok := trackOf(ad.Name(), ed.Name(), fd); ok {
+						al.Tracks = append(al.Tracks, t)
+					}
+				}
+				if len(al.Tracks) > 0 {
+					slices.SortFunc(al.Tracks, func(x, y track) int { return natural(x.Name, y.Name) })
+					a.Albums = append(a.Albums, al)
+				}
+			} else if t, ok := trackOf(ad.Name(), "", ed); ok {
+				singles.Tracks = append(singles.Tracks, t)
+			}
+		}
+		if len(singles.Tracks) > 0 {
+			slices.SortFunc(singles.Tracks, func(x, y track) int { return natural(x.Name, y.Name) })
+			a.Albums = append(a.Albums, singles)
+		}
+		if len(a.Albums) > 0 {
+			slices.SortFunc(a.Albums, func(x, y album) int {
+				return cmp.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
+			})
+			artists = append(artists, a)
+		}
+	}
+	slices.SortFunc(artists, func(x, y artist) int {
+		return cmp.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
+	})
+	return artists, nil
+}
+
+// trackOf reads one directory entry as a track, skipping folders and
+// formats the player does not serve.
+func trackOf(artist, album string, entry os.DirEntry) (track, bool) {
+	if entry.IsDir() || !isAudio(entry.Name()) {
+		return track{}, false
+	}
+	info, err := entry.Info()
+	if err != nil {
+		return track{}, false
+	}
+	var dir string
+	if album != "" {
+		dir = path.Join(artist, album)
+	} else {
+		dir = artist
+	}
+	return track{
+		Name: strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())),
+		Path: path.Join(dir, entry.Name()),
+		Size: info.Size(),
+	}, true
+}
+
+// isAudio reports whether a file is one the player can serve.
+func isAudio(name string) bool {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wav", ".wma":
+		return true
+	}
+	return false
+}
+
+// safeJoin resolves a slash-separated path from a request under the
+// library's root, refusing anything that would escape it: the path is
+// made absolute before it is cleaned, so ".." can only ever climb back
+// down inside the root.
+func safeJoin(root, p string) (string, error) {
+	clean := path.Clean("/" + p)
+	if clean == "/" {
+		return "", errors.New("empty path")
+	}
+	joined := filepath.Join(root, filepath.FromSlash(clean))
+	abs, err := filepath.Abs(joined)
+	if err != nil {
+		return "", err
+	}
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasPrefix(abs+string(filepath.Separator), rootAbs+string(filepath.Separator)) {
+		return "", errors.New("outside the library")
+	}
+	return abs, nil
+}
+
+// natural orders track names like "02." and "10." by their number rather
+// than their spelling.
+func natural(a, b string) int {
+	na, aok := leadingInt(a)
+	nb, bok := leadingInt(b)
+	if aok && bok && na != nb {
+		return cmp.Compare(na, nb)
+	}
+	return cmp.Compare(strings.ToLower(a), strings.ToLower(b))
+}
+
+// leadingInt reads the number before a track name's first period.
+func leadingInt(s string) (int, bool) {
+	head, _, found := strings.Cut(s, ".")
+	if !found {
+		return 0, false
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(head))
+	return n, err == nil
 }
 
 // withDesign serves the page with the shared fonts and tokens under design/.

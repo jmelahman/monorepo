@@ -71,3 +71,114 @@ main {
   color: var(--dim);
   max-width: 26rem;
 }
+
+/* The library. */
+
+.library {
+  margin-top: 2.5rem;
+}
+
+.library h2 {
+  margin: 0 0 0.75rem;
+  font: 600 0.6875rem/1.2 var(--cond);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.now-playing {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0 0 0.75rem;
+  color: var(--chalk);
+  font: 400 0.6875rem/1.2 var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing button {
+  flex: none;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.5rem;
+  color: var(--dim);
+  font-size: 0.75rem;
+}
+
+.crumbs button {
+  padding: 0.125rem 0;
+  border: none;
+  background: none;
+}
+
+.crumbs span {
+  color: var(--chalk);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--ink-2);
+  overflow: hidden;
+}
+
+.list .row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid var(--rule-soft);
+  background: none;
+  color: var(--chalk);
+  font: 400 0.8125rem/1.3 var(--sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms var(--ease-out);
+}
+
+.list li:last-child .row {
+  border-bottom: none;
+}
+
+.list .row:hover {
+  background: var(--surface-hi);
+}
+
+.list .row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.list .row.current {
+  color: var(--accent);
+}
+
+.list .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list .size {
+  flex: none;
+  margin-left: auto;
+  color: var(--dim);
+  font: 400 0.625rem/1.2 var(--mono);
+}
+
+.list .empty {
+  padding: 0.5rem 0.75rem;
+  color: var(--dim);
+}
