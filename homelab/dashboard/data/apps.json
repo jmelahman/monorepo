@@ -45,6 +45,12 @@
           "icon": "headphones"
         },
         {
+          "name": "Chat",
+          "description": "Local model chat",
+          "url": "/llama/",
+          "icon": "chat"
+        },
+        {
           "name": "Jellyfin",
           "description": "Video library",
           "url": "/video/",
