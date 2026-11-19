@@ -51,7 +51,6 @@ services:
       - audiobookshelf
       - jellyfin
       - pihole
-      - pacoloco
 
   jellyfin:
     image: jellyfin/jellyfin
@@ -91,20 +90,7 @@ services:
       - SYS_NICE
       - SYS_TIME
 
-  pacoloco:
-    image: ghcr.io/anatol/pacoloco
-    container_name: pacoloco
-    restart: unless-stopped
-    environment:
-      - TZ=America/Chicago
-    expose:
-      - 9129
-    volumes:
-      - pacoloco_data:/var/cache/pacoloco
-      - ./pacoloco/pacoloco.yaml:/etc/pacoloco.yaml
-
 volumes:
   jellyfin_data:
-  pacoloco_data:
   notebook_state:
   notebook_cache:
