@@ -63,6 +63,48 @@ Episodes are published to `podcasts/`; to see them, add a Podcast library on
 `/podcasts` in audiobookshelf once. Anyone who can reach the dashboard can use
 the notebook, and through it Claude on your subscription.
 
+### Models
+
+`llama` serves the local models with [llama.cpp](https://github.com/ggml-org/llama.cpp)
+on port 18080, with an OpenAI-compatible API:
+
+```shell
+curl http://localhost:18080/v1/models
+curl http://localhost:18080/v1/chat/completions \
+  -d '{"model": "gemma4:26b", "messages": [{"role": "user", "content": "hi"}]}'
+```
+
+Devcontainers on `kanban-net` reach it as `http://llama:18080/v1`. It runs in
+router mode: `llama.cpp/models.ini` lists the models, and llama.cpp loads one
+on first request (`--models-max 1`), swapping it out when another is asked for.
+Each preset carries the Ollama-era id as an alias, so the names below are what
+clients request:
+
+| Model             | Notes                                  |
+| ----------------- | -------------------------------------- |
+| `gemma4:26b`      | vision, via its mmproj                 |
+| `gemma4:e4b`      | text only                              |
+| `qwen3.6:35b-a3b` | text only                              |
+| `qwen3.8:27b`     | vision, via its mmproj                 |
+
+The GGUFs live in `models/`, which is not committed. They came from Ollama's
+blob store (an Ollama model is a GGUF plus metadata). Two of them had a vision
+tower fused into the same file, which llama.cpp rejects, so
+`llama.cpp/convert-ollama-gguf.py` repacks the header and drops those tensors.
+To migrate another Ollama model, find its blob in
+`.../volumes/ollama_ollama_data/_data/models/blobs` (the `model` layer in the
+manifest under `models/manifests`) and run:
+
+```shell
+./llama.cpp/convert-ollama-gguf.py --strip-vision --out models/name.gguf BLOB
+```
+
+Add a matching section to `llama.cpp/models.ini`, then
+
+```shell
+docker compose up -d llama
+```
+
 ### Organizing
 
 Choose **Edit** on the dashboard to add, remove, rename, and rearrange apps and

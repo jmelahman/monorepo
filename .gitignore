@@ -35,6 +35,7 @@ homelab/auth/
 homelab/config/
 homelab/etc-pihole/
 homelab/metadata/
+homelab/models/
 homelab/podcasts/
 
 # Editor / AI tooling

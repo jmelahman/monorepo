@@ -90,7 +90,54 @@ services:
       - SYS_NICE
       - SYS_TIME
 
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama
+    restart: unless-stopped
+    # The AMD iGPU, for the Vulkan backend
+    devices:
+      - /dev/dri:/dev/dri
+    # 18080 in-container and on the host, so the same URL works everywhere:
+    # http://llama:18080/v1 in kanban devcontainers (docker DNS) and
+    # http://localhost:18080/v1 on the host.
+    expose:
+      - 18080
+    ports:
+      - "18080:18080"
+    networks:
+      - default
+      # agentic-kanban's devcontainers live on this network
+      - kanban-net
+    # Router mode: one endpoint for every model in llama.cpp/models.ini,
+    # loaded on first request and swapped out when another one needs the
+    # memory. The presets keep the Ollama-era ids as aliases, so existing
+    # clients need no changes.
+    command:
+      - --models-preset
+      - /etc/llama.cpp/models.ini
+      - --models-max
+      - "1"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "18080"
+    volumes:
+      - ./models:/models:ro
+      - ./llama.cpp/models.ini:/etc/llama.cpp/models.ini:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:18080/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 5m
+
 volumes:
   jellyfin_data:
   notebook_state:
   notebook_cache:
+
+networks:
+  # Declared by the agentic-kanban compose project and shared with its
+  # devcontainers, which reach the model server as http://llama:18080/v1.
+  kanban-net:
+    external: true
