@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate models.json from the output of `ollama list`.
+"""Generate models.json from a llama.cpp server's /v1/models listing.
 
-Usage: ./gen-models.py [--max-context N] [--stdout]
+Usage: ./gen-models.py [--url http://llama:18080] [--stdout]
 """
 
 from __future__ import annotations
@@ -10,11 +10,13 @@ import argparse
 import json
 from pathlib import Path
 import re
-import subprocess
 from typing import NamedTuple
+import urllib.request
 
 OUTPUT = Path(__file__).resolve().parent / "models.json"
-DEFAULT_MAX_CONTEXT = 131072
+DEFAULT_URL = "http://llama:18080"
+# Unloaded presets report no n_ctx; models.ini serves every model at this size.
+DEFAULT_CONTEXT = 8192
 
 
 class Model(NamedTuple):
@@ -26,20 +28,25 @@ class Model(NamedTuple):
         return {"id": self.id, "name": self.name, "contextWindow": self.context_window}
 
 
-def ollama(*args: str) -> str:
-    return subprocess.run(  # noqa: S603
-        ["ollama", *args], check=True, capture_output=True, text=True
-    ).stdout
+def list_models(base_url: str) -> list[Model]:
+    # The URL is a local llama.cpp endpoint the user passes in.
+    with urllib.request.urlopen(f"{base_url}/v1/models", timeout=30) as response:  # noqa: S310
+        data = json.load(response)["data"]
 
-
-def list_models() -> list[str]:
-    lines = ollama("list").splitlines()[1:]  # skip header
-    return [line.split()[0] for line in lines if line.strip()]
-
-
-def context_length(model: str) -> int | None:
-    match = re.search(r"^\s*context length\s+(\d+)", ollama("show", model), re.MULTILINE)
-    return int(match.group(1)) if match else None
+    models = []
+    for entry in data:
+        # The router lists quant-normalized ids ("gemma4:26B"); the preset
+        # aliases carry the intended model id.
+        model_id = (entry.get("aliases") or [entry["id"]])[0]
+        context = entry.get("meta", {}).get("n_ctx")
+        models.append(
+            Model(
+                id=model_id,
+                name=display_name(model_id),
+                context_window=int(context or DEFAULT_CONTEXT),
+            )
+        )
+    return sorted(models, key=lambda m: m.id)
 
 
 def display_name(model: str) -> str:
@@ -60,31 +67,24 @@ def display_name(model: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--max-context",
-        type=int,
-        default=DEFAULT_MAX_CONTEXT,
-        help=f"cap contextWindow at this value (default: {DEFAULT_MAX_CONTEXT})",
+        "--url",
+        default=DEFAULT_URL,
+        help=f"llama.cpp server base URL (default: {DEFAULT_URL})",
     )
     parser.add_argument(
         "--stdout", action="store_true", help="print instead of writing models.json"
     )
     args = parser.parse_args()
 
-    models = [
-        Model(
-            id=model,
-            name=display_name(model),
-            context_window=min(context_length(model) or args.max_context, args.max_context),
-        )
-        for model in sorted(list_models())
-    ]
+    base_url = args.url.rstrip("/")
+    models = list_models(base_url)
 
     config = {
         "providers": {
-            "ollama": {
-                "baseUrl": "http://ollama:11434/v1",
+            "llama": {
+                "baseUrl": f"{base_url}/v1",
                 "api": "openai-completions",
-                "apiKey": "ollama",
+                "apiKey": "llama",
                 "models": [model.to_json() for model in models],
             }
         }

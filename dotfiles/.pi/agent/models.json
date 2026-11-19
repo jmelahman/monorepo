@@ -1,29 +1,29 @@
 {
   "providers": {
-    "ollama": {
-      "baseUrl": "http://ollama:11434/v1",
+    "llama": {
+      "baseUrl": "http://llama:18080/v1",
       "api": "openai-completions",
-      "apiKey": "ollama",
+      "apiKey": "llama",
       "models": [
         {
           "id": "gemma4:26b",
           "name": "Gemma 4 26B",
-          "contextWindow": 131072
+          "contextWindow": 8192
         },
         {
           "id": "gemma4:e4b",
           "name": "Gemma 4 E4B",
-          "contextWindow": 131072
+          "contextWindow": 8192
         },
         {
           "id": "qwen3.6:35b-a3b",
           "name": "Qwen 3.6 35B-A3B",
-          "contextWindow": 131072
+          "contextWindow": 8192
         },
         {
           "id": "qwen3.8:27b",
           "name": "Qwen 3.8 27B",
-          "contextWindow": 131072
+          "contextWindow": 8192
         }
       ]
     }
