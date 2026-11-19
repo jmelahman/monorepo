@@ -43,6 +43,30 @@ services:
       - ~/media/music:/music
       - music_state:/state
 
+  syncthing:
+    image: syncthing/syncthing
+    container_name: syncthing
+    hostname: bert
+    restart: unless-stopped
+    environment:
+      # Rootless Docker: container root is the host user, as in the other
+      # services; the image's default UID 1000 would map to a subuid with
+      # no write access to the mounts below.
+      - PUID=0
+      - PGID=0
+    volumes:
+      - syncthing_config:/var/syncthing/config
+      # The owned library, the same folder the music app serves and jellyfin
+      # plays; synced two-way with the phone over the tailnet.
+      - ~/media/music:/var/syncthing/music
+    ports:
+      # The GUI answers only on this machine; pairing happens from here.
+      - "127.0.0.1:8384:8384"
+      # Sync traffic goes direct over the tailnet; relays are off in the
+      # config so nothing leaves it.
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
+
   nginx:
     image: nginx
     container_name: nginx
@@ -150,6 +174,7 @@ volumes:
   notebook_state:
   notebook_cache:
   music_state:
+  syncthing_config:
 
 networks:
   # Declared by the agentic-kanban compose project and shared with its
