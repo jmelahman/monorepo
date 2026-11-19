@@ -1,0 +1,9 @@
+- A native Android client: Media3 playback in a foreground service, and
+  downloads through WorkManager with OS-enforced unmetered-network
+  constraints — the access control a page can only promise, not enforce.
+  It would speak the same api/ the webapp does and take over its playback,
+  and its own download manager would then replace the Syncthing pair.
+- Mixes and search from YouTube Music, the audio proxied through this
+  server so it plays anywhere the homelab is reachable.
+- Purchases through pluggable store providers into the owned library,
+  with a queue behind them for retries and a VPN-fronted egress.
