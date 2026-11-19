@@ -18,10 +18,10 @@ services:
     environment:
       # Required whenever the port is reachable beyond this machine.
       AGILECBT_SECRET: ${AGILECBT_SECRET:?set AGILECBT_SECRET}
-      # Any OpenAI-compatible API; defaults to Ollama on the host. Set
-      # AGILECBT_LLM=none to turn the coach off.
+      # Any OpenAI-compatible API; defaults to the host's llama.cpp server.
+      # Set AGILECBT_LLM=none to turn the coach off.
       AGILECBT_LLM: ${AGILECBT_LLM:-openai}
-      AGILECBT_LLM_BASE_URL: ${AGILECBT_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      AGILECBT_LLM_BASE_URL: ${AGILECBT_LLM_BASE_URL:-http://host.docker.internal:18080/v1}
       AGILECBT_LLM_API_KEY: ${AGILECBT_LLM_API_KEY:-}
       AGILECBT_MODEL: ${AGILECBT_MODEL:-}
     extra_hosts:

@@ -9,9 +9,10 @@ Both processes are long-running. Start them with `run_in_background: true`,
 then poll until their ports answer before driving the UI.
 
 The repo's `.config/agilecbt/config.toml` points the coach at the host's
-Ollama through its OpenAI-compatible API (`http://localhost:11434/v1`,
-`gemma4:26b`), so chat works out of the box when the server runs from the
-repo root. Dev containers set `AGILECBT_LLM_BASE_URL=http://ollama:11434/v1`
+llama.cpp server (the homelab's `llama` service) through its OpenAI-compatible
+API (`http://localhost:18080/v1`, `gemma4:26b`), so chat works out of the box
+when the server runs from the repo root. Dev containers set
+`AGILECBT_LLM_BASE_URL=http://llama:18080/v1`
 (via kanban's `container_env`) to reach it on the Docker network; if it's
 unset in a container (one started before that), export it yourself, or chat
 and `eval` fail every turn against `localhost`. Env vars

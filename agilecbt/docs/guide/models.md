@@ -121,7 +121,7 @@ report has them.
 From a checkout of the repo (the scenarios live in `evals/scenarios/`):
 
 ```sh
-ollama pull <model>
+# Serve the model on the configured endpoint first, then:
 agilecbt eval --model <model> --runs 3 --no-baseline
 ```
 

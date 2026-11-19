@@ -20,8 +20,8 @@ const appName = "agilecbt"
 
 // LLM backends for the in-app curator.
 const (
-	// LLMOpenAI is any OpenAI-compatible chat completions API: Ollama's /v1,
-	// OpenRouter, llama.cpp, vLLM, OpenAI itself.
+	// LLMOpenAI is any OpenAI-compatible chat completions API: llama.cpp's
+	// /v1, Ollama, OpenRouter, vLLM, OpenAI itself.
 	LLMOpenAI = "openai"
 	// LLMClaudeCode runs the Claude Code CLI (`claude -p`) on the signed-in
 	// Claude subscription.
@@ -29,9 +29,9 @@ const (
 	LLMNone       = "none"
 )
 
-// Defaults for the OpenAI-compatible backend: a local Ollama.
+// Defaults for the OpenAI-compatible backend: a local llama.cpp server.
 const (
-	DefaultBaseURL         = "http://localhost:11434/v1"
+	DefaultBaseURL         = "http://localhost:18080/v1"
 	DefaultModel           = "gemma4:26b"
 	DefaultReasoningEffort = "none"
 )

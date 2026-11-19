@@ -20,10 +20,10 @@ import (
 const maxToolRounds = 10
 
 // OpenAI runs the curator against any OpenAI-compatible chat completions
-// API: a local Ollama (/v1), OpenRouter, llama.cpp, vLLM, or OpenAI. Tools
+// API: a local llama.cpp server (/v1), Ollama, OpenRouter, vLLM, or OpenAI. Tools
 // run in-process through the registry.
 type OpenAI struct {
-	BaseURL string // e.g. http://localhost:11434/v1
+	BaseURL string // e.g. http://localhost:18080/v1
 	APIKey  string // sent as a bearer token when set
 	Model   string
 	// ReasoningEffort is sent as reasoning_effort when set. "none" keeps
@@ -151,7 +151,7 @@ func (o *OpenAI) Status(ctx context.Context) (bool, string) {
 			return true, ready
 		}
 	}
-	return false, fmt.Sprintf("%s doesn't have model %s (for Ollama, run `ollama pull %s`)", o.host(), o.Model, o.Model)
+	return false, fmt.Sprintf("%s doesn't have model %s (serve it there first — a llama.cpp models.ini preset, or Ollama: `ollama pull %s`)", o.host(), o.Model, o.Model)
 }
 
 type oaiMessage struct {

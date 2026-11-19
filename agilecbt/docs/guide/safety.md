@@ -82,8 +82,9 @@ adds its latency to every message. A small model keeps that short:
 `gemma4:e4b` took about 2 seconds per check on a local GPU. It's also the safer
 choice on a busy or slow server. When the check takes longer than 20 seconds,
 the app falls back to the phrase list, and the server logs
-`safety: classifier failed`. With Ollama, make sure the classifier and the
-coach fit in memory together. Otherwise each message waits for a model swap,
+`safety: classifier failed`. With a local model server, make sure the
+classifier and the coach fit in memory together. Otherwise each message waits
+for a model swap,
 and a check that waits too long for its model to load falls back to the phrase
 list.
 

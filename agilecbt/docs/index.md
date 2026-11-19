@@ -24,7 +24,7 @@ features:
   - title: CBT built in
     details: Guided thought records with plain-language thinking traps, a mood trend chart, and a weekly retro that turns "one thing to try" into next week's intention.
   - title: An AI coach you can undo
-    details: Runs on a local Ollama model or any OpenAI-compatible API, like OpenRouter. Claude Code can drive the same tools over MCP. Every change it makes shows up as a chip with Undo, and what it remembers is yours to edit.
+    details: Runs on a local llama.cpp model server or any OpenAI-compatible API, like OpenRouter. Claude Code can drive the same tools over MCP. Every change it makes shows up as a chip with Undo, and what it remembers is yours to edit.
   - title: Works with Claude over MCP
     details: The same tools are exposed at /mcp, so Claude Code or Claude Desktop can plan your week.
   - title: Your data stays yours

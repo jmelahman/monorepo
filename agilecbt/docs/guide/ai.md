@@ -26,7 +26,7 @@ needs to support tool calling.
 | Key (`config.toml`) | Environment | Default |
 | --- | --- | --- |
 | `llm` | `AGILECBT_LLM` | `openai`; `claude-code` uses [Claude Code](#claude-code-your-claude-subscription); `none` turns the coach off |
-| `base_url` | `AGILECBT_LLM_BASE_URL` | `http://localhost:11434/v1` (a local Ollama) |
+| `base_url` | `AGILECBT_LLM_BASE_URL` | `http://localhost:18080/v1` (a local llama.cpp server) |
 | `api_key` | `AGILECBT_LLM_API_KEY` | none; sent as `Authorization: Bearer` when set |
 | `model` | `AGILECBT_MODEL` | `gemma4:26b` (with `claude-code`: Claude Code's default) |
 | `reasoning_effort` | `AGILECBT_LLM_REASONING_EFFORT` | `none`; set it to `""` to leave it out of requests |
@@ -44,18 +44,19 @@ forms.
 Qwen3, so replies stay short and quick. If your provider rejects the
 parameter, set it to `""`, or to `low` for a model that must reason.
 
-### Ollama (local, the default)
+### llama.cpp (local, the default)
 
 Your check-ins never leave the machine. For natural check-in conversations
 and reliable tool calls, stick to the default model or larger. Smaller models run, but
 miss crisis resources and tool calls; see [Choosing a model](/guide/models).
 
 ```sh
-ollama pull gemma4:26b
+# Serve a gemma4:26b GGUF; any OpenAI-compatible server works.
+llama-server -m gemma4-26b.gguf --alias gemma4:26b --host 0.0.0.0 --port 18080
 agilecbt serve
 ```
 
-If Ollama runs elsewhere, set `base_url`, e.g. `http://ollama:11434/v1`.
+If the server runs elsewhere, set `base_url`, e.g. `http://localhost:18080/v1`.
 
 ### OpenRouter
 

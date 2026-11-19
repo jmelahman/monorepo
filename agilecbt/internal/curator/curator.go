@@ -1,6 +1,6 @@
 // Package curator is the in-app AI check-in coach. It builds the prompt and
 // per-turn context, stores the transcript, and delegates generation to a
-// Backend (an OpenAI-compatible API such as Ollama or OpenRouter).
+// Backend (an OpenAI-compatible API such as llama.cpp or OpenRouter).
 package curator
 
 import (

@@ -18,7 +18,7 @@ optional:
 
 ```toml
 llm = "openai"                          # AGILECBT_LLM: openai, claude-code, none
-base_url = "http://ollama:11434/v1"     # AGILECBT_LLM_BASE_URL
+base_url = "http://localhost:18080/v1"     # AGILECBT_LLM_BASE_URL
 api_key = "…"                           # AGILECBT_LLM_API_KEY
 model = "gemma4:26b"                   # AGILECBT_MODEL
 reasoning_effort = "none"               # AGILECBT_LLM_REASONING_EFFORT
@@ -34,8 +34,8 @@ safety_api_key = "…"                    # AGILECBT_SAFETY_API_KEY
 ```
 
 Unknown keys are an error, so a typo doesn't silently fall back to a default.
-The repository ships a `.config/agilecbt/config.toml` that points at Ollama
-on `localhost`; dev containers override it with `AGILECBT_LLM_BASE_URL`. Don't
+The repository ships a `.config/agilecbt/config.toml` that points at the
+local llama.cpp server on `localhost`; dev containers override it with `AGILECBT_LLM_BASE_URL`. Don't
 put `secret` or `api_key` in a file you commit.
 
 ## Crisis resources
@@ -86,7 +86,7 @@ The SQLite database lives in the data directory, resolved in order:
 | --- | --- | --- |
 | `AGILECBT_SECRET` | server, CLI | Shared secret. When set, the web UI asks for it and API/MCP clients send it as `Authorization: Bearer`. Unset means no auth |
 | `AGILECBT_LLM` | server | AI coach: `openai` (default, any OpenAI-compatible API), `claude-code` (the Claude Code CLI on your Claude subscription; see [Claude Code](/guide/ai#claude-code-your-claude-subscription)), or `none` |
-| `AGILECBT_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:11434/v1`, a local Ollama) |
+| `AGILECBT_LLM_BASE_URL` | server | API root before `/chat/completions` (default `http://localhost:18080/v1`, a local llama.cpp server) |
 | `AGILECBT_LLM_API_KEY` | server | Bearer token for the API, e.g. an OpenRouter key |
 | `AGILECBT_MODEL` | server | Model id (default `gemma4:26b`; with `claude-code`, Claude Code's default) |
 | `AGILECBT_LLM_REASONING_EFFORT` | server | Sent as `reasoning_effort` (default `none`, thinking off); empty leaves it out |

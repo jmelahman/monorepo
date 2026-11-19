@@ -15,8 +15,8 @@ with tools from cognitive behavioral therapy:
 - **Retro**: a weekly look back, optionally drafted by the coach, with a mood
   trend chart.
 
-The AI coach runs on any OpenAI-compatible API: a local Ollama model by
-default, or a hosted one through OpenRouter. The same tools are exposed over
+The AI coach runs on any OpenAI-compatible API: a local llama.cpp model
+server by default, or a hosted one through OpenRouter. The same tools are exposed over
 MCP at `/mcp`, so Claude Code and Claude Desktop can use them too. Every AI
 change is logged and can be undone.
 

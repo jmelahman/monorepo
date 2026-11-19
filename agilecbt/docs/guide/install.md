@@ -18,8 +18,8 @@ Put `agilecbt` on your `PATH`.
 AGILECBT_SECRET='something long' docker compose up -d --build
 ```
 
-`compose.yaml` points the coach at Ollama on the host
-(`http://host.docker.internal:11434/v1`). Set `AGILECBT_LLM_BASE_URL`,
+`compose.yaml` points the coach at the host's llama.cpp server
+(`http://host.docker.internal:18080/v1`). Set `AGILECBT_LLM_BASE_URL`,
 `AGILECBT_LLM_API_KEY`, and `AGILECBT_MODEL` to use another OpenAI-compatible
 API such as OpenRouter, or `AGILECBT_LLM=none` to turn the coach off.
 

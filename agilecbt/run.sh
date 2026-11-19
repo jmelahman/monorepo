@@ -11,7 +11,7 @@ IMAGE="${AGILECBT_DEV_IMAGE:-ghcr.io/jmelahman/devcontainer:latest}"
 
 if [[ -z ${AGILECBT_IN_DEVCONTAINER:-} ]]; then
 	# Host network keeps the ports on the host's localhost and lets the repo
-	# config reach the host's Ollama at localhost:11434 unchanged.
+	# config reach the host's llama.cpp server at localhost:18080 unchanged.
 	data_dir="${AGILECBT_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agilecbt}"
 	gomod_dir="${GOMODCACHE:-$HOME/go/pkg/mod}"
 	cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"

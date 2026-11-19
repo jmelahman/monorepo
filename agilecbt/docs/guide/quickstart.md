@@ -8,9 +8,10 @@ agilecbt serve
 
 The server listens on `:8080`. Open <http://localhost:8080/>.
 
-By default, the AI coach uses a local [Ollama](https://ollama.com)
-(`ollama pull gemma4:26b`). Any OpenAI-compatible API works, including
-OpenRouter; see [AI coach & MCP](/guide/ai). `AGILECBT_LLM=none` turns the coach
+By default, the AI coach uses a local [llama.cpp](https://github.com/ggml-org/llama.cpp)
+server with `gemma4:26b` (see [AI coach & MCP](/guide/ai)). Any
+OpenAI-compatible API works, including Ollama and OpenRouter.
+`AGILECBT_LLM=none` turns the coach
 off, and every other feature keeps working without it.
 
 ## A first week
