@@ -1,6 +1,6 @@
 # music
 
-The homelab's music client: **stream to own.**
+The homelab's **music manager**: stream to own.
 
 A skeleton today. The shape it grows into:
 

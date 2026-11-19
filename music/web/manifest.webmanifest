@@ -1,7 +1,7 @@
 {
   "name": "Music",
   "short_name": "Music",
-  "description": "Stream to own.",
+  "description": "Music manager.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0a0a0c",

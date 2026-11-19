@@ -17,7 +17,7 @@
         },
         {
           "name": "Music",
-          "description": "Stream to own",
+          "description": "Music manager",
           "url": "/music/",
           "icon": "music"
         },
