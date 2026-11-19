@@ -52,6 +52,14 @@ makes the page installable as an app on a phone.
 blocks in `.pre-commit-config.yaml` are shared with the other projects in the
 monorepo: edit them there and `git orchard sync` copies them here.
 
+## Offline
+
+The page registers a service worker (`web/sw.js`) that caches the shell and
+the library listing, so the installed app opens off the tailnet. Albums are
+saved for offline deliberately — the button in the crumbs bar — into the
+browser's cache; saved tracks play from there with seeking, and removing
+one is the same button again.
+
 ## License
 
 GPLv3, like the notebook; see [LICENSE](LICENSE).

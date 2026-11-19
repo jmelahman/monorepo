@@ -122,6 +122,29 @@ main {
   color: var(--chalk);
 }
 
+.crumbs .spacer {
+  margin-left: auto;
+}
+
+.crumbs #save-offline {
+  flex: none;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--dim);
+  font-size: 0.6875rem;
+}
+
+.crumbs #save-offline:hover {
+  border-color: var(--dim);
+  color: var(--chalk);
+}
+
+.crumbs #save-offline:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .list {
   margin: 0;
   padding: 0;

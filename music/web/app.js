@@ -19,6 +19,19 @@ let library = []; // the artists, from api/library
 let playing = null; // { artist, album, index } of what the player holds
 let listedAlbum = null; // the album whose tracks are on screen
 
+// The same cache names the service worker keeps (web/sw.js).
+const AUDIO = 'music-audio-v1';
+const offlineKey = (path) => './saved-audio/' + encodeURIComponent(path);
+
+// The shell and saved albums come from the service worker; ask the browser
+// to keep them, since eviction would take the offline library with it.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});
+  }
+}
+
 fetch('api/health')
   .then((r) => r.json())
   .then((h) => {
@@ -51,6 +64,7 @@ const el = (tag, attrs, ...children) => {
 
 function renderArtists() {
   crumbs.hidden = true;
+  saveBtn.hidden = true;
   list.replaceChildren(
     ...library.map((a) =>
       el(
@@ -69,6 +83,7 @@ function renderArtists() {
 
 function renderAlbums(artist) {
   crumbs.hidden = false;
+  saveBtn.hidden = true;
   crumbArtist.textContent = artist.name;
   crumbAlbum.replaceChildren();
   list.replaceChildren(
@@ -90,6 +105,7 @@ function renderAlbums(artist) {
 function renderTracks(artist, album) {
   crumbAlbum.textContent = album.name;
   listedAlbum = album;
+  refreshSaveButton(album);
   list.replaceChildren(
     ...album.tracks.map((t, i) =>
       el(
@@ -117,6 +133,64 @@ crumbArtist.addEventListener('click', () => {
   const artist = library.find((a) => a.name === crumbArtist.textContent);
   if (artist) renderAlbums(artist);
 });
+
+// ------------------------------------------------------ saved offline
+
+const saveBtn = $('save-offline');
+
+saveBtn.addEventListener('click', () => {
+  if (listedAlbum) toggleSave(listedAlbum);
+});
+
+// The button mirrors the album's saved state: how many of its tracks the
+// cache holds.
+async function refreshSaveButton(album) {
+  const have = await savedCount(album);
+  saveBtn.hidden = false;
+  if (have === 0) {
+    saveBtn.textContent = 'Save offline';
+  } else if (have === album.tracks.length) {
+    saveBtn.textContent = 'Saved offline — remove';
+  } else {
+    saveBtn.textContent = `Save offline (${have} of ${album.tracks.length})`;
+  }
+}
+
+function savedCount(album) {
+  return caches.open(AUDIO).then((cache) =>
+    Promise.all(album.tracks.map((t) => cache.match(offlineKey(t.path)))).then((hits) => hits.filter(Boolean).length)
+  );
+}
+
+// toggleSave pins an album into the cache, track by track, or clears it
+// once everything is there. Saved tracks play from the cache, so this is
+// also a "stop streaming this album" switch.
+async function toggleSave(album) {
+  const cache = await caches.open(AUDIO);
+  const have = await savedCount(album);
+  if (have === album.tracks.length) {
+    await Promise.all(album.tracks.map((t) => cache.delete(offlineKey(t.path))));
+    await refreshSaveButton(album);
+    return;
+  }
+  saveBtn.disabled = true;
+  nowPlaying.hidden = false;
+  for (let i = 0; i < album.tracks.length; i++) {
+    const t = album.tracks[i];
+    if (await cache.match(offlineKey(t.path))) continue;
+    try {
+      const resp = await fetch(`api/audio?path=${encodeURIComponent(t.path)}`);
+      if (!resp.ok) throw new Error(resp.status);
+      await cache.put(offlineKey(t.path), resp);
+    } catch {
+      npText.textContent = `Could not save ${t.name} — the phone may be out of space`;
+      break;
+    }
+    npText.textContent = `Saving ${album.name}… ${i + 1} of ${album.tracks.length}`;
+  }
+  saveBtn.disabled = false;
+  await refreshSaveButton(album);
+}
 
 // ---------------------------------------------------------------- play
 
@@ -150,6 +224,14 @@ function step(delta) {
 }
 
 player.addEventListener('ended', () => step(1));
+
+// A track that won't load offline is a track that was never saved.
+player.addEventListener('error', () => {
+  if (!navigator.onLine) {
+    nowPlaying.hidden = false;
+    npText.textContent = 'Offline, and this album is not saved';
+  }
+});
 
 playpause.addEventListener('click', () => {
   if (player.paused) {
