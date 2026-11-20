@@ -42,6 +42,11 @@ services:
       # too; synced to the phone by the host's Syncthing.
       - ~/media/music:/music
       - music_state:/state
+      # The Android client's build output, served for download; the mount is
+      # empty until the first build, and the endpoint answers 404.
+      - ../music/android/app/build/outputs/apk/debug:/apk:ro
+    # Appends to the image's entrypoint.
+    command: ["--apk", "/apk/app-debug.apk"]
 
   syncthing:
     image: syncthing/syncthing

@@ -72,6 +72,29 @@ main {
   max-width: 26rem;
 }
 
+/* The native client's download, offered on the phone. */
+
+.intro .button {
+  display: inline-block;
+  margin-top: 1.25rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: 600 0.8125rem/1.2 var(--sans);
+  text-decoration: none;
+  transition: opacity 100ms var(--ease-out);
+}
+
+.intro .button:hover {
+  opacity: 0.85;
+}
+
+.intro .button:active {
+  transform: scale(0.99);
+}
+
 /* The library. */
 
 .library {

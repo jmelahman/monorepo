@@ -63,6 +63,12 @@ self.addEventListener('fetch', (event) => {
   const scope = new URL(self.registration.scope).pathname;
   const name = url.pathname.slice(scope.length - 1) || '/';
 
+  // The Android client's APK: tens of megabytes, a new one every build,
+  // and nothing the cache is for.
+  if (name.startsWith('/api/apk')) {
+    return;
+  }
+
   if (name.startsWith('/api/audio')) {
     event.respondWith(audio(req, url));
   } else if (name.startsWith('/api/library')) {

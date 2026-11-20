@@ -1,1 +1,7 @@
 Dockerfile
+
+# The Android client's build state; the APK reaches the server through the
+# compose mount, not the image.
+/android/.gradle/
+/android/app/build/
+/android/build/

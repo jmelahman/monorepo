@@ -51,6 +51,16 @@ fetch('api/library')
     list.append(el('li', { className: 'empty', textContent: 'The library could not be read.' }));
   });
 
+// The native client's APK, offered only where it can install: on the
+// phone, when a build is actually mounted behind the endpoint.
+if (/Android/.test(navigator.userAgent)) {
+  fetch('api/apk', { method: 'HEAD' })
+    .then((r) => {
+      if (r.ok) $('download-app').hidden = false;
+    })
+    .catch(() => {});
+}
+
 // ---------------------------------------------------------------- nodes
 
 const el = (tag, attrs, ...children) => {

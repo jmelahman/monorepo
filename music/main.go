@@ -38,6 +38,7 @@ func main() {
 	webDir := fl.String("web", "", "serve the page from this folder instead of the built-in copy, for development")
 	music := fl.String("music", defaultMusic(), "the owned library, where what is bought lands")
 	state := fl.String("state", defaultState(), "where the purchase queue and its session live")
+	apk := fl.String("apk", "", "the Android client's APK, served at api/apk when it exists")
 	_ = fl.Parse(os.Args[2:]) // ExitOnError
 
 	page, err := fs.Sub(embedded, "web")
@@ -88,6 +89,20 @@ func main() {
 		// ServeFile answers range requests, so seeking works and the
 		// browser only pulls what it has played.
 		http.ServeFile(w, r, name)
+	})
+	mux.HandleFunc("GET /api/apk", func(w http.ResponseWriter, r *http.Request) {
+		if *apk == "" {
+			http.NotFound(w, r)
+			return
+		}
+		info, err := os.Stat(*apk)
+		if err != nil || info.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+		// A download, not something to play inline.
+		w.Header().Set("Content-Disposition", `attachment; filename="Music.apk"`)
+		http.ServeFile(w, r, *apk)
 	})
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
