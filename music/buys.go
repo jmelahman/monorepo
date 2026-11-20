@@ -78,14 +78,14 @@ type buyQueue struct {
 // 503 when none is configured. Buys go through the queue rather than the
 // request: a purchase outlasts nginx's patience, and a hung-up client
 // must not cut it short.
-func routeBuys(mux *http.ServeMux, store, music, state string) {
+func routeBuys(ctx context.Context, mux *http.ServeMux, store, music, state string) {
 	var q *buyQueue
 	if store != "" {
 		var err error
 		if q, err = newBuyQueue(store, music, state); err != nil {
 			fail(err)
 		}
-		go q.run(context.Background())
+		go q.run(ctx)
 	}
 	mux.HandleFunc("POST /api/buy", func(w http.ResponseWriter, r *http.Request) {
 		if q == nil {
@@ -96,7 +96,10 @@ func routeBuys(mux *http.ServeMux, store, music, state string) {
 			Artist string `json:"artist"`
 			Title  string `json:"title"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Artist == "" || req.Title == "" {
+		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		err := json.NewDecoder(r.Body).Decode(&req)
+		req.Artist, req.Title = strings.TrimSpace(req.Artist), strings.TrimSpace(req.Title)
+		if err != nil || req.Artist == "" || req.Title == "" {
 			http.Error(w, "artist and title required", http.StatusBadRequest)
 			return
 		}
@@ -242,7 +245,12 @@ func (q *buyQueue) next() (*buy, time.Duration) {
 func (q *buyQueue) attempt(ctx context.Context, artist, title string) (*buyResult, error) {
 	cctx, cancel := context.WithTimeout(ctx, buyAttempt)
 	defer cancel()
-	cmd := exec.CommandContext(cctx, q.store, "buy", "--artist", artist, "--title", title, "--dir", q.music)
+	// The values ride in the flags themselves, so a title that starts
+	// with a dash can't be read as a flag of its own.
+	cmd := exec.CommandContext(cctx, q.store, "buy", "--artist="+artist, "--title="+title, "--dir="+q.music)
+	// A provider that leaves a browser or a download behind it must not
+	// hold the queue past the attempt's own limit.
+	cmd.WaitDelay = 10 * time.Second
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
 	out, err := cmd.Output()

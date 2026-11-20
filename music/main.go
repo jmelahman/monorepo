@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -45,6 +47,11 @@ func main() {
 	state := fl.String("state", defaultState(), "where the purchase queue and its session live")
 	apk := fl.String("apk", "", "the Android client's APK, served at api/apk when it exists")
 	_ = fl.Parse(os.Args[2:]) // ExitOnError
+
+	// A stop signal ends the buy worker and drains the requests in flight;
+	// a buy cut short runs again on the next start.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	page, err := fs.Sub(embedded, "web")
 	if err != nil {
@@ -74,7 +81,7 @@ func main() {
 	routeLibrary(mux, *music)
 	routeApp(mux, *apk)
 	routeYouTube(mux, *music)
-	routeBuys(mux, os.Getenv("MUSIC_STORE"), *music, *state)
+	routeBuys(ctx, mux, os.Getenv("MUSIC_STORE"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The page changes with the binary; don't let a browser hold an old one.
@@ -87,6 +94,13 @@ func main() {
 
 	slog.Info("music", "url", "http://"+*addr, "music", *music, "state", *state)
 	hs := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		<-ctx.Done()
+		// Streams can run for minutes; give them a moment, not forever.
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = hs.Shutdown(sctx)
+	}()
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fail(err)
 	}
@@ -144,7 +158,7 @@ func routeLibrary(mux *http.ServeMux, music string) {
 			return
 		}
 		loose := false
-		if info, err := os.Stat(dir); album == "Singles" && (err != nil || !info.IsDir()) {
+		if info, err := os.Stat(dir); album == singlesName && (err != nil || !info.IsDir()) {
 			dir, loose = artistDir, true
 		}
 		serveCover(w, r, dir, loose)
@@ -196,7 +210,7 @@ func routeYouTube(mux *http.ServeMux, music string) {
 			http.Error(w, "missing q", http.StatusBadRequest)
 			return
 		}
-		tracks, err := ytFlat(r.Context(), "ytsearch15:"+q)
+		tracks, err := ytFlat(r.Context(), "ytsearch15:"+q, 15)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
@@ -224,12 +238,12 @@ func ytStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for attempt := 0; ; attempt++ {
-		url, err := ytResolve(r.Context(), id)
+		stream, err := ytResolve(id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, stream.url, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
@@ -244,7 +258,7 @@ func ytStream(w http.ResponseWriter, r *http.Request) {
 		}
 		if (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusGone) && attempt == 0 {
 			resp.Body.Close()
-			ytForget(id)
+			ytForget(id, stream)
 			continue
 		}
 		defer resp.Body.Close()
@@ -323,7 +337,7 @@ func walkLibrary(root string) ([]artist, error) {
 			continue
 		}
 		var singles album
-		singles.Name = "Singles"
+		singles.Name = singlesName
 		for _, ed := range entries {
 			if ed.IsDir() {
 				files, err := os.ReadDir(filepath.Join(root, ad.Name(), ed.Name()))
@@ -346,6 +360,12 @@ func walkLibrary(root string) ([]artist, error) {
 			}
 		}
 		if len(singles.Tracks) > 0 {
+			// A folder that is itself called Singles takes the loose ones
+			// in, rather than the artist listing two albums of one name.
+			if i := slices.IndexFunc(a.Albums, func(al album) bool { return al.Name == singlesName }); i >= 0 {
+				singles.Tracks = append(a.Albums[i].Tracks, singles.Tracks...)
+				a.Albums = slices.Delete(a.Albums, i, i+1)
+			}
 			slices.SortFunc(singles.Tracks, func(x, y track) int { return natural(x.Name, y.Name) })
 			a.Albums = append(a.Albums, singles)
 		}
@@ -361,6 +381,9 @@ func walkLibrary(root string) ([]artist, error) {
 	})
 	return artists, nil
 }
+
+// singlesName is the album an artist's loose tracks are gathered into.
+const singlesName = "Singles"
 
 // trackOf reads one directory entry as a track, skipping folders and
 // formats the player does not serve.
@@ -429,13 +452,14 @@ func natural(a, b string) int {
 	return cmp.Compare(strings.ToLower(a), strings.ToLower(b))
 }
 
-// leadingInt reads the number before a track name's first period.
+// leadingInt reads the number a track name leads with, whatever follows
+// it: "02. ", "02 - " and "2 " all number the track.
 func leadingInt(s string) (int, bool) {
-	head, _, found := strings.Cut(s, ".")
-	if !found {
-		return 0, false
+	end := strings.IndexFunc(s, func(r rune) bool { return r < '0' || r > '9' })
+	if end < 0 {
+		end = len(s)
 	}
-	n, err := strconv.Atoi(strings.TrimSpace(head))
+	n, err := strconv.Atoi(s[:end])
 	return n, err == nil
 }
 
@@ -450,12 +474,13 @@ type ytTrack struct {
 
 // ytFlat runs yt-dlp over a URL and reads its flat playlist JSON lines,
 // one object per track.
-func ytFlat(ctx context.Context, url string) ([]ytTrack, error) {
+func ytFlat(ctx context.Context, url string, limit int) ([]ytTrack, error) {
 	cctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(cctx, "yt-dlp", "--flat-playlist", "-j", "--no-warnings", url).Output()
+	out, err := ytdlp(cctx, "--flat-playlist", "-j", "--no-warnings",
+		"--playlist-end", strconv.Itoa(limit), url)
 	if err != nil {
-		return nil, fmt.Errorf("yt-dlp: %w", err)
+		return nil, err
 	}
 	var tracks []ytTrack
 	for line := range strings.SplitSeq(string(out), "\n") {
@@ -481,63 +506,97 @@ func ytFlat(ctx context.Context, url string) ([]ytTrack, error) {
 	return tracks, nil
 }
 
-// ytResolve finds the audio stream behind a video, caching briefly: the
-// URLs are signed to this server and expire.
-var ytStreams = struct {
-	sync.RWMutex
-	urls map[string]struct {
-		url     string
-		expires time.Time
+// ytdlp runs yt-dlp and returns what it printed, or the last thing it
+// complained about, which says more than an exit status.
+func ytdlp(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd.WaitDelay = 5 * time.Second
+	out, err := cmd.Output()
+	if err != nil {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
+			if lines := strings.Split(strings.TrimSpace(string(exit.Stderr)), "\n"); lines[len(lines)-1] != "" {
+				return nil, fmt.Errorf("yt-dlp: %s", lines[len(lines)-1])
+			}
+		}
+		return nil, fmt.Errorf("yt-dlp: %w", err)
 	}
-}{urls: map[string]struct {
+	return out, nil
+}
+
+// ytStreams caches the audio stream behind each video briefly: the URLs
+// are signed to this server and expire. A video being resolved has a
+// pending entry the other requests for it wait on, as a player asks for
+// several ranges at once and each would otherwise run yt-dlp.
+var ytStreams = struct {
+	sync.Mutex
+	urls map[string]*ytStreamURL
+}{urls: map[string]*ytStreamURL{}}
+
+type ytStreamURL struct {
+	ready   chan struct{} // closed once url and err are set
 	url     string
+	err     error
 	expires time.Time
-}{}}
+}
 
 // ytID is what a YouTube video id looks like; anything else is refused
 // before it reaches yt-dlp.
 var ytID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 
-// ytForget drops a cached stream URL that the far end has refused.
-func ytForget(videoID string) {
+// ytForget drops a cached stream URL that the far end has refused,
+// unless another request has already put a fresh one in its place.
+func ytForget(videoID string, stale *ytStreamURL) {
 	ytStreams.Lock()
-	delete(ytStreams.urls, videoID)
+	if ytStreams.urls[videoID] == stale {
+		delete(ytStreams.urls, videoID)
+	}
 	ytStreams.Unlock()
 }
 
-func ytResolve(ctx context.Context, videoID string) (string, error) {
-	ytStreams.RLock()
-	hit, ok := ytStreams.urls[videoID]
-	ytStreams.RUnlock()
-	if ok && time.Now().Before(hit.expires) {
-		return hit.url, nil
-	}
-	cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(cctx, "yt-dlp", "-g", "-f", "bestaudio", "--no-warnings",
-		"https://music.youtube.com/watch?v="+videoID).Output()
-	if err != nil {
-		return "", fmt.Errorf("yt-dlp: %w", err)
-	}
-	url, _, _ := strings.Cut(string(out), "\n")
-	url = strings.TrimSpace(url)
-	if url == "" {
-		return "", errors.New("no audio stream found")
-	}
+// ytResolve finds the audio stream behind a video. It runs apart from
+// any one request, so a player hanging up on its first range doesn't
+// fail the others waiting on the same resolve.
+func ytResolve(videoID string) (*ytStreamURL, error) {
+	now := time.Now()
 	ytStreams.Lock()
-	// Expired entries go as new ones come, so the cache stays the size of
-	// what was played in the last ten minutes.
-	for id, e := range ytStreams.urls {
-		if time.Now().After(e.expires) {
-			delete(ytStreams.urls, id)
+	e, ok := ytStreams.urls[videoID]
+	if !ok || now.After(e.expires) {
+		// Expired entries go as new ones come, so the cache stays the
+		// size of what was played in the last ten minutes.
+		for id, old := range ytStreams.urls {
+			if now.After(old.expires) {
+				delete(ytStreams.urls, id)
+			}
+		}
+		e = &ytStreamURL{ready: make(chan struct{}), expires: now.Add(10 * time.Minute)}
+		ytStreams.urls[videoID] = e
+		go e.resolve(videoID)
+	}
+	ytStreams.Unlock()
+	<-e.ready
+	if e.err != nil {
+		return nil, e.err
+	}
+	return e, nil
+}
+
+func (e *ytStreamURL) resolve(videoID string) {
+	defer close(e.ready)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	out, err := ytdlp(ctx, "-g", "-f", "bestaudio", "--no-warnings", "https://music.youtube.com/watch?v="+videoID)
+	if err == nil {
+		e.url, _, _ = strings.Cut(string(out), "\n")
+		e.url = strings.TrimSpace(e.url)
+		if e.url == "" {
+			err = errors.New("no audio stream found")
 		}
 	}
-	ytStreams.urls[videoID] = struct {
-		url     string
-		expires time.Time
-	}{url, time.Now().Add(10 * time.Minute)}
-	ytStreams.Unlock()
-	return url, nil
+	if err != nil {
+		e.err = err
+		// A failure isn't cached; the next play tries again.
+		ytForget(videoID, e)
+	}
 }
 
 // trackNumber is the "01 " or "1. " a file name leads with.
@@ -561,17 +620,20 @@ func ytSupermix(ctx context.Context, musicDir string) ([]ytTrack, error) {
 	// Find the seed on YouTube, then let the radio do the rest.
 	// Track numbers only muddy the search.
 	name := trackNumber.ReplaceAllString(seed.Name, "")
-	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+name)
+	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+name, 1)
 	if err != nil || len(found) == 0 {
 		return nil, fmt.Errorf("no YouTube match for %s — %s", artist.Name, name)
 	}
-	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+found[0].VideoID+"&list=RD"+found[0].VideoID)
+	seedID := found[0].VideoID
+	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+seedID+"&list=RD"+seedID, 51)
 	if err != nil {
 		return nil, err
 	}
-	// The radio starts on its own seed; the mix is what follows it.
-	if len(mix) > 50 {
-		mix = mix[:50]
+	// The radio starts on its own seed, which the library already owns;
+	// the mix is what follows it.
+	mix = slices.DeleteFunc(mix, func(t ytTrack) bool { return t.VideoID == seedID })
+	if len(mix) == 0 {
+		return nil, fmt.Errorf("YouTube has no radio for %s — %s", artist.Name, name)
 	}
 	return mix, nil
 }
@@ -615,11 +677,14 @@ func (e *etags) of(urlPath string) string {
 	if t, ok := e.tags[name]; ok {
 		return t
 	}
-	t := ""
-	if b, err := fs.ReadFile(e.fsys, name); err == nil {
-		sum := sha256.Sum256(b)
-		t = `"` + hex.EncodeToString(sum[:12]) + `"`
+	b, err := fs.ReadFile(e.fsys, name)
+	if err != nil {
+		// Not remembered: any path can be asked for, and the misses
+		// would grow the map without end.
+		return ""
 	}
+	sum := sha256.Sum256(b)
+	t := `"` + hex.EncodeToString(sum[:12]) + `"`
 	if e.tags == nil {
 		e.tags = map[string]string{}
 	}

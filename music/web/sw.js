@@ -7,7 +7,7 @@
 // online page is always the current one; the cache answers when the
 // network doesn't.
 
-const SHELL = 'music-shell-v2';
+const SHELL = 'music-shell-v3';
 const AUDIO = 'music-audio-v1'; // the same name the page uses for saving
 
 // The shell: the page and the shared design, all that renders before the
@@ -116,8 +116,14 @@ async function range(req, saved) {
       headers: { 'Content-Type': type, 'Accept-Ranges': 'bytes' },
     });
   }
-  const start = Math.min(Number(m[1]), body.byteLength - 1);
+  const start = Number(m[1]);
   const end = m[2] === '' ? body.byteLength - 1 : Math.min(Number(m[2]), body.byteLength - 1);
+  if (start > end) {
+    return new Response(null, {
+      status: 416,
+      headers: { 'Content-Range': `bytes */${body.byteLength}` },
+    });
+  }
   const slice = body.slice(start, end + 1);
   return new Response(slice, {
     status: 206,

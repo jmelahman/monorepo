@@ -902,8 +902,7 @@ async function buyTrack(e, t) {
       body: JSON.stringify({ artist: t.artist, title: t.title }),
     });
     if (!r.ok) throw new Error((await r.text()).trim().slice(0, 120) || r.status);
-    await render();
-refreshBuys();
+    await refreshBuys();
   } catch (err) {
     notice(`The buy could not be queued: ${err.message}`);
     btn.disabled = false;
@@ -931,9 +930,11 @@ async function refreshBuys() {
       landed = true;
       const r = b.result;
       notice(
-        r.alreadyOwned
-          ? `Already in the library — ${r.artist} · ${r.title}`
-          : `Bought: ${r.artist} — ${r.title} (${r.album})`
+        !r
+          ? `Bought: ${b.artist} — ${b.title}`
+          : r.alreadyOwned
+            ? `Already in the library — ${r.artist} · ${r.title}`
+            : `Bought: ${r.artist} — ${r.title} (${r.album})`
       );
     } else if (b.status === 'failed') {
       notice(`The buy did not go through: ${b.artist} — ${b.title}: ${b.error}`);
