@@ -78,15 +78,6 @@ docker compose up -d --build music
 The page carries a manifest, so over Tailscale Serve the browser's
 "install app" puts it on a phone's home screen.
 
-### Syncthing
-
-The owned library (`~/media/music`) syncs two-way with the phone's Music
-folder, so what is bought lands on the phone and what the phone adds lands
-on the server, where jellyfin picks it up too. Sync goes direct over the
-tailnet — relays are off, so nothing leaves it — and a deletion on either
-side is kept in `.stversions` for two weeks before it goes for good. The
-GUI is at http://127.0.0.1:8384, on this machine only.
-
 ### Models
 
 `llama` serves the local models with [llama.cpp](https://github.com/ggml-org/llama.cpp)
