@@ -185,6 +185,7 @@ func main() {
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
 	})
+	routeBuys(mux, os.Getenv("MUSIC_STORE"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The page changes with the binary; don't let a browser hold an old one.

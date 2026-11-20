@@ -1,5 +1,5 @@
-- Purchases through pluggable store providers into the owned library,
-  with a queue behind them for retries and a VPN-fronted egress.
+- A VPN-fronted egress for the store provider (gluetun in the compose
+  file, the music container on its network), once there is a VPN to use.
 - The account-tied supermix, the one YouTube builds for signed-in
   listeners; the library-seeded radio mix stands in until cookies make it
   possible.

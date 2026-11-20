@@ -2,6 +2,7 @@ package com.jmelahman.music
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
@@ -86,4 +87,65 @@ object Api {
             YTTrack(o.getString("videoId"), o.getString("title"), o.getString("artist"), o.getInt("duration"))
         }
     }
+
+    // buy queues a streamed track with the server's store provider; the
+    // buy runs there, and buys() says where it stands.
+    fun buy(track: YTTrack): Buy {
+        val payload = JSONObject().put("artist", track.artist).put("title", track.title).toString()
+        val conn = URL("$baseUrl/api/buy").openConnection() as HttpURLConnection
+        try {
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.outputStream.use { it.write(payload.toByteArray()) }
+            if (conn.responseCode !in 200..299) {
+                val why = conn.errorStream?.bufferedReader()?.readText()?.trim().orEmpty()
+                throw RuntimeException(why.ifEmpty { "the server answered ${conn.responseCode}" })
+            }
+            return parseBuy(JSONObject(conn.inputStream.bufferedReader().readText()))
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    // buys is the server's purchase queue, newest first.
+    fun buys(): List<Buy> {
+        val a = JSONArray(URL("$baseUrl/api/buys").openStream().bufferedReader().readText())
+        return List(a.length()) { i -> parseBuy(a.getJSONObject(i)) }
+    }
+
+    private fun parseBuy(o: JSONObject): Buy {
+        val r = o.optJSONObject("result")
+        return Buy(
+            o.getString("id"), o.getString("artist"), o.getString("title"),
+            o.getString("status"), o.optString("error"),
+            r?.let {
+                BuyResult(
+                    it.optString("artist"), it.optString("album"), it.optString("title"),
+                    it.optString("file"), it.optBoolean("alreadyOwned"),
+                )
+            },
+        )
+    }
 }
+
+// One purchase in the server's queue: queued, buying, done or failed.
+data class Buy(
+    val id: String,
+    val artist: String,
+    val title: String,
+    val status: String,
+    val error: String,
+    val result: BuyResult?,
+) {
+    val pending get() = status == "queued" || status == "buying"
+}
+
+// What the store provider reports about a purchase that landed.
+data class BuyResult(
+    val artist: String,
+    val album: String,
+    val title: String,
+    val file: String,
+    val alreadyOwned: Boolean,
+)

@@ -26,6 +26,22 @@ wgo run . serve --web web
 The server listens on `:8095`, and the owned library defaults to
 `~/media/music`.
 
+## Buying
+
+The Buy button on a streamed track queues it with the store provider that
+`MUSIC_STORE` names: an executable run as
+
+```shell
+$MUSIC_STORE buy --artist NAME --title NAME --dir LIBRARY
+```
+
+which lands the file under `LIBRARY/Artist/Album/` and prints JSON —
+`artist`, `album`, `title`, `file`, `alreadyOwned` — or exits non-zero
+with the reason on stderr. The server runs one buy at a time, retries a
+failed one after a minute, five, then thirty, and saves the queue under
+`--state` so a restart picks up where it left off. `api/buys` lists it,
+newest first. Without `MUSIC_STORE`, buying answers 503.
+
 ## Image
 
 Every push to master and every release builds

@@ -37,6 +37,12 @@ services:
     restart: unless-stopped
     expose:
       - 8095
+    environment:
+      # The store provider the buy endpoint runs, with the credentials it
+      # signs in with; both live in homelab/.env.
+      - MUSIC_STORE=/store/provider
+      - STORE_EMAIL=${STORE_EMAIL:-}
+      - STORE_PASSWORD=${STORE_PASSWORD:-}
     volumes:
       # The owned library, beside the media jellyfin serves, so it plays there
       # too; the phone carries what its app saves for offline.
@@ -45,6 +51,8 @@ services:
       # The Android client's build output, served for download; the mount is
       # empty until the first build, and the endpoint answers 404.
       - ../music/android/app/build/outputs/apk/debug:/apk:ro
+      # The private store provider, built outside the mirror.
+      - ../music/stores/_private/provider:/store:ro
     # Appends to the image's entrypoint.
     command: ["--apk", "/apk/app-debug.apk"]
 

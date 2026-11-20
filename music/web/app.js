@@ -322,23 +322,157 @@ function renderStreams(tracks) {
     url: `api/yt/stream?v=${encodeURIComponent(t.videoId)}`,
   }));
   discoverList.replaceChildren(
-    ...tracks.map((t, i) =>
-      el(
+    ...tracks.map((t, i) => {
+      const play = () => playQueue(discoverItems, i);
+      return el(
         'li',
         {},
         el(
-          'button',
+          'div',
           {
             className: 'row stream',
-            type: 'button',
+            role: 'button',
+            tabIndex: 0,
             dataset: { key: discoverItems[i].key },
-            onclick: () => playQueue(discoverItems, i),
+            onclick: play,
+            // A div plays on the keys a button would.
+            onkeydown: (e) => {
+              if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                play();
+              }
+            },
           },
           el('span', { className: 'name', textContent: t.title }),
-          el('span', { className: 'size', textContent: fmtDuration(t.duration) })
+          el('span', { className: 'size', textContent: fmtDuration(t.duration) }),
+          el('button', {
+            className: 'buy',
+            type: 'button',
+            title: 'Buy this track into the owned library',
+            dataset: { buy: buyKey(t.artist, t.title) },
+            onclick: (e) => buyTrack(e, t),
+            textContent: 'Buy',
+          })
         )
-      )
-    )
+      );
+    })
   );
   markTrack();
+  markBuys();
 }
+
+// ---------------------------------------------------------------- buys
+
+// The server queues buys and runs them one at a time; the page polls the
+// queue while any are pending and marks each track's button with where
+// its buy stands.
+let buys = []; // from api/buys, newest first
+let buysPoll = null;
+
+const buyKey = (artist, title) => `${artist}\u0000${title}`.toLowerCase();
+
+const BUY_LABELS = { queued: 'Queued', buying: 'Buying…', done: 'Owned', failed: 'Retry' };
+
+// buyTrack hands a streamed track to the server's queue.
+async function buyTrack(e, t) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  // A buy spends the store account's balance; say so before it does.
+  if (!confirm(`Buy ${t.artist} — ${t.title} into the library?`)) return;
+  btn.disabled = true;
+  btn.textContent = 'Queued';
+  try {
+    const r = await fetch('api/buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artist: t.artist, title: t.title }),
+    });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 120));
+    await refreshBuys();
+  } catch (err) {
+    notice(`The buy could not be queued: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = 'Buy';
+  }
+}
+
+// refreshBuys reads the queue, says what finished since the last read,
+// and keeps polling while anything is pending.
+async function refreshBuys() {
+  let next;
+  try {
+    const r = await fetch('api/buys');
+    if (!r.ok) return;
+    next = await r.json();
+  } catch {
+    return;
+  }
+  const before = new Map(buys.map((b) => [b.id, b.status]));
+  let landed = false;
+  for (const b of next) {
+    const was = before.get(b.id);
+    if (was === undefined || was === b.status) continue;
+    if (b.status === 'done') {
+      landed = true;
+      const r = b.result;
+      notice(
+        r.alreadyOwned
+          ? `Already in the library — ${r.artist} · ${r.title}`
+          : `Bought: ${r.artist} — ${r.title} (${r.album})`
+      );
+    } else if (b.status === 'failed') {
+      notice(`The buy did not go through: ${b.artist} — ${b.title}: ${b.error}`);
+    }
+  }
+  buys = next;
+  markBuys();
+  if (landed) reloadLibrary();
+
+  const pending = buys.some((b) => b.status === 'queued' || b.status === 'buying');
+  if (pending && !buysPoll) {
+    buysPoll = setInterval(refreshBuys, 3000);
+  } else if (!pending && buysPoll) {
+    clearInterval(buysPoll);
+    buysPoll = null;
+  }
+}
+
+// markBuys labels each listed track's button with its newest buy.
+function markBuys() {
+  const newest = new Map();
+  for (const b of buys) {
+    const k = buyKey(b.artist, b.title);
+    if (!newest.has(k)) newest.set(k, b);
+  }
+  for (const btn of discoverList.querySelectorAll('.buy')) {
+    const b = newest.get(btn.dataset.buy);
+    if (!b) continue;
+    btn.textContent = BUY_LABELS[b.status] || 'Buy';
+    btn.disabled = b.status !== 'failed';
+    btn.title =
+      b.status === 'failed'
+        ? `The last try failed: ${b.error}`
+        : b.status === 'queued' && b.error
+          ? `Retrying after: ${b.error}`
+          : btn.title;
+  }
+}
+
+// reloadLibrary picks up what a buy added, redrawing the artists if
+// they're what is on screen.
+function reloadLibrary() {
+  fetch('api/library')
+    .then((r) => r.json())
+    .then((artists) => {
+      library = artists;
+      if (crumbs.hidden) renderArtists();
+    })
+    .catch(() => {});
+}
+
+function notice(text) {
+  nowPlaying.hidden = false;
+  npText.textContent = text;
+}
+
+refreshBuys();

@@ -56,6 +56,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import java.io.File
 import java.net.URL
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -87,6 +88,9 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
         private set
     var ytBusy by mutableStateOf(false)
         private set
+    var buys by mutableStateOf<List<Buy>>(emptyList())
+        private set
+    private var buysPoll: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +110,7 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
         setContent { MusicApp(this) }
         reload()
         checkForUpdate()
+        scope.launch { refreshBuys() }
     }
 
     override fun onDestroy() {
@@ -165,6 +170,70 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
                 notice = "The mix could not be built: ${e.message}"
             }
             ytBusy = false
+        }
+    }
+
+    // buyTrack queues a streamed track with the server's store provider,
+    // then follows the queue until it lands.
+    fun buyTrack(track: YTTrack) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.buy(track) }
+            } catch (e: Exception) {
+                notice = "The buy could not be queued: ${e.message}"
+                return@launch
+            }
+            refreshBuys()
+        }
+    }
+
+    // buyFor is the newest buy of a track, if it has one.
+    fun buyFor(track: YTTrack): Buy? = buys.firstOrNull {
+        it.artist.equals(track.artist, ignoreCase = true) && it.title.equals(track.title, ignoreCase = true)
+    }
+
+    // refreshBuys reads the queue, says what finished since the last read,
+    // and keeps polling while anything is pending.
+    private suspend fun refreshBuys() {
+        val next = try {
+            withContext(Dispatchers.IO) { Api.buys() }
+        } catch (e: Exception) {
+            return
+        }
+        val before = buys.associate { it.id to it.status }
+        var landed = false
+        for (b in next) {
+            val was = before[b.id] ?: continue
+            if (was == b.status) continue
+            when (b.status) {
+                "done" -> {
+                    landed = true
+                    val r = b.result
+                    notice = when {
+                        r == null -> "Bought: ${b.artist} — ${b.title}"
+                        r.alreadyOwned -> "Already in the library — ${r.artist} · ${r.title}"
+                        else -> "Bought: ${r.artist} — ${r.title} (${r.album})"
+                    }
+                }
+                "failed" -> notice = "The buy did not go through: ${b.artist} — ${b.title}: ${b.error}"
+            }
+        }
+        buys = next
+        if (landed) reloadLibrary()
+        if (buys.any { it.pending } && buysPoll?.isActive != true) {
+            buysPoll = scope.launch {
+                while (buys.any { it.pending }) {
+                    delay(3000)
+                    refreshBuys()
+                }
+            }
+        }
+    }
+
+    // reloadLibrary picks up what a buy added without clearing the screen.
+    private fun reloadLibrary() {
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { Api.library() } }.onSuccess { library = it }
         }
     }
 
@@ -386,6 +455,7 @@ private fun Notice(text: String?) {
 @Composable
 private fun DiscoverScreen(activity: MainActivity) {
     var query by remember { mutableStateOf("") }
+    var confirming by remember { mutableStateOf<YTTrack?>(null) }
     Column {
         Row(
             modifier = Modifier
@@ -429,9 +499,40 @@ private fun DiscoverScreen(activity: MainActivity) {
                 ) {
                     Text(track.title, modifier = Modifier.weight(1f))
                     Text(track.artist, color = Color.Gray)
+                    Spacer(Modifier.width(8.dp))
+                    val buy = activity.buyFor(track)
+                    TextButton(
+                        onClick = { confirming = track },
+                        enabled = buy == null || buy.status == "failed",
+                    ) {
+                        Text(
+                            when (buy?.status) {
+                                "queued" -> "Queued"
+                                "buying" -> "Buying…"
+                                "done" -> "Owned"
+                                "failed" -> "Retry"
+                                else -> "Buy"
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+    // A buy spends the store account's balance; say so before it does.
+    confirming?.let { track ->
+        AlertDialog(
+            onDismissRequest = { confirming = null },
+            title = { Text("Buy this track?") },
+            text = { Text("${track.artist} — ${track.title}, into the owned library.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    activity.buyTrack(track)
+                    confirming = null
+                }) { Text("Buy") }
+            },
+            dismissButton = { TextButton(onClick = { confirming = null }) { Text("Cancel") } },
+        )
     }
 }
 
