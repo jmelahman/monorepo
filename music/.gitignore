@@ -3,3 +3,10 @@
 
 # Store providers that stay out of the public mirror, with their credentials.
 /stores/_private/
+
+# The Android client's build state; the SDK lives outside the tree, in
+# local.properties.
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
