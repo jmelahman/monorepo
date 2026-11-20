@@ -253,6 +253,11 @@ class Session:
             if not props & PROP_WRITE:
                 return packet(msg_id, seq, code=RESP_OPERATION_NOT_SUPPORTED)
             log.debug("write %s <- %s", target, data.hex())
+            # A control point like FTMS's 0x2AD9 rejects writes until its
+            # indications are on, but Zwift never asks for them over DIRCON: it
+            # expects the responses unprompted. Turn them on for the writer.
+            if props & (PROP_NOTIFY | PROP_INDICATE):
+                await trainer.subscribe(self, target, enable=True)
             try:
                 response = "write" in char.properties
                 await trainer.client.write_gatt_char(char, data, response=response)
