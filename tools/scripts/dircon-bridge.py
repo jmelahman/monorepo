@@ -74,6 +74,12 @@ HIDDEN_SERVICES = {
     uuid.UUID("00001801-0000-1000-8000-00805f9b34fb"),
 }
 
+# Fitness Machine and Cycling Power: what a smart trainer advertises.
+TRAINER_SERVICES = {
+    "00001826-0000-1000-8000-00805f9b34fb",
+    "00001818-0000-1000-8000-00805f9b34fb",
+}
+
 
 def dircon_properties(char: BleakGATTCharacteristic) -> int:
     props = set(char.properties)
@@ -278,6 +284,25 @@ class Session:
         return packet(msg_id, seq, code=RESP_UNKNOWN_MESSAGE)
 
 
+async def find_trainer() -> str:
+    """Returns the address of the one nearby trainer, waiting until one shows up."""
+    while True:
+        log.info("scanning for a trainer (pedal or wake it if it is asleep)")
+        found = await BleakScanner.discover(timeout=10, return_adv=True)
+        trainers = [
+            (device, adv)
+            for device, adv in found.values()
+            if TRAINER_SERVICES & {u.lower() for u in adv.service_uuids}
+        ]
+        if len(trainers) == 1:
+            device, _ = trainers[0]
+            log.info("found %s (%s)", device.name, device.address)
+            return device.address
+        if trainers:
+            listing = "\n".join(f"  {d.address}  {d.name}" for d, _ in trainers)
+            raise SystemExit(f"found several trainers; pass one's address:\n{listing}")
+
+
 def local_ipv4() -> str:
     # Connecting a UDP socket sends nothing; it just picks the outbound interface.
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -290,7 +315,7 @@ async def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "address", nargs="?", default="D6:F8:D9:7F:99:4B", help="trainer Bluetooth address"
+        "address", nargs="?", help="trainer Bluetooth address (default: find it by scanning)"
     )
     parser.add_argument("--port", type=int, default=36866)
     parser.add_argument("--name", help="name Zwift shows (default: the trainer's Bluetooth name)")
@@ -304,7 +329,7 @@ async def main() -> None:
     if not args.verbose:
         logging.getLogger("bleak").setLevel(logging.WARNING)
 
-    trainer = Trainer(args.address)
+    trainer = Trainer(args.address or await find_trainer())
     ble = asyncio.create_task(trainer.run())
     await trainer.connected.wait()
 
@@ -324,8 +349,8 @@ async def main() -> None:
         port=args.port,
         properties={
             "ble-service-uuids": ",".join(str(u) for u in trainer.services),
-            "mac-address": args.address.replace(":", "-"),
-            "serial-number": args.address.replace(":", ""),
+            "mac-address": trainer.address.replace(":", "-"),
+            "serial-number": trainer.address.replace(":", ""),
         },
         server=f"{name.replace(' ', '-')}.local.",
     )
