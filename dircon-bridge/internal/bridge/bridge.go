@@ -6,21 +6,23 @@
 package bridge
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
+	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/brutella/dnssd"
-	"golang.org/x/sync/singleflight"
 
-	"github.com/jmelahman/dircon-bridge/internal/bluez"
 	"github.com/jmelahman/dircon-bridge/internal/dircon"
 )
 
@@ -36,6 +38,15 @@ const (
 	maxRetryDelay = 30 * time.Second
 	gattTimeout   = 10 * time.Second
 	sendTimeout   = 5 * time.Second
+	// sendQueue is how many packets a session may have waiting to be sent
+	// before it is dropped as stuck.
+	sendQueue = 64
+	// resendWindow is how long after a write succeeds that the same value
+	// written again is taken for Zwift resending it.
+	resendWindow = 2 * time.Second
+	// maxTXT is the most a TXT record string, "key=value", can hold.
+	maxTXT          = 255
+	txtServiceUUIDs = "ble-service-uuids"
 )
 
 // Generic Access and Generic Attribute belong to the BLE link, not the device.
@@ -44,10 +55,52 @@ var hiddenServices = map[dircon.UUID]bool{
 	dircon.MustParseUUID("00001801-0000-1000-8000-00805f9b34fb"): true,
 }
 
+// The services Zwift pairs by, in the order to announce them while there is
+// room: Fitness Machine, Cycling Power, Cycling Speed and Cadence, Heart Rate.
+var fitnessServices = []dircon.UUID{
+	dircon.MustParseUUID("00001826-0000-1000-8000-00805f9b34fb"),
+	dircon.MustParseUUID("00001818-0000-1000-8000-00805f9b34fb"),
+	dircon.MustParseUUID("00001816-0000-1000-8000-00805f9b34fb"),
+	dircon.MustParseUUID("0000180d-0000-1000-8000-00805f9b34fb"),
+}
+
+// Device is the Bluetooth LE device a bridge relays.
+type Device interface {
+	// Address returns the device's address, e.g. D6:F8:D9:7F:99:4B.
+	Address() string
+	Name() string
+	// Connect connects and resolves the device's services, giving up when
+	// ctx is done. The channel receives why the connection dropped.
+	Connect(ctx context.Context) (dropped <-chan string, err error)
+	Disconnect() error
+	Characteristics() ([]Characteristic, error)
+}
+
+// Characteristic is a GATT characteristic of a connected Device.
+type Characteristic interface {
+	UUID() string
+	// Service returns the UUID of the characteristic's service.
+	Service() string
+	// Has reports whether the characteristic has a BlueZ flag, e.g. "read",
+	// "write", "write-without-response", "notify" or "indicate".
+	Has(flag string) bool
+	Read(ctx context.Context) ([]byte, error)
+	Write(ctx context.Context, value []byte) error
+	// StartNotify turns on notifications or indications and calls f with
+	// each value until the device is disconnected. f must not block.
+	StartNotify(ctx context.Context, f func([]byte)) error
+}
+
+// Announcer announces services over mDNS; dnssd.Responder is one.
+type Announcer interface {
+	Add(svc dnssd.Service) (dnssd.ServiceHandle, error)
+	Remove(h dnssd.ServiceHandle)
+}
+
 // Bridge relays one device.
 type Bridge struct {
-	dev       *bluez.Device
-	responder dnssd.Responder
+	dev       Device
+	announcer Announcer
 	log       *slog.Logger
 	link      *link
 	port      int
@@ -55,90 +108,117 @@ type Bridge struct {
 }
 
 // New returns a bridge for dev that listens on port and announces itself
-// through responder.
-func New(dev *bluez.Device, port int, responder dnssd.Responder, log *slog.Logger) *Bridge {
+// through announcer. Port 0 picks a free port.
+func New(dev Device, port int, announcer Announcer, log *slog.Logger) *Bridge {
 	return &Bridge{
 		dev:       dev,
 		port:      port,
-		responder: responder,
-		log:       log.With("device", dev.Address),
+		announcer: announcer,
+		log:       log.With("device", dev.Address()),
 	}
 }
 
-// Run keeps the device connected and relayed until ctx is done.
+// Run keeps the device connected and relayed until ctx is done. It withdraws
+// the announcement before it returns.
 func (b *Bridge) Run(ctx context.Context) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", net.JoinHostPort("", strconv.Itoa(b.port)))
 	if err != nil {
 		return err
 	}
-	go b.accept(ln)
 	defer func() { _ = ln.Close() }()
+	addr, err := netip.ParseAddrPort(ln.Addr().String())
+	if err != nil {
+		return err
+	}
+	port := int(addr.Port())
+	go b.accept(ln)
 
-	delay := minRetryDelay
+	var bo backoff
 	for {
-		if err := b.connectOnce(ctx); err != nil {
-			if ctx.Err() == nil {
-				b.log.Warn("connection failed", "err", err, "retry", delay)
-			}
-			delay = min(2*delay, maxRetryDelay)
-		} else {
-			delay = minRetryDelay
+		err := b.connectOnce(ctx, port)
+		if ctx.Err() != nil {
+			return nil
 		}
+		wait := minRetryDelay
+		if err != nil {
+			wait = bo.next()
+			b.log.Warn("connection failed", "err", err, "retry in", wait)
+		} else {
+			bo = backoff{}
+		}
+		t := time.NewTimer(wait)
 		select {
 		case <-ctx.Done():
+			t.Stop()
 			return nil
-		case <-time.After(delay):
+		case <-t.C:
 		}
 	}
 }
 
-func (b *Bridge) connectOnce(ctx context.Context) error {
+// backoff doubles the delay between failed attempts, from minRetryDelay up to
+// maxRetryDelay. The zero value is ready to use.
+type backoff struct{ delay time.Duration }
+
+func (b *backoff) next() time.Duration {
+	if b.delay == 0 {
+		b.delay = minRetryDelay
+	} else {
+		b.delay = min(2*b.delay, maxRetryDelay)
+	}
+	return b.delay
+}
+
+func (b *Bridge) connectOnce(ctx context.Context, port int) error {
 	b.log.Info("connecting (wake the device if it is asleep)")
-	dropped := make(chan struct{})
 	cctx, cancel := context.WithTimeout(ctx, connectTimeout)
-	err := b.dev.Connect(cctx, func() { close(dropped) })
+	dropped, err := b.dev.Connect(cctx)
 	cancel()
 	if err != nil {
-		return err
+		return fmt.Errorf("connect: %w", err)
 	}
 	defer func() { _ = b.dev.Disconnect() }()
 
 	l, err := newLink(b.dev, b.log)
 	if err != nil {
-		return err
+		return fmt.Errorf("list characteristics: %w", err)
 	}
+	defer l.close()
 	name := b.dev.Name()
 	b.log.Info("connected", "name", name, "services", l.services)
 
+	uuids, omitted := serviceUUIDs(l.services)
+	if len(omitted) > 0 {
+		b.log.Warn("services left out of the announcement for lack of room", "services", omitted)
+	}
 	svc, err := dnssd.NewService(dnssd.Config{
 		Name: name,
 		Type: ServiceType,
-		Port: b.port,
+		Port: port,
 		Text: map[string]string{
-			"ble-service-uuids": joinUUIDs(l.services),
-			"mac-address":       strings.ReplaceAll(b.dev.Address, ":", "-"),
-			"serial-number":     strings.ReplaceAll(b.dev.Address, ":", ""),
+			txtServiceUUIDs: uuids,
+			"mac-address":   strings.ReplaceAll(b.dev.Address(), ":", "-"),
+			"serial-number": strings.ReplaceAll(b.dev.Address(), ":", ""),
 		},
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("mDNS service: %w", err)
 	}
-	handle, err := b.responder.Add(svc)
+	handle, err := b.announcer.Add(svc)
 	if err != nil {
-		return err
+		return fmt.Errorf("announce: %w", err)
 	}
 	b.setLink(l)
-	b.log.Info("advertising to Zwift", "name", name, "port", b.port)
+	b.log.Info("advertising to Zwift", "name", name, "port", port)
 
 	select {
-	case <-dropped:
-		b.log.Warn("device disconnected", "reason", b.dev.DisconnectReason())
+	case reason := <-dropped:
+		b.log.Warn("device disconnected", "reason", reason)
 	case <-ctx.Done():
 	}
-	b.responder.Remove(handle)
 	b.setLink(nil)
-	l.close()
+	b.announcer.Remove(handle)
 	return nil
 }
 
@@ -166,48 +246,84 @@ func (b *Bridge) accept(ln net.Listener) {
 	}
 }
 
-func joinUUIDs(uuids []dircon.UUID) string {
-	s := make([]string, len(uuids))
-	for i, u := range uuids {
-		s[i] = u.String()
+// serviceUUIDs returns the ble-service-uuids TXT value: the fitness services
+// first, then the rest, as many as fit in one TXT string. It returns the
+// services that didn't fit.
+func serviceUUIDs(services []dircon.UUID) (value string, omitted []dircon.UUID) {
+	ordered := slices.Clone(services)
+	rank := func(u dircon.UUID) int {
+		if i := slices.Index(fitnessServices, u); i >= 0 {
+			return i
+		}
+		return len(fitnessServices)
 	}
-	return strings.Join(s, ",")
+	slices.SortStableFunc(ordered, func(a, b dircon.UUID) int { return rank(a) - rank(b) })
+
+	room := maxTXT - len(txtServiceUUIDs+"=")
+	var kept []string
+	for _, u := range ordered {
+		s := u.String()
+		need := len(s)
+		if len(kept) > 0 {
+			need++ // the comma
+		}
+		if need > room {
+			omitted = append(omitted, u)
+			continue
+		}
+		room -= need
+		kept = append(kept, s)
+	}
+	return strings.Join(kept, ","), omitted
+}
+
+// notifyState is a characteristic's notifications being turned on.
+type notifyState struct {
+	err  error
+	done chan struct{}
+}
+
+type lastWrite struct {
+	at    time.Time
+	value []byte
 }
 
 // link is one BLE connection and the Zwift sessions relayed over it.
 type link struct {
 	log         *slog.Logger
-	chars       map[dircon.UUID]*bluez.Characteristic
+	chars       map[dircon.UUID]Characteristic
 	byService   map[dircon.UUID][]dircon.UUID
-	notifying   map[dircon.UUID]bool
+	notifying   map[dircon.UUID]*notifyState
 	subscribers map[dircon.UUID]map[*session]bool
 	sessions    map[*session]bool
-	writes      singleflight.Group
-	services    []dircon.UUID
-	writeMu     sync.Mutex
-	mu          sync.Mutex
-	closed      bool
+	// The last successful write to each characteristic. Guarded by writeMu.
+	lastWrites map[dircon.UUID]lastWrite
+	services   []dircon.UUID
+	writeMu    sync.Mutex
+	mu         sync.Mutex
+	closed     bool
 }
 
-func newLink(dev *bluez.Device, log *slog.Logger) (*link, error) {
+func newLink(dev Device, log *slog.Logger) (*link, error) {
 	chars, err := dev.Characteristics()
 	if err != nil {
 		return nil, err
 	}
 	l := &link{
 		log:         log,
-		chars:       map[dircon.UUID]*bluez.Characteristic{},
+		chars:       map[dircon.UUID]Characteristic{},
 		byService:   map[dircon.UUID][]dircon.UUID{},
-		notifying:   map[dircon.UUID]bool{},
+		notifying:   map[dircon.UUID]*notifyState{},
 		subscribers: map[dircon.UUID]map[*session]bool{},
 		sessions:    map[*session]bool{},
+		lastWrites:  map[dircon.UUID]lastWrite{},
 	}
 	for _, ch := range chars {
-		svc, err := dircon.ParseUUID(ch.Service)
+		svc, err := dircon.ParseUUID(ch.Service())
 		if err != nil || hiddenServices[svc] {
 			continue
 		}
-		u, err := dircon.ParseUUID(ch.UUID)
+		u, err := dircon.ParseUUID(ch.UUID())
 		if err != nil {
 			continue
 		}
@@ -227,11 +343,11 @@ func (l *link) close() {
 	l.sessions = map[*session]bool{}
 	l.mu.Unlock()
 	for s := range sessions {
-		_ = s.conn.Close()
+		s.close()
 	}
 }
 
-func properties(ch *bluez.Characteristic) byte {
+func properties(ch Characteristic) byte {
 	var p byte
 	if ch.Has("read") {
 		p |= dircon.PropRead
@@ -249,10 +365,10 @@ func properties(ch *bluez.Characteristic) byte {
 }
 
 // subscribe turns notifications on or off for s, starting them on the device
-// the first time anyone asks.
-func (l *link) subscribe(s *session, u dircon.UUID, enable bool) error {
+// the first time anyone asks. The device is not called with l.mu held, as
+// its notifications need l.mu to be delivered.
+func (l *link) subscribe(ctx context.Context, s *session, u dircon.UUID, enable bool) error {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	subs := l.subscribers[u]
 	if subs == nil {
 		subs = map[*session]bool{}
@@ -260,46 +376,80 @@ func (l *link) subscribe(s *session, u dircon.UUID, enable bool) error {
 	}
 	if !enable {
 		delete(subs, s)
+		l.mu.Unlock()
 		return nil
 	}
 	subs[s] = true
-	if l.notifying[u] {
-		return nil
+	st := l.notifying[u]
+	start := st == nil
+	if start {
+		st = &notifyState{done: make(chan struct{})}
+		l.notifying[u] = st
 	}
-	err := l.chars[u].StartNotify(func(value []byte) {
-		p := dircon.Packet{MsgID: dircon.MsgNotification, Payload: append(u[:], value...)}
+	l.mu.Unlock()
+
+	if start {
+		st.err = l.chars[u].StartNotify(ctx, func(value []byte) { l.notify(u, value) })
+		if st.err != nil {
+			// Let the next subscriber try again.
+			l.mu.Lock()
+			delete(l.notifying, u)
+			l.mu.Unlock()
+		}
+		close(st.done)
+	}
+	select {
+	case <-st.done:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	if st.err != nil {
 		l.mu.Lock()
-		targets := make([]*session, 0, len(l.subscribers[u]))
-		for t := range l.subscribers[u] {
-			targets = append(targets, t)
-		}
+		delete(subs, s)
 		l.mu.Unlock()
-		for _, t := range targets {
-			t.send(p)
-		}
-	})
-	if err != nil {
-		return err
 	}
-	l.notifying[u] = true
-	return nil
+	return st.err
+}
+
+func (l *link) notify(u dircon.UUID, value []byte) {
+	p := dircon.Packet{MsgID: dircon.MsgNotification, Payload: append(u[:], value...)}
+	l.mu.Lock()
+	targets := make([]*session, 0, len(l.subscribers[u]))
+	for t := range l.subscribers[u] {
+		targets = append(targets, t)
+	}
+	l.mu.Unlock()
+	for _, t := range targets {
+		t.send(p)
+	}
 }
 
 // write writes value to the characteristic. BlueZ fails a write while another
-// is outstanding, and a write with response takes about a second. Zwift resends
-// a write it hasn't heard back about, so the resend shares the original's
-// result instead of colliding with it.
+// is outstanding, so writes go one at a time. A write with response takes
+// about a second, and Zwift resends a write it hasn't heard back about; a
+// resend of a write that just succeeded is answered without writing again.
 func (l *link) write(ctx context.Context, u dircon.UUID, value []byte) error {
-	_, err, _ := l.writes.Do(string(u[:])+string(value), func() (any, error) {
-		l.writeMu.Lock()
-		defer l.writeMu.Unlock()
-		return nil, l.chars[u].Write(ctx, value)
-	})
-	return err
+	l.writeMu.Lock()
+	defer l.writeMu.Unlock()
+	if last, ok := l.lastWrites[u]; ok && bytes.Equal(last.value, value) && time.Since(last.at) < resendWindow {
+		l.log.Debug("resend answered without writing", "char", u)
+		return nil
+	}
+	if err := l.chars[u].Write(ctx, value); err != nil {
+		delete(l.lastWrites, u)
+		return err
+	}
+	l.lastWrites[u] = lastWrite{value: slices.Clone(value), at: time.Now()}
+	return nil
 }
 
 func (l *link) serve(conn net.Conn) {
-	s := &session{conn: conn, link: l}
+	s := &session{
+		conn: conn,
+		link: l,
+		out:  make(chan dircon.Packet, sendQueue),
+		done: make(chan struct{}),
+	}
 	l.mu.Lock()
 	if l.closed {
 		l.mu.Unlock()
@@ -308,6 +458,7 @@ func (l *link) serve(conn net.Conn) {
 	}
 	l.sessions[s] = true
 	l.mu.Unlock()
+	go s.writeLoop()
 
 	peer := conn.RemoteAddr().String()
 	l.log.Info("Zwift connected", "peer", peer)
@@ -318,7 +469,7 @@ func (l *link) serve(conn net.Conn) {
 			delete(subs, s)
 		}
 		l.mu.Unlock()
-		_ = conn.Close()
+		s.close()
 		l.log.Info("Zwift disconnected", "peer", peer)
 	}()
 	for {
@@ -337,16 +488,46 @@ func (l *link) serve(conn net.Conn) {
 type session struct {
 	conn net.Conn
 	link *link
-	mu   sync.Mutex
+	out  chan dircon.Packet
+	// done is closed when the session ends.
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
+// send queues p without blocking: notifications are sent from BlueZ's signal
+// loop, which a stuck client must not hold up. A client too far behind is
+// dropped; Zwift reconnects.
 func (s *session) send(p dircon.Packet) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// Notifications are sent from BlueZ's signal loop, which a stuck client
-	// must not hold up.
-	_ = s.conn.SetWriteDeadline(time.Now().Add(sendTimeout))
-	_, _ = s.conn.Write(p.Encode())
+	select {
+	case <-s.done:
+	case s.out <- p:
+	default:
+		s.link.log.Warn("Zwift isn't keeping up; dropping its connection", "peer", s.conn.RemoteAddr())
+		s.close()
+	}
+}
+
+func (s *session) writeLoop() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case p := <-s.out:
+			_ = s.conn.SetWriteDeadline(time.Now().Add(sendTimeout))
+			if _, err := s.conn.Write(p.Encode()); err != nil {
+				s.link.log.Debug("send failed", "err", err)
+				s.close()
+				return
+			}
+		}
+	}
+}
+
+func (s *session) close() {
+	s.closeOnce.Do(func() {
+		close(s.done)
+		_ = s.conn.Close()
+	})
 }
 
 func (s *session) handle(req dircon.Packet) dircon.Packet {
@@ -419,7 +600,7 @@ func (s *session) handle(req dircon.Packet) dircon.Packet {
 		// indications are on, but Zwift never asks for them over DIRCON: it
 		// expects the responses unprompted. Turn them on for the writer.
 		if props&(dircon.PropNotify|dircon.PropIndicate) != 0 {
-			if err := l.subscribe(s, target, true); err != nil {
+			if err := l.subscribe(ctx, s, target, true); err != nil {
 				l.log.Warn("enabling indications failed", "char", target, "err", err)
 			}
 		}
@@ -436,7 +617,7 @@ func (s *session) handle(req dircon.Packet) dircon.Packet {
 		}
 		enable := len(data) > 0 && data[0] != 0
 		l.log.Info("notifications", "char", target, "enable", enable)
-		if err := l.subscribe(s, target, enable); err != nil {
+		if err := l.subscribe(ctx, s, target, enable); err != nil {
 			l.log.Warn("enabling notifications failed", "char", target, "err", err)
 			return fail(dircon.RespUnexpectedError)
 		}

@@ -11,12 +11,17 @@ why.
 
 ## Layout
 
-- `main.go` — the CLI: flags, device discovery, one bridge per device.
+- `main.go` — the CLI: flags, scanning for devices (`find`), one bridge per
+  device, and shutdown order (bridges withdraw their mDNS records before the
+  responder stops).
 - `internal/dircon/` — DIRCON packet and UUID encoding. Pure; unit tested.
 - `internal/bluez/` — a small BlueZ D-Bus client (godbus): discovery,
-  connect, GATT read/write/notify, and the PropertiesChanged dispatch.
+  connect, GATT read/write/notify, and the signal dispatch. Needs a real
+  bus, so only address parsing is unit tested.
 - `internal/bridge/` — per-device bridge: TCP sessions, mDNS registration
-  while connected, write coalescing.
+  while connected, write serialization. It talks to the device through the
+  `Device` and `Characteristic` interfaces (`FromBlueZ` adapts BlueZ), so the
+  tests drive it with fakes over real TCP.
 - `internal/version/` — ldflags-stamped version.
 
 ## Conventions
@@ -25,4 +30,7 @@ why.
   allows; brutella/dnssd doesn't check. Don't switch to a library that does.
 - The protocol layout follows qdomyos-zwift's
   `src/devices/dircon/dirconpacket.cpp`.
+- BlueZ signals are delivered on one goroutine shared by every device;
+  callbacks from it (notifications, drops) must never block. Sessions queue
+  their sends for this reason.
 - Tests go in `package <pkg>_test`. Struct fields: wide first, `bool` last.

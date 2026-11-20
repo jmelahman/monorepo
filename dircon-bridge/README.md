@@ -26,16 +26,19 @@ Wake the devices (pedal the trainer, wear the strap), then run:
 dircon-bridge
 ```
 
-With no arguments, it scans for one trainer (Fitness Machine or Cycling Power
-service) and one heart rate monitor, and bridges both. If it finds more than
-one of a kind, it lists them and you pass the addresses you want:
+With no arguments, it scans for a trainer (Fitness Machine or Cycling Power
+service) and a heart rate monitor, and bridges each as it is found. Once it has
+one, it looks for the other for three more scans and then stops, since
+scanning disturbs the connected device. If it finds more than one of a kind,
+it lists them and you pass the addresses you want:
 
 ```sh
 dircon-bridge D6:F8:D9:7F:99:4B F5:B4:81:3D:07:26
 ```
 
 In Zwift's pairing screen, the devices appear with a Wi-Fi icon. The first
-device listens on TCP port 36866, the next on 36867, and so on (`-port`
+device listens on TCP port 36866, the next on 36867, and so on, in the order
+they are given or found (`-port`
 changes the first). Zwift must be able to reach those ports and see the mDNS
 announcements, so a containerized Zwift needs host networking.
 
@@ -63,4 +66,5 @@ on the device through BlueZ. Two device quirks are handled along the way:
   the first write.
 - Zwift resends a write it hasn't heard back about after about a second, and
   BlueZ rejects a write while another is outstanding. The bridge serializes
-  writes and answers a resend with the original's result.
+  writes, and answers a resend of a write that just succeeded without writing
+  it again.

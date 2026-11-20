@@ -39,20 +39,36 @@ const (
 	uuidHeartRate      = "0000180d-0000-1000-8000-00805f9b34fb"
 )
 
-// ErrAmbiguous is returned when scanning finds more than one device of a kind.
-var ErrAmbiguous = errors.New("found several devices of one kind; pass the addresses to bridge")
+// followUpScans is how many more scans look for the missing kind of device
+// once one is found. Scanning disturbs connected devices, so it stops.
+const followUpScans = 3
+
+var (
+	// ErrAmbiguous is returned when scanning finds more than one device of a
+	// kind.
+	ErrAmbiguous = errors.New("found several devices of one kind; pass the addresses to bridge")
+	// errUsage wraps the errors flag has already reported.
+	errUsage = errors.New("usage")
+)
 
 var programName = filepath.Base(os.Args[0])
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go func() {
+		// Let a second signal kill a shutdown that hangs.
+		<-ctx.Done()
+		stop()
+	}()
 	err := run(ctx, os.Args[1:], os.Stdout, os.Stderr)
 	stop()
-	if err != nil {
-		// Help was asked for, or a signal ended the bridge.
-		if errors.Is(err, flag.ErrHelp) || errors.Is(err, context.Canceled) {
-			return
-		}
+	switch {
+	// Help was asked for, or a signal ended the bridge.
+	case err == nil, errors.Is(err, flag.ErrHelp), errors.Is(err, context.Canceled):
+	// flag has already reported it.
+	case errors.Is(err, errUsage):
+		os.Exit(2)
+	default:
 		fmt.Fprintln(os.Stderr, programName+":", err)
 		os.Exit(1)
 	}
@@ -63,21 +79,31 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	fs.Usage = func() {
 		_, _ = fmt.Fprintln(stderr, "usage: "+programName+" [flags] [address...]")
-		_, _ = fmt.Fprintln(stderr, "\nWith no addresses, bridges the one trainer and the one heart rate monitor found by scanning.")
+		_, _ = fmt.Fprintln(stderr, "\nWith no addresses, bridges the trainer and the heart rate monitor found by scanning.")
 		fs.PrintDefaults()
 	}
 	var (
 		port        = fs.Int("port", 36866, "TCP port for the first device; each further device uses the next one")
-		scan        = fs.Duration("scan", 10*time.Second, "how long to scan when no addresses are given")
+		scan        = fs.Duration("scan", 10*time.Second, "how long each scan lasts when no addresses are given")
 		verbose     = fs.Bool("v", false, "log every message relayed")
 		showVersion = fs.Bool("version", false, "print the version and exit")
 	)
 	if err := fs.Parse(args); err != nil {
-		return err
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		return fmt.Errorf("%w: %w", errUsage, err)
 	}
 	if *showVersion {
 		_, err := fmt.Fprintln(stdout, version.Version())
 		return err
+	}
+	addresses := make([]string, fs.NArg())
+	for i, a := range fs.Args() {
+		var err error
+		if addresses[i], err = bluez.ParseAddress(a); err != nil {
+			return err
+		}
 	}
 
 	level := slog.LevelInfo
@@ -91,64 +117,133 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("connect to BlueZ: %w", err)
 	}
 	defer func() { _ = bz.Close() }()
-
-	addresses := fs.Args()
-	if len(addresses) == 0 {
-		if addresses, err = find(ctx, bz, *scan, log); err != nil {
-			return err
-		}
-	}
-
 	responder, err := dnssd.NewResponder()
 	if err != nil {
 		return fmt.Errorf("start mDNS: %w", err)
 	}
-	g, ctx := errgroup.WithContext(ctx)
-	for i, addr := range addresses {
-		b := bridge.New(bz.Device(addr), *port+i, responder, log)
-		g.Go(func() error { return b.Run(ctx) })
-	}
-	g.Go(func() error {
-		if err := responder.Respond(ctx); err != nil && ctx.Err() == nil {
-			return fmt.Errorf("mDNS: %w", err)
+
+	// The responder outlives the bridges, so they can withdraw their
+	// announcements on the way out.
+	rctx, rcancel := context.WithCancel(context.WithoutCancel(ctx))
+	defer rcancel()
+	bctx, bcancel := context.WithCancelCause(ctx)
+	defer bcancel(nil)
+	responded := make(chan struct{})
+	go func() {
+		defer close(responded)
+		if err := responder.Respond(rctx); err != nil && rctx.Err() == nil {
+			bcancel(fmt.Errorf("mDNS: %w", err))
 		}
+	}()
+
+	g, gctx := errgroup.WithContext(bctx)
+	next := *port
+	start := func(addr string) error {
+		dev, err := bz.Device(addr)
+		if err != nil {
+			return err
+		}
+		b := bridge.New(bridge.FromBlueZ(dev), next, responder, log)
+		next++
+		g.Go(func() error { return b.Run(gctx) })
 		return nil
-	})
-	return g.Wait()
+	}
+	if len(addresses) == 0 {
+		g.Go(func() error { return find(gctx, bz, *scan, log, start) })
+	}
+	for _, addr := range addresses {
+		if err := start(addr); err != nil {
+			return err
+		}
+	}
+	err = g.Wait()
+	rcancel()
+	<-responded
+	if err != nil {
+		return err
+	}
+	if cause := context.Cause(bctx); !errors.Is(cause, ctx.Err()) {
+		return cause
+	}
+	return ctx.Err()
 }
 
-// find scans until it sees a trainer or a heart rate monitor, and returns the
-// addresses of the one of each kind it found.
-func find(ctx context.Context, bz *bluez.Client, d time.Duration, log *slog.Logger) ([]string, error) {
-	for {
-		log.Info("scanning for a trainer and a heart rate monitor (wake them if they are asleep)")
-		found, err := bz.Discover(ctx, d, uuidFitnessMachine, uuidCyclingPower, uuidHeartRate)
+// scanner finds devices; *bluez.Client is one.
+type scanner interface {
+	Discover(ctx context.Context, d time.Duration, uuids ...string) ([]bluez.DeviceInfo, error)
+}
+
+// find scans for a trainer and a heart rate monitor and starts a bridge for
+// each as it is found. Once it has found one, it gives up on the other after
+// a few more scans.
+func find(ctx context.Context, sc scanner, d time.Duration, log *slog.Logger, start func(address string) error) error {
+	needTrainer, needMonitor := true, true
+	for scans := 0; needTrainer || needMonitor; {
+		var uuids []string
+		if needTrainer {
+			uuids = append(uuids, uuidFitnessMachine, uuidCyclingPower)
+		}
+		if needMonitor {
+			uuids = append(uuids, uuidHeartRate)
+		}
+		if !needTrainer || !needMonitor {
+			if scans == followUpScans {
+				missing := "trainer"
+				if needMonitor {
+					missing = "heart rate monitor"
+				}
+				log.Warn("no " + missing + " found; stopped scanning so as not to disturb the connected device. Pass both addresses to bridge it")
+				return nil
+			}
+			scans++
+		}
+		if needTrainer && needMonitor {
+			log.Info("scanning for a trainer and a heart rate monitor (wake them if they are asleep)")
+		}
+		found, err := sc.Discover(ctx, d, uuids...)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		var trainers, monitors []bluez.DeviceInfo
-		for _, dev := range found {
-			switch {
-			case slices.Contains(dev.UUIDs, uuidFitnessMachine), slices.Contains(dev.UUIDs, uuidCyclingPower):
-				trainers = append(trainers, dev)
-			case slices.Contains(dev.UUIDs, uuidHeartRate):
-				monitors = append(monitors, dev)
+		trainers, monitors := classify(found)
+		var picked []bluez.DeviceInfo
+		for _, kind := range []struct {
+			need *bool
+			devs []bluez.DeviceInfo
+		}{{&needTrainer, trainers}, {&needMonitor, monitors}} {
+			if !*kind.need || len(kind.devs) == 0 {
+				continue
 			}
-		}
-		if len(trainers) > 1 || len(monitors) > 1 {
-			var b strings.Builder
-			for _, dev := range slices.Concat(trainers, monitors) {
-				fmt.Fprintf(&b, "\n  %s  %s", dev.Address, dev.Name)
+			if len(kind.devs) > 1 {
+				var b strings.Builder
+				for _, dev := range kind.devs {
+					fmt.Fprintf(&b, "\n  %s  %s", dev.Address, dev.Name)
+				}
+				return fmt.Errorf("%w:%s", ErrAmbiguous, b.String())
 			}
-			return nil, fmt.Errorf("%w:%s", ErrAmbiguous, b.String())
+			*kind.need = false
+			picked = append(picked, kind.devs[0])
 		}
-		var addresses []string
-		for _, dev := range slices.Concat(trainers, monitors) {
+		for _, dev := range picked {
 			log.Info("found", "name", dev.Name, "address", dev.Address)
-			addresses = append(addresses, dev.Address)
-		}
-		if len(addresses) > 0 {
-			return addresses, nil
+			if err := start(dev.Address); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+// classify sorts devices into trainers and heart rate monitors by the services
+// they advertise. A trainer that also measures heart rate counts as a
+// trainer.
+func classify(devs []bluez.DeviceInfo) (trainers, monitors []bluez.DeviceInfo) {
+	for _, dev := range devs {
+		switch {
+		case slices.Contains(dev.UUIDs, uuidFitnessMachine), slices.Contains(dev.UUIDs, uuidCyclingPower):
+			trainers = append(trainers, dev)
+		case slices.Contains(dev.UUIDs, uuidHeartRate):
+			monitors = append(monitors, dev)
+		}
+	}
+	return trainers, monitors
 }
