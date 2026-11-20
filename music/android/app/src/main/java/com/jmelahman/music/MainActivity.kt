@@ -1,6 +1,7 @@
 package com.jmelahman.music
 
 import android.content.ComponentName
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -41,6 +42,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +61,7 @@ import kotlinx.coroutines.withContext
 // The one screen: the library, browsed the way the server lays it out,
 // played through the session service. The settings carry the native
 // client's point: streaming on metered data is off unless switched on.
-class MainActivity : ComponentActivity() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+class MainActivity : ComponentActivity() {    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     lateinit var settings: Settings
         private set
     private lateinit var controllerFuture: ListenableFuture<MediaController>
@@ -118,36 +125,63 @@ class MainActivity : ComponentActivity() {
         if (stack.size > 1) stack = stack.dropLast(1)
     }
 
-    fun saveSettings(url: String, allowMetered: Boolean) {
+    fun saveSettings(url: String, allowMetered: Boolean, allowDownloadsMetered: Boolean) {
         settings.baseUrl = url.trim().trimEnd('/')
         settings.allowMetered = allowMetered
+        settings.allowDownloadsMetered = allowDownloadsMetered
         reload()
     }
 
-    // play starts an album at a track, with the metered-network guard that
-    // made this a native app.
+    // saveAlbum queues one piece of work per track, each carrying the
+    // constraint the OS then enforces: unmetered networks only, unless
+    // the user switched downloads on mobile data on.
+    fun saveAlbum(album: Album) {
+        val wm = WorkManager.getInstance(this)
+        val network =
+            if (settings.allowDownloadsMetered) NetworkType.CONNECTED else NetworkType.UNMETERED
+        for (t in album.tracks) {
+            val request = OneTimeWorkRequestBuilder<DownloadWorker>()
+                .setInputData(workDataOf("url" to Api.audioUrl(t.path), "dest" to t.path))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
+                .addTag(DOWNLOAD_TAG)
+                .build()
+            wm.enqueueUniqueWork("download:${t.path}", ExistingWorkPolicy.KEEP, request)
+        }
+    }
+
+    // play starts an album at a track: saved tracks play from the phone,
+    // the rest stream, and a metered network only ever carries what the
+    // user allowed.
     fun play(artist: Artist, album: Album, track: Track) {
         val c = controller ?: return
-        if (!settings.allowMetered && Settings.metered(this)) {
+        if (!Downloads.saved(this, track) &&
+            !settings.allowMetered && Settings.metered(this)
+        ) {
             notice = "Mobile data — streaming is off in settings"
             return
         }
-        val items = album.tracks.map { it.mediaItem(artist, album) }
+        val items = album.tracks.map { it.mediaItem(this, artist, album) }
         c.setMediaItems(items, album.tracks.indexOf(track), 0)
         c.prepare()
         c.play()
     }
 
-    private fun Track.mediaItem(artist: Artist, album: Album) = MediaItem.Builder()
-        .setUri(Api.audioUrl(path))
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle(name)
-                .setArtist(artist.name)
-                .setAlbumTitle(album.name)
-                .build(),
-        )
-        .build()
+    private fun Track.mediaItem(context: android.content.Context, artist: Artist, album: Album): MediaItem {
+        // A saved track plays from the phone; anything else streams.
+        val local = Downloads.fileFor(context, this)
+        val uri =
+            if (local.length() > 0) Uri.fromFile(local) else Uri.parse(Api.audioUrl(path))
+        return MediaItem.Builder()
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(name)
+                    .setArtist(artist.name)
+                    .setAlbumTitle(album.name)
+                    .build(),
+            )
+            .build()
+    }
 }
 
 // The screens of a simple stack; the position is in the back of it.
@@ -156,6 +190,9 @@ sealed class Screen {
     data class Albums(val artist: Artist) : Screen()
     data class Tracks(val artist: Artist, val album: Album) : Screen()
 }
+
+// The tag every download carries, so the queue can be counted.
+private const val DOWNLOAD_TAG = "music-download"
 
 @Composable
 fun MusicApp(activity: MainActivity) {
@@ -240,9 +277,51 @@ private fun AlbumsScreen(activity: MainActivity, artist: Artist) {
 
 @Composable
 private fun TracksScreen(activity: MainActivity, artist: Artist, album: Album) {
-    LazyColumn {
-        items(album.tracks) { track ->
-            ListRow(track.name) { activity.play(artist, album, track) }
+    var saved by remember { mutableStateOf(0) }
+    var queued by remember { mutableStateOf(0) }
+    LaunchedEffect(album) {
+        while (true) {
+            saved = Downloads.savedCount(activity, album)
+            queued = withContext(Dispatchers.IO) {
+                WorkManager.getInstance(activity)
+                    .getWorkInfosByTag(DOWNLOAD_TAG).get()
+                    .count {
+                        it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.RUNNING
+                    }
+            }
+            delay(2000)
+        }
+    }
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { activity.saveAlbum(album) }) { Text("Save offline") }
+            Spacer(Modifier.width(8.dp))
+            if (queued > 0) {
+                Text("$queued queued", color = Color.Gray)
+            } else {
+                Text("$saved of ${album.tracks.size} saved", color = Color.Gray)
+            }
+        }
+        LazyColumn {
+            items(album.tracks) { track ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { activity.play(artist, album, track) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(track.name, modifier = Modifier.weight(1f))
+                    if (Downloads.saved(activity, track)) {
+                        Text("saved", color = Color.Gray)
+                    }
+                }
+            }
         }
     }
 }
@@ -317,6 +396,7 @@ private fun NowPlaying(activity: MainActivity) {
 private fun SettingsDialog(activity: MainActivity, onDismiss: () -> Unit) {
     var url by remember { mutableStateOf(activity.settings.baseUrl) }
     var allowMetered by remember { mutableStateOf(activity.settings.allowMetered) }
+    var allowDownloadsMetered by remember { mutableStateOf(activity.settings.allowDownloadsMetered) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -333,12 +413,16 @@ private fun SettingsDialog(activity: MainActivity, onDismiss: () -> Unit) {
                     Text("Stream on mobile data", modifier = Modifier.weight(1f))
                     Switch(checked = allowMetered, onCheckedChange = { allowMetered = it })
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Download on mobile data", modifier = Modifier.weight(1f))
+                    Switch(checked = allowDownloadsMetered, onCheckedChange = { allowDownloadsMetered = it })
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    activity.saveSettings(url, allowMetered)
+                    activity.saveSettings(url, allowMetered, allowDownloadsMetered)
                     onDismiss()
                 },
             ) { Text("Save") }

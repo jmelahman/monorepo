@@ -1,8 +1,3 @@
-- Finish the native Android client: the playback service and screens are
-  in (android/), what's left is downloads through WorkManager with
-  OS-enforced unmetered-network constraints — the access control a page
-  can only promise, not enforce — and its own download manager would then
-  replace the Syncthing pair.
 - Mixes and search from YouTube Music, the audio proxied through this
   server so it plays anywhere the homelab is reachable.
 - Purchases through pluggable store providers into the owned library,

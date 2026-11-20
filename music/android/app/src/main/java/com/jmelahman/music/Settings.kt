@@ -20,6 +20,10 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("allow_metered", false)
         set(value) = prefs.edit().putBoolean("allow_metered", value).apply()
 
+    var allowDownloadsMetered: Boolean
+        get() = prefs.getBoolean("downloads_metered", false)
+        set(value) = prefs.edit().putBoolean("downloads_metered", value).apply()
+
     companion object {
         fun metered(context: Context): Boolean {
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
