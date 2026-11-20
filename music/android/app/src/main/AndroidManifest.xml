@@ -3,11 +3,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Without it the system installer refuses the update the app
+         downloads from its server. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Cleartext is allowed because the settings take an http://
+         server, for a homelab reached on its LAN; the default is https. -->
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.Music">
+        android:theme="@style/Theme.Music"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"

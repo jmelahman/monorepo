@@ -281,15 +281,21 @@ class Model(app: Application) : AndroidViewModel(app) {
     fun play(owners: List<Pair<Artist, Album>>, items: List<Track>, index: Int, shuffle: Boolean = false) {
         val order = if (shuffle) items.indices.shuffled() else items.indices.toList()
         val first = if (shuffle) 0 else index
-        val track = items[order[first]]
-        if (!Downloads.saved(context, track) && !streamingAllowed()) {
-            notice("Mobile data — streaming is off in settings, and this track isn't saved")
-            return
+        viewModelScope.launch {
+            // Which tracks are saved is a disk read each, so it is done
+            // off the main thread, a whole artist at a time.
+            val (saved, mediaItems) = withContext(Dispatchers.IO) {
+                Downloads.saved(context, items[order[first]]) to
+                    order.map { i -> items[i].mediaItem(owners[i].first, owners[i].second) }
+            }
+            if (!saved && !streamingAllowed()) {
+                notice("Mobile data — streaming is off in settings, and this track isn't saved")
+                return@launch
+            }
+            val (artist, album) = owners[order[first]]
+            start(mediaItems, first) { streams = emptyMap() }
+            rememberAlbum(artist, album)
         }
-        val mediaItems = order.map { i -> items[i].mediaItem(owners[i].first, owners[i].second) }
-        val (artist, album) = owners[order[first]]
-        start(mediaItems, first) { streams = emptyMap() }
-        rememberAlbum(artist, album)
     }
 
     fun playAlbum(artist: Artist, album: Album, index: Int = 0, shuffle: Boolean = false) =
