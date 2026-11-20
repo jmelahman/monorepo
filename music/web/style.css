@@ -97,16 +97,40 @@ main {
 
 /* The library. */
 
+.discover,
 .library {
   margin-top: 2.5rem;
 }
 
+.discover h2,
 .library h2 {
   margin: 0 0 0.75rem;
   font: 600 0.6875rem/1.2 var(--cond);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--dim);
+}
+
+.discover-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.discover-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ink-2);
+  color: var(--chalk);
+  font: 400 0.8125rem/1.3 var(--sans);
+}
+
+.discover-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .now-playing {

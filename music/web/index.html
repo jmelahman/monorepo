@@ -36,6 +36,16 @@
       <a id="download-app" class="button" href="api/apk" download hidden>Download the Android app</a>
     </section>
 
+    <section class="discover" aria-labelledby="discover-heading">
+      <h2 id="discover-heading">Discover</h2>
+      <form id="discover-form" class="discover-form">
+        <input id="discover-q" type="search" placeholder="Search YouTube for music to stream" required>
+        <button type="submit">Search</button>
+        <button type="button" id="supermix">Supermix</button>
+      </form>
+      <ul id="discover-list" class="list" role="list" hidden></ul>
+    </section>
+
     <section class="library" aria-labelledby="library-heading">
       <h2 id="library-heading">Library</h2>
       <div id="now-playing" class="now-playing" role="status" hidden>

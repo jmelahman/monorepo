@@ -1,4 +1,7 @@
-- Mixes and search from YouTube Music, the audio proxied through this
-  server so it plays anywhere the homelab is reachable.
 - Purchases through pluggable store providers into the owned library,
   with a queue behind them for retries and a VPN-fronted egress.
+- The account-tied supermix, the one YouTube builds for signed-in
+  listeners; the library-seeded radio mix stands in until cookies make it
+  possible.
+- Bump the yt-dlp pin in the Dockerfile when YouTube changes things and
+  streams stop resolving.

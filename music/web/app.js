@@ -16,7 +16,8 @@ const npText = $('np-text');
 const player = $('player');
 
 let library = []; // the artists, from api/library
-let playing = null; // { artist, album, index } of what the player holds
+let queue = []; // { key, name, sub, url }: owned tracks and streams alike
+let playingIndex = -1; // where in the queue the player is
 let listedAlbum = null; // the album whose tracks are on screen
 
 // The same cache names the service worker keeps (web/sw.js).
@@ -116,6 +117,12 @@ function renderTracks(artist, album) {
   crumbAlbum.textContent = album.name;
   listedAlbum = album;
   refreshSaveButton(album);
+  const items = album.tracks.map((t) => ({
+    key: t.path,
+    name: t.name,
+    sub: `${artist.name} · ${album.name}`,
+    url: `api/audio?path=${encodeURIComponent(t.path)}`,
+  }));
   list.replaceChildren(
     ...album.tracks.map((t, i) =>
       el(
@@ -126,8 +133,8 @@ function renderTracks(artist, album) {
           {
             className: 'row track',
             type: 'button',
-            dataset: { index: i },
-            onclick: () => play(artist, album, i),
+            dataset: { key: items[i].key },
+            onclick: () => playQueue(items, i),
           },
           el('span', { className: 'name', textContent: t.name }),
           el('span', { className: 'size', textContent: mb(t.size) })
@@ -204,21 +211,23 @@ async function toggleSave(album) {
 
 // ---------------------------------------------------------------- play
 
-function play(artist, album, index) {
-  const t = album.tracks[index];
-  playing = { artist, album, index };
-  player.src = `api/audio?path=${encodeURIComponent(t.path)}`;
+// playQueue starts the queue at an index; the queue holds owned tracks
+// and streams alike, each with the key its row is marked by.
+function playQueue(items, index) {
+  queue = items;
+  playingIndex = index;
+  const t = items[index];
+  player.src = t.url;
   player.play();
   nowPlaying.hidden = false;
-  npText.textContent = `${t.name} — ${artist.name} · ${album.name}`;
+  npText.textContent = `${t.name} — ${t.sub}`;
   playpause.textContent = 'Pause';
   markTrack();
   if ('mediaSession' in navigator) {
     // The lock screen's controls, on an installed app.
     navigator.mediaSession.metadata = new MediaMetadata({
       title: t.name,
-      artist: artist.name,
-      album: album.name,
+      artist: t.sub,
     });
     navigator.mediaSession.setActionHandler('previoustrack', () => step(-1));
     navigator.mediaSession.setActionHandler('nexttrack', () => step(1));
@@ -226,10 +235,9 @@ function play(artist, album, index) {
 }
 
 function step(delta) {
-  if (!playing) return;
-  const next = playing.index + delta;
-  if (next >= 0 && next < playing.album.tracks.length) {
-    play(playing.artist, playing.album, next);
+  const next = playingIndex + delta;
+  if (next >= 0 && next < queue.length) {
+    playQueue(queue, next);
   }
 }
 
@@ -253,14 +261,84 @@ playpause.addEventListener('click', () => {
   }
 });
 
-// Highlights the row of what is playing, in whichever album is listed.
+// Highlights the row of what is playing, in whichever list holds it.
 function markTrack() {
-  for (const row of list.querySelectorAll('.track')) {
-    const here = playing && listedAlbum === playing.album && Number(row.dataset.index) === playing.index;
-    row.classList.toggle('current', Boolean(here));
+  const current = queue[playingIndex]?.key;
+  for (const row of document.querySelectorAll('.row[data-key]')) {
+    row.classList.toggle('current', row.dataset.key === current);
   }
 }
 
 function mb(bytes) {
   return `${(bytes / 1e6).toFixed(1)} MB`;
+}
+
+function fmtDuration(seconds) {
+  if (!seconds) return '';
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// ------------------------------------------------------------ discover
+
+const discoverForm = $('discover-form');
+const discoverInput = $('discover-q');
+const discoverList = $('discover-list');
+let discoverItems = [];
+
+discoverForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = discoverInput.value.trim();
+  if (!q) return;
+  discoverList.hidden = false;
+  discoverList.replaceChildren(el('li', { className: 'empty', textContent: 'Searching…' }));
+  fetch(`api/yt/search?q=${encodeURIComponent(q)}`)
+    .then((r) => r.json())
+    .then(renderStreams)
+    .catch(() => {
+      discoverList.replaceChildren(el('li', { className: 'empty', textContent: 'The search could not be read.' }));
+    });
+});
+
+$('supermix').addEventListener('click', () => {
+  discoverList.hidden = false;
+  discoverList.replaceChildren(
+    el('li', { className: 'empty', textContent: 'Building a mix from the owned library…' })
+  );
+  fetch('api/yt/supermix')
+    .then((r) => r.json())
+    .then(renderStreams)
+    .catch(() => {
+      discoverList.replaceChildren(el('li', { className: 'empty', textContent: 'The mix could not be built.' }));
+    });
+});
+
+function renderStreams(tracks) {
+  discoverItems = tracks.map((t) => ({
+    key: `yt:${t.videoId}`,
+    name: t.title,
+    sub: t.artist,
+    url: `api/yt/stream?v=${encodeURIComponent(t.videoId)}`,
+  }));
+  discoverList.replaceChildren(
+    ...tracks.map((t, i) =>
+      el(
+        'li',
+        {},
+        el(
+          'button',
+          {
+            className: 'row stream',
+            type: 'button',
+            dataset: { key: discoverItems[i].key },
+            onclick: () => playQueue(discoverItems, i),
+          },
+          el('span', { className: 'name', textContent: t.title }),
+          el('span', { className: 'size', textContent: fmtDuration(t.duration) })
+        )
+      )
+    )
+  );
+  markTrack();
 }

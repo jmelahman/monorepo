@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -82,6 +83,10 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
         private set
     var updating by mutableStateOf(false)
         private set
+    var ytResults by mutableStateOf<List<YTTrack>?>(null)
+        private set
+    var ytBusy by mutableStateOf(false)
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,6 +133,63 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
 
     fun open(artist: Artist, album: Album) {
         stack = stack + Screen.Tracks(artist, album)
+    }
+
+    fun openDiscover() {
+        ytResults = null
+        stack = stack + Screen.Discover
+    }
+
+    // ytSearch and ytSupermix bring the streamed half of the library: what
+    // plays without being owned first.
+    fun ytSearch(query: String) {
+        ytBusy = true
+        notice = null
+        scope.launch {
+            try {
+                ytResults = withContext(Dispatchers.IO) { Api.ytSearch(query) }
+            } catch (e: Exception) {
+                notice = "The search could not be read: ${e.message}"
+            }
+            ytBusy = false
+        }
+    }
+
+    fun ytSupermix() {
+        ytBusy = true
+        notice = null
+        scope.launch {
+            try {
+                ytResults = withContext(Dispatchers.IO) { Api.ytSupermix() }
+            } catch (e: Exception) {
+                notice = "The mix could not be built: ${e.message}"
+            }
+            ytBusy = false
+        }
+    }
+
+    // playStream plays YouTube tracks through the server's proxy, under
+    // the same network rules as streaming the library.
+    fun playStream(tracks: List<YTTrack>, index: Int) {
+        val c = controller ?: return
+        if (!settings.allowMetered && Settings.metered(this)) {
+            notice = "Mobile data — streaming is off in settings"
+            return
+        }
+        val items = tracks.map { track ->
+            MediaItem.Builder()
+                .setUri(Uri.parse(Api.streamUrl(track.videoId)))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(track.title)
+                        .setArtist(track.artist)
+                        .build(),
+                )
+                .build()
+        }
+        c.setMediaItems(items, index, 0)
+        c.prepare()
+        c.play()
     }
 
     fun back() {
@@ -242,6 +304,7 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
 // The screens of a simple stack; the position is in the back of it.
 sealed class Screen {
     data object Artists : Screen()
+    data object Discover : Screen()
     data class Albums(val artist: Artist) : Screen()
     data class Tracks(val artist: Artist, val album: Album) : Screen()
 }
@@ -258,6 +321,7 @@ fun MusicApp(activity: MainActivity) {
                 Notice(activity.notice)
                 when (val screen = activity.stack.last()) {
                     is Screen.Artists -> ArtistsScreen(activity)
+                    is Screen.Discover -> DiscoverScreen(activity)
                     is Screen.Albums -> AlbumsScreen(activity, screen.artist)
                     is Screen.Tracks -> TracksScreen(activity, screen.artist, screen.album)
                 }
@@ -281,6 +345,7 @@ private fun Header(activity: MainActivity) {
         activity.stack.lastOrNull()?.let { screen ->
             val crumbs = when (screen) {
                 is Screen.Artists -> emptyList()
+                is Screen.Discover -> listOf("Discover")
                 is Screen.Albums -> listOf(screen.artist.name)
                 is Screen.Tracks -> listOf(screen.artist.name, screen.album.name)
             }
@@ -289,6 +354,7 @@ private fun Header(activity: MainActivity) {
             }
         }
         Spacer(Modifier.weight(1f))
+        TextButton(onClick = { activity.openDiscover() }) { Text("Discover") }
         val u = activity.update
         if (u != null) {
             TextButton(
@@ -315,9 +381,62 @@ private fun Notice(text: String?) {
     }
 }
 
+// Discover is the streamed half: search, and a supermix the server
+// seeds from the owned library.
 @Composable
-private fun ArtistsScreen(activity: MainActivity) {
-    val artists = activity.library ?: run {
+private fun DiscoverScreen(activity: MainActivity) {
+    var query by remember { mutableStateOf("") }
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Search YouTube") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = { if (query.isNotBlank()) activity.ytSearch(query.trim()) },
+                enabled = !activity.ytBusy,
+            ) { Text("Search") }
+        }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { activity.ytSupermix() }, enabled = !activity.ytBusy) {
+                Text("Supermix")
+            }
+            Spacer(Modifier.width(8.dp))
+            if (activity.ytBusy) {
+                Text("working…", color = Color.Gray)
+            }
+        }
+        val results = activity.ytResults ?: return@Column
+        LazyColumn {
+            itemsIndexed(results) { index, track ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { activity.playStream(results, index) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(track.title, modifier = Modifier.weight(1f))
+                    Text(track.artist, color = Color.Gray)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArtistsScreen(activity: MainActivity) {    val artists = activity.library ?: run {
         LoadingOrError(activity)
         return
     }

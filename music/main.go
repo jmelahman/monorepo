@@ -5,6 +5,7 @@ package main
 
 import (
 	"cmp"
+	"context"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -12,10 +13,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"slices"
@@ -123,6 +127,63 @@ func main() {
 			Version string `json:"version"`
 			Size    int64  `json:"size"`
 		}{Version: version, Size: info.Size()})
+	})
+	mux.HandleFunc("GET /api/yt/search", func(w http.ResponseWriter, r *http.Request) {
+		if q := r.URL.Query().Get("q"); q == "" {
+			http.Error(w, "missing q", http.StatusBadRequest)
+			return
+		}
+		tracks, err := ytFlat(r.Context(), "ytsearch15:"+r.URL.Query().Get("q"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(tracks)
+	})
+	mux.HandleFunc("GET /api/yt/supermix", func(w http.ResponseWriter, r *http.Request) {
+		mix, err := ytSupermix(r.Context(), *music)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(mix)
+	})
+	mux.HandleFunc("GET /api/yt/stream", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("v")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+		url, err := ytResolve(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		// The stream is signed to this server, so the phone plays it
+		// through here; ranges pass straight through so seeking works.
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		if rg := r.Header.Get("Range"); rg != "" {
+			req.Header.Set("Range", rg)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			http.Error(w, "the stream could not be fetched", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"} {
+			if v := resp.Header.Get(h); v != "" {
+				w.Header().Set(h, v)
+			}
+		}
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(w, resp.Body)
 	})
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -319,6 +380,116 @@ func leadingInt(s string) (int, bool) {
 	}
 	n, err := strconv.Atoi(strings.TrimSpace(head))
 	return n, err == nil
+}
+
+// ytTrack is one playable YouTube track, as the frontends receive it.
+type ytTrack struct {
+	VideoID  string `json:"videoId"`
+	Title    string `json:"title"`
+	Artist   string `json:"artist"`
+	Duration int    `json:"duration"` // seconds
+}
+
+// ytFlat runs yt-dlp over a URL and reads its flat playlist JSON lines,
+// one object per track.
+func ytFlat(ctx context.Context, url string) ([]ytTrack, error) {
+	cctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(cctx, "yt-dlp", "--flat-playlist", "-j", "--no-warnings", url).Output()
+	if err != nil {
+		return nil, fmt.Errorf("yt-dlp: %w", err)
+	}
+	var tracks []ytTrack
+	for line := range strings.SplitSeq(string(out), "\n") {
+		var raw struct {
+			ID       string `json:"id"`
+			Title    string `json:"title"`
+			Channel  string `json:"channel"`
+			Uploader string `json:"uploader"`
+			Duration int    `json:"duration"`
+		}
+		if json.Unmarshal([]byte(line), &raw) != nil || raw.ID == "" || raw.Title == "" {
+			continue
+		}
+		artist := raw.Channel
+		if artist == "" {
+			artist = raw.Uploader
+		}
+		tracks = append(tracks, ytTrack{VideoID: raw.ID, Title: raw.Title, Artist: artist, Duration: raw.Duration})
+	}
+	return tracks, nil
+}
+
+// ytResolve finds the audio stream behind a video, caching briefly: the
+// URLs are signed to this server and expire.
+var ytStreams = struct {
+	sync.RWMutex
+	urls map[string]struct {
+		url     string
+		expires time.Time
+	}
+}{urls: map[string]struct {
+	url     string
+	expires time.Time
+}{}}
+
+func ytResolve(ctx context.Context, videoID string) (string, error) {
+	ytStreams.RLock()
+	hit, ok := ytStreams.urls[videoID]
+	ytStreams.RUnlock()
+	if ok && time.Now().Before(hit.expires) {
+		return hit.url, nil
+	}
+	cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(cctx, "yt-dlp", "-g", "-f", "bestaudio", "--no-warnings",
+		"https://music.youtube.com/watch?v="+videoID).Output()
+	if err != nil {
+		return "", fmt.Errorf("yt-dlp: %w", err)
+	}
+	url, _, _ := strings.Cut(string(out), "\n")
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return "", errors.New("no audio stream found")
+	}
+	ytStreams.Lock()
+	ytStreams.urls[videoID] = struct {
+		url     string
+		expires time.Time
+	}{url, time.Now().Add(10 * time.Minute)}
+	ytStreams.Unlock()
+	return url, nil
+}
+
+// ytSupermix builds a mix like the store apps' own: a seed from the
+// owned library, expanded through YouTube's radio into a run of tracks
+// the library doesn't have to own yet.
+func ytSupermix(ctx context.Context, musicDir string) ([]ytTrack, error) {
+	artists, err := walkLibrary(musicDir)
+	if err != nil {
+		return nil, err
+	}
+	if len(artists) == 0 {
+		return nil, errors.New("the owned library is empty; nothing to seed a mix from")
+	}
+	artist := artists[rand.IntN(len(artists))]
+	album := artist.Albums[rand.IntN(len(artist.Albums))]
+	seed := album.Tracks[rand.IntN(len(album.Tracks))]
+
+	// Find the seed on YouTube, then let the radio do the rest.
+	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+seed.Name)
+	if err != nil || len(found) == 0 {
+		return nil, fmt.Errorf("no YouTube match for %s — %s", artist.Name, seed.Name)
+	}
+	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+found[0].VideoID+"&list=RD"+found[0].VideoID)
+	if err != nil {
+		return nil, err
+	}
+	// The radio starts on its own seed; the mix is what follows it.
+	if len(mix) > 50 {
+		mix = mix[:50]
+	}
+	return mix, nil
 }
 
 // withDesign serves the page with the shared fonts and tokens under design/.
