@@ -28,6 +28,7 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import signal
 import socket
 import struct
 from typing import TYPE_CHECKING
@@ -386,5 +387,8 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    # Unwind on SIGTERM as on Ctrl-C: a bridge that dies without disconnecting
+    # leaves BlueZ holding the trainer, which then stops advertising.
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(main())
