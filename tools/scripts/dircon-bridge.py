@@ -114,6 +114,24 @@ class Trainer:
         # Characteristic -> sessions that enabled notifications on it.
         self.subscribers: dict[uuid.UUID, set[Session]] = {}
         self._notifying: set[uuid.UUID] = set()
+        self._write_lock = asyncio.Lock()
+        self._writes: dict[tuple[str, bytes], asyncio.Task[None]] = {}
+
+    async def write(self, char: BleakGATTCharacteristic, data: bytes) -> None:
+        # BlueZ fails a write while another is outstanding, and a write with
+        # response takes about a second. Zwift resends one it hasn't heard back
+        # about, so let the resend share the original instead of colliding.
+        key = (char.uuid, data)
+        if key not in self._writes:
+            self._writes[key] = asyncio.create_task(self._write(char, data))
+            self._writes[key].add_done_callback(lambda _: self._writes.pop(key, None))
+        await asyncio.shield(self._writes[key])
+
+    async def _write(self, char: BleakGATTCharacteristic, data: bytes) -> None:
+        async with self._write_lock:
+            assert self.client is not None
+            response = "write" in char.properties
+            await self.client.write_gatt_char(char, data, response=response)
 
     async def run(self) -> None:
         while True:
@@ -265,8 +283,7 @@ class Session:
             if props & (PROP_NOTIFY | PROP_INDICATE):
                 await trainer.subscribe(self, target, enable=True)
             try:
-                response = "write" in char.properties
-                await trainer.client.write_gatt_char(char, data, response=response)
+                await trainer.write(char, data)
             except Exception as e:  # noqa: BLE001
                 log.warning("write to %s failed: %s", target, e)
                 return packet(msg_id, seq, code=RESP_WRITE_FAILED)
