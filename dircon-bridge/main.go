@@ -104,11 +104,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 	g, ctx := errgroup.WithContext(ctx)
 	for i, addr := range addresses {
-		dev, err := bz.Device(ctx, addr)
-		if err != nil {
-			return err
-		}
-		b := bridge.New(dev, *port+i, responder, log)
+		b := bridge.New(bz.Device(addr), *port+i, responder, log)
 		g.Go(func() error { return b.Run(ctx) })
 	}
 	g.Go(func() error {

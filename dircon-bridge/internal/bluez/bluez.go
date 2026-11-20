@@ -281,16 +281,12 @@ type Device struct {
 	Address string
 }
 
-// Device returns the device with the given address, scanning until it shows
-// up if BlueZ has never seen it.
-func (c *Client) Device(ctx context.Context, address string) (*Device, error) {
+// Device returns the device with the given address. BlueZ need not know it
+// yet; Connect scans for it.
+func (c *Client) Device(address string) *Device {
 	address = strings.ToUpper(address)
 	path := c.adapter + dbus.ObjectPath("/dev_"+strings.ReplaceAll(address, ":", "_"))
-	d := &Device{c: c, Path: path, Address: address}
-	if err := c.waitKnown(ctx, path); err != nil {
-		return nil, err
-	}
-	return d, nil
+	return &Device{c: c, Path: path, Address: address}
 }
 
 // waitKnown scans until BlueZ knows the device at path. BlueZ forgets an

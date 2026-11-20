@@ -30,9 +30,12 @@ const ServiceType = "_wahoo-fitness-tnp._tcp"
 
 const (
 	connectTimeout = 30 * time.Second
-	retryDelay     = 3 * time.Second
-	gattTimeout    = 10 * time.Second
-	sendTimeout    = 5 * time.Second
+	// Retries back off while the device can't be reached, because looking
+	// for it scans, and scanning disturbs the other devices' links.
+	minRetryDelay = 3 * time.Second
+	maxRetryDelay = 30 * time.Second
+	gattTimeout   = 10 * time.Second
+	sendTimeout   = 5 * time.Second
 )
 
 // Generic Access and Generic Attribute belong to the BLE link, not the device.
@@ -72,14 +75,20 @@ func (b *Bridge) Run(ctx context.Context) error {
 	go b.accept(ln)
 	defer func() { _ = ln.Close() }()
 
+	delay := minRetryDelay
 	for {
-		if err := b.connectOnce(ctx); err != nil && ctx.Err() == nil {
-			b.log.Warn("connection failed", "err", err)
+		if err := b.connectOnce(ctx); err != nil {
+			if ctx.Err() == nil {
+				b.log.Warn("connection failed", "err", err, "retry", delay)
+			}
+			delay = min(2*delay, maxRetryDelay)
+		} else {
+			delay = minRetryDelay
 		}
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(retryDelay):
+		case <-time.After(delay):
 		}
 	}
 }
