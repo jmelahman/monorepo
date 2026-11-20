@@ -67,6 +67,7 @@ type buy struct {
 type buyQueue struct {
 	store string // the store provider's executable
 	music string // the owned library it buys into
+	proxy string // the HTTP proxy the provider's traffic leaves through, if any
 	file  string // where the queue is saved
 
 	mu   sync.Mutex
@@ -78,13 +79,14 @@ type buyQueue struct {
 // 503 when none is configured. Buys go through the queue rather than the
 // request: a purchase outlasts nginx's patience, and a hung-up client
 // must not cut it short.
-func routeBuys(ctx context.Context, mux *http.ServeMux, store, music, state string) {
+func routeBuys(ctx context.Context, mux *http.ServeMux, store, proxy, music, state string) {
 	var q *buyQueue
 	if store != "" {
 		var err error
 		if q, err = newBuyQueue(store, music, state); err != nil {
 			fail(err)
 		}
+		q.proxy = proxy
 		go q.run(ctx)
 	}
 	mux.HandleFunc("POST /api/buy", func(w http.ResponseWriter, r *http.Request) {
@@ -129,14 +131,8 @@ func newBuyQueue(store, music, state string) (*buyQueue, error) {
 		file:  filepath.Join(state, "buys.json"),
 		wake:  make(chan struct{}, 1),
 	}
-	b, err := os.ReadFile(q.file)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := loadJSON(q.file, &q.buys); err != nil {
 		return nil, err
-	}
-	if len(b) > 0 {
-		if err := json.Unmarshal(b, &q.buys); err != nil {
-			return nil, err
-		}
 	}
 	// A buy that was running when the server stopped runs again.
 	for _, b := range q.buys {
@@ -251,6 +247,14 @@ func (q *buyQueue) attempt(ctx context.Context, artist, title string) (*buyResul
 	// A provider that leaves a browser or a download behind it must not
 	// hold the queue past the attempt's own limit.
 	cmd.WaitDelay = 10 * time.Second
+	if q.proxy != "" {
+		// Only the provider leaves through the proxy (the homelab's VPN),
+		// and with it set the provider has no other way out: a VPN that
+		// is down fails the attempt rather than buying in the clear.
+		cmd.Env = append(os.Environ(),
+			"HTTPS_PROXY="+q.proxy, "HTTP_PROXY="+q.proxy, "https_proxy="+q.proxy, "http_proxy="+q.proxy,
+			"NO_PROXY=", "no_proxy=")
+	}
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
 	out, err := cmd.Output()
@@ -313,19 +317,7 @@ func (q *buyQueue) pruneLocked() {
 	})
 }
 
-// saveLocked writes the queue through a temporary file, so a crash leaves
-// the old copy or the new one, never half of either.
+// saveLocked writes the queue.
 func (q *buyQueue) saveLocked() error {
-	b, err := json.MarshalIndent(q.buys, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(q.file), 0o755); err != nil {
-		return err
-	}
-	tmp := q.file + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, q.file)
+	return saveJSON(q.file, q.buys)
 }

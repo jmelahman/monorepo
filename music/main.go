@@ -16,7 +16,6 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
-	"math/rand/v2"
 	"net/http"
 	"os"
 	"os/exec"
@@ -78,10 +77,19 @@ func main() {
 			Music string `json:"music"`
 		}{OK: true, Music: *music})
 	})
-	routeLibrary(mux, *music)
+	shelf, err := newShelf(*state)
+	if err != nil {
+		fail(err)
+	}
+	routeLibrary(mux, *music, shelf)
+	routeShelf(mux, shelf, *music)
+	routeMixes(mux, &mixer{
+		music: *music, shelf: shelf,
+		cookies: os.Getenv("MUSIC_YTM_COOKIES"), supermix: os.Getenv("MUSIC_YTM_SUPERMIX"),
+	})
 	routeApp(mux, *apk)
-	routeYouTube(mux, *music)
-	routeBuys(ctx, mux, os.Getenv("MUSIC_STORE"), *music, *state)
+	routeYouTube(mux)
+	routeBuys(ctx, mux, os.Getenv("MUSIC_STORE"), os.Getenv("MUSIC_STORE_PROXY"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The page changes with the binary; don't let a browser hold an old one.
@@ -114,13 +122,14 @@ func writeJSON(w http.ResponseWriter, v any) {
 
 // routeLibrary serves the owned library: its listing, its audio and its
 // albums' art.
-func routeLibrary(mux *http.ServeMux, music string) {
+func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
 	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
 		artists, err := walkLibrary(music)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		shelf.decorate(artists)
 		writeJSON(w, artists)
 	})
 	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {
@@ -201,9 +210,9 @@ func routeApp(mux *http.ServeMux, apk string) {
 	})
 }
 
-// routeYouTube serves the streamed half: search, the supermix, and the
-// audio behind a video, proxied.
-func routeYouTube(mux *http.ServeMux, music string) {
+// routeYouTube serves the streamed half: search and the audio behind a
+// video, proxied. The supermix is with the other mix, in mix.go.
+func routeYouTube(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/yt/search", func(w http.ResponseWriter, r *http.Request) {
 		q := strings.TrimSpace(r.URL.Query().Get("q"))
 		if q == "" {
@@ -216,14 +225,6 @@ func routeYouTube(mux *http.ServeMux, music string) {
 			return
 		}
 		writeJSON(w, tracks)
-	})
-	mux.HandleFunc("GET /api/yt/supermix", func(w http.ResponseWriter, r *http.Request) {
-		mix, err := ytSupermix(r.Context(), music)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		writeJSON(w, mix)
 	})
 	mux.HandleFunc("GET /api/yt/stream", ytStream)
 }
@@ -297,9 +298,12 @@ func defaultState() string {
 // track is one file of the owned library, with its path relative to the
 // library's root so the audio endpoint can ask for it by name.
 type track struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
-	Size int64  `json:"size"`
+	Name     string `json:"name"`
+	Path     string `json:"path"`
+	Size     int64  `json:"size"`
+	Added    int64  `json:"added"` // when the file landed, in Unix seconds
+	Plays    int    `json:"plays,omitempty"`
+	Excluded bool   `json:"excluded,omitempty"` // kept out of the mixes
 }
 
 // album groups its tracks.
@@ -402,9 +406,10 @@ func trackOf(artist, album string, entry os.DirEntry) (track, bool) {
 		dir = artist
 	}
 	return track{
-		Name: strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())),
-		Path: path.Join(dir, entry.Name()),
-		Size: info.Size(),
+		Name:  strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())),
+		Path:  path.Join(dir, entry.Name()),
+		Size:  info.Size(),
+		Added: info.ModTime().Unix(),
 	}, true
 }
 
@@ -474,11 +479,11 @@ type ytTrack struct {
 
 // ytFlat runs yt-dlp over a URL and reads its flat playlist JSON lines,
 // one object per track.
-func ytFlat(ctx context.Context, url string, limit int) ([]ytTrack, error) {
+func ytFlat(ctx context.Context, url string, limit int, extra ...string) ([]ytTrack, error) {
 	cctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	out, err := ytdlp(cctx, "--flat-playlist", "-j", "--no-warnings",
-		"--playlist-end", strconv.Itoa(limit), url)
+	args := append([]string{"--flat-playlist", "-j", "--no-warnings", "--playlist-end", strconv.Itoa(limit)}, extra...)
+	out, err := ytdlp(cctx, append(args, url)...)
 	if err != nil {
 		return nil, err
 	}
@@ -601,42 +606,6 @@ func (e *ytStreamURL) resolve(videoID string) {
 
 // trackNumber is the "01 " or "1. " a file name leads with.
 var trackNumber = regexp.MustCompile(`^\d+[\s._-]*`)
-
-// ytSupermix builds a mix like the store apps' own: a seed from the
-// owned library, expanded through YouTube's radio into a run of tracks
-// the library doesn't have to own yet.
-func ytSupermix(ctx context.Context, musicDir string) ([]ytTrack, error) {
-	artists, err := walkLibrary(musicDir)
-	if err != nil {
-		return nil, err
-	}
-	if len(artists) == 0 {
-		return nil, errors.New("the owned library is empty; nothing to seed a mix from")
-	}
-	artist := artists[rand.IntN(len(artists))]
-	album := artist.Albums[rand.IntN(len(artist.Albums))]
-	seed := album.Tracks[rand.IntN(len(album.Tracks))]
-
-	// Find the seed on YouTube, then let the radio do the rest.
-	// Track numbers only muddy the search.
-	name := trackNumber.ReplaceAllString(seed.Name, "")
-	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+name, 1)
-	if err != nil || len(found) == 0 {
-		return nil, fmt.Errorf("no YouTube match for %s — %s", artist.Name, name)
-	}
-	seedID := found[0].VideoID
-	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+seedID+"&list=RD"+seedID, 51)
-	if err != nil {
-		return nil, err
-	}
-	// The radio starts on its own seed, which the library already owns;
-	// the mix is what follows it.
-	mix = slices.DeleteFunc(mix, func(t ytTrack) bool { return t.VideoID == seedID })
-	if len(mix) == 0 {
-		return nil, fmt.Errorf("YouTube has no radio for %s — %s", artist.Name, name)
-	}
-	return mix, nil
-}
 
 // withDesign serves the page with the shared fonts and tokens under design/.
 // They sit beside web/ rather than in it because the monorepo syncs the same

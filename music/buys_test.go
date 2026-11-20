@@ -117,3 +117,25 @@ func TestBuyQueueResumesInterrupted(t *testing.T) {
 		t.Fatalf("an interrupted buy runs again: %+v", l[0])
 	}
 }
+
+func TestBuyGoesThroughTheProxy(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store")
+	script := `#!/bin/sh
+echo "{\"artist\":\"A\",\"album\":\"B\",\"title\":\"$HTTPS_PROXY\",\"file\":\"/m/A/B/C.mp3\"}"
+`
+	if err := os.WriteFile(store, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	q, err := newBuyQueue(store, t.TempDir(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	q.proxy = "http://gluetun:8888"
+	res, err := q.attempt(t.Context(), "A", "C")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Title != q.proxy {
+		t.Fatalf("the provider saw HTTPS_PROXY=%q", res.Title)
+	}
+}
