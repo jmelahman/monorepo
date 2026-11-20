@@ -64,8 +64,8 @@ self.addEventListener('fetch', (event) => {
   const name = url.pathname.slice(scope.length - 1) || '/';
 
   // The Android client's APK: tens of megabytes, a new one every build,
-  // and nothing the cache is for.
-  if (name.startsWith('/api/apk')) {
+  // and nothing the cache is for. Its version file rides along.
+  if (name.startsWith('/api/apk') || name.startsWith('/api/app')) {
     return;
   }
 

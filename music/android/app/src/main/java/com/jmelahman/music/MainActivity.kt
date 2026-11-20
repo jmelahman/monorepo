@@ -1,6 +1,7 @@
 package com.jmelahman.music
 
 import android.content.ComponentName
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
@@ -50,6 +52,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.google.common.util.concurrent.ListenableFuture
+import java.io.File
+import java.net.URL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -74,6 +78,10 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
         private set
     var stack by mutableStateOf<List<Screen>>(listOf(Screen.Artists))
     var notice by mutableStateOf<String?>(null)
+    var update by mutableStateOf<AppUpdate?>(null)
+        private set
+    var updating by mutableStateOf(false)
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,6 +100,7 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
 
         setContent { MusicApp(this) }
         reload()
+        checkForUpdate()
     }
 
     override fun onDestroy() {
@@ -135,8 +144,7 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
     // saveAlbum queues one piece of work per track, each carrying the
     // constraint the OS then enforces: unmetered networks only, unless
     // the user switched downloads on mobile data on.
-    fun saveAlbum(album: Album) {
-        val wm = WorkManager.getInstance(this)
+    fun saveAlbum(album: Album) {        val wm = WorkManager.getInstance(this)
         val network =
             if (settings.allowDownloadsMetered) NetworkType.CONNECTED else NetworkType.UNMETERED
         for (t in album.tracks) {
@@ -146,6 +154,53 @@ class MainActivity : ComponentActivity() {    private val scope = CoroutineScope
                 .addTag(DOWNLOAD_TAG)
                 .build()
             wm.enqueueUniqueWork("download:${t.path}", ExistingWorkPolicy.KEEP, request)
+        }
+    }
+
+    // checkForUpdate asks the server which build it offers; anything other
+    // than this one's own version shows itself as a button.
+    private fun checkForUpdate() {
+        scope.launch {
+            val u = withContext(Dispatchers.IO) { Api.app() }
+            if (u != null && u.version.isNotEmpty() && u.version != BuildConfig.VERSION_NAME) {
+                update = u
+            }
+        }
+    }
+
+    // installUpdate fetches the newer build under the same network rules
+    // as music, then hands it to the system installer, which asks for the
+    // one confirmation Android always requires.
+    fun installUpdate() {
+        val u = update ?: return
+        if (!settings.allowDownloadsMetered && Settings.metered(this)) {
+            notice = "Mobile data — the update waits for Wi-Fi"
+            return
+        }
+        updating = true
+        scope.launch {
+            val file = File(cacheDir, "update/Music.apk")
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    file.parentFile?.mkdirs()
+                    URL(Api.baseUrl + "/api/apk").openStream().use { input ->
+                        file.outputStream().use { input.copyTo(it) }
+                    }
+                    file.length() == u.size
+                }.getOrDefault(false)
+            }
+            updating = false
+            if (!ok) {
+                notice = "The update could not be downloaded"
+                return@launch
+            }
+            val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+            startActivity(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+            )
         }
     }
 
@@ -234,6 +289,13 @@ private fun Header(activity: MainActivity) {
             }
         }
         Spacer(Modifier.weight(1f))
+        val u = activity.update
+        if (u != null) {
+            TextButton(
+                onClick = { activity.installUpdate() },
+                enabled = !activity.updating,
+            ) { Text(if (activity.updating) "Downloading…" else "Update to ${u.version}") }
+        }
         var showSettings by remember { mutableStateOf(false) }
         TextButton(onClick = { showSettings = true }) { Text("Settings") }
         if (showSettings) {

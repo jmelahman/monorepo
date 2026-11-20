@@ -12,8 +12,8 @@ android {
         applicationId = "com.jmelahman.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2"
+        versionCode = 3
+        versionName = "0.3"
     }
 
     buildTypes {
@@ -30,6 +30,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -48,4 +49,18 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+}
+
+// The server reads this sidecar to tell installed clients which version
+// the downloadable APK is.
+tasks.register("writeVersion") {
+    doLast {
+        layout.buildDirectory
+            .file("outputs/apk/debug/app-debug.apk.version")
+            .get().asFile
+            .writeText(android.defaultConfig.versionName ?: "?")
+    }
+}
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+    finalizedBy("writeVersion")
 }

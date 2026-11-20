@@ -12,6 +12,10 @@ data class Track(val name: String, val path: String, val size: Long)
 data class Album(val name: String, val tracks: List<Track>)
 data class Artist(val name: String, val albums: List<Album>)
 
+// The Android client's build that the server offers, when it is newer
+// than the one asking.
+data class AppUpdate(val version: String, val size: Long)
+
 object Api {
     // Set from settings before the first call.
     var baseUrl = "http://localhost:8095"
@@ -43,4 +47,10 @@ object Api {
     )
 
     fun audioUrl(path: String) = "$baseUrl/api/audio?path=" + URLEncoder.encode(path, "UTF-8")
+
+    fun app(): AppUpdate? = runCatching {
+        val body = URL("$baseUrl/api/app").openStream().bufferedReader().readText()
+        val o = JSONObject(body)
+        AppUpdate(o.getString("version"), o.getLong("size"))
+    }.getOrNull()
 }

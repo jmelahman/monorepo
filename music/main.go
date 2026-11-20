@@ -104,6 +104,26 @@ func main() {
 		w.Header().Set("Content-Disposition", `attachment; filename="Music.apk"`)
 		http.ServeFile(w, r, *apk)
 	})
+	mux.HandleFunc("GET /api/app", func(w http.ResponseWriter, _ *http.Request) {
+		if *apk == "" {
+			http.NotFound(w, new(http.Request))
+			return
+		}
+		version := ""
+		if b, err := os.ReadFile(*apk + ".version"); err == nil {
+			version = strings.TrimSpace(string(b))
+		}
+		info, err := os.Stat(*apk)
+		if err != nil || info.IsDir() {
+			http.NotFound(w, new(http.Request))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(struct {
+			Version string `json:"version"`
+			Size    int64  `json:"size"`
+		}{Version: version, Size: info.Size()})
+	})
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The page changes with the binary; don't let a browser hold an old one.
