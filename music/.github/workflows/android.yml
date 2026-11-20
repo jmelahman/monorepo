@@ -1,0 +1,89 @@
+# Builds the Android client on every push, so a break is caught at the
+# commit that caused it. Only a pushed `v*` tag gets a signed build, and the
+# GitHub release for that tag with it attached: the install path for a
+# phone off the homelab, at
+# https://github.com/jmelahman/music/releases/latest/download/music.apk
+name: android
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # Android Gradle Plugin 8.7 builds cleanly against 21, not newer.
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: 21
+      # `tools` has left Google's repository; Gradle fetches the platform and
+      # build-tools itself once the licenses are accepted.
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699
+        with:
+          packages: platform-tools
+
+      # Only a tag gets the real key; a push build is unsigned on purpose.
+      - name: Decode signing key
+        if: github.ref_type == 'tag'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Assemble release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+        working-directory: android
+
+      # Signed builds land as app-release.apk and unsigned ones as
+      # app-release-unsigned.apk; the glob covers both.
+      - name: Name the APK for humans
+        run: |
+          find android/app/build/outputs/apk/release -name 'app-release*.apk' \
+            -exec mv {} music.apk \;
+          ls -l music.apk
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: music-apk
+          path: music.apk
+          if-no-files-found: error
+
+  publish:
+    needs: apk
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: music-apk
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 ||
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+      - name: Attach the APK to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release upload "$TAG" music.apk --clobber

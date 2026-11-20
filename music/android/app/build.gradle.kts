@@ -16,8 +16,27 @@ android {
         versionName = "0.5"
     }
 
+    // The signing key is what lets one build replace another on a phone:
+    // Android treats a package signed by a different key as a different app
+    // and refuses the upgrade. CI decodes the key from a repo secret on a
+    // tag; without it (any local build) the block is skipped and
+    // assembleRelease produces an unsigned APK rather than failing.
+    val keystore = System.getenv("ANDROID_KEYSTORE_PATH")
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = "music"
+                keyPassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
         }
     }
@@ -52,15 +71,15 @@ dependencies {
 }
 
 // The server reads this sidecar to tell installed clients which version
-// the downloadable APK is.
+// the downloadable APK is: one beside each APK a build leaves.
 tasks.register("writeVersion") {
     doLast {
-        layout.buildDirectory
-            .file("outputs/apk/debug/app-debug.apk.version")
-            .get().asFile
-            .writeText(android.defaultConfig.versionName ?: "?")
+        val apks = layout.buildDirectory.dir("outputs/apk").get().asFile
+        apks.walkTopDown().filter { it.extension == "apk" }.forEach {
+            File(it.path + ".version").writeText(android.defaultConfig.versionName ?: "?")
+        }
     }
 }
-tasks.matching { it.name == "assembleDebug" }.configureEach {
+tasks.matching { it.name == "assembleDebug" || it.name == "assembleRelease" }.configureEach {
     finalizedBy("writeVersion")
 }
