@@ -19,6 +19,11 @@ let libraryState = 'loading'; // loading, ready or failed
 let queue = []; // { key, name, sub, url, art, album }: owned tracks and streams alike
 let playingIndex = -1; // where in the queue the player is
 let mix = null; // the supermix last built, kept for the home page
+let mixSource = ''; // account (YouTube Music's own) or radio (seeded from the library)
+let libMix = null; // the library mix: null until asked for, then 'loading', a list or 'failed'
+let playlists = null; // from api/playlists, without their tracks
+const playlistTracks = new Map(); // id → the playlist with its tracks, as last read
+let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> for streams
 let lastSearch = { q: '', tracks: null }; // the search last run, so back doesn't run it again
 let apkReady = false; // whether the Android client can be offered
 
@@ -49,6 +54,14 @@ function setStatus(up, text) {
 }
 
 loadLibrary();
+loadPlaylists();
+fetch('api/excluded')
+  .then((r) => (r.ok ? r.json() : []))
+  .then((keys) => {
+    excluded = new Set(keys);
+    markExcluded();
+  })
+  .catch(() => {});
 
 // The native client's APK, offered only where it can install: on the
 // phone, when a build is actually mounted behind the endpoint.
@@ -184,13 +197,15 @@ function keep(key, value) {
 
 // --------------------------------------------------------------- routes
 
-// route reads the hash: #/, #/library[/artists], #/artist/A,
-// #/album/A/B or #/search/Q.
+// route reads the hash: #/, #/library[/artists|/playlists], #/artist/A,
+// #/album/A/B, #/playlist/ID or #/search/Q.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   switch (parts[0]) {
     case 'library':
-      return { kind: 'library', tab: parts[1] === 'artists' ? 'artists' : 'albums' };
+      return { kind: 'library', tab: ['artists', 'playlists'].includes(parts[1]) ? parts[1] : 'albums' };
+    case 'playlist':
+      return { kind: 'playlist', id: parts[1] || '' };
     case 'artist':
       return { kind: 'artist', artist: parts[1] || '' };
     case 'album':
@@ -207,7 +222,8 @@ const href = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 function render() {
   const r = route();
   for (const a of document.querySelectorAll('.tabs a')) {
-    const on = a.dataset.tab === r.kind || (a.dataset.tab === 'library' && (r.kind === 'artist' || r.kind === 'album'));
+    const inLibrary = ['artist', 'album', 'playlist'].includes(r.kind);
+    const on = a.dataset.tab === r.kind || (a.dataset.tab === 'library' && inLibrary);
     if (on) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
@@ -222,6 +238,9 @@ function render() {
     case 'album':
       renderAlbum(r.artist, r.album);
       break;
+    case 'playlist':
+      renderPlaylist(r.id);
+      break;
     case 'search':
       $('search-q').value = r.q;
       renderSearch(r.q);
@@ -231,6 +250,7 @@ function render() {
   }
   markTrack();
   markBuys();
+  markExcluded();
 }
 
 window.addEventListener('hashchange', () => {
@@ -294,43 +314,98 @@ function renderHome() {
         { className: 'shelf' },
         el('a', { className: 'btn chrome', href: 'api/apk', download: '' }, icon('save'), 'Get the Android app')
       ),
-    el(
-      'section',
-      { className: `hero${mix === 'loading' ? ' spinning' : ''}`, 'aria-labelledby': 'mix-title' },
-      el('div', { className: 'hero-disc', 'aria-hidden': 'true' }),
-      el(
-        'div',
-        {},
-        el('p', { className: 'kicker', textContent: 'Made from your library' }),
-        el('h2', { id: 'mix-title', textContent: 'Supermix' }),
-        el('p', {
-          textContent: 'Endless streams seeded by what you already own. Hear something you like, buy it in.',
-        }),
-        el(
-          'div',
-          { className: 'btn-row' },
-          el(
-            'button',
-            { className: 'btn chrome', type: 'button', disabled: mix === 'loading', onclick: buildMix },
-            icon('mix'),
-            mix === 'loading' ? 'Mixing…' : Array.isArray(mix) ? 'Mix again' : 'Start a mix'
-          ),
-          Array.isArray(mix) &&
-            mix.length > 0 &&
-            el(
-              'button',
-              { className: 'btn ghost', type: 'button', onclick: () => playStreams(mix, 0) },
-              icon('play'),
-              'Play'
-            )
-        )
-      )
-    ),
-    Array.isArray(mix) && shelf('Your mix', null, streamList(mix)),
+    el('div', { className: 'mixes' }, supermixHero(), libraryMixHero()),
+    Array.isArray(libMix) && libMix.length > 0 && shelf('Library mix', null, ownedList(libItems(libMix))),
+    Array.isArray(mix) && shelf('Your Supermix', null, streamList(mix)),
     libraryPending(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
     all.length > 0 && shelf('From your library', '#/library', albumRow(shuffled(all).slice(0, 18)))
   );
+}
+
+// The supermix streams: YouTube Music's own for the account when the
+// server is set up for it, a radio seeded from the library otherwise.
+function supermixHero() {
+  return el(
+    'section',
+    { className: `hero${mix === 'loading' ? ' spinning' : ''}`, 'aria-labelledby': 'mix-title' },
+    el('div', { className: 'hero-disc', 'aria-hidden': 'true' }),
+    el(
+      'div',
+      {},
+      el('p', {
+        className: 'kicker',
+        textContent: mixSource === 'radio' ? 'Radio from your library' : 'From YouTube Music',
+      }),
+      el('h2', { id: 'mix-title', textContent: 'Your Supermix' }),
+      el('p', { textContent: 'Streams to discover. Hear something you like, buy it in.' }),
+      el(
+        'div',
+        { className: 'btn-row' },
+        el(
+          'button',
+          { className: 'btn chrome', type: 'button', disabled: mix === 'loading', onclick: () => buildMix(false) },
+          icon('play'),
+          mix === 'loading' ? 'Mixing…' : 'Play'
+        ),
+        Array.isArray(mix) &&
+          el(
+            'button',
+            { className: 'btn ghost', type: 'button', onclick: () => buildMix(true) },
+            icon('mix'),
+            'New mix'
+          )
+      )
+    )
+  );
+}
+
+// The library mix plays what is owned, a new one each day; the phone
+// keeps it saved.
+function libraryMixHero() {
+  if (libMix === null) loadLibraryMix();
+  const ready = Array.isArray(libMix) && libMix.length > 0;
+  return el(
+    'section',
+    { className: 'hero owned-mix', 'aria-labelledby': 'libmix-title' },
+    el('div', { className: 'hero-disc', 'aria-hidden': 'true' }),
+    el(
+      'div',
+      {},
+      el('p', { className: 'kicker', textContent: 'Made from your library' }),
+      el('h2', { id: 'libmix-title', textContent: 'Library mix' }),
+      el('p', {
+        textContent:
+          libMix === 'failed'
+            ? 'The mix could not be read.'
+            : ready
+              ? `${plural(libMix.length, 'track')} you own, new each day.`
+              : 'Picking from what you own…',
+      }),
+      el(
+        'div',
+        { className: 'btn-row' },
+        el(
+          'button',
+          { className: 'btn chrome', type: 'button', disabled: !ready, onclick: () => playQueue(libItems(libMix), 0) },
+          icon('play'),
+          'Play'
+        )
+      )
+    )
+  );
+}
+
+async function loadLibraryMix() {
+  libMix = 'loading';
+  try {
+    const r = await fetch('api/mix/library');
+    if (!r.ok) throw new Error(r.status);
+    libMix = await r.json();
+  } catch {
+    libMix = 'failed';
+  }
+  if (route().kind === 'home') render();
 }
 
 function shelf(title, more, body) {
@@ -351,12 +426,19 @@ function albumRow(items) {
   return el('ul', { className: 'grid row-scroll' }, items.map((x) => el('li', {}, albumTile(x.artist, x.album))));
 }
 
-async function buildMix() {
+// buildMix plays the supermix, reading it first if it isn't here yet;
+// fresh asks the server for a new one.
+async function buildMix(fresh) {
+  if (Array.isArray(mix) && !fresh) {
+    if (mix.length) playStreams(mix, 0);
+    return;
+  }
   mix = 'loading';
   render();
   try {
-    const r = await fetch('api/yt/supermix');
+    const r = await fetch(`api/yt/supermix${fresh ? '?fresh=1' : ''}`);
     if (!r.ok) throw new Error((await r.text()).trim() || r.status);
+    mixSource = r.headers.get('X-Mix-Source') || '';
     mix = await r.json();
   } catch (err) {
     mix = null;
@@ -372,18 +454,20 @@ function renderLibrary(tab) {
   const chips = el(
     'div',
     { className: 'chips', role: 'group', 'aria-label': 'Show' },
-    ['albums', 'artists'].map((t) =>
+    ['albums', 'artists', 'playlists'].map((t) =>
       el('a', {
         className: 'chip',
-        href: t === 'albums' ? '#/library' : '#/library/artists',
-        textContent: t === 'albums' ? 'Albums' : 'Artists',
+        href: t === 'albums' ? '#/library' : `#/library/${t}`,
+        textContent: t[0].toUpperCase() + t.slice(1),
         'aria-current': t === tab ? 'page' : 'false',
       })
     )
   );
   const pending = libraryPending();
   let body;
-  if (pending) {
+  if (tab === 'playlists') {
+    body = playlistGrid();
+  } else if (pending) {
     body = pending;
   } else if (tab === 'artists') {
     body = el(
@@ -468,14 +552,81 @@ function renderArtist(name) {
 
 // ownedItems are an album's tracks as the queue holds them.
 function ownedItems(artist, album) {
-  return album.tracks.map((t) => ({
+  return libItems(album.tracks.map((t) => ({ ...t, artist: artist.name, album: album.name })));
+}
+
+// libItems are tracks from anywhere in the library, as playlists and the
+// library mix list them, as the queue holds them.
+function libItems(tracks) {
+  return tracks.map((t) => ({
     key: t.path,
+    path: t.path,
     name: trackName(t.name),
-    sub: `${artist.name} · ${album.name}`,
+    sub: `${t.artist} · ${t.album}`,
+    size: t.size,
     url: `api/audio?path=${encodeURIComponent(t.path)}`,
-    art: coverUrl(artist.name, album.name),
-    album: { artist: artist.name, album: album.name },
+    art: coverUrl(t.artist, t.album),
+    album: { artist: t.artist, album: t.album },
   }));
+}
+
+// ownedList lists owned tracks with a menu each: numbered on an album,
+// with their covers elsewhere.
+function ownedList(items, opts = {}) {
+  if (!items.length) return el('p', { className: 'empty', textContent: opts.empty || 'Nothing here yet.' });
+  return el(
+    'ol',
+    { className: 'tracks' },
+    items.map((t, i) =>
+      rowOf(
+        t,
+        () => playQueue(items, i),
+        opts.numbered ? el('span', { className: 'num', textContent: String(i + 1) }) : art(t.album.album, t.art),
+        el(
+          'span',
+          {},
+          el('span', { className: 'name', textContent: t.name }),
+          !opts.numbered && el('span', { className: 'sub', textContent: t.sub })
+        ),
+        el(
+          'span',
+          { className: 'end' },
+          el('span', { className: 'no-mix', title: 'Kept out of the mixes', textContent: 'No mix' }),
+          opts.numbered && t.size && el('span', { className: 'size', textContent: mb(t.size) }),
+          menuButton(t, opts.playlist)
+        ),
+        opts.numbered ? '' : 'stream'
+      )
+    )
+  );
+}
+
+// rowOf is one track's row. It can't be a button, as it holds the menu
+// and buy buttons, so it takes a button's keys.
+function rowOf(item, play, lead, body, end, extra) {
+  return el(
+    'li',
+    {},
+    el(
+      'div',
+      {
+        className: `track ${extra || ''}`.trim(),
+        role: 'button',
+        tabIndex: 0,
+        dataset: { key: item.key },
+        onclick: play,
+        onkeydown: (e) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            play();
+          }
+        },
+      },
+      lead,
+      body,
+      end
+    )
+  );
 }
 
 function renderAlbum(artistName, albumName) {
@@ -527,28 +678,7 @@ function renderAlbum(artistName, albumName) {
         )
       )
     ),
-    el(
-      'ol',
-      { className: 'tracks' },
-      album.tracks.map((t, i) =>
-        el(
-          'li',
-          {},
-          el(
-            'button',
-            {
-              className: 'track',
-              type: 'button',
-              dataset: { key: items[i].key },
-              onclick: () => playQueue(items, i),
-            },
-            el('span', { className: 'num', textContent: String(i + 1) }),
-            el('span', {}, el('span', { className: 'name', textContent: items[i].name })),
-            el('span', { className: 'end' }, el('span', { className: 'size', textContent: mb(t.size) }))
-          )
-        )
-      )
-    )
+    ownedList(items, { numbered: true })
   );
 }
 
@@ -597,58 +727,458 @@ function playStreams(tracks, i) {
   playQueue(streamItems(tracks), i);
 }
 
-// streamList lists streams with their stills and a buy button each. The
-// row can't be a button, as it holds one, so it takes a button's keys.
+// streamList lists streams with their stills, a buy button and a menu
+// each.
 function streamList(tracks) {
   if (!tracks.length) return el('p', { className: 'empty', textContent: 'Nothing found.' });
   const items = streamItems(tracks);
   return el(
     'ol',
     { className: 'tracks' },
-    tracks.map((t, i) => {
-      const play = () => playQueue(items, i);
-      return el(
-        'li',
-        {},
+    tracks.map((t, i) =>
+      rowOf(
+        items[i],
+        () => playQueue(items, i),
+        art(t.title, t.thumb),
         el(
-          'div',
-          {
-            className: 'track stream',
-            role: 'button',
-            tabIndex: 0,
-            dataset: { key: items[i].key },
-            onclick: play,
-            onkeydown: (e) => {
-              if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                e.preventDefault();
-                play();
-              }
-            },
-          },
-          art(t.title, t.thumb),
+          'span',
+          {},
+          el('span', { className: 'name', textContent: t.title }),
+          el('span', { className: 'sub', textContent: t.artist })
+        ),
+        el(
+          'span',
+          { className: 'end' },
+          el('span', { className: 'no-mix', title: 'Kept out of the mixes', textContent: 'No mix' }),
+          el('span', { textContent: t.duration ? fmtTime(t.duration) : '' }),
+          el('button', {
+            className: 'buy',
+            type: 'button',
+            title: 'Buy this track into the owned library',
+            dataset: { buy: buyKey(t.artist, t.title) },
+            onclick: (e) => buyTrack(e, t),
+            textContent: 'Buy',
+          }),
+          menuButton(items[i])
+        ),
+        'stream'
+      )
+    )
+  );
+}
+
+// ------------------------------------------------------------ playlists
+
+// Playlists live on the server, so the phone and the page share them. A
+// smart one's tracks are whatever meets its rules when it is read.
+function loadPlaylists() {
+  return fetch('api/playlists')
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then((list) => {
+      playlists = list;
+    })
+    .catch(() => {
+      playlists = playlists || 'failed';
+    })
+    .finally(() => {
+      const r = route();
+      if (r.kind === 'library' && r.tab === 'playlists') render();
+    });
+}
+
+function playlistGrid() {
+  const head = el(
+    'div',
+    { className: 'btn-row' },
+    button('btn chrome', () => editPlaylist(null, false), icon('plus'), 'New playlist'),
+    button('btn', () => editPlaylist(null, true), icon('smart'), 'New smart playlist')
+  );
+  const empty = (text) => [head, el('p', { className: 'empty', textContent: text })];
+  if (playlists === null) return empty('Reading the playlists…');
+  if (playlists === 'failed') return empty('The playlists could not be read.');
+  if (!playlists.length) return empty('No playlists yet. Make one, or let a smart one fill itself.');
+  return [
+    head,
+    el(
+      'ul',
+      { className: 'grid' },
+      playlists.map((p) =>
+        el(
+          'li',
+          {},
           el(
-            'span',
-            {},
-            el('span', { className: 'name', textContent: t.title }),
-            el('span', { className: 'sub', textContent: t.artist })
-          ),
-          el(
-            'span',
-            { className: 'end' },
-            el('span', { textContent: t.duration ? fmtTime(t.duration) : '' }),
-            el('button', {
-              className: 'buy',
-              type: 'button',
-              title: 'Buy this track into the owned library',
-              dataset: { buy: buyKey(t.artist, t.title) },
-              onclick: (e) => buyTrack(e, t),
-              textContent: 'Buy',
+            'a',
+            { className: 'tile', href: href('playlist', p.id) },
+            playlistArt(p),
+            el('span', { className: 'tile-title', textContent: p.name }),
+            el('span', {
+              className: 'tile-sub',
+              textContent: `${p.smart ? 'Smart · ' : ''}${plural(p.count, 'track')}`,
             })
           )
         )
-      );
+      )
+    ),
+  ];
+}
+
+function playlistArt(p, opts = {}) {
+  const box = art(p.name, '', opts);
+  box.classList.add('playlist-art');
+  box.append(icon(p.smart ? 'smart' : 'list'));
+  return box;
+}
+
+function renderPlaylist(id) {
+  const cached = playlistTracks.get(id);
+  if (cached) showPlaylist(cached);
+  else show(el('p', { className: 'empty', textContent: 'Reading the playlist…' }));
+  fetch(`api/playlists/${encodeURIComponent(id)}`)
+    .then((r) => {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    })
+    .then((p) => {
+      const r = route();
+      if (r.kind !== 'playlist' || r.id !== id) return;
+      if (!p) {
+        show(el('p', { className: 'empty', textContent: 'No such playlist.' }));
+        return;
+      }
+      playlistTracks.set(id, p);
+      showPlaylist(p);
+      markTrack();
+      markExcluded();
+    })
+    .catch(() => {
+      if (!cached) show(el('p', { className: 'empty', textContent: 'The playlist could not be read.' }));
+    });
+}
+
+function showPlaylist(p) {
+  const items = libItems(p.tracks || []);
+  show(
+    el(
+      'header',
+      { className: 'album-head' },
+      playlistArt(p, { eager: true }),
+      el(
+        'div',
+        {},
+        el('p', { className: 'kicker', textContent: p.smart ? 'Smart playlist' : 'Playlist' }),
+        el('h2', { textContent: p.name }),
+        el('p', {
+          className: 'meta',
+          textContent: plural(items.length, 'track') + (p.smart ? ` · ${describeRules(p.smart)}` : ''),
+        }),
+        el(
+          'div',
+          { className: 'btn-row' },
+          items.length > 0 && button('btn chrome', () => playQueue(items, 0), icon('play'), 'Play'),
+          items.length > 0 && button('btn', () => playQueue(shuffled(items), 0), icon('shuffle'), 'Shuffle'),
+          button('btn ghost', () => editPlaylist(p, !!p.smart), 'Edit'),
+          button('btn ghost', () => deletePlaylist(p), 'Delete')
+        )
+      )
+    ),
+    ownedList(items, {
+      playlist: p.smart ? null : p,
+      empty: p.smart ? 'Nothing in the library meets these rules yet.' : 'Add tracks from their menus (⋯).',
     })
   );
+}
+
+async function deletePlaylist(p) {
+  if (!confirm(`Delete the playlist “${p.name}”?`)) return;
+  const r = await fetch(`api/playlists/${encodeURIComponent(p.id)}`, { method: 'DELETE' }).catch(() => null);
+  if (!r || !r.ok) {
+    notice('The playlist could not be deleted');
+    return;
+  }
+  playlistTracks.delete(p.id);
+  await loadPlaylists();
+  location.hash = '#/library/playlists';
+}
+
+// The smart rules, by field: the comparisons each takes and what its
+// value is.
+const TEXT_OPS = { contains: 'contains', is: 'is', not: 'does not contain', starts: 'starts with' };
+const RULE_FIELDS = {
+  artist: { label: 'Artist', ops: TEXT_OPS },
+  album: { label: 'Album', ops: TEXT_OPS },
+  title: { label: 'Title', ops: TEXT_OPS },
+  plays: { label: 'Plays', ops: { '>': 'more than', '<': 'fewer than', '=': 'exactly' }, number: true },
+  added: { label: 'Added', ops: { within: 'in the last … days', before: 'more than … days ago' }, number: true },
+  played: {
+    label: 'Last played',
+    ops: { within: 'in the last … days', before: 'not in the last … days' },
+    number: true,
+  },
+};
+const SORTS = {
+  artist: 'Artist',
+  added: 'Recently added',
+  plays: 'Most played',
+  played: 'Recently played',
+  random: 'Shuffled daily',
+};
+
+function describeRules(sm) {
+  const parts = (sm.rules || []).map((r) => {
+    const f = RULE_FIELDS[r.field];
+    if (!f) return '';
+    const op = f.ops[r.op] || r.op;
+    return `${f.label.toLowerCase()} ${op.includes('…') ? op.replace('…', r.value) : `${op} ${r.value}`}`;
+  });
+  const joined = parts.length ? parts.join(sm.match === 'any' ? ' or ' : ' and ') : 'everything';
+  return `${joined}${sm.limit ? `, up to ${sm.limit}` : ''}`;
+}
+
+// editPlaylist opens the editor: a name, and for a smart playlist its
+// rules, order and size. p is null for a new one.
+function editPlaylist(p, isSmart) {
+  const blank = () => ({ field: 'artist', op: 'contains', value: '' });
+  const sm = p?.smart || { match: 'all', rules: [blank()], sort: 'artist', limit: 0 };
+  const name = el('input', { type: 'text', value: p?.name || '', placeholder: 'Name', required: true });
+  name.setAttribute('aria-label', 'Name');
+  const rules = el('div', { className: 'rules' });
+  const match = select({ all: 'all', any: 'any' }, sm.match || 'all', 'Match');
+  const sort = select(SORTS, sm.sort || 'artist', 'Order');
+  const limit = el('input', { type: 'number', min: 0, max: 5000, value: sm.limit || 0, title: '0 for no limit' });
+
+  const addRule = (r) => {
+    const labels = Object.fromEntries(Object.entries(RULE_FIELDS).map(([k, f]) => [k, f.label]));
+    const field = select(labels, r.field, 'Field');
+    const op = el('select', { 'aria-label': 'Comparison' });
+    const value = el('input', { type: 'text', value: r.value ?? '', 'aria-label': 'Value' });
+    const fill = (keep) => {
+      const f = RULE_FIELDS[field.value];
+      op.replaceChildren(...Object.entries(f.ops).map(([k, label]) => el('option', { value: k, textContent: label })));
+      if (keep && f.ops[keep]) op.value = keep;
+      value.type = f.number ? 'number' : 'text';
+      value.min = f.number ? '0' : '';
+    };
+    fill(r.op);
+    field.onchange = () => fill(null);
+    const row = el(
+      'div',
+      { className: 'rule' },
+      field,
+      op,
+      value,
+      el(
+        'button',
+        { className: 'icon-btn', type: 'button', 'aria-label': 'Remove the rule', onclick: () => row.remove() },
+        icon('close')
+      )
+    );
+    row.read = () => ({ field: field.value, op: op.value, value: value.value.trim() });
+    rules.append(row);
+  };
+  if (isSmart) for (const r of sm.rules || []) addRule(r);
+
+  const form = el(
+    'form',
+    { method: 'dialog', className: 'editor' },
+    el('h2', { textContent: p ? `Edit ${p.name}` : isSmart ? 'New smart playlist' : 'New playlist' }),
+    name,
+    isSmart && [
+      el('p', { className: 'rule-match' }, 'Tracks that meet ', match, ' of these:'),
+      rules,
+      button('btn ghost', () => addRule(blank()), icon('plus'), 'Add a rule'),
+      el('div', { className: 'rule-match' }, el('label', {}, 'Order ', sort), el('label', {}, 'Limit ', limit)),
+    ],
+    el(
+      'div',
+      { className: 'btn-row' },
+      el('button', { className: 'btn chrome', type: 'submit', value: 'save' }, 'Save'),
+      button('btn ghost', () => dialog.close(), 'Cancel')
+    )
+  );
+  const dialog = el('dialog', { className: 'sheet' }, form);
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const body = { name: name.value.trim() };
+    if (isSmart) {
+      body.smart = {
+        match: match.value,
+        rules: [...rules.children].map((row) => row.read()),
+        sort: sort.value,
+        limit: Number(limit.value) || 0,
+      };
+    } else {
+      body.paths = p?.paths || [];
+    }
+    const r = await fetch(p ? `api/playlists/${encodeURIComponent(p.id)}` : 'api/playlists', {
+      method: p ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    if (!r || !r.ok) {
+      notice(`The playlist could not be saved${r ? `: ${(await r.text()).trim()}` : ''}`);
+      return;
+    }
+    const saved = await r.json();
+    playlistTracks.set(saved.id, saved);
+    dialog.close();
+    await loadPlaylists();
+    if (location.hash === href('playlist', saved.id)) render();
+    else location.hash = href('playlist', saved.id);
+  };
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+function select(options, value, label) {
+  const options_ = Object.entries(options).map(([k, v]) => el('option', { value: k, textContent: v }));
+  const s = el('select', { 'aria-label': label }, options_);
+  s.value = value;
+  return s;
+}
+
+function button(className, onclick, ...children) {
+  return el('button', { className, type: 'button', onclick }, ...children);
+}
+
+// addToPlaylist appends tracks to a plain playlist, or to a new one.
+async function addToPlaylist(p, paths) {
+  if (!p) {
+    const name = prompt('Name the new playlist');
+    if (!name || !name.trim()) return;
+    const r = await fetch('api/playlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), paths }),
+    }).catch(() => null);
+    if (!r || !r.ok) return notice('The playlist could not be made');
+    notice(`Added to ${name.trim()}`);
+  } else {
+    const r = await fetch(`api/playlists/${encodeURIComponent(p.id)}/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    }).catch(() => null);
+    if (!r || !r.ok) return notice('The track could not be added');
+    playlistTracks.delete(p.id);
+    notice(`Added to ${p.name}`);
+  }
+  loadPlaylists();
+}
+
+async function removeFromPlaylist(p, path) {
+  const body = { name: p.name, paths: (p.paths || []).filter((x) => x !== path) };
+  const r = await fetch(`api/playlists/${encodeURIComponent(p.id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  if (!r || !r.ok) return notice('The track could not be removed');
+  playlistTracks.set(p.id, await r.json());
+  loadPlaylists();
+  render();
+}
+
+// ---------------------------------------------------------------- menus
+
+// menuButton opens a track's menu: add to a playlist, keep it out of the
+// mixes, and take it out of the playlist it is listed in.
+function menuButton(item, inPlaylist) {
+  return el(
+    'button',
+    {
+      className: 'icon-btn more',
+      type: 'button',
+      'aria-label': `More for ${item.name}`,
+      'aria-haspopup': 'menu',
+      onclick: (e) => {
+        e.stopPropagation();
+        openMenu(e.currentTarget, item, inPlaylist);
+      },
+    },
+    icon('more')
+  );
+}
+
+let openedMenu = null;
+
+function closeMenu() {
+  if (openedMenu) openedMenu.remove();
+  openedMenu = null;
+}
+
+document.addEventListener('click', (e) => {
+  if (openedMenu && !openedMenu.contains(e.target)) closeMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMenu();
+});
+window.addEventListener('hashchange', closeMenu);
+
+function openMenu(anchor, item, inPlaylist) {
+  closeMenu();
+  const owned = !item.key.startsWith('yt:');
+  const out = excluded.has(item.key);
+  const entry = (label, fn) =>
+    el('button', {
+      type: 'button',
+      role: 'menuitem',
+      textContent: label,
+      onclick: (e) => {
+        e.stopPropagation();
+        closeMenu();
+        fn();
+      },
+    });
+  const lists = Array.isArray(playlists) ? playlists.filter((p) => !p.smart) : [];
+  const menu = el(
+    'div',
+    { className: 'menu', role: 'menu' },
+    owned && el('p', { className: 'menu-head', textContent: 'Add to playlist' }),
+    owned && lists.map((p) => entry(p.name, () => addToPlaylist(p, [item.path]))),
+    owned && entry('New playlist…', () => addToPlaylist(null, [item.path])),
+    owned && el('hr'),
+    inPlaylist && entry(`Remove from ${inPlaylist.name}`, () => removeFromPlaylist(inPlaylist, item.path)),
+    entry(out ? 'Allow in mixes' : 'Keep out of mixes', () => setExcluded(item.key, !out)),
+    item.album && entry('Go to album', () => (location.hash = href('album', item.album.artist, item.album.album)))
+  );
+  document.body.append(menu);
+  const r = anchor.getBoundingClientRect();
+  const top = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.top = `${Math.max(8, top)}px`;
+  menu.style.left = `${Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8))}px`;
+  openedMenu = menu;
+  menu.querySelector('button')?.focus();
+}
+
+// setExcluded keeps a track out of the mixes, or lets it back in. The
+// phone stops keeping a library-mix track once it is out.
+async function setExcluded(key, out) {
+  const r = await fetch('api/excluded', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, excluded: out }),
+  }).catch(() => null);
+  if (!r || !r.ok) return notice('That could not be saved');
+  if (out) excluded.add(key);
+  else excluded.delete(key);
+  markExcluded();
+  if (out && Array.isArray(libMix) && libMix.some((t) => t.path === key)) {
+    libMix = libMix.filter((t) => t.path !== key);
+    if (route().kind === 'home') render();
+  }
+  if (out && Array.isArray(mix) && key.startsWith('yt:')) {
+    mix = mix.filter((t) => `yt:${t.videoId}` !== key);
+    if (route().kind === 'home') render();
+  }
+  notice(out ? 'Kept out of the mixes' : 'Allowed back in the mixes');
+}
+
+function markExcluded() {
+  for (const row of view.querySelectorAll('.track[data-key]')) {
+    row.classList.toggle('excluded', excluded.has(row.dataset.key));
+  }
 }
 
 // ------------------------------------------------------- saved offline
@@ -715,6 +1245,7 @@ function playQueue(items, index) {
   if (!items.length) return;
   queue = items;
   playingIndex = index;
+  counted = false;
   const t = items[index];
   player.src = t.url;
   player.play().catch(() => {});
@@ -762,6 +1293,22 @@ function step(delta) {
 }
 
 player.addEventListener('ended', () => step(1));
+
+// An owned track counts as played once half of it, or half a minute, has
+// played; smart playlists and the library mix go by the counts.
+let counted = false;
+player.addEventListener('timeupdate', () => {
+  const t = queue[playingIndex];
+  if (counted || !t || !t.path) return;
+  const d = player.duration;
+  if (player.currentTime < Math.min(30, Number.isFinite(d) ? d / 2 : 30)) return;
+  counted = true;
+  fetch('api/played', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: t.path }),
+  }).catch(() => {});
+});
 
 // A track that won't load offline is a track that was never saved.
 player.addEventListener('error', () => {

@@ -356,6 +356,25 @@ main > .view-title {
   color: var(--dim);
 }
 
+/* The two mixes side by side: streamed and owned. */
+.mixes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+  margin: 0 0 2.5rem;
+}
+
+.mixes .hero {
+  margin: 0;
+}
+
+.hero.owned-mix {
+  background:
+    radial-gradient(90% 140% at 100% 0%, rgb(79 209 139 / 0.16), transparent 55%),
+    radial-gradient(70% 120% at 0% 100%, rgb(150 165 190 / 0.18), transparent 60%),
+    var(--card);
+}
+
 /* -------------------------------------------------------------- buttons */
 
 .btn {
@@ -722,6 +741,153 @@ main > .view-title {
   font-size: 1rem;
 }
 
+/* A track kept out of the mixes says so, quietly. */
+.track .no-mix {
+  display: none;
+  padding: 0.1875rem 0.4375rem;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  font: 600 0.625rem/1 var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.track.excluded .no-mix {
+  display: inline-block;
+}
+
+.track.excluded .name {
+  opacity: 0.65;
+}
+
+.track .more {
+  width: 2rem;
+  height: 2rem;
+  opacity: 0.55;
+}
+
+.track:hover .more,
+.track:focus-within .more {
+  opacity: 1;
+}
+
+.menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 13rem;
+  max-height: min(24rem, 70vh);
+  padding: 0.375rem;
+  overflow-y: auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  background: var(--card-hi);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.5);
+}
+
+.menu button {
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+  background: var(--card);
+}
+
+.menu-head {
+  margin: 0.25rem 0.75rem;
+  color: var(--dim);
+  font: 600 0.6875rem/1.4 var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.menu hr {
+  width: 100%;
+  margin: 0.25rem 0;
+  border: 0;
+  border-top: 1px solid var(--edge);
+}
+
+/* A playlist's art: its tinted metal with the kind of list on it. */
+.playlist-art::before {
+  content: none;
+}
+
+.playlist-art > svg {
+  position: absolute;
+  inset: 32%;
+  width: 36%;
+  height: 36%;
+  color: rgb(255 255 255 / 0.75);
+}
+
+.sheet {
+  width: min(34rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--edge);
+  border-radius: 0.75rem;
+  background: var(--card);
+  color: var(--chalk);
+}
+
+.sheet::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.editor h2 {
+  margin: 0;
+  font: 600 1.5rem/1 var(--cond);
+}
+
+.editor input,
+.editor select {
+  min-height: 2.25rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--page);
+  color: inherit;
+  font: inherit;
+}
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 7rem 10rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.rule-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  color: var(--dim);
+}
+
+.rule-match input {
+  width: 6rem;
+}
+
 .buy {
   height: 1.875rem;
   padding: 0 0.875rem;
@@ -1026,6 +1192,14 @@ body:not(.playing-bar) .toast {
 
   .track .end .size {
     display: none;
+  }
+
+  .rule {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .rule input {
+    grid-column: 1 / 3;
   }
 }
 
