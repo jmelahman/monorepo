@@ -49,7 +49,8 @@ func main() {
 	err := run(ctx, os.Args[1:], os.Stdout, os.Stderr)
 	stop()
 	if err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+		// Help was asked for, or a signal ended the bridge.
+		if errors.Is(err, flag.ErrHelp) || errors.Is(err, context.Canceled) {
 			return
 		}
 		fmt.Fprintln(os.Stderr, programName+":", err)
