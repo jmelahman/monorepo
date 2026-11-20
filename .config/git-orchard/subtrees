@@ -198,3 +198,9 @@
 	remote = git@github.com:jmelahman/view.git
 	branch = master
 	shared = design
+[subtree "dircon-bridge"]
+	remote = git@github.com:jmelahman/dircon-bridge.git
+	branch = master
+	shared = base
+	shared = go
+	shared = goreleaser

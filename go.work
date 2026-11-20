@@ -6,6 +6,7 @@ use (
 	./ai-detection
 	./check-symlinks
 	./connections
+	./dircon-bridge
 	./git-orchard
 	./kev-go
 	./local-preview
