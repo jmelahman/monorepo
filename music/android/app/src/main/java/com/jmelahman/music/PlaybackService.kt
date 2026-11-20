@@ -29,6 +29,13 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
+    // Swiping the app away stops a paused player with it; one that is
+    // playing carries on, as music apps do.
+    override fun onTaskRemoved(rootIntent: android.content.Intent?) {
+        val player = session?.player
+        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) stopSelf()
+    }
+
     override fun onDestroy() {
         session?.run {
             player.release()

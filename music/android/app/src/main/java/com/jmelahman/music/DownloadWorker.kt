@@ -6,8 +6,7 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+import java.io.IOException
 
 // One track, fetched into the app's library. The network it may run on
 // is decided by the constraint the enqueue attached, which the OS
@@ -19,27 +18,26 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val url = inputData.getString("url") ?: return Result.failure()
         val rel = inputData.getString("dest") ?: return Result.failure()
-        val dest = Downloads.fileFor(applicationContext, Track("", rel, 0))
+        val dest = Downloads.fileFor(applicationContext, rel) ?: return Result.failure()
         val part = File(dest.path + ".part")
         return withContext(Dispatchers.IO) {
+            val conn = Api.open(url)
             try {
-                val conn = URL(url).openConnection() as HttpURLConnection
-                conn.connectTimeout = 15_000
-                conn.readTimeout = 60_000
-                if (conn.responseCode !in 200..299) {
-                    conn.disconnect()
-                    return@withContext retry()
+                val code = conn.responseCode
+                when {
+                    code in 200..299 -> {}
+                    // Gone from the server, or refused: trying again won't help.
+                    code in 400..499 -> return@withContext Result.failure()
+                    else -> return@withContext retry()
                 }
                 dest.parentFile?.mkdirs()
                 part.outputStream().use { conn.inputStream.copyTo(it) }
-                conn.disconnect()
-                if (part.renameTo(dest)) Result.success() else {
-                    part.delete()
-                    retry()
-                }
-            } catch (e: Exception) {
-                part.delete()
+                if (part.renameTo(dest)) Result.success() else retry()
+            } catch (e: IOException) {
                 retry()
+            } finally {
+                conn.disconnect()
+                part.delete()
             }
         }
     }

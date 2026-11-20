@@ -1,3 +1,7 @@
 <resources>
-    <style name="Theme.Music" parent="android:Theme.Material.NoActionBar" />
+    <!-- Graphite from the first frame, so the launch doesn't flash white
+         before Compose draws. -->
+    <style name="Theme.Music" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/graphite</item>
+    </style>
 </resources>
