@@ -325,7 +325,9 @@ async def main() -> None:
         server=f"{name.replace(' ', '-')}.local.",
     )
     zc = AsyncZeroconf(ip_version=IPVersion.V4Only)
-    await zc.async_register_service(info)
+    # "wahoo-fitness-tnp" is longer than the 15 bytes RFC 6763 allows a service
+    # name, so it fails zeroconf's strict check. Wahoo picked it; Zwift expects it.
+    await zc.async_register_service(info, strict=False)
     log.info("advertising %r on %s:%d; pair it from Zwift's pairing screen", name, ip, args.port)
 
     try:
