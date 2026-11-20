@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -65,126 +66,14 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(struct {
+		writeJSON(w, struct {
 			OK    bool   `json:"ok"`
 			Music string `json:"music"`
 		}{OK: true, Music: *music})
 	})
-	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
-		artists, err := walkLibrary(*music)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(artists)
-	})
-	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {
-		name, err := safeJoin(*music, r.URL.Query().Get("path"))
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-		if info, err := os.Stat(name); err != nil || info.IsDir() || !isAudio(name) {
-			http.NotFound(w, r)
-			return
-		}
-		// ServeFile answers range requests, so seeking works and the
-		// browser only pulls what it has played.
-		http.ServeFile(w, r, name)
-	})
-	mux.HandleFunc("GET /api/apk", func(w http.ResponseWriter, r *http.Request) {
-		if *apk == "" {
-			http.NotFound(w, r)
-			return
-		}
-		info, err := os.Stat(*apk)
-		if err != nil || info.IsDir() {
-			http.NotFound(w, r)
-			return
-		}
-		// A download, not something to play inline.
-		w.Header().Set("Content-Disposition", `attachment; filename="Music.apk"`)
-		http.ServeFile(w, r, *apk)
-	})
-	mux.HandleFunc("GET /api/app", func(w http.ResponseWriter, _ *http.Request) {
-		if *apk == "" {
-			http.NotFound(w, new(http.Request))
-			return
-		}
-		version := ""
-		if b, err := os.ReadFile(*apk + ".version"); err == nil {
-			version = strings.TrimSpace(string(b))
-		}
-		info, err := os.Stat(*apk)
-		if err != nil || info.IsDir() {
-			http.NotFound(w, new(http.Request))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(struct {
-			Version string `json:"version"`
-			Size    int64  `json:"size"`
-		}{Version: version, Size: info.Size()})
-	})
-	mux.HandleFunc("GET /api/yt/search", func(w http.ResponseWriter, r *http.Request) {
-		if q := r.URL.Query().Get("q"); q == "" {
-			http.Error(w, "missing q", http.StatusBadRequest)
-			return
-		}
-		tracks, err := ytFlat(r.Context(), "ytsearch15:"+r.URL.Query().Get("q"))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(tracks)
-	})
-	mux.HandleFunc("GET /api/yt/supermix", func(w http.ResponseWriter, r *http.Request) {
-		mix, err := ytSupermix(r.Context(), *music)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(mix)
-	})
-	mux.HandleFunc("GET /api/yt/stream", func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Query().Get("v")
-		if id == "" {
-			http.NotFound(w, r)
-			return
-		}
-		url, err := ytResolve(r.Context(), id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		// The stream is signed to this server, so the phone plays it
-		// through here; ranges pass straight through so seeking works.
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		if rg := r.Header.Get("Range"); rg != "" {
-			req.Header.Set("Range", rg)
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			http.Error(w, "the stream could not be fetched", http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-		for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"} {
-			if v := resp.Header.Get(h); v != "" {
-				w.Header().Set(h, v)
-			}
-		}
-		w.WriteHeader(resp.StatusCode)
-		_, _ = io.Copy(w, resp.Body)
-	})
+	routeLibrary(mux, *music)
+	routeApp(mux, *apk)
+	routeYouTube(mux, *music)
 	routeBuys(mux, os.Getenv("MUSIC_STORE"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +89,173 @@ func main() {
 	hs := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fail(err)
+	}
+}
+
+// writeJSON answers with v as JSON.
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+// routeLibrary serves the owned library: its listing, its audio and its
+// albums' art.
+func routeLibrary(mux *http.ServeMux, music string) {
+	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
+		artists, err := walkLibrary(music)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, artists)
+	})
+	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {
+		name, err := safeJoin(music, r.URL.Query().Get("path"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if info, err := os.Stat(name); err != nil || info.IsDir() || !isAudio(name) {
+			http.NotFound(w, r)
+			return
+		}
+		// ServeFile answers range requests, so seeking works and the
+		// browser only pulls what it has played.
+		http.ServeFile(w, r, name)
+	})
+	mux.HandleFunc("GET /api/cover", func(w http.ResponseWriter, r *http.Request) {
+		// An album's art by the names the library lists it under; the
+		// Singles an artist's loose tracks are gathered into have no
+		// folder of their own, so their art is looked for among them.
+		q := r.URL.Query()
+		artist, album := q.Get("artist"), q.Get("album")
+		if strings.ContainsAny(artist+album, "/\\") {
+			http.NotFound(w, r)
+			return
+		}
+		artistDir, err := safeJoin(music, artist)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		dir, err := safeJoin(artistDir, album)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		loose := false
+		if info, err := os.Stat(dir); album == "Singles" && (err != nil || !info.IsDir()) {
+			dir, loose = artistDir, true
+		}
+		serveCover(w, r, dir, loose)
+	})
+}
+
+// routeApp serves the Android client's APK and what version it is, so
+// installed clients can offer to update themselves.
+func routeApp(mux *http.ServeMux, apk string) {
+	present := func() (os.FileInfo, bool) {
+		if apk == "" {
+			return nil, false
+		}
+		info, err := os.Stat(apk)
+		return info, err == nil && !info.IsDir()
+	}
+	mux.HandleFunc("GET /api/apk", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := present(); !ok {
+			http.NotFound(w, r)
+			return
+		}
+		// A download, not something to play inline.
+		w.Header().Set("Content-Disposition", `attachment; filename="Music.apk"`)
+		http.ServeFile(w, r, apk)
+	})
+	mux.HandleFunc("GET /api/app", func(w http.ResponseWriter, r *http.Request) {
+		info, ok := present()
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		version := ""
+		if b, err := os.ReadFile(apk + ".version"); err == nil {
+			version = strings.TrimSpace(string(b))
+		}
+		writeJSON(w, struct {
+			Version string `json:"version"`
+			Size    int64  `json:"size"`
+		}{Version: version, Size: info.Size()})
+	})
+}
+
+// routeYouTube serves the streamed half: search, the supermix, and the
+// audio behind a video, proxied.
+func routeYouTube(mux *http.ServeMux, music string) {
+	mux.HandleFunc("GET /api/yt/search", func(w http.ResponseWriter, r *http.Request) {
+		q := strings.TrimSpace(r.URL.Query().Get("q"))
+		if q == "" {
+			http.Error(w, "missing q", http.StatusBadRequest)
+			return
+		}
+		tracks, err := ytFlat(r.Context(), "ytsearch15:"+q)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		writeJSON(w, tracks)
+	})
+	mux.HandleFunc("GET /api/yt/supermix", func(w http.ResponseWriter, r *http.Request) {
+		mix, err := ytSupermix(r.Context(), music)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		writeJSON(w, mix)
+	})
+	mux.HandleFunc("GET /api/yt/stream", ytStream)
+}
+
+// ytStream proxies a video's audio. The stream is signed to this server,
+// so the phone plays it through here; ranges pass straight through so
+// seeking works. A cached URL that has gone stale is resolved afresh once.
+func ytStream(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("v")
+	if !ytID.MatchString(id) {
+		http.NotFound(w, r)
+		return
+	}
+	for attempt := 0; ; attempt++ {
+		url, err := ytResolve(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		if rg := r.Header.Get("Range"); rg != "" {
+			req.Header.Set("Range", rg)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			http.Error(w, "the stream could not be fetched", http.StatusBadGateway)
+			return
+		}
+		if (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusGone) && attempt == 0 {
+			resp.Body.Close()
+			ytForget(id)
+			continue
+		}
+		defer resp.Body.Close()
+		for _, h := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"} {
+			if v := resp.Header.Get(h); v != "" {
+				w.Header().Set(h, v)
+			}
+		}
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(w, resp.Body)
+		return
 	}
 }
 
@@ -389,6 +445,7 @@ type ytTrack struct {
 	Title    string `json:"title"`
 	Artist   string `json:"artist"`
 	Duration int    `json:"duration"` // seconds
+	Thumb    string `json:"thumb"`    // the video's still, cropped square by the clients
 }
 
 // ytFlat runs yt-dlp over a URL and reads its flat playlist JSON lines,
@@ -416,7 +473,10 @@ func ytFlat(ctx context.Context, url string) ([]ytTrack, error) {
 		if artist == "" {
 			artist = raw.Uploader
 		}
-		tracks = append(tracks, ytTrack{VideoID: raw.ID, Title: raw.Title, Artist: artist, Duration: raw.Duration})
+		tracks = append(tracks, ytTrack{
+			VideoID: raw.ID, Title: raw.Title, Artist: artist, Duration: raw.Duration,
+			Thumb: "https://i.ytimg.com/vi/" + raw.ID + "/mqdefault.jpg",
+		})
 	}
 	return tracks, nil
 }
@@ -433,6 +493,17 @@ var ytStreams = struct {
 	url     string
 	expires time.Time
 }{}}
+
+// ytID is what a YouTube video id looks like; anything else is refused
+// before it reaches yt-dlp.
+var ytID = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+
+// ytForget drops a cached stream URL that the far end has refused.
+func ytForget(videoID string) {
+	ytStreams.Lock()
+	delete(ytStreams.urls, videoID)
+	ytStreams.Unlock()
+}
 
 func ytResolve(ctx context.Context, videoID string) (string, error) {
 	ytStreams.RLock()
@@ -454,6 +525,13 @@ func ytResolve(ctx context.Context, videoID string) (string, error) {
 		return "", errors.New("no audio stream found")
 	}
 	ytStreams.Lock()
+	// Expired entries go as new ones come, so the cache stays the size of
+	// what was played in the last ten minutes.
+	for id, e := range ytStreams.urls {
+		if time.Now().After(e.expires) {
+			delete(ytStreams.urls, id)
+		}
+	}
 	ytStreams.urls[videoID] = struct {
 		url     string
 		expires time.Time
@@ -461,6 +539,9 @@ func ytResolve(ctx context.Context, videoID string) (string, error) {
 	ytStreams.Unlock()
 	return url, nil
 }
+
+// trackNumber is the "01 " or "1. " a file name leads with.
+var trackNumber = regexp.MustCompile(`^\d+[\s._-]*`)
 
 // ytSupermix builds a mix like the store apps' own: a seed from the
 // owned library, expanded through YouTube's radio into a run of tracks
@@ -478,9 +559,11 @@ func ytSupermix(ctx context.Context, musicDir string) ([]ytTrack, error) {
 	seed := album.Tracks[rand.IntN(len(album.Tracks))]
 
 	// Find the seed on YouTube, then let the radio do the rest.
-	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+seed.Name)
+	// Track numbers only muddy the search.
+	name := trackNumber.ReplaceAllString(seed.Name, "")
+	found, err := ytFlat(ctx, "ytsearch1:"+artist.Name+" "+name)
 	if err != nil || len(found) == 0 {
-		return nil, fmt.Errorf("no YouTube match for %s — %s", artist.Name, seed.Name)
+		return nil, fmt.Errorf("no YouTube match for %s — %s", artist.Name, name)
 	}
 	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+found[0].VideoID+"&list=RD"+found[0].VideoID)
 	if err != nil {
