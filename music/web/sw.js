@@ -7,7 +7,7 @@
 // online page is always the current one; the cache answers when the
 // network doesn't.
 
-const SHELL = 'music-shell-v1';
+const SHELL = 'music-shell-v2';
 const AUDIO = 'music-audio-v1'; // the same name the page uses for saving
 
 // The shell: the page and the shared design, all that renders before the
