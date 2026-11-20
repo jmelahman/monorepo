@@ -287,8 +287,18 @@ func (c *Client) Device(ctx context.Context, address string) (*Device, error) {
 	address = strings.ToUpper(address)
 	path := c.adapter + dbus.ObjectPath("/dev_"+strings.ReplaceAll(address, ":", "_"))
 	d := &Device{c: c, Path: path, Address: address}
+	if err := c.waitKnown(ctx, path); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// waitKnown scans until BlueZ knows the device at path. BlueZ forgets an
+// unpaired device it hasn't seen for a while, so this is needed again before
+// each connect.
+func (c *Client) waitKnown(ctx context.Context, path dbus.ObjectPath) error {
 	if c.known(path) {
-		return d, nil
+		return nil
 	}
 	found := make(chan struct{}, 1)
 	stop, err := c.discover(nil, func(p dbus.ObjectPath) {
@@ -300,18 +310,18 @@ func (c *Client) Device(ctx context.Context, address string) (*Device, error) {
 		}
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer stop()
 	// The device may have appeared between the check and the discovery.
 	if c.known(path) {
-		return d, nil
+		return nil
 	}
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return ctx.Err()
 	case <-found:
-		return d, nil
+		return nil
 	}
 }
 
@@ -352,6 +362,9 @@ func (d *Device) Connect(ctx context.Context, onDisconnect func()) error {
 }
 
 func (d *Device) connect(ctx context.Context, onDisconnect func()) error {
+	if err := d.c.waitKnown(ctx, d.Path); err != nil {
+		return err
+	}
 	var once sync.Once
 	d.c.watch(d.Path, func(iface string, changed map[string]dbus.Variant) {
 		if v, ok := changed["Connected"]; ok && iface == ifaceDevice {
