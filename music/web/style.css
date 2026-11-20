@@ -97,59 +97,56 @@ svg {
 
 /* ------------------------------------------------------------ top bar */
 
+/* The suite's toolbar from design/, kept in view while the page scrolls;
+   the name, tabs and search speak the dashboard's condensed caps. */
 .toolbar {
   position: sticky;
   top: 0;
   z-index: 10;
   flex-wrap: nowrap;
-  gap: 0.5rem 1.25rem;
-  padding-inline: var(--gutter);
-  background: var(--metal);
-  box-shadow: var(--metal-edge), 0 6px 18px rgb(0 0 0 / 0.25);
-  backdrop-filter: saturate(1.2);
 }
 
 .brand {
-  display: flex;
   flex: none;
-  align-items: center;
-  gap: 0.5rem;
+  color: inherit;
   text-decoration: none;
-}
-
-.brand-mark {
-  width: 1.375rem;
-  height: 1.375rem;
-  color: var(--accent);
 }
 
 h1 {
   margin: 0;
-  font: 600 1.125rem/1 var(--cond);
-  letter-spacing: 0.04em;
+  font: 600 1.0625rem/1 var(--cond);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .tabs {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.375rem;
 }
 
 .tabs a {
-  padding: 0.4375rem 0.875rem;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  height: var(--control);
+  padding: 0 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   color: var(--dim);
-  font-weight: 500;
+  font: 600 0.6875rem/1 var(--cond);
+  letter-spacing: 0.14em;
   text-decoration: none;
-  transition: color 150ms var(--ease-out), background 150ms var(--ease-out);
+  text-transform: uppercase;
+  transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
 }
 
 .tabs a:hover {
+  border-color: var(--dim);
   color: var(--chalk);
 }
 
 .tabs a[aria-current="page"] {
-  background: var(--card-hi);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  border-color: var(--accent);
+  background: var(--accent-soft);
   color: var(--chalk);
 }
 
@@ -159,24 +156,23 @@ h1 {
   align-items: center;
   gap: 0.5rem;
   max-width: 30rem;
-  height: 2.375rem;
-  padding: 0 0.875rem;
-  border: 1px solid var(--edge);
-  border-radius: 999px;
-  background: var(--card);
-  box-shadow: var(--shadow-recess);
+  height: var(--control);
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ink-2);
   color: var(--dim);
 }
 
 .search:focus-within {
-  border-color: var(--dim);
+  border-color: var(--accent);
   color: var(--chalk);
 }
 
 .search svg {
   flex: none;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .search input {
@@ -186,7 +182,7 @@ h1 {
   outline: 0;
   background: none;
   color: var(--chalk);
-  font: inherit;
+  font: 400 0.8125rem/1 var(--mono);
 }
 
 .group {
@@ -1104,18 +1100,12 @@ body:not(.playing-bar) .toast {
 
   .toolbar {
     flex-wrap: wrap;
-    gap: 0.5rem 0.875rem;
-    padding-bottom: 0.625rem;
   }
 
   .search {
     flex-basis: 100%;
     order: 5;
     max-width: none;
-  }
-
-  .tabs a {
-    padding: 0.375rem 0.75rem;
   }
 
   main {
