@@ -11,8 +11,11 @@ import org.json.JSONArray
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
 
+    // The server, empty until the first launch asks for it. A build may
+    // carry a default (the musicServer gradle property, kept out of the
+    // repository) so a phone of one's own needn't be told.
     var baseUrl: String
-        get() = prefs.getString("base_url", null) ?: Api.baseUrl
+        get() = prefs.getString("base_url", null) ?: BuildConfig.DEFAULT_SERVER
         set(value) {
             prefs.edit().putString("base_url", value).apply()
             Api.baseUrl = value
@@ -25,6 +28,17 @@ class Settings(context: Context) {
     var allowDownloadsMetered: Boolean
         get() = prefs.getBoolean("downloads_metered", false)
         set(value) = prefs.edit().putBoolean("downloads_metered", value).apply()
+
+    // What the phone keeps in step with the server on Wi-Fi: playlist:<id>,
+    // album:<artist>/<album>, and mix:library for the day's library mix.
+    var kept: Set<String>
+        get() = prefs.getStringSet("kept", null) ?: setOf(LIBRARY_MIX)
+        set(value) = prefs.edit().putStringSet("kept", HashSet(value)).apply()
+
+    // Whether the albums saved before there was a kept set have joined it.
+    var keptMigrated: Boolean
+        get() = prefs.getBoolean("kept_migrated", false)
+        set(value) = prefs.edit().putBoolean("kept_migrated", value).apply()
 
     // The albums last played, newest first, as (artist, album).
     var recent: List<Pair<String, String>>
@@ -39,6 +53,12 @@ class Settings(context: Context) {
         }
 
     companion object {
+        const val LIBRARY_MIX = "mix:library"
+
+        fun playlistKey(id: String) = "playlist:$id"
+
+        fun albumKey(artist: String, album: String) = "album:$artist/$album"
+
         fun metered(context: Context): Boolean {
             val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
             return cm.isActiveNetworkMetered

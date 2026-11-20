@@ -130,4 +130,14 @@ object Glyph {
     val Down = icon("down", "M6 9l6 6 6-6", stroke = 2f)
     val Close = icon("close", "M6 6l12 12M18 6 6 18", stroke = 2f)
     val Update = icon("update", "M12 16V5m-4.5 4.5L12 5l4.5 4.5M5 19.5h14", stroke = 1.8f)
+    val More = icon(
+        "more",
+        "M12 5.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z",
+    )
+    val Plus = icon("plus", "M12 5v14M5 12h14", stroke = 1.8f)
+    val List = icon("list", "M4 6h12M4 11h12M4 16h7M18 9v8.5", stroke = 1.8f)
+    val Smart = icon(
+        "smart",
+        "M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z",
+    )
 }

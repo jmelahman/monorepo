@@ -158,7 +158,7 @@ private fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp),
@@ -168,7 +168,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Kicker(text: String) {
+fun Kicker(text: String) {
     Text(
         text.uppercase(Locale.ROOT),
         color = Palette.Dim,
@@ -214,7 +214,7 @@ private fun AlbumTile(model: Model, artist: Artist, album: Album, width: Dp? = n
 
 private fun artistCover(a: Artist) = a.albums.firstOrNull()?.let { Api.coverUrl(a.name, it.name) }
 
-private fun plural(n: Int, one: String) = "$n $one${if (n == 1) "" else "s"}"
+fun plural(n: Int, one: String) = "$n $one${if (n == 1) "" else "s"}"
 
 private fun mb(bytes: Long) = String.format(Locale.ROOT, "%.1f MB", bytes / 1e6)
 
@@ -228,7 +228,7 @@ fun clock(ms: Long): String {
 }
 
 @Composable
-private fun LibraryPending(model: Model) {
+fun LibraryPending(model: Model) {
     val error = model.loadError
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (error != null) {
@@ -275,8 +275,18 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             }
         }
         item { MixHero(model) }
+        item { LibraryMixHero(model) }
+        model.libraryMix?.takeIf { it.isNotEmpty() }?.let { mix ->
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionTitle("Library mix", Modifier.weight(1f))
+                    TextButton(onClick = { model.go(Screen.LibraryMix) }) { Text("See all", color = Palette.Dim) }
+                }
+            }
+            ownedRows(model, mix, null, limit = 5)
+        }
         model.mix?.let { mix ->
-            item { SectionTitle("Your mix") }
+            item { SectionTitle("Your Supermix") }
             streamRows(model, mix) { confirming = it }
         }
         if (library == null) {
@@ -307,79 +317,113 @@ private fun AlbumRow(model: Model, albums: List<Pair<Artist, Album>>) {
     }
 }
 
-// MixHero is the supermix: the one big thing on the home page.
+// Disc is the mixes' art: a record, brushed.
 @Composable
-private fun MixHero(model: Model) {
+fun Disc(size: Int) {
+    Box(
+        Modifier
+            .size(size.dp)
+            .clip(CircleShape)
+            .background(
+                Brush.sweepGradient(
+                    listOf(
+                        Color(0xFF2A2B30), Color(0xFF6B6F78), Color(0xFF2A2B30),
+                        Color(0xFF8D929B), Color(0xFF2A2B30),
+                    ),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size((size / 6).dp)
+                .clip(CircleShape)
+                .background(Palette.Card),
+        )
+    }
+}
+
+// MixCard is one of the two mixes on the home page, tinted by its kind:
+// the accent for streams, green for what is owned.
+@Composable
+private fun MixCard(kicker: String, title: String, text: String, tint: Color, actions: @Composable () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
-            .padding(16.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp)
             .fillMaxWidth()
             .clip(shape)
             .background(Palette.Card)
             .background(
                 Brush.radialGradient(
-                    listOf(Palette.Accent.copy(alpha = 0.22f), Color.Transparent),
+                    listOf(tint.copy(alpha = 0.22f), Color.Transparent),
                     radius = 700f,
                     center = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, 0f),
                 ),
             )
             .background(Palette.Sheen)
             .border(1.dp, Palette.Edge, shape)
-            .padding(20.dp),
+            .padding(18.dp),
     ) {
-        Box(
-            Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.sweepGradient(
-                        listOf(
-                            Color(0xFF2A2B30), Color(0xFF6B6F78), Color(0xFF2A2B30),
-                            Color(0xFF8D929B), Color(0xFF2A2B30),
-                        ),
-                    ),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(Palette.Card),
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Kicker("Made from your library")
-        Text("Supermix", fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-        Text(
-            "Endless streams seeded by what you already own. Hear something you like, buy it in.",
-            color = Palette.Dim,
-            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ChromeButton(
-                when {
-                    model.mixing -> "Mixing…"
-                    model.mix != null -> "Mix again"
-                    else -> "Start a mix"
-                },
-                Glyph.Mix,
-                { model.buildMix() },
-                enabled = !model.mixing,
-            )
-            val mix = model.mix
-            if (!mix.isNullOrEmpty()) {
-                PillButton("Play", Glyph.Play, { model.playStreams(mix, 0) })
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Disc(52)
+            Column(Modifier.padding(start = 14.dp)) {
+                Kicker(kicker)
+                Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             }
         }
+        Text(text, color = Palette.Dim, modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
+    }
+}
+
+// MixHero is the supermix: YouTube Music's own for the account when the
+// server has its cookies, otherwise a radio seeded from the library.
+@Composable
+private fun MixHero(model: Model) {
+    MixCard(
+        if (model.mixSource == "radio") "Seeded from your library" else "From YouTube Music",
+        "Your Supermix",
+        "Streams to discover. Hear something you like, buy it in.",
+        Palette.Accent,
+    ) {
+        ChromeButton(
+            when {
+                model.mixing -> "Mixing…"
+                model.mix != null -> "Mix again"
+                else -> "Start"
+            },
+            Glyph.Mix,
+            { model.buildMix() },
+            enabled = !model.mixing,
+        )
+        val mix = model.mix
+        if (!mix.isNullOrEmpty()) {
+            PillButton("Play", Glyph.Play, { model.playStreams(mix, 0) })
+        }
+    }
+}
+
+// LibraryMixHero is the day's mix of owned tracks, which the phone keeps
+// unless told otherwise.
+@Composable
+private fun LibraryMixHero(model: Model) {
+    val mix = model.libraryMix
+    MixCard(
+        "Made from your library",
+        "Library mix",
+        if (mix == null) "Mixing…" else "${plural(mix.size, "track")} you own, new each day.",
+        Palette.Owned,
+    ) {
+        ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
+        KeepButton(model, Settings.LIBRARY_MIX, "the library mix")
     }
 }
 
 // -------------------------------------------------------------- library
 
 @Composable
-fun LibraryScreen(model: Model, artists: Boolean, padding: PaddingValues) {
+fun LibraryScreen(model: Model, view: Shelf, padding: PaddingValues) {
     val library = model.library
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
@@ -396,13 +440,14 @@ fun LibraryScreen(model: Model, artists: Boolean, padding: PaddingValues) {
                 Modifier.padding(4.dp, 16.dp, 4.dp, 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Chip("Albums", !artists) { model.tab(Screen.Library(false)) }
-                Chip("Artists", artists) { model.tab(Screen.Library(true)) }
+                for (v in Shelf.entries) Chip(v.name, v == view) { model.tab(Screen.Library(v)) }
             }
         }
-        if (library == null) {
+        if (view == Shelf.Playlists) {
+            playlistShelf(model)
+        } else if (library == null) {
             item(span = { GridItemSpan(maxLineSpan) }) { LibraryPending(model) }
-        } else if (artists) {
+        } else if (view == Shelf.Artists) {
             items(library, key = { it.name }) { a ->
                 Tile(a.name, plural(a.albums.size, "album"), artistCover(a), null, round = true) {
                     model.go(Screen.ArtistPage(a.name))
@@ -415,10 +460,31 @@ fun LibraryScreen(model: Model, artists: Boolean, padding: PaddingValues) {
     }
 }
 
+// playlistShelf is the library's playlists, with the two ways to start
+// one.
+private fun androidx.compose.foundation.lazy.grid.LazyGridScope.playlistShelf(model: Model) {
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        var making by remember { mutableStateOf<Boolean?>(null) }
+        Row(Modifier.padding(4.dp, 0.dp, 4.dp, 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PillButton("New", Glyph.Plus, { making = false })
+            PillButton("Smart", Glyph.Smart, { making = true })
+        }
+        making?.let { PlaylistEditor(model, null, it) { making = null } }
+    }
+    val lists = model.playlists
+    when {
+        lists == null -> item(span = { GridItemSpan(maxLineSpan) }) { Empty("Reading the playlists…") }
+        lists.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
+            Empty("No playlists yet. Start one, or let a smart one fill itself from rules.")
+        }
+        else -> items(lists, key = { it.id }) { p -> PlaylistTile(model, p) }
+    }
+}
+
 // Header is the top of an artist's or album's page: big art, names, and
 // what can be done with it all.
 @Composable
-private fun Header(
+fun Header(
     kicker: String,
     title: String,
     meta: String,
@@ -519,14 +585,17 @@ fun AlbumScreen(model: Model, artistName: String, albumName: String, padding: Pa
             ) {
                 ChromeButton("Play", Glyph.Play, { model.playAlbum(artist, album) })
                 PillButton("Shuffle", Glyph.Shuffle, { model.playAlbum(artist, album, shuffle = true) })
+                val kept = Settings.albumKey(artist.name, album.name) in model.kept
                 when {
-                    active > 0 -> PillButton("${saved.size}/${album.tracks.size}", Glyph.Save, {}, enabled = false)
-                    all -> PillButton("Saved", Glyph.Saved, {
+                    kept && active > 0 -> PillButton("${saved.size}/${album.tracks.size}", Glyph.Save, {
                         model.removeAlbum(artist, album)
-                        saved = emptySet()
                         removed++
                     })
-                    else -> PillButton("Save", Glyph.Save, { model.saveAlbum(artist, album) })
+                    kept -> PillButton("Kept", Glyph.Saved, {
+                        model.removeAlbum(artist, album)
+                        removed++
+                    })
+                    else -> PillButton(if (all) "Keep" else "Save", Glyph.Save, { model.saveAlbum(artist, album) })
                 }
             }
         }
@@ -546,7 +615,7 @@ fun AlbumScreen(model: Model, artistName: String, albumName: String, padding: Pa
                 Modifier
                     .fillMaxWidth()
                     .clickable { model.playAlbum(artist, album, i) }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.width(32.dp), contentAlignment = Alignment.CenterStart) {
@@ -564,9 +633,18 @@ fun AlbumScreen(model: Model, artistName: String, albumName: String, padding: Pa
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (t.path in model.excluded) NoMix()
                 if (t.path in saved) {
-                    Icon(Glyph.Saved, "Saved", tint = Palette.Dim, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Glyph.Saved,
+                        "Saved",
+                        tint = Palette.Dim,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(16.dp),
+                    )
                 }
+                TrackMenu(model, Owned(t, artist.name, album.name), toAlbum = false)
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
@@ -635,7 +713,7 @@ private fun LazyListScope.streamRows(model: Model, tracks: List<YTTrack>, buy: (
             Modifier
                 .fillMaxWidth()
                 .clickable { model.playStreams(tracks, i) }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Cover(t.title, t.thumb.ifEmpty { null }, Modifier.size(48.dp), RoundedCornerShape(4.dp))
@@ -657,6 +735,7 @@ private fun LazyListScope.streamRows(model: Model, tracks: List<YTTrack>, buy: (
                 )
             }
             BuyButton(model.buyFor(t)) { buy(t) }
+            StreamMenu(model, t)
         }
     }
 }

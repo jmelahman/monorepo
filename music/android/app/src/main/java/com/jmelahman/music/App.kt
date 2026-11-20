@@ -62,6 +62,10 @@ fun MusicApp(model: Model) {
     MusicTheme {
         val snackbar = remember { SnackbarHostState() }
         LaunchedEffect(Unit) { model.noticeFlow.collect { snackbar.showSnackbar(it) } }
+        if (model.server.isEmpty()) {
+            SetupScreen(model, snackbar)
+            return@MusicTheme
+        }
         BackHandler(enabled = model.expanded || model.stack.size > 1) { model.back() }
         var settingsOpen by remember { mutableStateOf(false) }
 
@@ -88,10 +92,12 @@ fun MusicApp(model: Model) {
             ) { padding ->
                 when (val s = model.screen) {
                     Screen.Home -> HomeScreen(model, padding)
-                    is Screen.Library -> LibraryScreen(model, s.artists, padding)
+                    is Screen.Library -> LibraryScreen(model, s.view, padding)
                     is Screen.ArtistPage -> ArtistScreen(model, s.artist, padding)
                     is Screen.AlbumPage -> AlbumScreen(model, s.artist, s.album, padding)
                     Screen.Search -> SearchScreen(model, padding)
+                    is Screen.PlaylistPage -> PlaylistScreen(model, s.id, padding)
+                    Screen.LibraryMix -> LibraryMixScreen(model, padding)
                 }
             }
             AnimatedVisibility(
@@ -155,6 +161,8 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
                 is Screen.ArtistPage -> s.artist
                 is Screen.AlbumPage -> s.album
                 Screen.Search -> "Search"
+                is Screen.PlaylistPage -> model.opened[s.id]?.name ?: model.playlists?.find { it.id == s.id }?.name.orEmpty()
+                Screen.LibraryMix -> "Library mix"
                 else -> ""
             }
             Text(

@@ -12,8 +12,14 @@ android {
         applicationId = "com.jmelahman.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.6"
+        versionCode = 7
+        versionName = "0.7"
+
+        // The server a fresh install starts on, from the musicServer
+        // property (in ~/.gradle/gradle.properties, never this
+        // repository); without it the app asks on first launch.
+        val server = (project.findProperty("musicServer") as String?).orEmpty().trimEnd('/')
+        buildConfigField("String", "DEFAULT_SERVER", "\"$server\"")
     }
 
     // The signing key is what lets one build replace another on a phone:

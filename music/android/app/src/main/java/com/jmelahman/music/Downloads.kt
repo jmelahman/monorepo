@@ -11,7 +11,9 @@ object Downloads {
     // follow only its own.
     const val TAG = "music-download"
 
-    fun albumTag(artist: Artist, album: Album) = "album:${artist.name}/${album.name}"
+    fun albumTag(artist: Artist, album: Album) = albumTag(artist.name, album.name)
+
+    fun albumTag(artist: String, album: String) = "album:$artist/$album"
 
     private fun root(context: Context) = File(context.filesDir, "music")
 
@@ -31,7 +33,20 @@ object Downloads {
     fun savedPaths(context: Context, album: Album): Set<String> =
         album.tracks.filter { saved(context, it) }.mapTo(HashSet()) { it.path }
 
-    fun delete(context: Context, album: Album) {
-        for (t in album.tracks) fileFor(context, t.path)?.delete()
+    // prune deletes every saved track not in keep, and the folders it
+    // leaves empty. A download still being written is left to finish.
+    fun prune(context: Context, keep: Set<String>): Int {
+        val root = root(context).canonicalFile
+        if (!root.isDirectory) return 0
+        var n = 0
+        root.walkBottomUp().forEach { f ->
+            when {
+                f == root -> {}
+                f.isDirectory -> if (f.list().isNullOrEmpty()) f.delete()
+                f.name.endsWith(".part") -> {}
+                f.relativeTo(root).invariantSeparatorsPath !in keep -> if (f.delete()) n++
+            }
+        }
+        return n
     }
 }

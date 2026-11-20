@@ -16,12 +16,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.work.Constraints
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -36,11 +30,16 @@ import java.io.File
 // switches between; the rest stack on top.
 sealed class Screen {
     data object Home : Screen()
-    data class Library(val artists: Boolean = false) : Screen()
+    data class Library(val view: Shelf = Shelf.Albums) : Screen()
     data class ArtistPage(val artist: String) : Screen()
     data class AlbumPage(val artist: String, val album: String) : Screen()
     data object Search : Screen()
+    data class PlaylistPage(val id: String) : Screen()
+    data object LibraryMix : Screen()
 }
+
+// The library's three views.
+enum class Shelf { Albums, Artists, Playlists }
 
 // What the player is on, as the screens draw it.
 data class NowPlaying(
@@ -72,6 +71,36 @@ class Model(app: Application) : AndroidViewModel(app) {
     var mix by mutableStateOf<List<YTTrack>?>(null)
         private set
     var mixing by mutableStateOf(false)
+        private set
+
+    // Where the supermix came from: "account", the YouTube Music
+    // account's own, or "radio", seeded from the library.
+    var mixSource by mutableStateOf("")
+        private set
+
+    // The day's mix of owned tracks.
+    var libraryMix by mutableStateOf<List<Owned>?>(null)
+        private set
+
+    // The server, empty until the first launch is told one.
+    var server by mutableStateOf(settings.baseUrl)
+        private set
+    var connecting by mutableStateOf(false)
+        private set
+
+    var playlists by mutableStateOf<List<Playlist>?>(null)
+        private set
+
+    // Each playlist opened, with its tracks, by id.
+    var opened by mutableStateOf<Map<String, Playlist>>(emptyMap())
+        private set
+
+    // What is kept out of the mixes: paths, and yt:<id> for streams.
+    var excluded by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    // What the phone keeps in step with the server; see Settings.kept.
+    var kept by mutableStateOf(settings.kept)
         private set
 
     var buys by mutableStateOf<List<Buy>>(emptyList())
@@ -159,9 +188,36 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     init {
         Api.baseUrl = settings.baseUrl
+        if (server.isNotEmpty()) start()
+    }
+
+    // start reads everything from the server and has the phone catch up
+    // with what it keeps.
+    private fun start() {
         reload()
         checkForUpdate()
         viewModelScope.launch { refreshBuys() }
+        Sync.schedule(context)
+        Sync.now(context)
+    }
+
+    // connect checks that an address is one of these servers before the
+    // app settles on it.
+    fun connect(url: String) {
+        val base = url.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
+        if (connecting) return
+        connecting = true
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.health(base) }
+                settings.baseUrl = base
+                server = base
+                start()
+            } catch (e: Exception) {
+                notice("No music server at $base: ${e.message}")
+            }
+            connecting = false
+        }
     }
 
     override fun onCleared() {
@@ -173,6 +229,11 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     fun reload() {
         loadError = null
+        loadPlaylists()
+        loadLibraryMix()
+        viewModelScope.launch {
+            runCatching { excluded = withContext(Dispatchers.IO) { Api.excluded() } }
+        }
         viewModelScope.launch {
             try {
                 library = withContext(Dispatchers.IO) { Api.library() }
@@ -234,10 +295,12 @@ class Model(app: Application) : AndroidViewModel(app) {
     fun buildMix() {
         if (mixing) return
         mixing = true
+        val fresh = mix != null
         viewModelScope.launch {
             try {
-                val m = withContext(Dispatchers.IO) { Api.ytSupermix() }
+                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(fresh) }
                 mix = m
+                mixSource = source
                 if (m.isNotEmpty()) playStreams(m, 0)
             } catch (e: Exception) {
                 notice("The mix could not be built: ${e.message}")
@@ -270,7 +333,7 @@ class Model(app: Application) : AndroidViewModel(app) {
                 )
                 .build()
         }
-        start(items, index) { streams = tracks.associateBy { "yt:${it.videoId}" } }
+        play(items, index) { streams = tracks.associateBy { "yt:${it.videoId}" } }
     }
 
     // play starts a list of owned tracks: saved ones play from the phone,
@@ -278,36 +341,33 @@ class Model(app: Application) : AndroidViewModel(app) {
     // user allowed.
     // owners holds each track's artist and album, which a track alone
     // doesn't carry.
-    fun play(owners: List<Pair<Artist, Album>>, items: List<Track>, index: Int, shuffle: Boolean = false) {
+    // remember says to keep the album among the ones last played.
+    fun play(items: List<Owned>, index: Int, shuffle: Boolean = false, remember: Boolean = false) {
+        if (items.isEmpty()) return
         val order = if (shuffle) items.indices.shuffled() else items.indices.toList()
         val first = if (shuffle) 0 else index
         viewModelScope.launch {
             // Which tracks are saved is a disk read each, so it is done
             // off the main thread, a whole artist at a time.
             val (saved, mediaItems) = withContext(Dispatchers.IO) {
-                Downloads.saved(context, items[order[first]]) to
-                    order.map { i -> items[i].mediaItem(owners[i].first, owners[i].second) }
+                Downloads.saved(context, items[order[first]].track) to order.map { i -> items[i].mediaItem() }
             }
             if (!saved && !streamingAllowed()) {
                 notice("Mobile data — streaming is off in settings, and this track isn't saved")
                 return@launch
             }
-            val (artist, album) = owners[order[first]]
-            start(mediaItems, first) { streams = emptyMap() }
-            rememberAlbum(artist, album)
+            play(mediaItems, first) { streams = emptyMap() }
+            if (remember) rememberAlbum(items[order[first]].artist, items[order[first]].album)
         }
     }
 
     fun playAlbum(artist: Artist, album: Album, index: Int = 0, shuffle: Boolean = false) =
-        play(List(album.tracks.size) { artist to album }, album.tracks, index, shuffle)
+        play(album.tracks.map { Owned(it, artist.name, album.name) }, index, shuffle, remember = true)
 
-    fun playArtist(artist: Artist, shuffle: Boolean) {
-        val owners = artist.albums.flatMap { al -> al.tracks.map { artist to al } }
-        if (owners.isEmpty()) return
-        play(owners, artist.albums.flatMap { it.tracks }, 0, shuffle)
-    }
+    fun playArtist(artist: Artist, shuffle: Boolean) =
+        play(artist.albums.flatMap { al -> al.tracks.map { Owned(it, artist.name, al.name) } }, 0, shuffle, remember = true)
 
-    private fun start(items: List<MediaItem>, index: Int, then: () -> Unit) {
+    private fun play(items: List<MediaItem>, index: Int, then: () -> Unit) {
         val c = controller
         if (c == null) {
             notice("The player is still starting")
@@ -319,19 +379,19 @@ class Model(app: Application) : AndroidViewModel(app) {
         c.play()
     }
 
-    private fun Track.mediaItem(artist: Artist, album: Album): MediaItem {
+    private fun Owned.mediaItem(): MediaItem {
         // A saved track plays from the phone; anything else streams.
-        val local = Downloads.fileFor(context, path)?.takeIf { it.length() > 0 }
-        val uri = local?.let(Uri::fromFile) ?: Uri.parse(Api.audioUrl(path))
+        val local = Downloads.fileFor(context, track.path)?.takeIf { it.length() > 0 }
+        val uri = local?.let(Uri::fromFile) ?: Uri.parse(Api.audioUrl(track.path))
         return MediaItem.Builder()
-            .setMediaId(path)
+            .setMediaId(track.path)
             .setUri(uri)
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist.name)
-                    .setAlbumTitle(album.name)
-                    .setArtworkUri(Uri.parse(Api.coverUrl(artist.name, album.name)))
+                    .setTitle(track.title)
+                    .setArtist(artist)
+                    .setAlbumTitle(album)
+                    .setArtworkUri(Uri.parse(Api.coverUrl(artist, album)))
                     .build(),
             )
             .build()
@@ -339,40 +399,129 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     // rememberAlbum keeps the albums last played, newest first, for the
     // home page's "Jump back in".
-    private fun rememberAlbum(artist: Artist, album: Album) {
-        val key = artist.name to album.name
+    private fun rememberAlbum(artist: String, album: String) {
+        val key = artist to album
         recent = (listOf(key) + recent.filter { it != key }).take(12)
         settings.recent = recent
     }
 
     // ----------------------------------------------------------- offline
 
-    // saveAlbum queues one piece of work per track, each carrying the
-    // constraint the OS then enforces: unmetered networks only, unless
-    // the user switched downloads on mobile data on.
-    fun saveAlbum(artist: Artist, album: Album) {
-        val wm = WorkManager.getInstance(context)
-        val network =
-            if (settings.allowDownloadsMetered) NetworkType.CONNECTED else NetworkType.UNMETERED
-        for (t in album.tracks) {
-            if (Downloads.saved(context, t)) continue
-            val request = OneTimeWorkRequestBuilder<DownloadWorker>()
-                .setInputData(workDataOf("url" to Api.audioUrl(t.path), "dest" to t.path))
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
-                .addTag(Downloads.TAG)
-                .addTag(Downloads.albumTag(artist, album))
-                .build()
-            wm.enqueueUniqueWork("download:${t.path}", ExistingWorkPolicy.KEEP, request)
-        }
-        if (network == NetworkType.UNMETERED && Settings.metered(context)) {
-            notice("Saving ${album.name} once on Wi-Fi")
+    // keep has the phone keep something (Settings.kept) or let it go; the
+    // sync then fetches or deletes its tracks, on Wi-Fi unless downloads
+    // on mobile data are on.
+    fun keep(key: String, on: Boolean, name: String) {
+        kept = if (on) kept + key else kept - key
+        settings.kept = kept
+        Sync.now(context)
+        notice(
+            when {
+                !on -> "$name will leave the phone"
+                !settings.allowDownloadsMetered && Settings.metered(context) -> "Keeping $name once on Wi-Fi"
+                else -> "Keeping $name on the phone"
+            },
+        )
+    }
+
+    fun saveAlbum(artist: Artist, album: Album) = keep(Settings.albumKey(artist.name, album.name), true, album.name)
+
+    fun removeAlbum(artist: Artist, album: Album) = keep(Settings.albumKey(artist.name, album.name), false, album.name)
+
+    // ------------------------------------------------------------- mixes
+
+    fun loadLibraryMix() {
+        viewModelScope.launch {
+            runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix() } }
         }
     }
 
-    fun removeAlbum(artist: Artist, album: Album) {
-        WorkManager.getInstance(context).cancelAllWorkByTag(Downloads.albumTag(artist, album))
-        viewModelScope.launch(Dispatchers.IO) { Downloads.delete(context, album) }
-        notice("Removed ${album.name} from the phone")
+    // exclude keeps a track (a path, or yt:<id>) out of the mixes, or lets
+    // it back in.
+    fun exclude(key: String, out: Boolean) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.setExcluded(key, out) }
+                excluded = if (out) excluded + key else excluded - key
+                notice(if (out) "Kept out of the mixes" else "Back in the mixes")
+                if (out) {
+                    mix = mix?.filter { "yt:${it.videoId}" != key }
+                    libraryMix = libraryMix?.filter { it.track.path != key }
+                }
+            } catch (e: Exception) {
+                notice("That could not be changed: ${e.message}")
+            }
+        }
+    }
+
+    // ---------------------------------------------------------- playlists
+
+    fun loadPlaylists() {
+        viewModelScope.launch {
+            runCatching { playlists = withContext(Dispatchers.IO) { Api.playlists() } }
+        }
+    }
+
+    fun loadPlaylist(id: String) {
+        viewModelScope.launch {
+            try {
+                val p = withContext(Dispatchers.IO) { Api.playlist(id) }
+                opened = opened + (id to p)
+            } catch (e: Exception) {
+                notice("The playlist could not be read: ${e.message}")
+            }
+        }
+    }
+
+    // savePlaylist creates a playlist (id null) or replaces one, then
+    // shows it.
+    fun savePlaylist(id: String?, name: String, paths: List<String>, smart: Smart?, then: (Playlist) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val p = withContext(Dispatchers.IO) { Api.savePlaylist(id, name, paths, smart) }
+                opened = opened + (p.id to p)
+                loadPlaylists()
+                if (Settings.playlistKey(p.id) in kept) Sync.now(context)
+                then(p)
+            } catch (e: Exception) {
+                notice("The playlist could not be saved: ${e.message}")
+            }
+        }
+    }
+
+    fun createPlaylist(name: String, paths: List<String>, smart: Smart?) =
+        savePlaylist(null, name, paths, smart) { p ->
+            if (paths.isEmpty()) go(Screen.PlaylistPage(p.id)) else notice("Added to ${p.name}")
+        }
+
+    fun addToPlaylist(p: Playlist, paths: List<String>) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.addToPlaylist(p.id, paths) }
+                notice("Added to ${p.name}")
+                loadPlaylists()
+                if (p.id in opened) loadPlaylist(p.id)
+                if (Settings.playlistKey(p.id) in kept) Sync.now(context)
+            } catch (e: Exception) {
+                notice("That could not be added: ${e.message}")
+            }
+        }
+    }
+
+    fun removeFromPlaylist(p: Playlist, path: String) =
+        savePlaylist(p.id, p.name, p.paths - path, null) { notice("Removed from ${it.name}") }
+
+    fun deletePlaylist(p: Playlist) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.deletePlaylist(p.id) }
+                opened = opened - p.id
+                if (Settings.playlistKey(p.id) in kept) keep(Settings.playlistKey(p.id), false, p.name)
+                back()
+                loadPlaylists()
+            } catch (e: Exception) {
+                notice("The playlist could not be deleted: ${e.message}")
+            }
+        }
     }
 
     // --------------------------------------------------------------- buys
@@ -446,12 +595,14 @@ class Model(app: Application) : AndroidViewModel(app) {
         }
         val moved = base != settings.baseUrl
         settings.baseUrl = base
+        server = base
         settings.allowMetered = allowMetered
         settings.allowDownloadsMetered = allowDownloadsMetered
         if (moved) {
             library = null
-            reload()
-            checkForUpdate()
+            playlists = null
+            opened = emptyMap()
+            start()
         }
     }
 
