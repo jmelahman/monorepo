@@ -37,7 +37,9 @@ type Client struct {
 	// Object path -> callback for its PropertiesChanged signals.
 	watchers map[dbus.ObjectPath]func(iface string, changed map[string]dbus.Variant)
 	// Callbacks for objects that are seen advertising during discovery.
-	seen    map[int]func(dbus.ObjectPath)
+	seen map[int]func(dbus.ObjectPath)
+	// Object path -> why BlueZ last said the device disconnected.
+	reasons map[dbus.ObjectPath]string
 	adapter dbus.ObjectPath
 	mu      sync.Mutex
 	nextID  int
@@ -55,6 +57,7 @@ func New() (*Client, error) {
 		conn:     conn,
 		watchers: map[dbus.ObjectPath]func(string, map[string]dbus.Variant){},
 		seen:     map[int]func(dbus.ObjectPath){},
+		reasons:  map[dbus.ObjectPath]string{},
 	}
 	objs, err := c.objects()
 	if err != nil {
@@ -74,6 +77,7 @@ func New() (*Client, error) {
 	for _, opt := range [][]dbus.MatchOption{
 		{dbus.WithMatchInterface(ifaceProperties), dbus.WithMatchMember("PropertiesChanged"), dbus.WithMatchPathNamespace("/org/bluez")},
 		{dbus.WithMatchInterface(ifaceObjectManager), dbus.WithMatchMember("InterfacesAdded")},
+		{dbus.WithMatchInterface(ifaceDevice), dbus.WithMatchMember("Disconnected")},
 	} {
 		if err := conn.AddMatchSignal(append(opt, dbus.WithMatchSender(service))...); err != nil {
 			_ = conn.Close()
@@ -117,6 +121,16 @@ func (c *Client) dispatch(signals <-chan *dbus.Signal) {
 					f(sig.Path)
 				}
 			}
+		case ifaceDevice + ".Disconnected":
+			// Sent by BlueZ 5.82 and later, before Connected turns false.
+			if len(sig.Body) < 2 {
+				continue
+			}
+			name, _ := sig.Body[0].(string)
+			msg, _ := sig.Body[1].(string)
+			c.mu.Lock()
+			c.reasons[sig.Path] = msg + " (" + name + ")"
+			c.mu.Unlock()
 		case ifaceObjectManager + ".InterfacesAdded":
 			if len(sig.Body) < 2 {
 				continue
@@ -328,6 +342,16 @@ func (d *Device) Name() string {
 // BlueZ waits for an LE device to advertise, so ctx bounds that wait.
 // onDisconnect is called once if the connection later drops.
 func (d *Device) Connect(ctx context.Context, onDisconnect func()) error {
+	err := d.connect(ctx, onDisconnect)
+	if err != nil {
+		// BlueZ keeps trying after the call is abandoned, and would refuse
+		// the next attempt with "In Progress"; disconnecting cancels it.
+		_ = d.Disconnect()
+	}
+	return err
+}
+
+func (d *Device) connect(ctx context.Context, onDisconnect func()) error {
 	var once sync.Once
 	d.c.watch(d.Path, func(iface string, changed map[string]dbus.Variant) {
 		if v, ok := changed["Connected"]; ok && iface == ifaceDevice {
@@ -351,6 +375,18 @@ func (d *Device) Connect(ctx context.Context, onDisconnect func()) error {
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
+}
+
+// DisconnectReason returns why the device last disconnected, if BlueZ said.
+func (d *Device) DisconnectReason() string {
+	d.c.mu.Lock()
+	defer d.c.mu.Unlock()
+	reason := d.c.reasons[d.Path]
+	delete(d.c.reasons, d.Path)
+	if reason == "" {
+		return "unknown"
+	}
+	return reason
 }
 
 // Disconnect drops the connection and stops watching it.

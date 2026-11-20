@@ -124,7 +124,7 @@ func (b *Bridge) connectOnce(ctx context.Context) error {
 
 	select {
 	case <-dropped:
-		b.log.Warn("device disconnected")
+		b.log.Warn("device disconnected", "reason", b.dev.DisconnectReason())
 	case <-ctx.Done():
 	}
 	b.responder.Remove(handle)
