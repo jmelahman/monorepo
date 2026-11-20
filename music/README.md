@@ -41,6 +41,29 @@ with the reason on stderr. The server runs one buy at a time, retries a
 failed one after a minute, five, then thirty, and saves the queue under
 `--state` so a restart picks up where it left off. `api/buys` lists it,
 newest first. Without `MUSIC_STORE`, buying answers 503.
+`MUSIC_STORE_PROXY`, when set, is handed to the provider as its HTTP
+proxy; the homelab points it at gluetun, so purchases leave over the VPN.
+
+## Mixes
+
+Home shows two mixes side by side:
+
+- **Your Supermix**, streamed: YouTube Music's own Supermix for the
+  account when `MUSIC_YTM_COOKIES` names a cookies.txt exported from a
+  browser signed in to YouTube Music and `MUSIC_YTM_SUPERMIX` names the
+  playlist (its id or URL). Without them, or when YouTube refuses, it is
+  a radio seeded from a random owned track.
+- **Library mix**, owned: fifty tracks from the library, the same all day,
+  favouring what is played and resting what was played lately.
+
+A track kept out of the mixes, from its ⋮ menu, comes up in neither.
+
+## Playlists
+
+Playlists are plain (a list of owned tracks) or smart (rules on artist,
+album, title, plays, when added and when last played, with an order and
+a size). They live in `playlists.json` under `--state`; play counts and
+exclusions in `library.json` beside it.
 
 ## Image
 
@@ -75,6 +98,13 @@ the library listing, so the installed app opens off the tailnet. Albums are
 saved for offline deliberately — the button in the crumbs bar — into the
 browser's cache; saved tracks play from there with seeking, and removing
 one is the same button again.
+
+The Android app asks for the server on first launch; a build can carry a
+default from the `musicServer` gradle property, set in
+`~/.gradle/gradle.properties` rather than the repository. Albums,
+playlists and the library mix marked Keep are synced on Wi-Fi, every six
+hours and when the app opens: new tracks are fetched and dropped ones
+deleted.
 
 ## License
 

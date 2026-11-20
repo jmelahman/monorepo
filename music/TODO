@@ -1,7 +1,4 @@
-- A VPN-fronted egress for the store provider (gluetun in the compose
-  file, the music container on its network), once there is a VPN to use.
-- The account-tied supermix, the one YouTube builds for signed-in
-  listeners; the library-seeded radio mix stands in until cookies make it
-  possible.
 - Bump the yt-dlp pin in the Dockerfile when YouTube changes things and
   streams stop resolving.
+- Re-export the YouTube Music cookies when the account's Supermix falls
+  back to the library radio (the server logs why).
