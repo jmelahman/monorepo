@@ -255,7 +255,6 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
         library.orEmpty().flatMap { a -> a.albums.map { a to it } }.shuffled().take(18)
     }
     val recent = model.recent.mapNotNull { (a, al) -> model.album(a, al) }
-    var confirming by remember { mutableStateOf<YTTrack?>(null) }
 
     LazyColumn(contentPadding = padding) {
         model.update?.let { u ->
@@ -283,19 +282,6 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             item { MixHero(model) }
         }
         item { LibraryMixHero(model) }
-        model.libraryMix?.takeIf { it.isNotEmpty() }?.let { mix ->
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SectionTitle("Library mix", Modifier.weight(1f))
-                    TextButton(onClick = { model.go(Screen.LibraryMix) }) { Text("See all", color = Palette.Dim) }
-                }
-            }
-            ownedRows(model, mix, null, limit = 5)
-        }
-        model.mix?.takeIf { model.supermixReady }?.let { mix ->
-            item { SectionTitle("Supermix") }
-            streamRows(model, mix) { confirming = it }
-        }
         if (library == null) {
             item { LibraryPending(model) }
         }
@@ -314,7 +300,6 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
         }
         item { Spacer(Modifier.height(24.dp)) }
     }
-    BuyDialog(model, confirming) { confirming = null }
 }
 
 @Composable

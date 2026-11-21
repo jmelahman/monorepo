@@ -292,9 +292,8 @@ fun KeepButton(model: Model, key: String, name: String) {
 }
 
 // ownedRows lists owned tracks with their art, each with its menu.
-// Only the first limit are shown; a tap still plays them all.
-fun LazyListScope.ownedRows(model: Model, tracks: List<Owned>, playlist: Playlist?, limit: Int = Int.MAX_VALUE) {
-    itemsIndexed(tracks.take(limit), key = { i, o -> "${o.track.path}:$i" }) { i, o ->
+fun LazyListScope.ownedRows(model: Model, tracks: List<Owned>, playlist: Playlist?) {
+    itemsIndexed(tracks, key = { i, o -> "${o.track.path}:$i" }) { i, o ->
         val on = model.playing?.id == o.track.path
         val out = o.track.path in model.excluded
         Row(

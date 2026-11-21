@@ -61,8 +61,8 @@ private val clouds = listOf(
     Cloud(0.40f, 0.62f, 0.56f, 0.48f, 140f, 0.05f),
 )
 
-// glows remembers each cover's colour, null when it has none to give.
-private val glows = HashMap<String, Color?>()
+// glows remembers each cover's colour once it has been read.
+private val glows = HashMap<String, Color>()
 
 @Composable
 fun Wash(src: String?, modifier: Modifier = Modifier) {
@@ -71,8 +71,9 @@ fun Wash(src: String?, modifier: Modifier = Modifier) {
     LaunchedEffect(src) {
         glow = when {
             src.isNullOrEmpty() -> null
-            glows.containsKey(src) -> glows[src]
-            else -> coverColour(context, src).also { glows[src] = it }
+            src in glows -> glows[src]
+            // A cover that didn't load is asked for again next time.
+            else -> coverColour(context, src)?.also { glows[src] = it }
         }
     }
     val wash by animateColorAsState(glow ?: Slate, tween(900), label = "wash")

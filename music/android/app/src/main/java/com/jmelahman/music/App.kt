@@ -79,6 +79,8 @@ fun MusicApp(model: Model) {
             Wash(model.backdrop())
             Scaffold(
                 containerColor = Color.Transparent,
+                // A clear scaffold can't pick its text colour from its own.
+                contentColor = Palette.Chalk,
                 contentWindowInsets = WindowInsets(0),
                 topBar = { TopBar(model) { settingsOpen = true } },
                 bottomBar = {
