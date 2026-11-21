@@ -602,8 +602,7 @@ function libraryMixHero() {
           },
           icon('mix'),
           'Remix'
-        ),
-        mixSizePicker()
+        )
       )
     )
   );

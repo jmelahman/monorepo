@@ -1497,10 +1497,6 @@ body:not(.playing-bar) .toast {
     padding: 0 0.875rem;
   }
 
-  .hero .mix-size {
-    display: none;
-  }
-
   .hero p:not(.kicker) {
     margin: 0.75rem 0 0;
   }
