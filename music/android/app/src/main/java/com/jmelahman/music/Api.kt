@@ -236,6 +236,10 @@ object Api {
     // ----------------------------------------------------- mixes and plays
 
     // libraryMix is the day's mix of owned tracks, the same all day.
+    // supermixReady is whether the server has YouTube Music set up, so
+    // the supermix is worth offering.
+    fun supermixReady(): Boolean = JSONObject(request("/api/mix")).optBoolean("supermix")
+
     fun libraryMix(): List<Owned> = list(JSONArray(request("/api/mix/library")), ::parseOwned)
 
     // played counts a play of an owned track toward its smart playlists

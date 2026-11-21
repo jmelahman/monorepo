@@ -46,13 +46,14 @@ proxy; the homelab points it at gluetun, so purchases leave over the VPN.
 
 ## Mixes
 
-Home shows two mixes side by side:
+Home shows up to two mixes side by side:
 
 - **Your Supermix**, streamed: YouTube Music's own Supermix for the
-  account when `MUSIC_YTM_COOKIES` names a cookies.txt exported from a
-  browser signed in to YouTube Music and `MUSIC_YTM_SUPERMIX` names the
-  playlist (its id or URL). Without them, or when YouTube refuses, it is
-  a radio seeded from a random owned track.
+  account, shown only when `MUSIC_YTM_COOKIES` names a cookies.txt
+  exported from a browser signed in to YouTube Music and
+  `MUSIC_YTM_SUPERMIX` names the playlist (its id or URL); `GET /api/mix`
+  says whether they are. When YouTube refuses the account, it is a radio
+  seeded from a random owned track.
 - **Library mix**, owned: fifty tracks from the library, the same all day,
   favouring what is played and resting what was played lately.
 

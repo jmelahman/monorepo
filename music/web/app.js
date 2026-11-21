@@ -26,6 +26,7 @@ const playlistTracks = new Map(); // id → the playlist with its tracks, as las
 let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> for streams
 let lastSearch = { q: '', tracks: null }; // the search last run, so back doesn't run it again
 let apkReady = false; // whether the Android client can be offered
+let supermixReady = false; // whether the server has YouTube Music set up for the supermix
 
 // The same cache names the service worker keeps (web/sw.js).
 const AUDIO = 'music-audio-v1';
@@ -60,6 +61,15 @@ fetch('api/excluded')
   .then((keys) => {
     excluded = new Set(keys);
     markExcluded();
+  })
+  .catch(() => {});
+
+// The supermix is offered only once the server has YouTube Music set up.
+fetch('api/mix')
+  .then((r) => (r.ok ? r.json() : {}))
+  .then((m) => {
+    supermixReady = !!m.supermix;
+    if (supermixReady && route().kind === 'home') render();
   })
   .catch(() => {});
 
@@ -314,17 +324,17 @@ function renderHome() {
         { className: 'shelf' },
         el('a', { className: 'btn chrome', href: 'api/apk', download: '' }, icon('save'), 'Get the Android app')
       ),
-    el('div', { className: 'mixes' }, supermixHero(), libraryMixHero()),
+    el('div', { className: 'mixes' }, supermixReady && supermixHero(), libraryMixHero()),
     Array.isArray(libMix) && libMix.length > 0 && shelf('Library mix', null, ownedList(libItems(libMix))),
-    Array.isArray(mix) && shelf('Your Supermix', null, streamList(mix)),
+    supermixReady && Array.isArray(mix) && shelf('Your Supermix', null, streamList(mix)),
     libraryPending(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
     all.length > 0 && shelf('From your library', '#/library', albumRow(shuffled(all).slice(0, 18)))
   );
 }
 
-// The supermix streams: YouTube Music's own for the account when the
-// server is set up for it, a radio seeded from the library otherwise.
+// The supermix streams YouTube Music's own for the account, or a radio
+// seeded from the library when the account doesn't answer.
 function supermixHero() {
   return el(
     'section',

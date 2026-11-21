@@ -274,7 +274,9 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
                 }
             }
         }
-        item { MixHero(model) }
+        if (model.supermixReady) {
+            item { MixHero(model) }
+        }
         item { LibraryMixHero(model) }
         model.libraryMix?.takeIf { it.isNotEmpty() }?.let { mix ->
             item {
@@ -285,7 +287,7 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             }
             ownedRows(model, mix, null, limit = 5)
         }
-        model.mix?.let { mix ->
+        model.mix?.takeIf { model.supermixReady }?.let { mix ->
             item { SectionTitle("Your Supermix") }
             streamRows(model, mix) { confirming = it }
         }
@@ -377,8 +379,8 @@ private fun MixCard(kicker: String, title: String, text: String, tint: Color, ac
     }
 }
 
-// MixHero is the supermix: YouTube Music's own for the account when the
-// server has its cookies, otherwise a radio seeded from the library.
+// MixHero is the supermix: YouTube Music's own for the account, or a
+// radio seeded from the library when the account doesn't answer.
 @Composable
 private fun MixHero(model: Model) {
     MixCard(

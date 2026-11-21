@@ -198,3 +198,42 @@ func TestShelfRoutes(t *testing.T) {
 	do("DELETE", "/api/playlists/"+p.ID, "", 204)
 	do("GET", "/api/playlists/"+p.ID, "", 404)
 }
+
+// The supermix is offered only once YouTube Music is set up; the compose
+// file mounts an empty cookies file until it is.
+func TestSupermixNeedsTheAccount(t *testing.T) {
+	cookies := filepath.Join(t.TempDir(), "cookies.txt")
+	if err := os.WriteFile(cookies, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := &mixer{cookies: cookies, supermix: "RDTMAK"}
+	mux := http.NewServeMux()
+	routeMixes(mux, m)
+	offered := func() bool {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/mix", nil))
+		var got struct{ Supermix bool }
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		return got.Supermix
+	}
+	if offered() {
+		t.Fatal("offered with an empty cookies file")
+	}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/yt/supermix", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("want 404 without the account, got %d", rec.Code)
+	}
+	if err := os.WriteFile(cookies, []byte("# Netscape HTTP Cookie File\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !offered() {
+		t.Fatal("not offered with the account set up")
+	}
+	m.supermix = ""
+	if offered() {
+		t.Fatal("offered without a playlist id")
+	}
+}

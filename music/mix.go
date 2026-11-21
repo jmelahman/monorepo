@@ -53,7 +53,18 @@ func routeMixes(mux *http.ServeMux, m *mixer) {
 		}
 		writeJSON(w, m.library(flatten(artists), time.Now()))
 	})
+	// Which mixes the server can make: the supermix only once YouTube
+	// Music is set up, so the clients show it only then.
+	mux.HandleFunc("GET /api/mix", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, struct {
+			Supermix bool `json:"supermix"`
+		}{m.accountSet()})
+	})
 	mux.HandleFunc("GET /api/yt/supermix", func(w http.ResponseWriter, r *http.Request) {
+		if !m.accountSet() {
+			http.Error(w, "YouTube Music isn't set up", http.StatusNotFound)
+			return
+		}
 		mix, source, err := m.streamed(r.Context(), r.URL.Query().Get("fresh") != "")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
@@ -134,8 +145,8 @@ func spread(ts []libTrack, rng *rand.Rand) {
 	}
 }
 
-// streamed is the supermix: the account's own when it is set up and
-// answers, otherwise a radio seeded from the library. It is kept for a
+// streamed is the supermix: the account's own, or a radio seeded from
+// the library when the account doesn't answer. It is kept for a
 // while unless a fresh one is asked for.
 func (m *mixer) streamed(ctx context.Context, fresh bool) ([]ytTrack, string, error) {
 	m.mu.Lock()
@@ -164,6 +175,17 @@ func (m *mixer) streamed(ctx context.Context, fresh bool) ([]ytTrack, string, er
 
 func (m *mixer) withoutExcluded(mix []ytTrack) []ytTrack {
 	return slices.DeleteFunc(slices.Clone(mix), func(t ytTrack) bool { return m.shelf.isExcluded("yt:" + t.VideoID) })
+}
+
+// accountSet is whether the account's Supermix is set up: a playlist id
+// and a cookies file with something in it. The compose file mounts an
+// empty file until one is set.
+func (m *mixer) accountSet() bool {
+	if m.cookies == "" || m.supermix == "" {
+		return false
+	}
+	fi, err := os.Stat(m.cookies)
+	return err == nil && fi.Size() > 0
 }
 
 // account fetches the account's own Supermix, or nothing when it isn't

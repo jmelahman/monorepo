@@ -78,6 +78,11 @@ class Model(app: Application) : AndroidViewModel(app) {
     var mixSource by mutableStateOf("")
         private set
 
+    // Whether the server has YouTube Music set up; the supermix is
+    // offered only then.
+    var supermixReady by mutableStateOf(false)
+        private set
+
     // The day's mix of owned tracks.
     var libraryMix by mutableStateOf<List<Owned>?>(null)
         private set
@@ -432,6 +437,9 @@ class Model(app: Application) : AndroidViewModel(app) {
     fun loadLibraryMix() {
         viewModelScope.launch {
             runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix() } }
+        }
+        viewModelScope.launch {
+            runCatching { supermixReady = withContext(Dispatchers.IO) { Api.supermixReady() } }
         }
     }
 
