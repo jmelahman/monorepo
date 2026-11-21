@@ -166,6 +166,13 @@ const artistCover = (a) => (a.albums.length ? coverUrl(a.name, a.albums[0].name)
 const trackNumber = /^\d+[\s._-]*/;
 const trackName = (name) => name.replace(trackNumber, '') || name;
 
+// ownKey names a track by its artist and title as letters and digits
+// alone, so a stream's "TENDER — go steady" finds the library's
+// "Tender/…/05 - Go Steady".
+const fold = (s) => s.replaceAll('&', 'and').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+const ownKey = (artist, title) => `${fold(artist)}\u0000${fold(title)}`;
+let ownedKeys = new Set(); // every library track's ownKey
+
 function mb(bytes) {
   return `${(bytes / 1e6).toFixed(1)} MB`;
 }
@@ -323,6 +330,9 @@ function loadLibrary() {
     .then((artists) => {
       library = artists;
       libraryState = 'ready';
+      ownedKeys = new Set(
+        artists.flatMap((a) => a.albums.flatMap((al) => al.tracks.map((t) => ownKey(a.name, trackName(t.name)))))
+      );
     })
     .catch(() => {
       libraryState = 'failed';
@@ -1103,7 +1113,7 @@ function streamList(tracks) {
             className: 'buy',
             type: 'button',
             title: 'Buy this track into the owned library',
-            dataset: { buy: buyKey(t.artist, t.title) },
+            dataset: { buy: buyKey(t.artist, t.title), own: ownKey(t.artist, t.title) },
             onclick: (e) => buyTrack(e, t),
             textContent: 'Buy',
           }),
@@ -2056,7 +2066,8 @@ async function refreshBuys() {
   }
 }
 
-// markBuys labels each listed track's button with its newest buy.
+// markBuys labels each listed track's button with its newest buy, or as
+// owned when the library has it, however it got there.
 function markBuys() {
   const newest = new Map();
   for (const b of buys) {
@@ -2064,6 +2075,13 @@ function markBuys() {
     if (!newest.has(k)) newest.set(k, b);
   }
   for (const btn of view.querySelectorAll('.buy')) {
+    if (ownedKeys.has(btn.dataset.own)) {
+      btn.textContent = 'Owned';
+      btn.disabled = true;
+      btn.classList.add('owned');
+      btn.title = 'In the library';
+      continue;
+    }
     const b = newest.get(btn.dataset.buy);
     if (!b) continue;
     // A queued buy with an error has failed once and waits to try again.

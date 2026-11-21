@@ -824,7 +824,7 @@ private fun LazyListScope.streamRows(model: Model, tracks: List<YTTrack>, buy: (
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            BuyButton(model.buyFor(t)) { buy(t) }
+            BuyButton(model.buyFor(t), model.owns(t)) { buy(t) }
             StreamMenu(model, t)
         }
     }
@@ -833,8 +833,8 @@ private fun LazyListScope.streamRows(model: Model, tracks: List<YTTrack>, buy: (
 // BuyButton says where a track's newest buy stands, and offers one when
 // there is none or the last failed.
 @Composable
-fun BuyButton(buy: Buy?, onClick: () -> Unit) {
-    val label = when (buy?.status) {
+fun BuyButton(buy: Buy?, inLibrary: Boolean, onClick: () -> Unit) {
+    val label = if (inLibrary) "Owned" else when (buy?.status) {
         // A queued buy with an error has failed once and waits to try again.
         "queued" -> if (buy?.error.isNullOrEmpty()) "Queued" else "Retrying"
         "buying" -> "Buying…"
@@ -842,8 +842,8 @@ fun BuyButton(buy: Buy?, onClick: () -> Unit) {
         "failed" -> "Retry"
         else -> "Buy"
     }
-    val enabled = buy == null || buy.status == "failed"
-    val owned = buy?.status == "done"
+    val owned = inLibrary || buy?.status == "done"
+    val enabled = !owned && (buy == null || buy.status == "failed")
     Box(
         Modifier
             .padding(start = 8.dp)

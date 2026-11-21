@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -625,6 +626,19 @@ class Model(app: Application) : AndroidViewModel(app) {
             Intent(Intent.ACTION_VIEW, Uri.parse("$server/#/buys")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }
+
+    // owns says whether the library has a stream's track, however it got
+    // there: by artist and title as letters and digits alone, so
+    // "TENDER — go steady" is "Tender/…/05 - Go Steady".
+    fun owns(track: YTTrack): Boolean = ownKey(track.artist, track.title) in ownedKeys
+
+    private val ownedKeys by derivedStateOf {
+        library.orEmpty().flatMap { a -> a.albums.flatMap { al -> al.tracks.map { ownKey(a.name, it.title) } } }.toHashSet()
+    }
+
+    private fun ownKey(artist: String, title: String) = "${fold(artist)}\u0000${fold(title)}"
+
+    private fun fold(s: String) = s.replace("&", "and").lowercase().filter { it.isLetterOrDigit() }
 
     // buyFor is the newest buy of a track, if it has one.
     fun buyFor(track: YTTrack): Buy? = buys.firstOrNull {

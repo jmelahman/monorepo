@@ -350,7 +350,7 @@ private fun PlayerSheet(model: Model) {
                 )
                 Text(now.subtitle, color = Palette.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            model.playingStream?.let { t -> BuyButton(model.buyFor(t)) { confirming = t } }
+            model.playingStream?.let { t -> BuyButton(model.buyFor(t), model.owns(t)) { confirming = t } }
         }
         Spacer(Modifier.height(16.dp))
         Slider(
