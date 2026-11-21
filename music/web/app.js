@@ -2398,37 +2398,48 @@ function inLibrary(artist, album) {
 }
 
 // storeShelf is the store's albums for a search, when the server has a
-// store to buy from.
+// store to buy from: all of an artist's when the search names one, then
+// a dozen of the rest.
 function storeShelf(q) {
   if (!buysReady || storeSearch.q !== q) return null;
   const albums = storeSearch.albums;
-  const head = el('div', { className: 'shelf-head' }, el('h2', { textContent: 'Albums in the store' }));
-  let body;
-  if (albums === 'loading' || albums === null) body = el('p', { className: 'empty', textContent: 'Looking in the store…' });
-  else if (albums === 'failed') body = el('p', { className: 'empty', textContent: 'The store could not be searched.' });
-  else if (!albums.length) body = el('p', { className: 'empty', textContent: 'The store has no albums like that.' });
-  else
-    body = el(
-      'ul',
-      { className: 'grid' },
-      albums.slice(0, 12).map((a) =>
+  const section = (title, body) =>
+    el('section', { className: 'shelf' }, el('div', { className: 'shelf-head' }, el('h2', { textContent: title })), body);
+  const note = (text) => section('Albums in the store', el('p', { className: 'empty', textContent: text }));
+  if (albums === 'loading' || albums === null) return note('Looking in the store…');
+  if (albums === 'failed') return note('The store could not be searched.');
+  if (!albums.length) return note('The store has no albums like that.');
+
+  const theirs = albums.filter((a) => fold(a.artist) === fold(q));
+  const rest = albums.filter((a) => fold(a.artist) !== fold(q)).slice(0, 12);
+  return [
+    theirs.length > 0 && section(`Albums by ${theirs[0].artist} in the store`, storeGrid(theirs)),
+    rest.length > 0 && section(theirs.length ? 'More in the store' : 'Albums in the store', storeGrid(rest)),
+  ];
+}
+
+function storeGrid(albums) {
+  return el(
+    'ul',
+    { className: 'grid' },
+    albums.map((a) => {
+      const owned = inLibrary(a.artist, a.album);
+      return el(
+        'li',
+        {},
         el(
-          'li',
-          {},
-          el(
-            'a',
-            { className: 'tile', href: href('store', a.artist, a.album) },
-            art(a.album, inLibrary(a.artist, a.album) ? coverUrl(a.artist, inLibrary(a.artist, a.album).name) : ''),
-            el('span', { className: 'tile-title', textContent: a.album }),
-            el('span', {
-              className: 'tile-sub',
-              textContent: [a.artist, a.year, inLibrary(a.artist, a.album) && 'In library'].filter(Boolean).join(' · '),
-            })
-          )
+          'a',
+          { className: 'tile', href: href('store', a.artist, a.album) },
+          art(a.album, owned ? coverUrl(a.artist, owned.name) : ''),
+          el('span', { className: 'tile-title', textContent: a.album }),
+          el('span', {
+            className: 'tile-sub',
+            textContent: [a.artist, a.year, owned && 'In library'].filter(Boolean).join(' · '),
+          })
         )
-      )
-    );
-  return el('section', { className: 'shelf' }, head, body);
+      );
+    })
+  );
 }
 
 const dollars = (n) => `$${n.toFixed(2)}`;
