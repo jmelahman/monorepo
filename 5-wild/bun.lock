@@ -5,28 +5,28 @@
     "": {
       "name": "5-wild",
       "dependencies": {
-        "@capacitor/core": "^8.6.0",
+        "@capacitor/core": "^8.6.2",
         "@capacitor/status-bar": "^8.0.4",
         "@fontsource/ibm-plex-mono": "^5.3.0",
         "@fontsource/jersey-20": "^5.3.0",
         "@fontsource/jost": "^5.3.0",
       },
       "devDependencies": {
-        "@capacitor/android": "^8.6.0",
-        "@capacitor/cli": "^8.6.0",
+        "@capacitor/android": "^8.6.2",
+        "@capacitor/cli": "^8.6.2",
         "oxlint": "1.93.0",
-        "playwright-core": "^1.65.0",
+        "playwright-core": "^1.65.1",
         "vite": "^8.3.8",
         "vitest": "^5.1.0",
       },
     },
   },
   "packages": {
-    "@capacitor/android": ["@capacitor/android@8.6.0", "", { "peerDependencies": { "@capacitor/core": "^8.6.0" } }, "sha512-6IJS0TCfV/F/8+324CCwYd3xL6r+TH0W7zzaxYzPz9IV3YWCNvsZDuCCPHUIBC5iASb9od827ddSJ6rz+9Pu1Q=="],
+    "@capacitor/android": ["@capacitor/android@8.6.2", "", { "peerDependencies": { "@capacitor/core": "^8.6.0" } }, "sha512-dWXnXmOVTtxU91n5h11MzoQ7PAMjyzU1qguw0mBJZiwSuhGvLKTG/IlsQ75H8qeE0a1acV2f573x15wYvyzuVA=="],
 
-    "@capacitor/cli": ["@capacitor/cli@8.6.0", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.3", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^7.5.3", "tslib": "^2.8.1", "xcode": "^4.0.0", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-TyLo1v6AqK39inlB5Edm7eFc+dyk4r+Du5bbyD+cRm/u/3b+LkNIeyp5wwYp3ToO3rWiLs4T/PabXGADO0Rlxg=="],
+    "@capacitor/cli": ["@capacitor/cli@8.6.2", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.3", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^7.5.3", "tslib": "^2.8.1", "xcode": "^4.0.0", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-3HeNPX3cEWBSljJT0sJviZCxXRoToTLAufhUcIJh+JMj1xOhLFZpuj8oFRnJ0kNYAf7DIBHQDmilIXloK9+YYg=="],
 
-    "@capacitor/core": ["@capacitor/core@8.6.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-9F2zzuGYTJu+wqmQSEmqnFBfGrhC/njjMCfmxbvg9mq8xJT4wNh5pxbMFZxvW/yDhYJWPEBFQxeqzfo1gKrvxg=="],
+    "@capacitor/core": ["@capacitor/core@8.6.2", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-UEb9crRuqEAe2Iu2eGOEuQ8rLQxpwg7ZZIpl17UJoytEpnV1e4oXXW0K7yYS2NsCOGmJjyLeKjNlgG7tkAoX8g=="],
 
     "@capacitor/status-bar": ["@capacitor/status-bar@8.0.4", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-ZMzBUyHBzwDUxcHadEhvOvmoPmMQGMZgaMRJu8ohELeI6IaxoVH9ZhdF/OHnY3/yykv3Glev8Tnbh4aZY/0B0w=="],
 
@@ -302,7 +302,7 @@
 
     "picomatch": ["picomatch@4.0.7", "", {}, "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA=="],
 
-    "playwright-core": ["playwright-core@1.65.0", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA=="],
+    "playwright-core": ["playwright-core@1.65.1", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw=="],
 
     "plist": ["plist@3.1.1", "", { "dependencies": { "@xmldom/xmldom": "^0.9.10", "base64-js": "^1.5.1", "xmlbuilder": "^15.1.1" } }, "sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA=="],
 
