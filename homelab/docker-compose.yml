@@ -160,7 +160,11 @@ services:
     expose:
       - 18080
     networks:
-      - llama-internal
+      llama-internal:
+        # Not "llama": the proxy answers to that on the networks it fronts,
+        # and it would resolve to itself.
+        aliases:
+          - llama-upstream
     # Router mode: one endpoint for every model in llama.cpp/models.ini,
     # loaded on first request and swapped out when another one needs the
     # memory. The presets keep the Ollama-era ids as aliases, so existing
@@ -192,7 +196,7 @@ services:
     image: alpine/socat
     container_name: llama-proxy
     restart: unless-stopped
-    command: ["TCP-LISTEN:18080,fork,reuseaddr", "TCP:llama:18080"]
+    command: ["TCP-LISTEN:18080,fork,reuseaddr", "TCP:llama-upstream:18080"]
     ports:
       - "18080:18080"
     networks:
