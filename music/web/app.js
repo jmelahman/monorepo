@@ -396,19 +396,19 @@ function supermixHero() {
             { className: 'btn ghost', type: 'button', onclick: () => buildMix(true) },
             icon('mix'),
             'Remix'
-          ),
-        el(
-          'button',
-          {
-            className: 'btn ghost icon-only',
-            type: 'button',
-            title: 'The YouTube Music account',
-            'aria-label': 'The YouTube Music account',
-            onclick: openYTAccount,
-          },
-          icon('more')
-        )
+          )
       )
+    ),
+    el(
+      'button',
+      {
+        className: 'icon-btn card-more',
+        type: 'button',
+        title: 'The YouTube Music account',
+        'aria-label': 'The YouTube Music account',
+        onclick: openYTAccount,
+      },
+      icon('more')
     )
   );
 }

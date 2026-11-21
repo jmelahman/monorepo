@@ -424,7 +424,7 @@ main > .view-title {
 /* The two mixes side by side: streamed and owned. */
 .mixes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
   gap: 1rem;
   margin: 0 0 2.5rem;
 }
@@ -479,10 +479,11 @@ main > .view-title {
   background: transparent;
 }
 
-.btn.icon-only {
-  justify-content: center;
-  width: 2.375rem;
-  padding: 0;
+/* A card's own menu, in its top corner. */
+.hero .card-more {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
 }
 
 .btn-row {
