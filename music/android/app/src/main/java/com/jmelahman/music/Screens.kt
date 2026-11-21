@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -348,10 +350,47 @@ fun Disc(size: Int) {
     }
 }
 
+// MixArt leads a mix or a playlist with four of the covers it will play,
+// or one when it has fewer, as the web's does; blank stands in before it
+// has any. Each cover is a name, which draws the tile when the picture
+// won't, and its picture.
+@Composable
+fun MixArt(covers: List<Pair<String, String?>>, size: Dp, blank: @Composable () -> Unit) {
+    val picked = covers.filter { !it.second.isNullOrEmpty() }.distinctBy { it.second }.take(4)
+    val shown = if (picked.size == 4) picked else picked.take(1)
+    if (shown.isEmpty()) {
+        blank()
+        return
+    }
+    val shape = RoundedCornerShape(if (size > 120.dp) 8.dp else 6.dp)
+    Column(
+        Modifier
+            .size(size)
+            .clip(shape)
+            .background(Palette.CardHi),
+    ) {
+        shown.chunked(2).forEach { row ->
+            Row(Modifier.weight(1f)) {
+                row.forEach { (name, url) ->
+                    Cover(name, url, Modifier.weight(1f).fillMaxHeight(), RectangleShape)
+                }
+            }
+        }
+    }
+}
+
 // MixCard is one of the two mixes on the home page, tinted by its kind:
 // the accent for streams, green for what is owned.
 @Composable
-private fun MixCard(kicker: String, title: String, tint: Color, note: String? = null, actions: @Composable () -> Unit) {
+private fun MixCard(
+    kicker: String,
+    title: String,
+    tint: Color,
+    covers: List<Pair<String, String?>>,
+    note: String? = null,
+    open: (() -> Unit)? = null,
+    actions: @Composable () -> Unit,
+) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
@@ -371,9 +410,12 @@ private fun MixCard(kicker: String, title: String, tint: Color, note: String? = 
             .border(1.dp, Palette.Edge, shape)
             .padding(18.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Disc(52)
-            Column(Modifier.padding(start = 14.dp)) {
+        Row(
+            Modifier.then(if (open != null) Modifier.clickable(onClick = open) else Modifier),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MixArt(covers, 88.dp) { Disc(88) }
+            Column(Modifier.padding(start = 16.dp)) {
                 Kicker(kicker)
                 Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -393,6 +435,7 @@ private fun MixHero(model: Model) {
         if (model.mixSource == "radio") "Seeded from your library" else "From YouTube Music",
         "Supermix",
         Palette.Accent,
+        mix.orEmpty().map { it.title to it.thumb },
         note = when {
             model.mixFailed -> "The mix didn't load."
             model.mixSource == "radio" && model.accountFailed.isNotEmpty() -> model.accountFailed
@@ -421,6 +464,8 @@ private fun LibraryMixHero(model: Model) {
         "Made from your library",
         "Library mix",
         Palette.Owned,
+        mix.orEmpty().map { it.album to Api.coverUrl(it.artist, it.album) },
+        open = { model.go(Screen.LibraryMix) },
     ) {
         ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
         PillButton("Remix", Glyph.Mix, { model.remixLibrary() }, enabled = mix != null)

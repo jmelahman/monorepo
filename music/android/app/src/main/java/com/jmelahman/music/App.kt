@@ -53,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,7 +68,7 @@ fun MusicApp(model: Model) {
             SetupScreen(model, snackbar)
             return@MusicTheme
         }
-        BackHandler(enabled = model.expanded || model.stack.size > 1) { model.back() }
+        BackHandler(enabled = model.expanded || model.stack != listOf(Screen.Home)) { model.back() }
         var settingsOpen by remember { mutableStateOf(false) }
 
         Box(
@@ -89,7 +88,6 @@ fun MusicApp(model: Model) {
                             .navigationBarsPadding(),
                     ) {
                         if (model.playing != null) MiniPlayer(model)
-                        NavBar(model)
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbar) },
@@ -116,8 +114,6 @@ fun MusicApp(model: Model) {
     }
 }
 
-// TopBar is the brand and the tools on a root, a way back and a title
-// on anything stacked over one.
 // PurchasesButton opens the web app's purchases page, counting the buys
 // that failed and need a hand.
 @Composable
@@ -134,6 +130,8 @@ private fun PurchasesButton(model: Model) {
     }
 }
 
+// TopBar is the brand, which goes home, and the tools on a root, a way
+// back and a title on anything stacked over one.
 @Composable
 private fun TopBar(model: Model, openSettings: () -> Unit) {
     val root = model.stack.size == 1
@@ -147,30 +145,44 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (root) {
-            Spacer(Modifier.width(12.dp))
-            Box(
+            Row(
                 Modifier
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(Palette.Chrome),
-                contentAlignment = Alignment.Center,
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { model.tab(Screen.Home) }
+                    .padding(start = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     Modifier
-                        .size(8.dp)
+                        .size(26.dp)
                         .clip(CircleShape)
-                        .background(Palette.Accent),
+                        .background(Palette.Chrome),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Palette.Accent),
+                    )
+                }
+                Text(
+                    "Music",
+                    Modifier.padding(start = 10.dp),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.3).sp,
                 )
             }
-            Text(
-                "Music",
-                Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.3).sp,
-            )
+            IconButton(onClick = { model.tab(Screen.Library()) }) {
+                Icon(
+                    Glyph.Library,
+                    "Library",
+                    Modifier.size(22.dp),
+                    tint = if (model.screen is Screen.Library) Palette.Chalk else Palette.Dim,
+                )
+            }
             IconButton(onClick = { model.go(Screen.Search) }) {
                 Icon(Glyph.Search, "Search", Modifier.size(22.dp))
             }
@@ -195,46 +207,6 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-}
-
-@Composable
-private fun NavBar(model: Model) {
-    val root = model.stack.first()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(60.dp),
-    ) {
-        NavItem("Home", Glyph.Home, root == Screen.Home) { model.tab(Screen.Home) }
-        NavItem("Library", Glyph.Library, root is Screen.Library) { model.tab(Screen.Library()) }
-    }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.NavItem(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val tint = if (selected) Palette.Chalk else Palette.Dim
-    Column(
-        Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
-        Text(
-            label,
-            color = tint,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.padding(top = 3.dp),
-        )
     }
 }
 

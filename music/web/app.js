@@ -1210,7 +1210,7 @@ function showPlaylist(p) {
     el(
       'header',
       { className: 'album-head' },
-      playlistArt(p, { eager: true }),
+      items.length > 0 ? mixArt(items.map((i) => [i.album.album, i.art])) : playlistArt(p, { eager: true }),
       el(
         'div',
         {},
@@ -1235,6 +1235,7 @@ function showPlaylist(p) {
       empty: p.smart ? 'Nothing in the library meets these rules yet.' : 'Add tracks from their menus (⋯).',
     })
   );
+  backdrop(backdropFor(route()));
 }
 
 async function deletePlaylist(p) {
@@ -1759,7 +1760,8 @@ window.addEventListener('hashchange', () => toggleUpNext(false));
 // ------------------------------------------------------------ backdrop
 
 // backdropFor is the cover whose colour washes the top of the page: the
-// album's or artist's in view, or else what is playing.
+// album's or artist's in view, a mix's or playlist's first, or else what
+// is playing.
 function backdropFor(r) {
   if (r.kind === 'album') return coverUrl(r.artist, r.album);
   if (r.kind === 'mix') {
@@ -1769,6 +1771,10 @@ function backdropFor(r) {
   if (r.kind === 'artist') {
     const a = findArtist(r.artist);
     if (a) return artistCover(a);
+  }
+  if (r.kind === 'playlist') {
+    const first = playlistTracks.get(r.id)?.tracks?.[0];
+    if (first) return coverUrl(first.artist, first.album);
   }
   const t = queue[playingIndex];
   return t ? t.art : '';

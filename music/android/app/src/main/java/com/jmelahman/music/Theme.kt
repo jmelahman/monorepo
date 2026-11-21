@@ -112,7 +112,6 @@ object Glyph {
         "M9 18V5l10-2v13M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zm10-2a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z",
         stroke = 1.6f,
     )
-    val Home = icon("home", "M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z")
     val Library = icon("library", "M4 5h2.2v14H4zM8.4 5h2.2v14H8.4zM12.6 5.7l2-.7 4.8 13.3-2 .7z")
     val Tune = icon(
         "tune",

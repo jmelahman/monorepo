@@ -207,7 +207,7 @@ fun PlaylistScreen(model: Model, id: String, padding: PaddingValues) {
                 if (p.smart != null) "Smart playlist" else "Playlist",
                 p.name,
                 listOfNotNull(plural(tracks.size, "track"), p.smart?.let(::describe)).joinToString(" · "),
-                art = { PlaylistArt(p, Modifier.size(200.dp)) },
+                art = { MixArt(tracks.map { it.album to Api.coverUrl(it.artist, it.album) }, 200.dp) { PlaylistArt(p, Modifier.size(200.dp)) } },
             ) {
                 ChromeButton("Play", Glyph.Play, { model.play(tracks, 0) }, enabled = tracks.isNotEmpty())
                 PillButton("Shuffle", Glyph.Shuffle, { model.play(tracks, 0, shuffle = true) }, enabled = tracks.isNotEmpty())
@@ -266,7 +266,7 @@ fun LibraryMixScreen(model: Model, padding: PaddingValues) {
                 "Made from your library",
                 "Library mix",
                 "${plural(mix?.size ?: 0, "track")} you own, new each day",
-                art = { Disc(160) },
+                art = { MixArt(mix.orEmpty().map { it.album to Api.coverUrl(it.artist, it.album) }, 200.dp) { Disc(160) } },
             ) {
                 ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
                 PillButton("Shuffle", Glyph.Shuffle, { model.play(mix.orEmpty(), 0, shuffle = true) }, enabled = !mix.isNullOrEmpty())
