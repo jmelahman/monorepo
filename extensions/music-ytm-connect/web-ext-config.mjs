@@ -10,5 +10,6 @@ export default {
     "LICENSE",
     ".claude",
     "web-ext-artifacts",
+    ".amo-upload-uuid",
   ],
 };
