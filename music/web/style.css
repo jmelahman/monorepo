@@ -1152,16 +1152,13 @@ main > .view-title {
   box-shadow: var(--metal-edge), 0 -8px 24px rgb(0 0 0 / 0.35);
 }
 
-/* What is playing and its controls, together in the bar's middle. */
+/* What is playing sits flush left, its controls in the bar's middle. */
 .middle {
-  grid-column: 2;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  min-width: 0;
+  display: contents;
 }
 
 .controls {
+  grid-column: 2;
   flex: none;
   display: flex;
   align-items: center;
@@ -1176,6 +1173,7 @@ main > .view-title {
 }
 
 .np {
+  grid-column: 1;
   display: flex;
   align-items: center;
   gap: 0.875rem;
@@ -1381,13 +1379,9 @@ body:not(.playing-bar) .toast {
 
   /* The bar keeps the essentials: what is playing, and play/next. */
   .player-bar {
-    grid-template-columns: minmax(0, 1fr);
-    padding-inline: 0.75rem;
-  }
-
-  .middle {
-    grid-column: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.5rem;
+    padding-inline: 0.75rem;
   }
 
   .np {

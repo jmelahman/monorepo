@@ -61,6 +61,13 @@
   <footer id="player-bar" class="player-bar" hidden>
     <input id="seek" class="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek">
     <div class="middle">
+      <div class="np">
+        <div id="np-art" class="art"></div>
+        <div class="np-text">
+          <span id="np-title" class="np-title"></span>
+          <span id="np-sub" class="np-sub"></span>
+        </div>
+      </div>
       <div class="controls">
         <button type="button" id="shuffle" class="icon-btn toggle" aria-label="Shuffle" aria-pressed="false"><svg><use href="#i-shuffle"/></svg></button>
         <button type="button" id="prev" class="icon-btn" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
@@ -68,13 +75,6 @@
         <button type="button" id="next" class="icon-btn" aria-label="Next"><svg><use href="#i-next"/></svg></button>
         <button type="button" id="repeat" class="icon-btn toggle" aria-label="Repeat" aria-pressed="false"><svg><use href="#i-repeat"/></svg></button>
         <span id="time" class="time">0:00 / 0:00</span>
-      </div>
-      <div class="np">
-        <div id="np-art" class="art"></div>
-        <div class="np-text">
-          <span id="np-title" class="np-title"></span>
-          <span id="np-sub" class="np-sub"></span>
-        </div>
       </div>
     </div>
     <div class="aux">
