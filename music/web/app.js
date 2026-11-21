@@ -326,7 +326,7 @@ function renderHome() {
         { className: 'shelf' },
         el('a', { className: 'btn chrome', href: 'api/apk', download: '' }, icon('save'), 'Get the Android app')
       ),
-    el('div', { className: 'mixes' }, supermixReady && supermixHero(), libraryMixHero()),
+    el('div', { className: 'mixes' }, supermixReady ? supermixHero() : connectHero(), libraryMixHero()),
     Array.isArray(libMix) && libMix.length > 0 && shelf('Library mix', null, ownedList(libItems(libMix))),
     supermixReady && Array.isArray(mix) && shelf('Your Supermix', null, streamList(mix)),
     libraryPending(),
@@ -373,10 +373,154 @@ function supermixHero() {
           // The next Play reads one of the new length.
           if (Array.isArray(mix)) mix = null;
           render();
-        })
+        }),
+        el(
+          'button',
+          { className: 'btn ghost', type: 'button', title: 'The YouTube Music account', onclick: openYTAccount },
+          'Account'
+        )
       )
     )
   );
+}
+
+// Without YouTube Music set up, the supermix's place offers to set it up.
+function connectHero() {
+  return el(
+    'section',
+    { className: 'hero connect', 'aria-labelledby': 'connect-title' },
+    el(
+      'div',
+      {},
+      el('p', { className: 'kicker', textContent: 'YouTube Music' }),
+      el('h2', { id: 'connect-title', textContent: 'Your Supermix' }),
+      el('p', { textContent: "Connect your account and the Supermix it makes for you plays here." }),
+      el('div', { className: 'btn-row' }, button('btn chrome', openYTAccount, 'Connect YouTube Music'))
+    )
+  );
+}
+
+// openYTAccount is the panel that sets up the account's supermix: a
+// cookies.txt from a signed-in browser and the Supermix's share link.
+// The server keeps both; the cookies never come back to the page.
+async function openYTAccount() {
+  const status = el('p', { className: 'yt-status', role: 'status' });
+  const failed = el('p', { className: 'yt-failed', hidden: true });
+  const file = el('input', { type: 'file', accept: '.txt,text/plain', className: 'visually-hidden' });
+  const upload = el('label', { className: 'btn chrome' }, file, 'Upload cookies.txt');
+  const removeCookies = button('btn ghost', () => send('DELETE', 'api/yt/account/cookies'), 'Remove');
+  const link = el('input', {
+    type: 'url',
+    placeholder: 'https://music.youtube.com/playlist?list=…',
+    'aria-label': 'The Supermix share link',
+  });
+  const check = button('btn ghost', runCheck, 'Test');
+  let account = null;
+
+  const show_ = (a) => {
+    account = a;
+    const when = a.cookiesAt ? ` on ${new Date(a.cookiesAt).toLocaleDateString()}` : '';
+    status.textContent = a.ready
+      ? `Connected: cookies ${a.cookies === 'saved' ? `uploaded${when}` : 'from the server’s .env'}, Supermix ${a.supermix}.`
+      : !a.cookies && !a.supermix
+        ? 'Not connected yet.'
+        : !a.cookies
+          ? 'The Supermix link is set; the cookies are still needed.'
+          : 'The cookies are set; the Supermix link is still needed.';
+    failed.hidden = !a.failed;
+    failed.textContent = a.failed ? `YouTube refused the account last time: ${a.failed}` : '';
+    removeCookies.hidden = a.cookies !== 'saved';
+    if (document.activeElement !== link) link.value = a.supermixFrom === 'saved' ? a.supermix : '';
+    link.placeholder = a.supermixFrom === 'env' ? `${a.supermix} (from .env)` : 'https://music.youtube.com/playlist?list=…';
+    check.disabled = !a.ready;
+    if (supermixReady !== a.ready) {
+      supermixReady = a.ready;
+      if (route().kind === 'home') render();
+    }
+  };
+
+  async function send(method, url, body, headers) {
+    const r = await fetch(url, { method, body, headers }).catch(() => null);
+    if (!r || !r.ok) {
+      notice(r ? (await r.text()).trim() : 'The server could not be reached');
+      return false;
+    }
+    mix = null; // the account changed; the next Play asks YouTube again
+    show_(await r.json());
+    return true;
+  }
+
+  async function runCheck() {
+    check.disabled = true;
+    check.textContent = 'Testing…';
+    const r = await fetch('api/yt/account/check', { method: 'POST' }).catch(() => null);
+    const out = r && r.ok ? await r.json() : { error: 'the server could not be reached' };
+    check.textContent = 'Test';
+    check.disabled = !account?.ready;
+    failed.hidden = out.ok;
+    failed.textContent = out.ok ? '' : `YouTube refused the account: ${out.error}`;
+    if (out.ok) notice(`Signed in: the Supermix has ${plural(out.tracks, 'track')} ready`);
+  }
+
+  file.onchange = async () => {
+    const f = file.files[0];
+    if (!f) return;
+    if (await send('PUT', 'api/yt/account/cookies', await f.text(), { 'Content-Type': 'text/plain' })) {
+      notice('Cookies saved');
+    }
+    file.value = '';
+  };
+
+  const form = el(
+    'form',
+    { method: 'dialog', className: 'editor yt-account' },
+    el('h2', { textContent: 'YouTube Music' }),
+    status,
+    failed,
+    el('h3', { textContent: '1. Cookies' }),
+    el(
+      'p',
+      { className: 'yt-help' },
+      'In a browser signed in to ',
+      el('a', { href: 'https://music.youtube.com', target: '_blank', rel: 'noopener', textContent: 'music.youtube.com' }),
+      ', export its cookies as a cookies.txt with an extension such as ',
+      el('a', {
+        href: 'https://github.com/kairi003/Get-cookies.txt-LOCALLY',
+        target: '_blank',
+        rel: 'noopener',
+        textContent: 'Get cookies.txt LOCALLY',
+      }),
+      ', then choose the file here. Exported from a private window you then close, they last longer; when YouTube stops taking them, export again.'
+    ),
+    el('div', { className: 'btn-row' }, upload, removeCookies),
+    el('h3', { textContent: '2. The Supermix' }),
+    el(
+      'p',
+      { className: 'yt-help' },
+      'Open your Supermix on YouTube Music, then ⋮ → Share → Copy link, and paste it here.'
+    ),
+    el('div', { className: 'yt-link' }, link, el('button', { className: 'btn ghost', type: 'submit' }, 'Save')),
+    el('div', { className: 'btn-row' }, check, button('btn ghost', () => dialog.close(), 'Done'))
+  );
+  const dialog = el('dialog', { className: 'sheet' }, form);
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    if (
+      await send('PUT', 'api/yt/account/supermix', JSON.stringify({ supermix: link.value }), {
+        'Content-Type': 'application/json',
+      })
+    ) {
+      link.blur();
+      notice(link.value ? 'Supermix saved' : 'Supermix cleared');
+    }
+  };
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+
+  const r = await fetch('api/yt/account').catch(() => null);
+  if (r && r.ok) show_(await r.json());
+  else status.textContent = 'The server could not be reached.';
 }
 
 // The library mix plays what is owned, a new one each day; the phone

@@ -50,18 +50,25 @@ type mixer struct {
 	music string
 	shelf *shelf
 	// cookies is a cookies.txt from a browser signed in to YouTube Music,
-	// and supermix the account's Supermix playlist; with both, the
-	// supermix is the account's own.
+	// and supermix the account's Supermix playlist, both from the
+	// environment; what the YouTube Music panel saves under state wins
+	// over them (ytaccount.go). With both, the supermix is the account's
+	// own.
 	cookies, supermix string
+	state             string
 
 	mu     sync.Mutex
 	cached []ytTrack
 	asked  int // the size cached was built for
 	source string
 	at     time.Time
+	// failed is why the account's mix last failed, cleared when it next
+	// answers or the account changes.
+	failed string
 }
 
 func routeMixes(mux *http.ServeMux, m *mixer) {
+	routeYTAccount(mux, m)
 	mux.HandleFunc("GET /api/mix/library", func(w http.ResponseWriter, r *http.Request) {
 		artists, err := walkLibrary(m.music)
 		if err != nil {
@@ -178,6 +185,12 @@ func (m *mixer) streamed(ctx context.Context, size int, fresh bool) ([]ytTrack, 
 	m.mu.Unlock()
 
 	mix, source, err := m.account(ctx, size)
+	m.mu.Lock()
+	m.failed = ""
+	if err != nil {
+		m.failed = err.Error()
+	}
+	m.mu.Unlock()
 	if err != nil {
 		slog.Warn("supermix: the account's mix failed; using the library radio", "err", err)
 	}
@@ -201,24 +214,20 @@ func (m *mixer) withoutExcluded(mix []ytTrack, size int) []ytTrack {
 }
 
 // accountSet is whether the account's Supermix is set up: a playlist id
-// and a cookies file with something in it. The compose file mounts an
-// empty file until one is set.
+// and a cookies file with something in it.
 func (m *mixer) accountSet() bool {
-	if m.cookies == "" || m.supermix == "" {
-		return false
-	}
-	fi, err := os.Stat(m.cookies)
-	return err == nil && fi.Size() > 0
+	return m.cookiesFile() != "" && m.supermixID() != ""
 }
 
 // account fetches the account's own Supermix, or nothing when it isn't
 // set up. yt-dlp writes the cookies back when it is done, so it gets a
 // copy and the file stays read-only.
 func (m *mixer) account(ctx context.Context, size int) ([]ytTrack, string, error) {
-	if m.cookies == "" || m.supermix == "" {
+	cookies, supermix := m.cookiesFile(), m.supermixID()
+	if cookies == "" || supermix == "" {
 		return nil, "", nil
 	}
-	src, err := os.Open(m.cookies)
+	src, err := os.Open(cookies)
 	if err != nil {
 		return nil, "", err
 	}
@@ -239,7 +248,7 @@ func (m *mixer) account(ctx context.Context, size int) ([]ytTrack, string, error
 		// The compose file mounts an empty file until one is set.
 		return nil, "", nil
 	}
-	url := m.supermix
+	url := supermix
 	if !strings.Contains(url, "://") {
 		url = "https://music.youtube.com/playlist?list=" + url
 	}

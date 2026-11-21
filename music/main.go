@@ -86,6 +86,7 @@ func main() {
 	routeMixes(mux, &mixer{
 		music: *music, shelf: shelf,
 		cookies: os.Getenv("MUSIC_YTM_COOKIES"), supermix: os.Getenv("MUSIC_YTM_SUPERMIX"),
+		state: *state,
 	})
 	routeApp(mux, *apk)
 	routeYouTube(mux)

@@ -872,6 +872,67 @@ main > .view-title {
   font: inherit;
 }
 
+/* The YouTube Music panel. */
+.yt-account label.btn {
+  cursor: pointer;
+}
+
+/* The file input sits inside its label, out of sight but focusable. */
+.yt-account label.btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.yt-account h3 {
+  margin: 0.5rem 0 0;
+  font: 600 1rem/1.2 var(--cond);
+}
+
+.yt-status,
+.yt-help,
+.yt-failed {
+  margin: 0;
+}
+
+.yt-help {
+  color: var(--dim);
+  font-size: 0.875rem;
+}
+
+.yt-help a {
+  color: inherit;
+}
+
+.yt-failed {
+  color: var(--accent);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.yt-link {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.yt-link input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The supermix's place before YouTube Music is connected. */
+.hero.connect {
+  background: var(--card);
+}
+
 .rules {
   display: flex;
   flex-direction: column;

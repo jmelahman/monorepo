@@ -49,11 +49,16 @@ proxy; the homelab points it at gluetun, so purchases leave over the VPN.
 Home shows up to two mixes side by side:
 
 - **Your Supermix**, streamed: YouTube Music's own Supermix for the
-  account, shown only when `MUSIC_YTM_COOKIES` names a cookies.txt
-  exported from a browser signed in to YouTube Music and
-  `MUSIC_YTM_SUPERMIX` names the playlist (its id or URL); `GET /api/mix`
-  says whether they are. When YouTube refuses the account, it is a radio
-  seeded from random owned tracks.
+  account, shown once the account is connected; `GET /api/mix` says
+  whether it is. **Connect YouTube Music** on the home page uploads a
+  cookies.txt exported from a browser signed in to YouTube Music and
+  takes the Supermix's share link; the server keeps both in its state
+  directory (the cookies readable by it alone) and never hands the
+  cookies back. Its **Test** button asks YouTube there and then. The
+  `MUSIC_YTM_COOKIES` and `MUSIC_YTM_SUPERMIX` variables still work, and
+  what the panel saves wins over them. When YouTube refuses the account,
+  the mix is a radio seeded from random owned tracks, and the panel says
+  why.
 - **Library mix**, owned: tracks from the library, the same all day,
   favouring what is played and resting what was played lately.
 
