@@ -1748,7 +1748,7 @@ function renderUpNext() {
     next.length
       ? el('ol', { className: 'tracks' }, next.slice(0, upNextShown).map(row))
       : el('p', { className: 'empty', textContent: 'Nothing after this.' }),
-    more > 0 && el('p', { className: 'empty', textContent: `And ${more.toLocaleString()} more.` })
+    ...(more > 0 ? [el('p', { className: 'empty', textContent: `And ${more.toLocaleString()} more.` })] : [])
   );
   markTrack();
 }
