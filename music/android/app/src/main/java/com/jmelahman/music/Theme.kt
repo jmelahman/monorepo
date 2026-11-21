@@ -105,6 +105,17 @@ object Glyph {
     val Prev = icon("prev", "M6 5h2v14H6zM9.5 12 19 5.5v13z")
     val Next = icon("next", "M16 5h2v14h-2zM14.5 12 5 18.5v-13z")
     val Shuffle = icon("shuffle", "M16 4h4v4M4 20 20 4M20 16v4h-4M15 15l5 5M4 4l5 5", stroke = 1.8f)
+    val Repeat = icon(
+        "repeat",
+        "M17 3l3 3-3 3M4 11V9.5A3.5 3.5 0 0 1 7.5 6H20M7 21l-3-3 3-3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H4",
+        stroke = 1.8f,
+    )
+    val RepeatOne = icon(
+        "repeat-one",
+        "M17 3l3 3-3 3M4 11V9.5A3.5 3.5 0 0 1 7.5 6H20M7 21l-3-3 3-3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H4",
+        "M11 10.5l1.5-1v5",
+        stroke = 1.8f,
+    )
     val Search = icon("search", "M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5 20 20", stroke = 1.8f)
     val Save = icon("save", "M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19.5h14", stroke = 1.8f)
     val Saved = icon(

@@ -161,6 +161,10 @@ class Model(app: Application) : AndroidViewModel(app) {
         private set
     var hasNext by mutableStateOf(false)
         private set
+    var shuffle by mutableStateOf(false)
+        private set
+    var repeat by mutableStateOf(Player.REPEAT_MODE_OFF)
+        private set
     var expanded by mutableStateOf(false)
 
     // The streams in the queue, by media id, so the player can offer to
@@ -198,6 +202,8 @@ class Model(app: Application) : AndroidViewModel(app) {
         isPlaying = p.isPlaying
         duration = p.duration.coerceAtLeast(0)
         hasNext = p.hasNextMediaItem()
+        shuffle = p.shuffleModeEnabled
+        repeat = p.repeatMode
         if (item == null) expanded = false
     }
 
@@ -212,7 +218,29 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     fun previous() = controller?.seekToPrevious()
 
-    fun seekTo(ms: Long) = controller?.seekTo(ms)
+    // seeks counts the jumps, so a paused rail reads the new position.
+    var seeks by mutableStateOf(0)
+        private set
+
+    fun seekTo(ms: Long) {
+        controller?.seekTo(ms) ?: return
+        seeks++
+    }
+
+    fun toggleShuffle() {
+        val c = controller ?: return
+        c.shuffleModeEnabled = !c.shuffleModeEnabled
+    }
+
+    // cycleRepeat goes from off to the whole queue to the one track.
+    fun cycleRepeat() {
+        val c = controller ?: return
+        c.repeatMode = when (c.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
 
     init {
         Api.baseUrl = settings.baseUrl

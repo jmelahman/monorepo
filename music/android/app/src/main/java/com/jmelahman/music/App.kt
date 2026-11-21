@@ -8,13 +8,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,8 +44,6 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -52,15 +54,24 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.Player
 import kotlinx.coroutines.delay
 
 @Composable
@@ -228,7 +239,7 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
 @Composable
 private fun rememberPosition(model: Model): Long {
     var position by remember { mutableLongStateOf(model.position()) }
-    LaunchedEffect(model.isPlaying, model.playing?.id) {
+    LaunchedEffect(model.isPlaying, model.playing?.id, model.seeks) {
         position = model.position()
         while (model.isPlaying) {
             delay(500)
@@ -307,10 +318,6 @@ private fun PlayButton(model: Model, size: Int) {
 private fun PlayerSheet(model: Model) {
     val now = model.playing ?: return
     val position = rememberPosition(model)
-    // While dragging, the rail follows the thumb instead of the player.
-    var dragging by remember { mutableStateOf(false) }
-    var dragAt by remember { mutableFloatStateOf(0f) }
-    val shown = if (dragging) dragAt.toLong() else position
     var confirming by remember { mutableStateOf<YTTrack?>(null) }
 
     // The player has the wash of what is playing, as the screens do.
@@ -371,28 +378,7 @@ private fun PlayerSheet(model: Model) {
                 model.playingStream?.let { t -> BuyButton(model.buyFor(t), model.owns(t)) { confirming = t } }
             }
             Spacer(Modifier.height(16.dp))
-            Slider(
-                value = shown.toFloat().coerceIn(0f, model.duration.toFloat().coerceAtLeast(1f)),
-                onValueChange = {
-                    dragging = true
-                    dragAt = it
-                },
-                onValueChangeFinished = {
-                    model.seekTo(dragAt.toLong())
-                    dragging = false
-                },
-                valueRange = 0f..model.duration.toFloat().coerceAtLeast(1f),
-                enabled = model.duration > 0,
-                colors = SliderDefaults.colors(
-                    thumbColor = Palette.Chalk,
-                    activeTrackColor = Palette.Accent,
-                    inactiveTrackColor = Palette.Track,
-                ),
-            )
-            Row(Modifier.fillMaxWidth()) {
-                Text(clock(shown), color = Palette.Dim, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text(if (model.duration > 0) clock(model.duration) else "–:––", color = Palette.Dim, fontSize = 12.sp)
-            }
+            SeekBar(position, model.duration, model::seekTo)
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -400,6 +386,9 @@ private fun PlayerSheet(model: Model) {
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                ModeButton(Glyph.Shuffle, if (model.shuffle) "Shuffle is on" else "Shuffle", model.shuffle) {
+                    model.toggleShuffle()
+                }
                 IconButton(onClick = { model.previous() }, Modifier.size(56.dp)) {
                     Icon(Glyph.Prev, "Previous", Modifier.size(30.dp))
                 }
@@ -407,11 +396,113 @@ private fun PlayerSheet(model: Model) {
                 IconButton(onClick = { model.next() }, Modifier.size(56.dp), enabled = model.hasNext) {
                     Icon(Glyph.Next, "Next", Modifier.size(30.dp), tint = if (model.hasNext) Palette.Chalk else Palette.Dim)
                 }
+                ModeButton(
+                    if (model.repeat == Player.REPEAT_MODE_ONE) Glyph.RepeatOne else Glyph.Repeat,
+                    when (model.repeat) {
+                        Player.REPEAT_MODE_ALL -> "Repeating the queue"
+                        Player.REPEAT_MODE_ONE -> "Repeating this track"
+                        else -> "Repeat"
+                    },
+                    model.repeat != Player.REPEAT_MODE_OFF,
+                ) { model.cycleRepeat() }
             }
             Spacer(Modifier.height(16.dp))
         }
     }
     BuyDialog(model, confirming) { confirming = null }
+}
+
+// ModeButton is shuffle or repeat: the accent with a dot under it while
+// on, dim while off.
+@Composable
+private fun ModeButton(glyph: ImageVector, label: String, on: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, Modifier.size(48.dp)) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(glyph, label, Modifier.size(22.dp), tint = if (on) Palette.Accent else Palette.Dim)
+            if (on) {
+                Box(
+                    Modifier
+                        .padding(top = 34.dp)
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(Palette.Accent),
+                )
+            }
+        }
+    }
+}
+
+// SeekBar is the player's rail: a hairline that thickens under the finger
+// and shows a knob while held. A tap jumps; a drag scrubs, and the player
+// only seeks when the finger lifts. The clocks read the elapsed and the
+// time left, and brighten while scrubbing.
+@Composable
+private fun SeekBar(position: Long, duration: Long, onSeek: (Long) -> Unit) {
+    var held by remember { mutableStateOf(false) }
+    var heldAt by remember { mutableFloatStateOf(0f) }
+    val enabled = duration > 0
+    val fraction = when {
+        held -> heldAt
+        enabled -> (position.toFloat() / duration).coerceIn(0f, 1f)
+        else -> 0f
+    }
+    val grow by animateFloatAsState(if (held) 1f else 0f, tween(140), label = "seek")
+    val length by rememberUpdatedState(duration)
+    val seek by rememberUpdatedState(onSeek)
+    val shown = if (held) (heldAt * duration).toLong() else position
+    Column(Modifier.fillMaxWidth()) {
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    fun at(x: Float) = (x / size.width).coerceIn(0f, 1f)
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        down.consume()
+                        held = true
+                        heldAt = at(down.position.x)
+                        while (true) {
+                            val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                            if (!c.pressed) break
+                            heldAt = at(c.position.x)
+                            c.consume()
+                        }
+                        seek((heldAt * length).toLong())
+                        held = false
+                    }
+                },
+        ) {
+            val h = (3f + 4f * grow).dp.toPx()
+            val y = size.height / 2
+            val corner = CornerRadius(h / 2)
+            drawRoundRect(Palette.Track, Offset(0f, y - h / 2), Size(size.width, h), corner)
+            val x = size.width * fraction
+            if (x > 0f) {
+                drawRoundRect(
+                    Brush.horizontalGradient(listOf(Palette.Accent.copy(alpha = 0.55f), Palette.Accent), endX = x),
+                    Offset(0f, y - h / 2),
+                    Size(x, h),
+                    corner,
+                )
+            }
+            if (grow > 0f) {
+                drawCircle(Palette.Accent.copy(alpha = 0.25f * grow), 16.dp.toPx() * grow, Offset(x, y))
+                drawCircle(Palette.Chalk, 7.dp.toPx() * grow, Offset(x, y))
+            }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            val tint = if (held) Palette.Chalk else Palette.Dim
+            val digits = TextStyle(fontSize = 12.sp, fontFeatureSettings = "tnum")
+            Text(clock(shown), Modifier.weight(1f), color = tint, style = digits)
+            Text(
+                if (enabled) "−" + clock((duration - shown).coerceAtLeast(0)) else "–:––",
+                color = tint,
+                style = digits,
+            )
+        }
+    }
 }
 
 // Meter is the playing row's three bars, moving while it plays.
