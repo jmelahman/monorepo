@@ -48,7 +48,7 @@ proxy; the homelab points it at gluetun, so purchases leave over the VPN.
 
 Home shows up to two mixes side by side:
 
-- **Your Supermix**, streamed: YouTube Music's own Supermix for the
+- **Supermix**, streamed: YouTube Music's own Supermix for the
   account, shown once the account is connected; `GET /api/mix` says
   whether it is. **Connect YouTube Music** on the home page uploads a
   cookies.txt exported from a browser signed in to YouTube Music and

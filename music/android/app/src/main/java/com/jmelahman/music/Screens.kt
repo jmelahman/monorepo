@@ -288,7 +288,7 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             ownedRows(model, mix, null, limit = 5)
         }
         model.mix?.takeIf { model.supermixReady }?.let { mix ->
-            item { SectionTitle("Your Supermix") }
+            item { SectionTitle("Supermix") }
             streamRows(model, mix) { confirming = it }
         }
         if (library == null) {
@@ -348,7 +348,7 @@ fun Disc(size: Int) {
 // MixCard is one of the two mixes on the home page, tinted by its kind:
 // the accent for streams, green for what is owned.
 @Composable
-private fun MixCard(kicker: String, title: String, text: String, tint: Color, actions: @Composable () -> Unit) {
+private fun MixCard(kicker: String, title: String, tint: Color, actions: @Composable () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
@@ -374,8 +374,7 @@ private fun MixCard(kicker: String, title: String, text: String, tint: Color, ac
                 Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-        Text(text, color = Palette.Dim, modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
+        Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
     }
 }
 
@@ -385,8 +384,7 @@ private fun MixCard(kicker: String, title: String, text: String, tint: Color, ac
 private fun MixHero(model: Model) {
     MixCard(
         if (model.mixSource == "radio") "Seeded from your library" else "From YouTube Music",
-        "Your Supermix",
-        "Streams to discover. Hear something you like, buy it in.",
+        "Supermix",
         Palette.Accent,
     ) {
         ChromeButton(
@@ -415,7 +413,6 @@ private fun LibraryMixHero(model: Model) {
     MixCard(
         "Made from your library",
         "Library mix",
-        if (mix == null) "Mixing…" else "${plural(mix.size, "track")} you own, new each day.",
         Palette.Owned,
     ) {
         ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())

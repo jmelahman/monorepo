@@ -352,6 +352,14 @@ main > .view-title {
   color: var(--dim);
 }
 
+.hero .btn-row {
+  margin-top: 1rem;
+}
+
+.hero p + .btn-row {
+  margin-top: 0;
+}
+
 /* The two mixes side by side: streamed and owned. */
 .mixes {
   display: grid;

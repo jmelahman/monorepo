@@ -328,7 +328,7 @@ function renderHome() {
       ),
     el('div', { className: 'mixes' }, supermixReady ? supermixHero() : connectHero(), libraryMixHero()),
     Array.isArray(libMix) && libMix.length > 0 && shelf('Library mix', null, ownedList(libItems(libMix))),
-    supermixReady && Array.isArray(mix) && shelf('Your Supermix', null, streamList(mix)),
+    supermixReady && Array.isArray(mix) && shelf('Supermix', null, streamList(mix)),
     libraryPending(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
     all.length > 0 && shelf('From your library', '#/library', albumRow(shuffled(all).slice(0, 18)))
@@ -349,8 +349,7 @@ function supermixHero() {
         className: 'kicker',
         textContent: mixSource === 'radio' ? 'Radio from your library' : 'From YouTube Music',
       }),
-      el('h2', { id: 'mix-title', textContent: 'Your Supermix' }),
-      el('p', { textContent: 'Streams to discover. Hear something you like, buy it in.' }),
+      el('h2', { id: 'mix-title', textContent: 'Supermix' }),
       el(
         'div',
         { className: 'btn-row' },
@@ -393,7 +392,7 @@ function connectHero() {
       'div',
       {},
       el('p', { className: 'kicker', textContent: 'YouTube Music' }),
-      el('h2', { id: 'connect-title', textContent: 'Your Supermix' }),
+      el('h2', { id: 'connect-title', textContent: 'Supermix' }),
       el('p', { textContent: "Connect your account and the Supermix it makes for you plays here." }),
       el('div', { className: 'btn-row' }, button('btn chrome', openYTAccount, 'Connect YouTube Music'))
     )
@@ -537,14 +536,7 @@ function libraryMixHero() {
       {},
       el('p', { className: 'kicker', textContent: 'Made from your library' }),
       el('h2', { id: 'libmix-title', textContent: 'Library mix' }),
-      el('p', {
-        textContent:
-          libMix === 'failed'
-            ? 'The mix could not be read.'
-            : ready
-              ? `${plural(libMix.length, 'track')} you own, new each day.`
-              : 'Picking from what you own…',
-      }),
+      libMix === 'failed' && el('p', { textContent: 'The mix could not be read.' }),
       el(
         'div',
         { className: 'btn-row' },
