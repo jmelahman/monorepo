@@ -423,6 +423,19 @@ main > .view-title {
   gap: 0.625rem;
 }
 
+/* How many tracks a mix holds, beside its buttons. */
+.mix-size {
+  min-height: 2.25rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
 .icon-btn {
   display: inline-grid;
   flex: none;

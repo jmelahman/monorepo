@@ -403,6 +403,7 @@ private fun MixHero(model: Model) {
         if (!mix.isNullOrEmpty()) {
             PillButton("Play", Glyph.Play, { model.playStreams(mix, 0) })
         }
+        SizePicker(model.supermixSize) { model.sizeSupermix(it) }
     }
 }
 
@@ -419,7 +420,14 @@ private fun LibraryMixHero(model: Model) {
     ) {
         ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
         KeepButton(model, Settings.LIBRARY_MIX, "the library mix")
+        SizePicker(model.mixSize) { model.sizeLibraryMix(it) }
     }
+}
+
+// SizePicker chooses how many tracks a mix holds.
+@Composable
+private fun SizePicker(size: Int, pick: (Int) -> Unit) {
+    Picker(Settings.MIX_SIZES.associate { "$it" to "$it tracks" }, "$size") { pick(it.toInt()) }
 }
 
 // -------------------------------------------------------------- library

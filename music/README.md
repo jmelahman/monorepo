@@ -53,9 +53,14 @@ Home shows up to two mixes side by side:
   exported from a browser signed in to YouTube Music and
   `MUSIC_YTM_SUPERMIX` names the playlist (its id or URL); `GET /api/mix`
   says whether they are. When YouTube refuses the account, it is a radio
-  seeded from a random owned track.
-- **Library mix**, owned: fifty tracks from the library, the same all day,
+  seeded from random owned tracks.
+- **Library mix**, owned: tracks from the library, the same all day,
   favouring what is played and resting what was played lately.
+
+Each mix holds 50, 100, 200 or 500 tracks (`?size=`, 50 by default),
+chosen beside its buttons; the Supermix is as long as the account's
+playlist runs. The phone keeps the library mix at the length it last
+chose.
 
 A track kept out of the mixes, from its ⋮ menu, comes up in neither.
 

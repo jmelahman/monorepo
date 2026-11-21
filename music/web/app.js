@@ -26,6 +26,8 @@ const playlistTracks = new Map(); // id → the playlist with its tracks, as las
 let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> for streams
 let lastSearch = { q: '', tracks: null }; // the search last run, so back doesn't run it again
 let apkReady = false; // whether the Android client can be offered
+let mixSize = remember('music-mix-size', 50); // tracks in the library mix
+let supermixSize = remember('music-supermix-size', 50); // tracks in the supermix
 let supermixReady = false; // whether the server has YouTube Music set up for the supermix
 
 // The same cache names the service worker keeps (web/sw.js).
@@ -364,7 +366,14 @@ function supermixHero() {
             { className: 'btn ghost', type: 'button', onclick: () => buildMix(true) },
             icon('mix'),
             'New mix'
-          )
+          ),
+        sizePicker(supermixSize, (n) => {
+          supermixSize = n;
+          keep('music-supermix-size', n);
+          // The next Play reads one of the new length.
+          if (Array.isArray(mix)) mix = null;
+          render();
+        })
       )
     )
   );
@@ -400,16 +409,32 @@ function libraryMixHero() {
           { className: 'btn chrome', type: 'button', disabled: !ready, onclick: () => playQueue(libItems(libMix), 0) },
           icon('play'),
           'Play'
-        )
+        ),
+        sizePicker(mixSize, (n) => {
+          mixSize = n;
+          keep('music-mix-size', n);
+          libMix = null;
+          render();
+        })
       )
     )
+  );
+}
+
+// sizePicker chooses how many tracks a mix holds, from what the server
+// makes.
+function sizePicker(current, onchange) {
+  return el(
+    'select',
+    { className: 'mix-size', 'aria-label': 'Tracks in the mix', onchange: (e) => onchange(Number(e.target.value)) },
+    [50, 100, 200, 500].map((n) => el('option', { value: n, selected: n === current, textContent: `${n} tracks` }))
   );
 }
 
 async function loadLibraryMix() {
   libMix = 'loading';
   try {
-    const r = await fetch('api/mix/library');
+    const r = await fetch(`api/mix/library?size=${mixSize}`);
     if (!r.ok) throw new Error(r.status);
     libMix = await r.json();
   } catch {
@@ -446,7 +471,7 @@ async function buildMix(fresh) {
   mix = 'loading';
   render();
   try {
-    const r = await fetch(`api/yt/supermix${fresh ? '?fresh=1' : ''}`);
+    const r = await fetch(`api/yt/supermix?size=${supermixSize}${fresh ? '&fresh=1' : ''}`);
     if (!r.ok) throw new Error((await r.text()).trim() || r.status);
     mixSource = r.headers.get('X-Mix-Source') || '';
     mix = await r.json();

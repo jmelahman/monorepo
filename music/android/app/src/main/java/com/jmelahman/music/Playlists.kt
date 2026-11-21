@@ -559,7 +559,7 @@ private fun RuleRow(r: Rule, change: (Rule) -> Unit, remove: () -> Unit) {
 
 // Picker is a choice of a few, as a text button that opens them.
 @Composable
-private fun Picker(options: Map<String, String>, value: String, pick: (String) -> Unit) {
+fun Picker(options: Map<String, String>, value: String, pick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         TextButton(onClick = { open = true }) { Text((options[value] ?: value) + " ▾", color = Palette.Chalk) }

@@ -11,16 +11,32 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-// mixLength is how many tracks a mix holds.
+// mixLength is how many tracks a mix holds unless asked for another of
+// mixSizes.
 const mixLength = 50
 
-// mixPerArtist keeps one artist from filling the library mix.
+// mixSizes are the lengths a mix can be asked for, with ?size=.
+var mixSizes = []int{50, 100, 200, 500}
+
+// mixPerArtist keeps one artist from filling the library mix: this many
+// in every mixLength tracks.
 const mixPerArtist = 3
+
+// mixSize reads ?size=, falling back to mixLength for anything not in
+// mixSizes.
+func mixSize(r *http.Request) int {
+	n, err := strconv.Atoi(r.URL.Query().Get("size"))
+	if err != nil || !slices.Contains(mixSizes, n) {
+		return mixLength
+	}
+	return n
+}
 
 // mixKeep is how long a streamed mix is kept before YouTube is asked for
 // another; asking afresh is slow, and the mix should hold still while it
@@ -40,18 +56,19 @@ type mixer struct {
 
 	mu     sync.Mutex
 	cached []ytTrack
+	asked  int // the size cached was built for
 	source string
 	at     time.Time
 }
 
 func routeMixes(mux *http.ServeMux, m *mixer) {
-	mux.HandleFunc("GET /api/mix/library", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /api/mix/library", func(w http.ResponseWriter, r *http.Request) {
 		artists, err := walkLibrary(m.music)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, m.library(flatten(artists), time.Now()))
+		writeJSON(w, m.library(flatten(artists), time.Now(), mixSize(r)))
 	})
 	// Which mixes the server can make: the supermix only once YouTube
 	// Music is set up, so the clients show it only then.
@@ -65,7 +82,7 @@ func routeMixes(mux *http.ServeMux, m *mixer) {
 			http.Error(w, "YouTube Music isn't set up", http.StatusNotFound)
 			return
 		}
-		mix, source, err := m.streamed(r.Context(), r.URL.Query().Get("fresh") != "")
+		mix, source, err := m.streamed(r.Context(), mixSize(r), r.URL.Query().Get("fresh") != "")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
@@ -79,8 +96,9 @@ func routeMixes(mux *http.ServeMux, m *mixer) {
 
 // library picks the library mix: the same all day, so a phone keeping it
 // fetches one new set a day. Played tracks weigh more, the last two days'
-// less, and no artist has more than a few.
-func (m *mixer) library(all []libTrack, now time.Time) []libTrack {
+// less, and no artist has more than a few. A small library makes a
+// shorter mix than size.
+func (m *mixer) library(all []libTrack, now time.Time, size int) []libTrack {
 	rng := dailyRand("library-mix", now)
 	type scored struct {
 		t libTrack
@@ -103,12 +121,13 @@ func (m *mixer) library(all []libTrack, now time.Time) []libTrack {
 	}
 	slices.SortFunc(picks, func(a, b scored) int { return -cmpFloat(a.k, b.k) })
 	per := map[string]int{}
+	perArtist := max(mixPerArtist, mixPerArtist*size/mixLength)
 	out := []libTrack{}
 	for _, p := range picks {
-		if len(out) == mixLength {
+		if len(out) == size {
 			break
 		}
-		if per[p.t.Artist] == mixPerArtist {
+		if per[p.t.Artist] == perArtist {
 			continue
 		}
 		per[p.t.Artist]++
@@ -147,34 +166,38 @@ func spread(ts []libTrack, rng *rand.Rand) {
 
 // streamed is the supermix: the account's own, or a radio seeded from
 // the library when the account doesn't answer. It is kept for a
-// while unless a fresh one is asked for.
-func (m *mixer) streamed(ctx context.Context, fresh bool) ([]ytTrack, string, error) {
+// while unless a fresh or a longer one is asked for; a shorter one is
+// the start of the one kept.
+func (m *mixer) streamed(ctx context.Context, size int, fresh bool) ([]ytTrack, string, error) {
 	m.mu.Lock()
-	if !fresh && m.cached != nil && time.Since(m.at) < mixKeep {
+	if !fresh && m.cached != nil && m.asked >= size && time.Since(m.at) < mixKeep {
 		mix, source := m.cached, m.source
 		m.mu.Unlock()
-		return m.withoutExcluded(mix), source, nil
+		return m.withoutExcluded(mix, size), source, nil
 	}
 	m.mu.Unlock()
 
-	mix, source, err := m.account(ctx)
+	mix, source, err := m.account(ctx, size)
 	if err != nil {
 		slog.Warn("supermix: the account's mix failed; using the library radio", "err", err)
 	}
 	if mix == nil {
 		source = "radio"
-		if mix, err = ytSupermix(ctx, m.music, m.shelf); err != nil {
+		if mix, err = ytSupermix(ctx, m.music, m.shelf, size); err != nil {
 			return nil, "", err
 		}
 	}
 	m.mu.Lock()
-	m.cached, m.source, m.at = mix, source, time.Now()
+	m.cached, m.asked, m.source, m.at = mix, size, source, time.Now()
 	m.mu.Unlock()
-	return m.withoutExcluded(mix), source, nil
+	return m.withoutExcluded(mix, size), source, nil
 }
 
-func (m *mixer) withoutExcluded(mix []ytTrack) []ytTrack {
-	return slices.DeleteFunc(slices.Clone(mix), func(t ytTrack) bool { return m.shelf.isExcluded("yt:" + t.VideoID) })
+// withoutExcluded is the first size tracks of mix the listener hasn't
+// excluded.
+func (m *mixer) withoutExcluded(mix []ytTrack, size int) []ytTrack {
+	out := slices.DeleteFunc(slices.Clone(mix), func(t ytTrack) bool { return m.shelf.isExcluded("yt:" + t.VideoID) })
+	return out[:min(len(out), size)]
 }
 
 // accountSet is whether the account's Supermix is set up: a playlist id
@@ -191,7 +214,7 @@ func (m *mixer) accountSet() bool {
 // account fetches the account's own Supermix, or nothing when it isn't
 // set up. yt-dlp writes the cookies back when it is done, so it gets a
 // copy and the file stays read-only.
-func (m *mixer) account(ctx context.Context) ([]ytTrack, string, error) {
+func (m *mixer) account(ctx context.Context, size int) ([]ytTrack, string, error) {
 	if m.cookies == "" || m.supermix == "" {
 		return nil, "", nil
 	}
@@ -220,7 +243,7 @@ func (m *mixer) account(ctx context.Context) ([]ytTrack, string, error) {
 	if !strings.Contains(url, "://") {
 		url = "https://music.youtube.com/playlist?list=" + url
 	}
-	mix, err := ytFlat(ctx, url, mixLength, "--cookies", tmp.Name())
+	mix, err := ytFlat(ctx, url, size, "--cookies", tmp.Name())
 	if err != nil {
 		return nil, "", err
 	}
@@ -232,8 +255,9 @@ func (m *mixer) account(ctx context.Context) ([]ytTrack, string, error) {
 
 // ytSupermix builds a mix like the store apps' own: a seed from the
 // owned library, expanded through YouTube's radio into a run of tracks
-// the library doesn't have to own yet.
-func ytSupermix(ctx context.Context, musicDir string, s *shelf) ([]ytTrack, error) {
+// the library doesn't have to own yet. One radio runs to a few hundred
+// tracks, so a longer mix takes more seeds.
+func ytSupermix(ctx context.Context, musicDir string, s *shelf, size int) ([]ytTrack, error) {
 	artists, err := walkLibrary(musicDir)
 	if err != nil {
 		return nil, err
@@ -242,8 +266,31 @@ func ytSupermix(ctx context.Context, musicDir string, s *shelf) ([]ytTrack, erro
 	if len(all) == 0 {
 		return nil, errors.New("the owned library is empty; nothing to seed a mix from")
 	}
-	seed := all[rand.IntN(len(all))]
+	var mix []ytTrack
+	seen := map[string]bool{}
+	for try := 0; try < radioSeeds && len(mix) < size; try++ {
+		radio, err := ytRadio(ctx, all[rand.IntN(len(all))], size+1)
+		if err != nil {
+			if len(mix) > 0 {
+				break
+			}
+			return nil, err
+		}
+		for _, t := range radio {
+			if !seen[t.VideoID] {
+				seen[t.VideoID] = true
+				mix = append(mix, t)
+			}
+		}
+	}
+	return mix[:min(len(mix), size)], nil
+}
 
+// radioSeeds is how many radios a supermix may draw on.
+const radioSeeds = 4
+
+// ytRadio is YouTube's radio for an owned track, without the track.
+func ytRadio(ctx context.Context, seed libTrack, limit int) ([]ytTrack, error) {
 	// Find the seed on YouTube, then let the radio do the rest.
 	// Track numbers only muddy the search.
 	name := trackNumber.ReplaceAllString(seed.Name, "")
@@ -252,15 +299,15 @@ func ytSupermix(ctx context.Context, musicDir string, s *shelf) ([]ytTrack, erro
 		return nil, fmt.Errorf("no YouTube match for %s — %s", seed.Artist, name)
 	}
 	seedID := found[0].VideoID
-	mix, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+seedID+"&list=RD"+seedID, mixLength+1)
+	radio, err := ytFlat(ctx, "https://www.youtube.com/watch?v="+seedID+"&list=RD"+seedID, limit)
 	if err != nil {
 		return nil, err
 	}
 	// The radio starts on its own seed, which the library already owns;
 	// the mix is what follows it.
-	mix = slices.DeleteFunc(mix, func(t ytTrack) bool { return t.VideoID == seedID })
-	if len(mix) == 0 {
+	radio = slices.DeleteFunc(radio, func(t ytTrack) bool { return t.VideoID == seedID })
+	if len(radio) == 0 {
 		return nil, fmt.Errorf("YouTube has no radio for %s — %s", seed.Artist, name)
 	}
-	return mix, nil
+	return radio, nil
 }

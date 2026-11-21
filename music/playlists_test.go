@@ -119,7 +119,7 @@ func TestLibraryMix(t *testing.T) {
 	}
 	m := &mixer{music: root, shelf: s}
 	now := time.Now()
-	mix := m.library(all, now)
+	mix := m.library(all, now, mixLength)
 	if len(mix) != mixLength {
 		t.Fatalf("want %d tracks, got %d", mixLength, len(mix))
 	}
@@ -136,8 +136,16 @@ func TestLibraryMix(t *testing.T) {
 		}
 	}
 	// The same all day: a phone keeping it doesn't churn.
-	if again := m.library(all, now); !slices.Equal(names(again), names(mix)) {
+	if again := m.library(all, now, mixLength); !slices.Equal(names(again), names(mix)) {
 		t.Fatal("the mix changed within the day")
+	}
+	// A longer mix lets each artist in more often, and a library too
+	// small for it makes a shorter one: 29 artists of 5 is 145 tracks.
+	if long := m.library(all, now, 100); len(long) != 100 {
+		t.Fatalf("want 100 tracks, got %d", len(long))
+	}
+	if all := m.library(all, now, 500); len(all) != 145 {
+		t.Fatalf("want the whole library's 145 tracks, got %d", len(all))
 	}
 }
 
@@ -235,5 +243,13 @@ func TestSupermixNeedsTheAccount(t *testing.T) {
 	m.supermix = ""
 	if offered() {
 		t.Fatal("offered without a playlist id")
+	}
+}
+
+func TestMixSize(t *testing.T) {
+	for q, want := range map[string]int{"": mixLength, "size=200": 200, "size=500": 500, "size=7": mixLength, "size=x": mixLength} {
+		if got := mixSize(httptest.NewRequest(http.MethodGet, "/api/mix/library?"+q, nil)); got != want {
+			t.Errorf("%q: want %d, got %d", q, want, got)
+		}
 	}
 }

@@ -240,7 +240,7 @@ object Api {
     // the supermix is worth offering.
     fun supermixReady(): Boolean = JSONObject(request("/api/mix")).optBoolean("supermix")
 
-    fun libraryMix(): List<Owned> = list(JSONArray(request("/api/mix/library")), ::parseOwned)
+    fun libraryMix(size: Int): List<Owned> = list(JSONArray(request("/api/mix/library?size=$size")), ::parseOwned)
 
     // played counts a play of an owned track toward its smart playlists
     // and the library mix.
@@ -268,9 +268,9 @@ object Api {
 
     // ytSupermix is the supermix and where it came from: "account", the
     // YouTube Music account's own, or "radio", seeded from the library.
-    fun ytSupermix(fresh: Boolean): Pair<List<YTTrack>, String> {
+    fun ytSupermix(size: Int, fresh: Boolean): Pair<List<YTTrack>, String> {
         var source = ""
-        val body = request("/api/yt/supermix${if (fresh) "?fresh=1" else ""}") { source = it.getHeaderField("X-Mix-Source").orEmpty() }
+        val body = request("/api/yt/supermix?size=$size${if (fresh) "&fresh=1" else ""}") { source = it.getHeaderField("X-Mix-Source").orEmpty() }
         return parseYT(body) to source
     }
 

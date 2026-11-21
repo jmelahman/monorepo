@@ -35,6 +35,16 @@ class Settings(context: Context) {
         get() = prefs.getStringSet("kept", null) ?: setOf(LIBRARY_MIX)
         set(value) = prefs.edit().putStringSet("kept", HashSet(value)).apply()
 
+    // How many tracks the library mix and the supermix hold, from
+    // MIX_SIZES.
+    var mixSize: Int
+        get() = prefs.getInt("mix_size", MIX_SIZES.first())
+        set(value) = prefs.edit().putInt("mix_size", value).apply()
+
+    var supermixSize: Int
+        get() = prefs.getInt("supermix_size", MIX_SIZES.first())
+        set(value) = prefs.edit().putInt("supermix_size", value).apply()
+
     // Whether the albums saved before there was a kept set have joined it.
     var keptMigrated: Boolean
         get() = prefs.getBoolean("kept_migrated", false)
@@ -54,6 +64,9 @@ class Settings(context: Context) {
 
     companion object {
         const val LIBRARY_MIX = "mix:library"
+
+        // The lengths the server makes a mix in.
+        val MIX_SIZES = listOf(50, 100, 200, 500)
 
         fun playlistKey(id: String) = "playlist:$id"
 

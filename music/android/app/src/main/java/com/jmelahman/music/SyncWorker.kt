@@ -60,7 +60,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val gone = HashSet<String>()
         for (key in kept) {
             when {
-                key == Settings.LIBRARY_MIX -> Api.libraryMix().forEach { out[it.track.path] = it }
+                key == Settings.LIBRARY_MIX -> Api.libraryMix(settings.mixSize).forEach { out[it.track.path] = it }
                 key.startsWith("playlist:") -> try {
                     Api.playlist(key.removePrefix("playlist:")).tracks.orEmpty().forEach { out[it.track.path] = it }
                 } catch (e: HttpException) {

@@ -78,6 +78,12 @@ class Model(app: Application) : AndroidViewModel(app) {
     var mixSource by mutableStateOf("")
         private set
 
+    // How many tracks each mix holds (Settings.MIX_SIZES).
+    var mixSize by mutableStateOf(settings.mixSize)
+        private set
+    var supermixSize by mutableStateOf(settings.supermixSize)
+        private set
+
     // Whether the server has YouTube Music set up; the supermix is
     // offered only then.
     var supermixReady by mutableStateOf(false)
@@ -303,7 +309,7 @@ class Model(app: Application) : AndroidViewModel(app) {
         val fresh = mix != null
         viewModelScope.launch {
             try {
-                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(fresh) }
+                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(supermixSize, fresh) }
                 mix = m
                 mixSource = source
                 if (m.isNotEmpty()) playStreams(m, 0)
@@ -436,11 +442,30 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     fun loadLibraryMix() {
         viewModelScope.launch {
-            runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix() } }
+            runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix(mixSize) } }
         }
         viewModelScope.launch {
             runCatching { supermixReady = withContext(Dispatchers.IO) { Api.supermixReady() } }
         }
+    }
+
+    // sizeLibraryMix sets how long the library mix is, rereading it and
+    // syncing the phone's copy when it is kept.
+    fun sizeLibraryMix(n: Int) {
+        if (n == mixSize) return
+        mixSize = n
+        settings.mixSize = n
+        libraryMix = null
+        loadLibraryMix()
+        if (Settings.LIBRARY_MIX in kept) Sync.now(context)
+    }
+
+    // sizeSupermix sets how long the next supermix is.
+    fun sizeSupermix(n: Int) {
+        if (n == supermixSize) return
+        supermixSize = n
+        settings.supermixSize = n
+        mix = null
     }
 
     // exclude keeps a track (a path, or yt:<id>) out of the mixes, or lets
