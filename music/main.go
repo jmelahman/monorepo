@@ -154,32 +154,53 @@ func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
 		// browser only pulls what it has played.
 		http.ServeFile(w, r, name)
 	})
-	mux.HandleFunc("GET /api/cover", func(w http.ResponseWriter, r *http.Request) {
-		// An album's art by the names the library lists it under; the
-		// Singles an artist's loose tracks are gathered into have no
-		// folder of their own, so their art is looked for among them.
-		q := r.URL.Query()
-		artist, album := q.Get("artist"), q.Get("album")
+	// albumDir is the folder an album's art goes by, from the names the
+	// library lists it under; the Singles an artist's loose tracks are
+	// gathered into have no folder of their own, so their art is looked
+	// for among them, in the artist's.
+	albumDir := func(artist, album string) (dir string, loose bool, err error) {
 		if strings.ContainsAny(artist+album, "/\\") {
-			http.NotFound(w, r)
-			return
+			return "", false, errors.New("no such album")
 		}
 		artistDir, err := safeJoin(music, artist)
 		if err != nil {
-			http.NotFound(w, r)
-			return
+			return "", false, err
 		}
-		dir, err := safeJoin(artistDir, album)
+		if dir, err = safeJoin(artistDir, album); err != nil {
+			return "", false, err
+		}
+		if album == singlesName && !isDir(dir) {
+			return artistDir, true, nil
+		}
+		return dir, false, nil
+	}
+	mux.HandleFunc("GET /api/cover", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		dir, loose, err := albumDir(q.Get("artist"), q.Get("album"))
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
-		loose := false
-		if info, err := os.Stat(dir); album == singlesName && (err != nil || !info.IsDir()) {
-			dir, loose = artistDir, true
-		}
 		serveCover(w, r, dir, loose)
 	})
+	routeCoverEdit(mux, func(artist, album string) (string, error) {
+		dir, loose, err := albumDir(artist, album)
+		if err != nil {
+			return "", errors.New("no such album")
+		}
+		if loose {
+			return "", errors.New("the Singles have no folder of their own to keep a cover in")
+		}
+		if !isDir(dir) {
+			return "", errors.New("no such album")
+		}
+		return dir, nil
+	})
+}
+
+func isDir(name string) bool {
+	info, err := os.Stat(name)
+	return err == nil && info.IsDir()
 }
 
 // routeApp serves the Android client's APK and what version it is, so

@@ -55,8 +55,9 @@ func serveCover(w http.ResponseWriter, r *http.Request, dir string, loose bool) 
 		http.NotFound(w, r)
 		return
 	}
-	// The art changes only when the library does; a day is plenty.
-	w.Header().Set("Cache-Control", "max-age=86400")
+	// Art can be changed by hand, so it is checked for each time; asking
+	// costs a 304 when it hasn't.
+	w.Header().Set("Cache-Control", "no-cache")
 	if !isAudio(src) {
 		http.ServeFile(w, r, src)
 		return
@@ -69,8 +70,12 @@ func serveCover(w http.ResponseWriter, r *http.Request, dir string, loose bool) 
 		http.NotFound(w, r)
 		return
 	}
+	var mod time.Time
+	if info, err := os.Stat(src); err == nil {
+		mod = info.ModTime()
+	}
 	w.Header().Set("Content-Type", mime)
-	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(img))
+	http.ServeContent(w, r, "", mod, bytes.NewReader(img))
 }
 
 // findCover picks a folder's art: a named image first, then the first
