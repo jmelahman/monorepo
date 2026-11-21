@@ -119,7 +119,7 @@ func TestLibraryMix(t *testing.T) {
 	}
 	m := &mixer{music: root, shelf: s}
 	now := time.Now()
-	mix := m.library(all, now, mixLength)
+	mix := m.library(all, now, mixLength, 0)
 	if len(mix) != mixLength {
 		t.Fatalf("want %d tracks, got %d", mixLength, len(mix))
 	}
@@ -136,15 +136,21 @@ func TestLibraryMix(t *testing.T) {
 		}
 	}
 	// The same all day: a phone keeping it doesn't churn.
-	if again := m.library(all, now, mixLength); !slices.Equal(names(again), names(mix)) {
+	if again := m.library(all, now, mixLength, 0); !slices.Equal(names(again), names(mix)) {
 		t.Fatal("the mix changed within the day")
+	}
+	// A remix is another draw, and the same one again for the same number.
+	if other := m.library(all, now, mixLength, 7); slices.Equal(names(other), names(mix)) {
+		t.Fatal("a remix drew the day's own mix")
+	} else if again := m.library(all, now, mixLength, 7); !slices.Equal(names(again), names(other)) {
+		t.Fatal("the same remix drew another mix")
 	}
 	// A longer mix lets each artist in more often, and a library too
 	// small for it makes a shorter one: 29 artists of 5 is 145 tracks.
-	if long := m.library(all, now, 100); len(long) != 100 {
+	if long := m.library(all, now, 100, 0); len(long) != 100 {
 		t.Fatalf("want 100 tracks, got %d", len(long))
 	}
-	if all := m.library(all, now, 500); len(all) != 145 {
+	if all := m.library(all, now, 500, 0); len(all) != 145 {
 		t.Fatalf("want the whole library's 145 tracks, got %d", len(all))
 	}
 }

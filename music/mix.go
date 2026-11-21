@@ -80,7 +80,9 @@ func routeMixes(mux *http.ServeMux, m *mixer) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, m.library(flatten(artists), time.Now(), mixSize(r)))
+		// ?remix=N draws the day's Nth other mix; without it, the day's own.
+		remix, _ := strconv.Atoi(r.URL.Query().Get("remix"))
+		writeJSON(w, m.library(flatten(artists), time.Now(), mixSize(r), remix))
 	})
 	// Which mixes the server can make: the supermix only once YouTube
 	// Music is set up, so the clients show it only then.
@@ -109,9 +111,14 @@ func routeMixes(mux *http.ServeMux, m *mixer) {
 // library picks the library mix: the same all day, so a phone keeping it
 // fetches one new set a day. Played tracks weigh more, the last two days'
 // less, and no artist has more than a few. A small library makes a
-// shorter mix than size.
-func (m *mixer) library(all []libTrack, now time.Time, size int) []libTrack {
-	rng := dailyRand("library-mix", now)
+// shorter mix than size. A remix other than 0 draws another mix for the
+// day.
+func (m *mixer) library(all []libTrack, now time.Time, size, remix int) []libTrack {
+	name := "library-mix"
+	if remix != 0 {
+		name += "/" + strconv.Itoa(remix)
+	}
+	rng := dailyRand(name, now)
 	type scored struct {
 		t libTrack
 		k float64

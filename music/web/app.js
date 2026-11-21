@@ -22,6 +22,7 @@ let order = []; // the queue's indices in the order they play: shuffled, or not
 let mix = null; // the supermix last built, kept for its page
 let mixSource = ''; // account (YouTube Music's own) or radio (seeded from the library)
 let libMix = null; // the library mix: null until asked for, then 'loading', a list or 'failed'
+let libRemix = 0; // which of the day's library mixes: 0 is the day's own, others Remix's
 let playlists = null; // from api/playlists, without their tracks
 const playlistTracks = new Map(); // id → the playlist with its tracks, as last read
 let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> for streams
@@ -400,20 +401,6 @@ function supermixHero() {
           icon('play'),
           mix === 'loading' ? 'Mixing…' : 'Play'
         ),
-        Array.isArray(mix) &&
-          el(
-            'button',
-            {
-              className: 'btn ghost',
-              type: 'button',
-              onclick: () => {
-                location.hash = href('mix', 'supermix');
-                remix();
-              },
-            },
-            icon('mix'),
-            'Remix'
-          )
       )
     ),
     el(
@@ -594,6 +581,20 @@ function libraryMixHero() {
           icon('play'),
           'Play'
         ),
+        el(
+          'button',
+          {
+            className: 'btn ghost',
+            type: 'button',
+            disabled: libMix === 'loading',
+            onclick: () => {
+              location.hash = href('mix', 'library');
+              remix();
+            },
+          },
+          icon('mix'),
+          'Remix'
+        ),
         mixSizePicker()
       )
     )
@@ -622,7 +623,7 @@ function sizePicker(current, onchange) {
 async function loadLibraryMix() {
   libMix = 'loading';
   try {
-    const r = await fetch(`api/mix/library?size=${mixSize}`);
+    const r = await fetch(`api/mix/library?size=${mixSize}${libRemix ? `&remix=${libRemix}` : ''}`);
     if (!r.ok) throw new Error(r.status);
     libMix = await r.json();
   } catch {
@@ -657,16 +658,16 @@ async function openMix(which) {
     if (Array.isArray(libMix) && libMix.length) playQueue(libItems(libMix), 0);
     return;
   }
-  if (!Array.isArray(mix)) await loadSupermix(false);
+  if (!Array.isArray(mix)) await loadSupermix();
   if (Array.isArray(mix) && mix.length) playStreams(mix, 0);
 }
 
-// loadSupermix reads the supermix; fresh asks the server for a new one.
-async function loadSupermix(fresh) {
+// loadSupermix reads the supermix.
+async function loadSupermix() {
   mix = 'loading';
   render();
   try {
-    const r = await fetch(`api/yt/supermix${fresh ? '?fresh=1' : ''}`);
+    const r = await fetch('api/yt/supermix');
     if (!r.ok) throw new Error((await r.text()).trim() || r.status);
     mixSource = r.headers.get('X-Mix-Source') || '';
     mix = await r.json();
@@ -677,10 +678,14 @@ async function loadSupermix(fresh) {
   if (onMixes()) render();
 }
 
-// remix asks for a new supermix and plays it.
+// remix draws another library mix for the day and plays it. The supermix
+// has none: YouTube Music makes it, and asking again brings the same.
 async function remix() {
-  await loadSupermix(true);
-  if (Array.isArray(mix) && mix.length) playStreams(mix, 0);
+  libRemix = 1 + Math.floor(Math.random() * 1e9);
+  const loaded = loadLibraryMix();
+  if (onMixes()) render(); // "Mixing…" while it loads
+  await loaded;
+  if (Array.isArray(libMix) && libMix.length) playQueue(libItems(libMix), 0);
 }
 
 // The mixes' pages: the mix's covers, its buttons, then its tracks.
@@ -706,7 +711,7 @@ function renderSupermix() {
     show(connectHero());
     return;
   }
-  if (mix === null) loadSupermix(false);
+  if (mix === null) loadSupermix();
   const ready = Array.isArray(mix) && mix.length > 0;
   show(
     mixHead(
@@ -716,12 +721,6 @@ function renderSupermix() {
       ready && plural(mix.length, 'track'),
       ready && button('btn chrome', () => playStreams(mix, 0), icon('play'), 'Play'),
       ready && button('btn', () => playStreams(shuffled(mix), 0), icon('shuffle'), 'Shuffle'),
-      el(
-        'button',
-        { className: 'btn ghost', type: 'button', disabled: mix === 'loading', onclick: remix },
-        icon('mix'),
-        'Remix'
-      ),
       el(
         'button',
         {
@@ -749,9 +748,15 @@ function renderLibraryMix() {
       ready ? libMix.map((t) => [t.album, coverUrl(t.artist, t.album)]) : [],
       'Made from your library',
       'Library mix',
-      ready && `${plural(items.length, 'track')} · a new one each day`,
+      ready && `${plural(items.length, 'track')} · ${libRemix ? 'remixed' : 'a new one each day'}`,
       ready && button('btn chrome', () => playQueue(items, 0), icon('play'), 'Play'),
       ready && button('btn', () => playQueue(shuffled(items), 0), icon('shuffle'), 'Shuffle'),
+      el(
+        'button',
+        { className: 'btn ghost', type: 'button', disabled: libMix === 'loading', onclick: remix },
+        icon('mix'),
+        'Remix'
+      ),
       mixSizePicker()
     ),
     libMix === 'failed'
