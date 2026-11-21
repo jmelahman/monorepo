@@ -8,6 +8,7 @@ export default {
     "web-ext-config.mjs",
     "README.md",
     "LICENSE",
+    ".claude",
     "web-ext-artifacts",
   ],
 };

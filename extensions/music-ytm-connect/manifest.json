@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Music: Connect YouTube Music",
+  "name": "Music Server Connect for YouTube Music",
   "version": "0.1.0",
   "description": "Sends your YouTube Music sign-in, and your Supermix, to your own music server.",
   "browser_specific_settings": {

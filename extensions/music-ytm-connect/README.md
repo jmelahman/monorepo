@@ -12,7 +12,7 @@ your YouTube Music account, without exporting a cookies.txt by hand.
 - **Test** asks the server to fetch the Supermix there and then.
 
 The server's address is typed into the popup and kept in the extension's
-storage; nothing in this repository names it. Saving it asks Firefox for
+synced storage; nothing in this repository names it. Saving it asks Firefox for
 access to that one origin, which lets the popup call the server. The
 cookies go only there.
 
@@ -47,7 +47,15 @@ bun run start
 
 # Package a .zip
 bun run build
+
+# Upload and sign a listed version on AMO
+# (credentials: https://addons.mozilla.org/en-US/developers/addon/api/key/)
+WEB_EXT_API_KEY=... WEB_EXT_API_SECRET=... bun run sign
 ```
+
+Installed from AMO, Firefox Sync carries the extension and the server
+address to every browser; each one still asks for access to the server
+once, on Save. The listing's text is drafted in `.claude/amo-listing.md`.
 
 To load it manually instead: open `about:debugging#/runtime/this-firefox` →
 **Load Temporary Add-on…** → select `manifest.json`.

@@ -41,7 +41,9 @@ function describe(a) {
 async function refresh() {
   actions.hidden = !base;
   if (!base) {
-    say(status, "Type the music server's address, as you open it in the browser.");
+    say(status, input.value
+      ? "Save to let this browser reach the server."
+      : "Type the music server's address, as you open it in the browser.");
     return;
   }
   try {
@@ -76,7 +78,7 @@ form.addEventListener("submit", (e) => {
     }
     base = typed;
     input.value = base;
-    await browser.storage.local.set({ server: base });
+    await browser.storage.sync.set({ server: base });
     say(result, "");
     await refresh();
   });
@@ -143,7 +145,9 @@ check.addEventListener("click", async () => {
   }
 });
 
-const saved = await browser.storage.local.get("server");
+// The address follows Firefox Sync; the permission to reach it doesn't,
+// so each browser is asked once, by Save.
+const saved = await browser.storage.sync.get("server");
 if (saved.server) {
   const granted = await browser.permissions.contains({ origins: [`${new URL(saved.server).origin}/*`] });
   base = granted ? saved.server : "";
