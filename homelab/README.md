@@ -102,7 +102,16 @@ clients request:
 | `qwen3.6:35b-a3b` | text only                              |
 | `qwen3.8:27b`     | vision, via its mmproj                 |
 
-The GGUFs live in `models/`, which is not committed. They came from Ollama's
+To add a model from Hugging Face, `llama.cpp/pull-model.py` downloads a quant
+into `models/` and appends its preset to `llama.cpp/models.ini` (`--mmproj` also
+fetches the vision projector):
+
+```shell
+./llama.cpp/pull-model.py unsloth/Inkling-2-Mini-GGUF Q4_K_M --id inkling-2-mini
+docker compose up -d llama
+```
+
+The GGUFs live in `models/`, which is not committed. The first ones came from Ollama's
 blob store (an Ollama model is a GGUF plus metadata). Two of them had a vision
 tower fused into the same file, which llama.cpp rejects, so
 `llama.cpp/convert-ollama-gguf.py` repacks the header and drops those tensors.
