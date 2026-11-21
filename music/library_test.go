@@ -42,3 +42,17 @@ func TestWalkLibraryMergesSingles(t *testing.T) {
 		t.Fatalf("paths: %+v", singles.Tracks)
 	}
 }
+
+func TestSongOf(t *testing.T) {
+	for _, c := range []struct{ title, channel, name, artist string }{
+		{"Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)", "Rick Astley", "Never Gonna Give You Up", "Rick Astley"},
+		{"Survivor - Eye Of The Tiger (Official HD Video)", "Survivor Band", "Eye Of The Tiger", "Survivor"},
+		{"Dead Or Alive - You Spin Me Round (Like a Record) (Official Video)", "deadoralivetv", "You Spin Me Round (Like a Record)", "Dead Or Alive"},
+		{"Here Comes The Sun - Remastered 2019", "The Beatles - Topic", "Here Comes The Sun - Remastered 2019", "The Beatles"},
+		{"Bad Romance (Official Music Video)", "LadyGagaVEVO", "Bad Romance", "LadyGaga"},
+	} {
+		if name, artist := songOf(c.title, c.channel); name != c.name || artist != c.artist {
+			t.Errorf("songOf(%q, %q) = %q, %q; want %q, %q", c.title, c.channel, name, artist, c.name, c.artist)
+		}
+	}
+}

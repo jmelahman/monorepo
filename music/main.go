@@ -505,16 +505,41 @@ func ytFlat(ctx context.Context, url string, limit int, extra ...string) ([]ytTr
 		if json.Unmarshal([]byte(line), &raw) != nil || raw.ID == "" || raw.Title == "" {
 			continue
 		}
-		artist := raw.Channel
-		if artist == "" {
-			artist = raw.Uploader
+		channel := raw.Channel
+		if channel == "" {
+			channel = raw.Uploader
 		}
+		title, artist := songOf(raw.Title, channel)
 		tracks = append(tracks, ytTrack{
-			VideoID: raw.ID, Title: raw.Title, Artist: artist, Duration: raw.Duration,
+			VideoID: raw.ID, Title: title, Artist: artist, Duration: raw.Duration,
 			Thumb: "https://i.ytimg.com/vi/" + raw.ID + "/mqdefault.jpg",
 		})
 	}
 	return tracks, nil
+}
+
+// videoTags are what music videos add to a song's name: "(Official
+// Video)", "[4K Remaster]", "(Lyrics)" and the like.
+var videoTags = regexp.MustCompile(`(?i)\s*[(\[][^)\]]*\b(official|video|audio|lyrics?|visualizer|remaster(ed)?|hd|4k|mv)\b[^)\]]*[)\]]`)
+
+// songOf reads a song's name and artist from a video's title and channel.
+// An artist's "Topic" channel names the song as it is; otherwise the
+// title is most often "Artist - Song (Official Video)", and the channel
+// a label's or "ArtistVEVO".
+func songOf(title, channel string) (name, artist string) {
+	if a, ok := strings.CutSuffix(channel, " - Topic"); ok {
+		return title, a
+	}
+	name = strings.TrimSpace(videoTags.ReplaceAllString(title, ""))
+	for _, dash := range []string{" - ", " – ", " — "} {
+		if a, song, ok := strings.Cut(name, dash); ok && strings.TrimSpace(a) != "" && strings.TrimSpace(song) != "" {
+			return strings.TrimSpace(song), strings.TrimSpace(a)
+		}
+	}
+	if name == "" {
+		name = title
+	}
+	return name, strings.TrimSuffix(channel, "VEVO")
 }
 
 // ytdlp runs yt-dlp and returns what it printed, or the last thing it
