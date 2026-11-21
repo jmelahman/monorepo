@@ -5,3 +5,7 @@ Dockerfile
 /android/.gradle/
 /android/app/build/
 /android/build/
+
+# Store providers are mounted at run time, and the private ones stay off
+# the image's build entirely.
+/stores/
