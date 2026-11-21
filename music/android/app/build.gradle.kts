@@ -12,8 +12,8 @@ android {
         applicationId = "com.jmelahman.music"
         minSdk = 29
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.12"
+        versionCode = 13
+        versionName = "0.13"
 
         // The server a fresh install starts on, from the musicServer
         // property (in ~/.gradle/gradle.properties, never this
