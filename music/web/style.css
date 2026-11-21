@@ -1887,3 +1887,59 @@ body:not(.playing-bar) .toast {
 .store-track.unpickable .name {
   color: var(--dim);
 }
+
+/* The versions of a track the store sells, to pick the one to buy. */
+.buy-matches {
+  display: grid;
+  gap: 0.25rem;
+  max-height: min(50vh, 26rem);
+  overflow-y: auto;
+}
+
+.buy-matches:empty {
+  display: none;
+}
+
+.buy-match {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.buy-match:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.buy-match.owned {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.buy-match input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.buy-match-text {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.buy-match-text .name,
+.buy-match-text .sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buy-match-text .sub {
+  color: var(--dim);
+  font-size: 0.8125rem;
+}

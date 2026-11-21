@@ -14,8 +14,9 @@ import (
 // nothing; only the tracks picked and confirmed are bought, through the
 // queue like any other buy.
 
-// storeLook bounds a search or an album's page.
-const storeLook = 45 * time.Second
+// storePreview bounds a search, an album's page, or a buy's preview,
+// which may read a score of the artist's albums.
+const storePreview = 2 * time.Minute
 
 // albumPick is a track picked off a store album's page.
 type albumPick struct {
@@ -31,7 +32,7 @@ func routeStore(mux *http.ServeMux, q *buyQueue) {
 			http.Error(w, "no store provider configured", http.StatusServiceUnavailable)
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), storeLook)
+		ctx, cancel := context.WithTimeout(r.Context(), storePreview)
 		defer cancel()
 		out, err := q.provider(ctx, args...)
 		if err != nil {
@@ -62,6 +63,21 @@ func routeStore(mux *http.ServeMux, q *buyQueue) {
 			return
 		}
 		look(w, r, "album", "--", artist, album)
+	})
+	// A preview lists the store's tracks a buy for a streamed track
+	// could be, the likeliest first, and buys nothing.
+	mux.HandleFunc("GET /api/buy/preview", func(w http.ResponseWriter, r *http.Request) {
+		v := r.URL.Query()
+		artist, title := strings.TrimSpace(v.Get("artist")), strings.TrimSpace(v.Get("title"))
+		if artist == "" || title == "" {
+			http.Error(w, "artist and title required", http.StatusBadRequest)
+			return
+		}
+		if q == nil {
+			http.Error(w, "no store provider configured", http.StatusServiceUnavailable)
+			return
+		}
+		look(w, r, "buy", "--dry-run", "--artist="+artist, "--title="+title, "--dir="+q.music)
 	})
 	// Buying an album queues the tracks picked, each a buy of its own.
 	mux.HandleFunc("POST /api/buy/album", func(w http.ResponseWriter, r *http.Request) {

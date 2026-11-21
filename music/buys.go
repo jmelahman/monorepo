@@ -117,18 +117,36 @@ func routeBuys(ctx context.Context, mux *http.ServeMux, store, proxy, music, sta
 			http.Error(w, "no store provider configured", http.StatusServiceUnavailable)
 			return
 		}
+		// A buy previewed names the store's own track: its album's page
+		// and its number there, so the buy is the one that was shown.
 		var req struct {
 			Artist string `json:"artist"`
 			Title  string `json:"title"`
+			Album  string `json:"album"`
+			Page   string `json:"page"`
+			Number int    `json:"number"`
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 		err := json.NewDecoder(r.Body).Decode(&req)
-		req.Artist, req.Title = strings.TrimSpace(req.Artist), strings.TrimSpace(req.Title)
+		req.Artist, req.Title, req.Page = strings.TrimSpace(req.Artist), strings.TrimSpace(req.Title), strings.TrimSpace(req.Page)
 		if err != nil || req.Artist == "" || req.Title == "" {
 			http.Error(w, "artist and title required", http.StatusBadRequest)
 			return
 		}
-		b, err := q.add(req.Artist, req.Title)
+		var b buy
+		if req.Page != "" {
+			if !storePage(req.Page) || req.Number <= 0 {
+				http.Error(w, "a store track needs its album's page and its number there", http.StatusBadRequest)
+				return
+			}
+			var bs []buy
+			bs, err = q.addAlbum(req.Artist, strings.TrimSpace(req.Album), req.Page, []albumPick{{Number: req.Number, Title: req.Title}})
+			if err == nil {
+				b = bs[0]
+			}
+		} else {
+			b, err = q.add(req.Artist, req.Title)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

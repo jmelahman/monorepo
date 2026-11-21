@@ -2570,27 +2570,107 @@ const buyKey = (artist, title) => `${artist}\u0000${title}`.toLowerCase();
 
 const BUY_LABELS = { queued: 'Queued', buying: 'Buying…', done: 'Owned', failed: 'Retry' };
 
-// buyTrack hands a streamed track to the server's queue.
-async function buyTrack(e, t) {
+// buyTrack shows what the store would sell for a streamed track, the
+// likeliest version first, and queues the one picked: its album's page
+// and number go with the buy, so the buy is the version shown.
+function buyTrack(e, t) {
   e.stopPropagation();
   const btn = e.currentTarget;
-  // A buy spends the store account's balance; say so before it does.
-  if (!confirm(`Buy ${t.artist} — ${t.title} into the library?`)) return;
-  btn.disabled = true;
-  btn.textContent = 'Queued';
-  try {
-    const r = await fetch('api/buy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artist: t.artist, title: t.title }),
-    });
-    if (!r.ok) throw new Error((await r.text()).trim().slice(0, 120) || r.status);
-    await refreshBuys();
-  } catch (err) {
-    notice(`The buy could not be queued: ${err.message}`);
-    btn.disabled = false;
-    btn.textContent = 'Buy';
+  const status = el('p', { className: 'yt-status', role: 'status', textContent: 'Looking in the store…' });
+  const list = el('div', { className: 'buy-matches', role: 'radiogroup', 'aria-label': 'Versions in the store' });
+  const buyBtn = el('button', { className: 'btn chrome', type: 'submit', disabled: true, textContent: 'Buy' });
+  const find = el('a', {
+    className: 'btn ghost',
+    href: href('search', `${t.artist} ${t.title}`),
+    onclick: () => dialog.close(),
+    textContent: 'Browse the store',
+  });
+  let picked = null;
+
+  const pick = (m) => {
+    picked = m;
+    buyBtn.disabled = false;
+    buyBtn.textContent = `Buy · ${m.free ? 'free' : m.price || 'price unknown'}`;
+  };
+  const row = (m, i) => {
+    const radio = el('input', { type: 'radio', name: 'match', disabled: m.owned, onchange: () => pick(m) });
+    if (i === 0 && !m.owned) {
+      radio.checked = true;
+      pick(m);
+    }
+    return el(
+      'label',
+      { className: `buy-match${m.owned ? ' owned' : ''}` },
+      radio,
+      el(
+        'span',
+        { className: 'buy-match-text' },
+        el('span', { className: 'name', textContent: m.title }),
+        el('span', {
+          className: 'sub',
+          textContent: [`${m.artist} — ${m.album}`, m.year, m.duration].filter(Boolean).join(' · '),
+        })
+      ),
+      el('span', {
+        className: `store-state${m.free ? ' free' : ''}`,
+        textContent: m.owned ? 'In library' : m.free ? 'Free' : m.price || '',
+      })
+    );
+  };
+
+  const form = el(
+    'form',
+    { method: 'dialog', className: 'editor yt-account buy-preview' },
+    el('h2', { textContent: 'Buy a track' }),
+    el('p', { className: 'yt-help', textContent: t.artist ? `${t.artist} — ${t.title}` : t.title }),
+    status,
+    list,
+    el('div', { className: 'btn-row' }, buyBtn, find, button('btn ghost', () => dialog.close(), 'Cancel'))
+  );
+  form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    if (!picked) return;
+    buyBtn.disabled = true;
+    const ok = await buysRequest(
+      'POST',
+      'api/buy',
+      { artist: t.artist, title: t.title, album: picked.album, page: picked.page, number: picked.number },
+      'The buy could not be queued'
+    );
+    if (!ok) {
+      buyBtn.disabled = false;
+      return;
+    }
+    dialog.close();
+    btn.disabled = true;
+    btn.textContent = 'Queued';
+  };
+  const dialog = el('dialog', { className: 'sheet' }, form);
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+
+  if (!t.artist) {
+    status.textContent = 'This stream names no artist to look for. Browse the store for the album instead.';
+    return;
   }
+  fetch(`api/buy/preview?artist=${encodeURIComponent(t.artist)}&title=${encodeURIComponent(t.title)}`)
+    .then(async (r) => {
+      if (!r.ok) throw new Error((await r.text()).trim().slice(0, 160) || r.status);
+      return r.json();
+    })
+    .then(({ matches }) => {
+      if (!matches.length) {
+        status.textContent = 'The store has nothing by that name. Browse it for the album instead.';
+        return;
+      }
+      status.textContent =
+        matches.length === 1 ? 'The store has one version.' : `The store has ${matches.length} versions; pick the one to buy.`;
+      list.append(...matches.map(row));
+    })
+    .catch((err) => {
+      status.textContent = `The store could not be asked: ${err.message}`;
+    });
 }
 
 // refreshBuys reads the queue, says what finished since the last read,
