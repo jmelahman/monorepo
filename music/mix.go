@@ -43,6 +43,11 @@ func mixSize(r *http.Request) int {
 // plays.
 const mixKeep = 3 * time.Hour
 
+// mixStandIn is how long the library radio is kept when it stands in for
+// an account whose mix failed: long enough to play, short enough that
+// the account's own is asked for again soon.
+const mixStandIn = 5 * time.Minute
+
 // mixer builds the two mixes: the library mix, from what is owned, and
 // the supermix, streamed from YouTube Music. Both leave out what the
 // listener has excluded.
@@ -176,15 +181,28 @@ func spread(ts []libTrack, rng *rand.Rand) {
 // while unless a fresh or a longer one is asked for; a shorter one is
 // the start of the one kept.
 func (m *mixer) streamed(ctx context.Context, size int, fresh bool) ([]ytTrack, string, error) {
+	set := m.accountSet()
 	m.mu.Lock()
-	if !fresh && m.cached != nil && m.asked >= size && time.Since(m.at) < mixKeep {
+	keep := mixKeep
+	if m.source == "radio" && set {
+		keep = mixStandIn
+	}
+	if !fresh && m.cached != nil && m.asked >= size && time.Since(m.at) < keep {
 		mix, source := m.cached, m.source
 		m.mu.Unlock()
 		return m.withoutExcluded(mix, size), source, nil
 	}
 	m.mu.Unlock()
 
+	// The fetch outlives a client that hangs up, so a slow YouTube still
+	// lands in the cache; ytFlat bounds it.
+	ctx = context.WithoutCancel(ctx)
 	mix, source, err := m.account(ctx, size)
+	if err != nil {
+		// One more try before standing in: YouTube refuses now and then.
+		slog.Warn("supermix: the account's mix failed; trying again", "err", err)
+		mix, source, err = m.account(ctx, size)
+	}
 	m.mu.Lock()
 	m.failed = ""
 	if err != nil {
