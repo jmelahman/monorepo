@@ -879,6 +879,10 @@ function renderArtist(name) {
     return;
   }
   const tracks = a.albums.flatMap((al) => ownedItems(a, al));
+  // Everything by the artist, as one album to the offline cache.
+  const all = { name: a.name, tracks: a.albums.flatMap((al) => al.tracks) };
+  const saveBtn = el('button', { className: 'btn', type: 'button', onclick: () => toggleSave(all, saveBtn) });
+  refreshSaveButton(all, saveBtn);
   show(
     el(
       'header',
@@ -908,6 +912,7 @@ function renderArtist(name) {
             icon('shuffle'),
             'Shuffle'
           ),
+          saveBtn,
           button('btn ghost', () => editArtist(a.name), 'Edit')
         )
       )
@@ -1886,7 +1891,7 @@ async function refreshSaveButton(album, btn) {
     icon(all ? 'saved' : 'save'),
     all ? 'Saved' : have ? `Save offline (${have}/${album.tracks.length})` : 'Save offline'
   );
-  btn.title = all ? 'Saved offline — click to remove' : 'Keep this album for when there is no connection';
+  btn.title = all ? 'Saved offline — click to remove' : `Keep ${album.name} for when there is no connection`;
 }
 
 function savedCount(album) {
@@ -1895,7 +1900,7 @@ function savedCount(album) {
   );
 }
 
-// toggleSave pins an album into the cache, track by track, or clears it
+// toggleSave pins an album, or all of an artist's, into the cache, track by track, or clears it
 // once everything is there. Saved tracks play from the cache, so this is
 // also a "stop streaming this album" switch.
 async function toggleSave(album, btn) {
