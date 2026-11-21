@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"crypto/sha256"
@@ -488,7 +489,7 @@ type ytTrack struct {
 func ytFlat(ctx context.Context, url string, limit int, extra ...string) ([]ytTrack, error) {
 	cctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	args := append([]string{"--flat-playlist", "-j", "--no-warnings", "--playlist-end", strconv.Itoa(limit)}, extra...)
+	args := append([]string{"--flat-playlist", "-j", "--playlist-end", strconv.Itoa(limit)}, extra...)
 	out, err := ytdlp(cctx, append(args, url)...)
 	if err != nil {
 		return nil, err
@@ -590,17 +591,24 @@ func unquote(s string) string {
 func ytdlp(ctx context.Context, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
 	cmd.WaitDelay = 5 * time.Second
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
-			if lines := strings.Split(strings.TrimSpace(string(exit.Stderr)), "\n"); lines[len(lines)-1] != "" {
-				return nil, fmt.Errorf("yt-dlp: %s", lines[len(lines)-1])
-			}
+		if lines := strings.Split(strings.TrimSpace(stderr.String()), "\n"); lines[len(lines)-1] != "" {
+			return nil, fmt.Errorf("yt-dlp: %s", lines[len(lines)-1])
 		}
 		return nil, fmt.Errorf("yt-dlp: %w", err)
 	}
+	// Expired cookies only warn, and YouTube answers as a stranger: a
+	// signed-in playlist comes back as someone else's.
+	if strings.Contains(stderr.String(), "cookies are no longer valid") {
+		return nil, errCookiesExpired
+	}
 	return out, nil
 }
+
+var errCookiesExpired = errors.New("the YouTube cookies have expired; export fresh ones from a private window")
 
 // ytStreams caches the audio stream behind each video briefly: the URLs
 // are signed to this server and expire. A video being resolved has a
