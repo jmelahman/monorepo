@@ -1445,12 +1445,12 @@ body:not(.playing-bar) .toast {
     padding-top: 1.25rem;
   }
 
-  /* The cover beside the name, and the buttons a row of their own
-     under both, so they don't wrap. */
+  /* The cover beside the name and the buttons under it; how many tracks
+     the mix holds is left to its page. */
   .hero {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: 1fr auto auto;
+    grid-template-rows: 1fr auto auto auto;
     gap: 0 1rem;
     padding: 1rem;
   }
@@ -1460,7 +1460,8 @@ body:not(.playing-bar) .toast {
   }
 
   .hero .mix-art {
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 4;
+    align-self: center;
   }
 
   .hero .kicker {
@@ -1474,15 +1475,26 @@ body:not(.playing-bar) .toast {
     margin: 0;
   }
 
-  .hero .btn-row,
   .hero p:not(.kicker) {
     grid-column: 1 / -1;
   }
 
   .hero .btn-row,
   .hero p + .btn-row {
+    grid-row: 4;
+    grid-column: 2;
     flex-wrap: nowrap;
-    margin-top: 0.875rem;
+    gap: 0.5rem;
+    margin-top: 0.625rem;
+  }
+
+  .hero .btn {
+    height: 2.125rem;
+    padding: 0 0.875rem;
+  }
+
+  .hero .mix-size {
+    display: none;
   }
 
   .hero p:not(.kicker) {
