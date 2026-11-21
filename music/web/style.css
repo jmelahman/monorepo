@@ -1611,3 +1611,140 @@ body:not(.playing-bar) .toast {
     transition: none !important;
   }
 }
+
+/* ---------------------------------------------------------- purchases */
+
+.buys-link {
+  position: relative;
+  width: var(--control);
+  height: var(--control);
+  border-radius: var(--radius);
+  color: var(--dim);
+}
+
+.buys-link svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.buys-link:hover,
+.buys-link[aria-current="page"] {
+  color: var(--chalk);
+}
+
+.buys-link[aria-current="page"] {
+  background: var(--accent-soft);
+}
+
+/* The failed buys' count, on the bag's corner. */
+.buys-link .badge {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: 700 0.625rem/1rem var(--sans);
+  text-align: center;
+}
+
+/* The page's sections sit under its title, not beside it. */
+.buys-shelf .shelf-head h2 {
+  font-size: 1.125rem;
+}
+
+.purchases {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.purchase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.purchase.failed {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--edge));
+}
+
+.purchase-text {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.purchase-text .name {
+  font-weight: 600;
+}
+
+.purchase-text .sub,
+.purchase-text .meta {
+  color: var(--dim);
+  font-size: 0.8125rem;
+}
+
+.purchase-text .meta a {
+  color: inherit;
+}
+
+.purchase-error {
+  color: var(--accent);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.store-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.purchase-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.purchase-actions:empty {
+  display: none;
+}
+
+.buy-link {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 0.5rem;
+}
+
+.buy-link input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control);
+  padding: 0 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ink-2);
+  color: var(--chalk);
+  font: 400 0.8125rem/1 var(--mono);
+}
+
+.buy-link input:focus {
+  border-color: var(--accent);
+  outline: 0;
+}
+
+@media (max-width: 40rem) {
+  .purchase {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

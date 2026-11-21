@@ -227,7 +227,7 @@ function keep(key, value) {
 // --------------------------------------------------------------- routes
 
 // route reads the hash: #/, #/library[/artists|/playlists], #/artist/A,
-// #/album/A/B, #/playlist/ID, #/mix/supermix|library or #/search/Q.
+// #/album/A/B, #/playlist/ID, #/mix/supermix|library, #/buys or #/search/Q.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   switch (parts[0]) {
@@ -243,6 +243,8 @@ function route() {
       return { kind: 'mix', which: parts[1] === 'library' ? 'library' : 'supermix' };
     case 'search':
       return { kind: 'search', q: parts.slice(1).join('/') };
+    case 'buys':
+      return { kind: 'buys' };
     default:
       return { kind: 'home' };
   }
@@ -255,6 +257,8 @@ const onMixes = () => ['home', 'mix'].includes(route().kind);
 
 function render() {
   const r = route();
+  if (r.kind === 'buys') $('buys-link').setAttribute('aria-current', 'page');
+  else $('buys-link').removeAttribute('aria-current');
   for (const a of document.querySelectorAll('.tabs a')) {
     const inLibrary = ['artist', 'album', 'playlist'].includes(r.kind);
     const on =
@@ -285,6 +289,9 @@ function render() {
     case 'search':
       $('search-q').value = r.q;
       renderSearch(r.q);
+      break;
+    case 'buys':
+      renderBuys();
       break;
     default:
       renderHome();
@@ -2009,6 +2016,7 @@ async function refreshBuys() {
   } catch {
     return;
   }
+  buysReady = true;
   const before = new Map(buys.map((b) => [b.id, b.status]));
   let landed = false;
   for (const b of next) {
@@ -2030,6 +2038,8 @@ async function refreshBuys() {
   }
   buys = next;
   markBuys();
+  markBuysLink();
+  if (route().kind === 'buys') renderBuys();
   if (landed) loadLibrary();
 
   const pending = buys.some((b) => b.status === 'queued' || b.status === 'buying');
@@ -2058,6 +2068,207 @@ function markBuys() {
     if (b.status === 'failed') btn.title = `The last try failed: ${b.error}`;
     else if (b.status === 'queued' && b.error) btn.title = `Retrying after: ${b.error}`;
   }
+}
+
+// markBuysLink shows the toolbar's way to the purchases once the server
+// takes buys, counting the ones that failed for good.
+function markBuysLink() {
+  const failed = buys.filter((b) => b.status === 'failed').length;
+  $('buys-link').hidden = !buysReady;
+  const badge = $('buys-badge');
+  badge.hidden = failed === 0;
+  badge.textContent = failed > 9 ? '9+' : String(failed);
+  $('buys-link').title = failed ? `Purchases: ${plural(failed, 'failed buy')}` : 'Purchases';
+}
+
+// The purchases page: what needs a hand first, then what is under way,
+// what landed, and the store links found by hand.
+
+let buysReady = false; // whether the server has a store to buy from
+let storeLinks = null; // from api/buys/links: null unread, 'loading', or the list
+
+async function loadStoreLinks() {
+  storeLinks = 'loading';
+  try {
+    const r = await fetch('api/buys/links');
+    storeLinks = r.ok ? await r.json() : [];
+  } catch {
+    storeLinks = [];
+  }
+  if (route().kind === 'buys') renderBuys();
+}
+
+const linkFor = (b) =>
+  Array.isArray(storeLinks) ? storeLinks.find((l) => buyKey(l.artist, l.title) === buyKey(b.artist, b.title)) : null;
+
+function renderBuys() {
+  if (storeLinks === null) loadStoreLinks();
+  // A field being typed in survives the poll's redraws.
+  const typing = document.activeElement?.closest?.('.buy-link');
+  if (typing && view.contains(typing)) return;
+
+  const failed = buys.filter((b) => b.status === 'failed');
+  const pending = buys.filter((b) => b.status === 'queued' || b.status === 'buying');
+  const done = buys.filter((b) => b.status === 'done');
+  const links = Array.isArray(storeLinks) ? storeLinks : [];
+  show(
+    el('h2', { className: 'view-title', textContent: 'Purchases' }),
+    !buysReady && el('p', { className: 'empty', textContent: 'The server has no store to buy from.' }),
+    buysReady &&
+      !buys.length &&
+      !links.length &&
+      el('p', { className: 'empty', textContent: 'Nothing bought yet. Buy a streamed track and it shows here.' }),
+    failed.length > 0 && buysShelf('Needs attention', failed.map(failedRow)),
+    pending.length > 0 && buysShelf('In progress', pending.map(pendingRow)),
+    done.length > 0 && buysShelf('Bought', done.map(doneRow)),
+    links.length > 0 && buysShelf('Store links', links.map(storeLinkRow))
+  );
+}
+
+function buysShelf(title, rows) {
+  return el(
+    'section',
+    { className: 'shelf buys-shelf' },
+    el('div', { className: 'shelf-head' }, el('h2', { textContent: title })),
+    el('ul', { className: 'purchases' }, rows)
+  );
+}
+
+// purchase is one row: the track and where it stands, its buttons, and
+// below them anything else the row needs.
+function purchase(b, detail, actions, below) {
+  return el(
+    'li',
+    { className: `purchase ${b.status || ''}` },
+    el(
+      'div',
+      { className: 'purchase-text' },
+      el('span', { className: 'name', textContent: b.title }),
+      el('span', { className: 'sub', textContent: b.artist }),
+      detail
+    ),
+    el('div', { className: 'purchase-actions' }, actions),
+    below
+  );
+}
+
+const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+// failedRow is a buy that failed, for good or for now: the reason, and a
+// field for the store's album page when the provider couldn't find it.
+function failedRow(b) {
+  const retrying = b.status === 'queued';
+  const saved = linkFor(b);
+  const field = el('input', {
+    type: 'url',
+    required: true,
+    placeholder: "Paste the store's album page",
+    'aria-label': `The store's album page for ${b.artist} — ${b.title}`,
+    value: saved ? saved.link : '',
+  });
+  const form = el(
+    'form',
+    {
+      className: 'buy-link',
+      onsubmit: (e) => {
+        e.preventDefault();
+        buyFromLink(b, field.value);
+      },
+    },
+    field,
+    el('button', { className: 'btn', type: 'submit', textContent: 'Buy from link' })
+  );
+  return purchase(
+    b,
+    el(
+      'span',
+      { className: 'purchase-error' },
+      retrying
+        ? `Retrying at ${clock(b.next)} after: ${b.error}`
+        : `${plural(b.attempts, 'try', 'tries')}${b.link ? ', from the saved link' : ''}: ${b.error}`
+    ),
+    [!retrying && button('btn', () => retryBuy(b), 'Retry'), button('btn', () => dismissBuy(b), 'Dismiss')].filter(Boolean),
+    form
+  );
+}
+
+function pendingRow(b) {
+  if (b.status === 'queued' && b.error) return failedRow(b);
+  return purchase(b, el('span', { className: 'meta', textContent: b.status === 'buying' ? 'Buying…' : 'Queued' }), []);
+}
+
+function doneRow(b) {
+  const r = b.result;
+  return purchase(
+    b,
+    r &&
+      el(
+        'span',
+        { className: 'meta' },
+        r.alreadyOwned ? 'Already in the library: ' : 'Into ',
+        el('a', { href: href('album', r.artist, r.album), textContent: `${r.artist} — ${r.album}` })
+      ),
+    [button('btn', () => dismissBuy(b), 'Dismiss')]
+  );
+}
+
+function storeLinkRow(l) {
+  return purchase(
+    l,
+    el('a', { className: 'meta store-link', href: l.link, target: '_blank', rel: 'noreferrer', textContent: l.link }),
+    [button('btn', () => forgetStoreLink(l), 'Forget')]
+  );
+}
+
+// retryBuy queues a failed buy again: it spends the store's balance, so
+// it asks first, as Buy does.
+async function retryBuy(b) {
+  if (!confirm(`Buy ${b.artist} — ${b.title} into the library?`)) return;
+  await buysRequest('POST', 'api/buy', { artist: b.artist, title: b.title }, 'The buy could not be queued');
+}
+
+async function buyFromLink(b, link) {
+  if (!confirm(`Buy ${b.artist} — ${b.title} from that album page?`)) return;
+  const ok = await buysRequest(
+    'PUT',
+    'api/buys/links',
+    { artist: b.artist, title: b.title, link: link.trim() },
+    'The link could not be saved'
+  );
+  if (ok) {
+    document.activeElement?.blur();
+    loadStoreLinks();
+  }
+}
+
+async function dismissBuy(b) {
+  await buysRequest('DELETE', `api/buys/${encodeURIComponent(b.id)}`, null, 'The buy could not be dismissed');
+}
+
+async function forgetStoreLink(l) {
+  const ok = await buysRequest(
+    'PUT',
+    'api/buys/links',
+    { artist: l.artist, title: l.title, link: '' },
+    'The link could not be forgotten'
+  );
+  if (ok) loadStoreLinks();
+}
+
+async function buysRequest(method, url, body, failure) {
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!r.ok) throw new Error((await r.text()).trim().slice(0, 160) || r.status);
+  } catch (err) {
+    notice(`${failure}: ${err.message}`);
+    return false;
+  }
+  await refreshBuys();
+  return true;
 }
 
 render();
