@@ -70,7 +70,8 @@ func (e *editor) since(seq int) (int, []moveRecord) {
 	if n := len(e.moves); n > 0 {
 		last = e.moves[n-1].Seq
 	}
-	return last, slices.Clone(e.moves[i:])
+	// Never null, so a client can always read the list.
+	return last, append([]moveRecord{}, e.moves[i:]...)
 }
 
 // editRequest is one edit. Exactly one of Track, Album or Artist names

@@ -90,6 +90,12 @@ func TestEditAlbum(t *testing.T) {
 	}
 	s.playlists = []*playlist{{ID: "p", Name: "P", Paths: []string{"Kanye West/Yeezus/01 On Sight.mp3", "Kanye West/MBDTF/01 Dark Fantasy.mp3"}}}
 
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/moves", nil))
+	if !strings.Contains(w.Body.String(), `"moves":[]`) {
+		t.Errorf("no moves yet answered %s", w.Body)
+	}
+
 	req := editRequest{Artist: "Kanye West", Album: "MBDTF", To: "My Beautiful Dark Twisted Fantasy"}
 	w, p := edit(t, mux, req, true)
 	if w.Code != http.StatusOK || p.Tracks != 1 || p.Merge {
