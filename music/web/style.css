@@ -1514,6 +1514,16 @@ body:not(.playing-bar) .toast {
     height: min(14rem, 60vw);
   }
 
+  /* The name and buttons centred under the centred cover. */
+  .album-head > div {
+    align-self: stretch;
+    text-align: center;
+  }
+
+  .album-head .btn-row {
+    justify-content: center;
+  }
+
   /* The bar keeps the essentials: what is playing, and play/next. */
   .player-bar {
     grid-template-columns: minmax(0, 1fr) auto auto;
