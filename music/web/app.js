@@ -1070,7 +1070,6 @@ function renderAlbum(artistName, albumName) {
             'Shuffle'
           ),
           saveBtn,
-          album.name !== 'Singles' && button('btn ghost', () => openCoverEditor(a.name, album.name), 'Change cover'),
           album.name !== 'Singles' && button('btn ghost', () => editAlbum(a.name, album.name), 'Edit')
         )
       )
@@ -1244,7 +1243,7 @@ function splitTrack(path) {
 // openEditor asks for new names and makes the edit. A plain rename goes
 // straight through; a merge into what is already there is shown first,
 // and two different tracks of one name stop it.
-function openEditor({ title, about, fields, request, done }) {
+function openEditor({ title, about, fields, request, done, more = [] }) {
   const status = el('p', { className: 'yt-status', role: 'status' });
   const save = el('button', { className: 'btn chrome', type: 'submit', textContent: 'Save' });
   let shown = null; // the request whose plan is on show, waiting to be confirmed
@@ -1328,7 +1327,23 @@ function openEditor({ title, about, fields, request, done }) {
     el('p', { className: 'yt-help', textContent: about }),
     inputs,
     status,
-    el('div', { className: 'btn-row' }, save, button('btn ghost', () => dialog.close(), 'Cancel'))
+    el(
+      'div',
+      { className: 'btn-row' },
+      save,
+      button('btn ghost', () => dialog.close(), 'Cancel'),
+      // Other edits, each in its own panel in place of this one.
+      more.map(([label, open]) =>
+        button(
+          'btn ghost',
+          () => {
+            dialog.close();
+            open();
+          },
+          label
+        )
+      )
+    )
   );
   form.onsubmit = (e) => {
     e.preventDefault();
@@ -1356,6 +1371,7 @@ function editAlbum(artist, album) {
         ? null
         : { artist, album, to: v.album, toArtist: v.artist === artist ? '' : v.artist },
     done: (v) => (location.hash = href('album', v.artist, v.album)),
+    more: [['Change cover', () => openCoverEditor(artist, album)]],
   });
 }
 
