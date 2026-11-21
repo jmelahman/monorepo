@@ -1,18 +1,20 @@
+<!-- The favicon's play triangle (web/favicon.svg, on a 32 grid), scaled
+     into the adaptive icon's 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="2.6"
-        android:scaleY="2.6"
-        android:translateX="23"
-        android:translateY="23">
+        android:scaleX="2"
+        android:scaleY="2"
+        android:translateX="22"
+        android:translateY="22">
         <path
-            android:pathData="M9,18V5l10,-2v13M9,18a2.5,2.5 0,1 1 -5,0 2.5,2.5 0,0 1 5,0zM19,16a2.5,2.5 0,1 1 -5,0 2.5,2.5 0,0 1 5,0z"
-            android:strokeLineJoin="round"
-            android:strokeWidth="1.6"
-            android:strokeColor="@color/accent"
-            android:fillColor="#00000000" />
+            android:pathData="M10,6.5 L24,16 L10,25.5z"
+            android:fillColor="@color/favicon"
+            android:strokeColor="@color/favicon"
+            android:strokeWidth="5"
+            android:strokeLineJoin="round" />
     </group>
 </vector>
