@@ -1226,13 +1226,18 @@ main > .view-title {
 
 .controls {
   grid-column: 2;
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
   gap: 0.375rem;
 }
 
+/* Beside the controls but out of their width, so play is the bar's
+   centre. */
 .time {
+  position: absolute;
+  left: 100%;
   margin-left: 0.75rem;
   color: var(--dim);
   font: 400 0.75rem/1 var(--mono);
@@ -1524,15 +1529,15 @@ body:not(.playing-bar) .toast {
     justify-content: center;
   }
 
-  /* The bar keeps the essentials: what is playing, and play/next. */
+  /* The bar keeps the essentials: what is playing, and previous, play
+     and next in its middle, between two columns of a width. */
   .player-bar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 0.5rem;
     padding-inline: 0.75rem;
   }
 
   .np {
-    flex: 1;
     max-width: none;
   }
 
@@ -1540,7 +1545,8 @@ body:not(.playing-bar) .toast {
     width: 2.75rem;
   }
 
-  #prev,
+  #shuffle,
+  #repeat,
   .time,
   #mute,
   .volume {
