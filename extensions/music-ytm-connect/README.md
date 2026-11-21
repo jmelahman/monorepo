@@ -48,14 +48,16 @@ bun run start
 # Package a .zip
 bun run build
 
-# Upload and sign a listed version on AMO
+# Sign an unlisted version: Mozilla signs it, AMO doesn't list it
 # (credentials: https://addons.mozilla.org/en-US/developers/addon/api/key/)
 WEB_EXT_API_KEY=... WEB_EXT_API_SECRET=... bun run sign
 ```
 
-Installed from AMO, Firefox Sync carries the extension and the server
-address to every browser; each one still asks for access to the server
-once, on Save. The listing's text is drafted in `.claude/amo-listing.md`.
+It isn't published on AMO. The signed `.xpi` in `web-ext-artifacts/`
+installs for good (open it in Firefox, or *Install Add-on From File…*
+in about:addons) but Firefox Sync doesn't carry it, so install it in
+each browser. The server address it saves does sync between them; each
+one still asks for access to the server once, on Save.
 
 To load it manually instead: open `about:debugging#/runtime/this-firefox` →
 **Load Temporary Add-on…** → select `manifest.json`.
