@@ -28,6 +28,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         if (settings.baseUrl.isEmpty()) return@withContext Result.success()
         Api.baseUrl = settings.baseUrl
         try {
+            followMoves(settings)
             val wanted = wanted(settings)
             Sync.download(applicationContext, settings, wanted.values)
             Downloads.prune(applicationContext, wanted.keys)
@@ -37,6 +38,35 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         } catch (e: org.json.JSONException) {
             Result.failure()
         }
+    }
+
+    // followMoves makes the server's renames to the phone's copies and
+    // to the albums it keeps, before anything is pruned for missing.
+    private fun followMoves(settings: Settings) {
+        val (seq, moves) = try {
+            Api.moves(settings.movesSeq)
+        } catch (e: HttpException) {
+            if (e.code == 404) return // a server from before edits
+            throw e
+        }
+        if (moves.isNotEmpty()) {
+            var kept = settings.kept
+            var recent = settings.recent
+            for (m in moves) {
+                if (m.album) {
+                    val from = "album:${m.from}"
+                    if (from in kept) kept = kept - from + "album:${m.to}"
+                    val was = m.from.substringBefore('/') to m.from.substringAfter('/')
+                    val now = m.to.substringBefore('/') to m.to.substringAfter('/')
+                    recent = recent.map { if (it == was) now else it }.distinct()
+                } else {
+                    Downloads.move(applicationContext, m.from, m.to)
+                }
+            }
+            settings.kept = kept
+            settings.recent = recent
+        }
+        settings.movesSeq = seq
     }
 
     // wanted is every track something kept holds, by path. A kept album

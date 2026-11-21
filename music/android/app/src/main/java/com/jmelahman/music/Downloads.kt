@@ -33,6 +33,26 @@ object Downloads {
     fun savedPaths(context: Context, album: Album): Set<String> =
         album.tracks.filter { saved(context, it) }.mapTo(HashSet()) { it.path }
 
+    // move follows a track the server renamed, so it needn't be fetched
+    // again. A copy already at the new path, as after a merge, stands.
+    fun move(context: Context, from: String, to: String) {
+        val src = fileFor(context, from) ?: return
+        val dst = fileFor(context, to) ?: return
+        if (!src.isFile) return
+        if (dst.exists()) {
+            src.delete()
+        } else {
+            dst.parentFile?.mkdirs()
+            src.renameTo(dst)
+        }
+        val root = root(context).canonicalFile
+        var dir = src.parentFile
+        while (dir != null && dir != root && dir.list().isNullOrEmpty()) {
+            dir.delete()
+            dir = dir.parentFile
+        }
+    }
+
     // prune deletes every saved track not in keep, and the folders it
     // leaves empty. A download still being written is left to finish.
     fun prune(context: Context, keep: Set<String>): Int {

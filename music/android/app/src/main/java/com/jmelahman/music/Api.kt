@@ -92,6 +92,8 @@ data class BuyResult(
 )
 
 // An answer other than 2xx, with what the server said about it.
+class Move(val from: String, val to: String, val album: Boolean)
+
 class HttpException(val code: Int, message: String) : IOException(message)
 
 object Api {
@@ -255,6 +257,16 @@ object Api {
 
     // excluded is what is kept out of the mixes: track paths, and yt:<id>
     // for streams.
+    // moves is the server's renames after since, and the last one's
+    // number: tracks' paths, and albums' "Artist/Album" when album.
+    fun moves(since: Int): Pair<Int, List<Move>> {
+        val o = JSONObject(request("/api/moves?since=$since"))
+        val moves = list(o.getJSONArray("moves")) {
+            Move(it.getString("from"), it.getString("to"), it.optBoolean("album"))
+        }
+        return o.getInt("seq") to moves
+    }
+
     fun excluded(): Set<String> {
         val a = JSONArray(request("/api/excluded"))
         return HashSet<String>().apply { for (i in 0 until a.length()) add(a.getString(i)) }

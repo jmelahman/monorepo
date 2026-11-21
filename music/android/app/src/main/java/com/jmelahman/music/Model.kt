@@ -449,7 +449,8 @@ class Model(app: Application) : AndroidViewModel(app) {
     // home page's "Jump back in".
     private fun rememberAlbum(artist: String, album: String) {
         val key = artist to album
-        recent = (listOf(key) + recent.filter { it != key }).take(12)
+        // From the saved list, which a sync may have renamed albums in.
+        recent = (listOf(key) + settings.recent.filter { it != key }).take(12)
         settings.recent = recent
     }
 
@@ -459,7 +460,8 @@ class Model(app: Application) : AndroidViewModel(app) {
     // sync then fetches or deletes its tracks, on Wi-Fi unless downloads
     // on mobile data are on.
     fun keep(key: String, on: Boolean, name: String) {
-        kept = if (on) kept + key else kept - key
+        // From the saved set, which a sync may have changed since.
+        kept = if (on) settings.kept + key else settings.kept - key
         settings.kept = kept
         Sync.now(context)
         notice(

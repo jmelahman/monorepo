@@ -46,6 +46,11 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("kept_migrated", false)
         set(value) = prefs.edit().putBoolean("kept_migrated", value).apply()
 
+    // The last of the server's renames the phone has made to its own.
+    var movesSeq: Int
+        get() = prefs.getInt("moves_seq", 0)
+        set(value) = prefs.edit().putInt("moves_seq", value).apply()
+
     // The albums last played, newest first, as (artist, album).
     var recent: List<Pair<String, String>>
         get() = runCatching {
