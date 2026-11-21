@@ -1153,6 +1153,60 @@ main > .view-title {
   min-width: 0;
 }
 
+/* The album cover panel: the covers to pick from, a grid that scrolls. */
+.cover-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.75rem;
+  max-height: min(22rem, 45vh);
+  overflow-y: auto;
+}
+
+.cover-choices:empty {
+  display: none;
+}
+
+.cover-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.375rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cover-choice:hover,
+.cover-choice:focus-visible {
+  background: var(--card-hi);
+}
+
+.cover-choice img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--art-radius);
+  background: var(--page);
+}
+
+.cover-choice .name,
+.cover-choice .sub {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cover-choice .sub {
+  color: var(--dim);
+  font-size: 0.75rem;
+}
+
 .rules {
   display: flex;
   flex-direction: column;

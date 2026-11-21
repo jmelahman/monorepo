@@ -155,8 +155,14 @@ function art(name, src, opts = {}) {
   return box;
 }
 
-const coverUrl = (artist, album) =>
-  `api/cover?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`;
+// coverSetAt marks the albums whose cover was changed here, so their
+// art is asked for afresh rather than taken from the browser's cache.
+const coverSetAt = new Map();
+
+const coverUrl = (artist, album) => {
+  const v = coverSetAt.get(`${artist}\0${album}`);
+  return `api/cover?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}${v ? `&v=${v}` : ''}`;
+};
 
 // An artist's picture is the cover of their first album with one; the
 // grid can't know which ahead, so it uses the first.
@@ -1032,12 +1038,126 @@ function renderAlbum(artistName, albumName) {
             icon('shuffle'),
             'Shuffle'
           ),
-          saveBtn
+          saveBtn,
+          album.name !== 'Singles' && button('btn ghost', () => openCoverEditor(a.name, album.name), 'Change cover')
         )
       )
     ),
     ownedList(items, { numbered: true })
   );
+}
+
+// openCoverEditor sets an album's cover: one of the covers MusicBrainz
+// has for albums like it, a picture uploaded or pasted, or one from a
+// link. The server keeps it as the folder's cover.jpg.
+function openCoverEditor(artist, album) {
+  const status = el('p', { className: 'yt-status', role: 'status' });
+  const choices = el('div', { className: 'cover-choices' });
+  const query = el('input', { type: 'search', value: album, 'aria-label': 'Album to look for' });
+  const file = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/gif', className: 'visually-hidden' });
+  const upload = el('label', { className: 'btn' }, file, 'Upload a picture');
+  const link = el('input', { type: 'url', placeholder: 'https://…/cover.jpg', 'aria-label': 'A link to a picture' });
+  let busy = false;
+
+  async function set(body, headers, what) {
+    if (busy) return;
+    busy = true;
+    status.textContent = `Saving ${what}…`;
+    const target = `api/cover?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`;
+    const r = await fetch(target, { method: 'PUT', body, headers }).catch(() => null);
+    busy = false;
+    if (!r || !r.ok) {
+      status.textContent = r ? (await r.text()).trim() : 'The server could not be reached.';
+      return;
+    }
+    coverSetAt.set(`${artist}\0${album}`, Date.now());
+    dialog.close();
+    notice('Cover saved');
+    render();
+  }
+  const json = (o) => [JSON.stringify(o), { 'Content-Type': 'application/json' }];
+
+  async function search() {
+    const q = query.value.trim();
+    if (!q) return;
+    status.textContent = 'Looking on MusicBrainz…';
+    choices.replaceChildren();
+    const r = await fetch(`api/cover/search?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(q)}`).catch(
+      () => null
+    );
+    if (!r || !r.ok) {
+      status.textContent = r ? (await r.text()).trim() : 'The server could not be reached.';
+      return;
+    }
+    const found = await r.json();
+    let shown = found.length;
+    const none = () => {
+      status.textContent = 'No covers found. Try other words, or upload one.';
+    };
+    if (!shown) none();
+    else status.textContent = 'Pick a cover:';
+    choices.replaceChildren(
+      ...found.map((c) => {
+        const img = el('img', {
+          alt: '',
+          loading: 'lazy',
+          src: `https://coverartarchive.org/release-group/${encodeURIComponent(c.id)}/front-250`,
+        });
+        const about = [c.artist, c.type, c.year].filter(Boolean).join(' · ');
+        const pick = button(
+          'cover-choice',
+          () => set(...json({ releaseGroup: c.id }), `the cover of ${c.title}`),
+          img,
+          el('span', { className: 'name', textContent: c.title }),
+          el('span', { className: 'sub', textContent: about })
+        );
+        pick.title = `${c.title} · ${about}`;
+        // Only the albums the archive has a cover for are offered.
+        img.onerror = () => {
+          pick.remove();
+          if (--shown === 0) none();
+        };
+        return pick;
+      })
+    );
+  }
+
+  file.onchange = () => {
+    const f = file.files[0];
+    if (f) set(f, { 'Content-Type': f.type || 'application/octet-stream' }, 'the picture');
+    file.value = '';
+  };
+
+  const form = el(
+    'form',
+    { method: 'dialog', className: 'editor yt-account cover-editor' },
+    el('h2', { textContent: 'Album cover' }),
+    el('p', { className: 'yt-help', textContent: `${album} · ${artist}` }),
+    el('div', { className: 'yt-link' }, query, button('btn ghost', search, 'Search')),
+    status,
+    choices,
+    el('h3', { textContent: 'Or your own' }),
+    el('p', { className: 'yt-help', textContent: 'Upload a JPEG, PNG or GIF, paste one here, or give a link to one.' }),
+    el('div', { className: 'yt-link' }, link, button('btn ghost', () => link.value && set(...json({ url: link.value }), 'the linked picture'), 'Use link')),
+    el('div', { className: 'btn-row' }, upload, button('btn ghost', () => dialog.close(), 'Cancel'))
+  );
+  const dialog = el('dialog', { className: 'sheet' }, form);
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    if (document.activeElement === link) link.value && set(...json({ url: link.value }), 'the linked picture');
+    else search();
+  };
+  // A picture pasted anywhere in the panel is taken as the cover.
+  dialog.addEventListener('paste', (e) => {
+    const f = [...e.clipboardData.files].find((x) => x.type.startsWith('image/'));
+    if (!f) return;
+    e.preventDefault();
+    set(f, { 'Content-Type': f.type }, 'the pasted picture');
+  });
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  search();
 }
 
 // --------------------------------------------------------------- search

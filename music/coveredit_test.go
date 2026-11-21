@@ -70,6 +70,12 @@ func TestPutCover(t *testing.T) {
 	}
 }
 
+func TestLoosely(t *testing.T) {
+	if got := loosely("section 80 a"); got != "section 80 a section* 80*" {
+		t.Errorf("loosely = %q", got)
+	}
+}
+
 func TestWords(t *testing.T) {
 	if got := words(`K_I_D_S CD2`); got != "k i d s" {
 		t.Errorf("words = %q", got)

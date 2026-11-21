@@ -42,7 +42,7 @@ type coverChoice struct {
 // the artist when there is one. Unlike find it doesn't insist the names
 // match: the person choosing sees the covers and picks.
 func (f *coverFetcher) suggest(ctx context.Context, artist, album string) ([]coverChoice, error) {
-	q := "releasegroup:(" + words(album) + ")"
+	q := "releasegroup:(" + loosely(words(album)) + ")"
 	if a := words(artist); a != "" {
 		q += " AND artist:(" + a + ")"
 	}
@@ -76,6 +76,19 @@ func words(s string) string {
 	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
 	}), " ")
+}
+
+// loosely adds each word again as a prefix, so a name a folder cut short
+// ("Fant") or that MusicBrainz writes as one word ("Section.80") still
+// finds its album; the whole words still rank first.
+func loosely(terms string) string {
+	out := strings.Fields(terms)
+	for _, w := range out {
+		if len(w) > 1 {
+			out = append(out, w+"*")
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 // writeCover makes img the folder's cover.jpg: a JPEG as it came, any
