@@ -37,22 +37,19 @@ services:
     restart: unless-stopped
     expose:
       - 8095
+    # The store provider (MUSIC_STORE, a path under /store) and its
+    # credentials, the Supermix's playlist id and the rest come from
+    # homelab/.env, which is gitignored.
+    env_file: .env
     environment:
-      # The store provider the buy endpoint runs, with the credentials it
-      # signs in with; both live in homelab/.env.
-      - MUSIC_STORE=/store/provider
-      - STORE_EMAIL=${STORE_EMAIL:-}
-      - STORE_PASSWORD=${STORE_PASSWORD:-}
       # Buys leave through the VPN and nothing else does: the server hands
       # the proxy to the store provider alone, so streams stay off it, and
       # a VPN that is down fails the buy rather than buying in the clear.
       - MUSIC_STORE_PROXY=http://gluetun:8888
-      # A cookies.txt exported from a browser signed in to YouTube Music,
-      # for the account's own Supermix; without one the mix is a radio
-      # seeded from the library. The playlist id is the Supermix's
-      # list= from its share link.
+      # .env names the cookies.txt on the host (exported from a browser
+      # signed in to YouTube Music); it is mounted here. Without one the
+      # mix is a radio seeded from the library.
       - MUSIC_YTM_COOKIES=/secrets/ytm-cookies.txt
-      - MUSIC_YTM_SUPERMIX=${MUSIC_YTM_SUPERMIX:-}
     volumes:
       # The owned library, beside the media jellyfin serves, so it plays there
       # too; the phone carries what its app saves for offline.
@@ -61,8 +58,8 @@ services:
       # The Android client's build output, served for download; the mount is
       # empty until the first build, and the endpoint answers 404.
       - ../music/android/app/build/outputs/apk/debug:/apk:ro
-      # The private store provider, built outside the mirror.
-      - ../music/stores/_private/provider:/store:ro
+      # The private store providers, kept out of the public mirror.
+      - ../music/stores/_private:/store:ro
       # /dev/null (an empty file) until .env names a cookies file.
       - ${MUSIC_YTM_COOKIES:-/dev/null}:/secrets/ytm-cookies.txt:ro
     depends_on:
