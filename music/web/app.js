@@ -28,7 +28,6 @@ let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> f
 let lastSearch = { q: '', tracks: null }; // the search last run, so back doesn't run it again
 let apkReady = false; // whether the Android client can be offered
 let mixSize = remember('music-mix-size', 50); // tracks in the library mix
-let supermixSize = remember('music-supermix-size', 50); // tracks in the supermix
 let supermixReady = false; // whether the server has YouTube Music set up for the supermix
 
 // The same cache names the service worker keeps (web/sw.js).
@@ -398,13 +397,6 @@ function supermixHero() {
             icon('mix'),
             'New mix'
           ),
-        sizePicker(supermixSize, (n) => {
-          supermixSize = n;
-          keep('music-supermix-size', n);
-          // The next Play reads one of the new length.
-          if (Array.isArray(mix)) mix = null;
-          render();
-        }),
         el(
           'button',
           { className: 'btn ghost', type: 'button', title: 'The YouTube Music account', onclick: openYTAccount },
@@ -640,7 +632,7 @@ async function buildMix(fresh) {
   mix = 'loading';
   render();
   try {
-    const r = await fetch(`api/yt/supermix?size=${supermixSize}${fresh ? '&fresh=1' : ''}`);
+    const r = await fetch(`api/yt/supermix${fresh ? '?fresh=1' : ''}`);
     if (!r.ok) throw new Error((await r.text()).trim() || r.status);
     mixSource = r.headers.get('X-Mix-Source') || '';
     mix = await r.json();
@@ -1486,6 +1478,7 @@ function playQueue(items, index) {
   backdrop(backdropFor(route()));
   updateTime();
   markTrack();
+  renderUpNext();
 
   if ('mediaSession' in navigator) {
     // The lock screen's controls, on an installed app.
@@ -1561,15 +1554,75 @@ $('shuffle').addEventListener('click', () => {
   keep('music-shuffle', shuffle);
   arrange(playingIndex);
   syncModes();
+  renderUpNext();
 });
 
 $('repeat').addEventListener('click', () => {
   repeat = { off: 'all', all: 'one', one: 'off' }[repeat];
   keep('music-repeat', repeat);
   syncModes();
+  renderUpNext();
 });
 
 syncModes();
+
+// -------------------------------------------------------------- up next
+
+const upNext = $('up-next');
+const upNextShown = 100; // rows listed; a long shuffle says how many more
+
+// toggleUpNext shows or hides what plays after this track.
+function toggleUpNext(open = upNext.hidden) {
+  upNext.hidden = !open;
+  $('queue').setAttribute('aria-expanded', String(open));
+  renderUpNext();
+}
+
+// renderUpNext lists the track playing and then the queue in the order
+// it will play: shuffled or not, and wrapping round when repeating it.
+function renderUpNext() {
+  if (upNext.hidden) return;
+  const at = order.indexOf(playingIndex);
+  let next = order.slice(at + 1);
+  if (repeat === 'all') next = next.concat(order.slice(0, at));
+  const row = (i) =>
+    rowOf(
+      queue[i],
+      () => playQueue(queue, i),
+      art(queue[i].name, queue[i].art),
+      el(
+        'span',
+        {},
+        el('span', { className: 'name', textContent: queue[i].name }),
+        el('span', { className: 'sub', textContent: queue[i].sub })
+      )
+    );
+  const more = next.length - upNextShown;
+  upNext.replaceChildren(
+    el('p', { className: 'kicker', textContent: 'Now playing' }),
+    el('ol', { className: 'tracks' }, queue[playingIndex] && row(playingIndex)),
+    el('p', { className: 'kicker', textContent: repeat === 'one' ? 'Up next, after this repeats' : 'Up next' }),
+    next.length
+      ? el('ol', { className: 'tracks' }, next.slice(0, upNextShown).map(row))
+      : el('p', { className: 'empty', textContent: 'Nothing after this.' }),
+    more > 0 && el('p', { className: 'empty', textContent: `And ${more.toLocaleString()} more.` })
+  );
+  markTrack();
+}
+
+$('queue').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleUpNext();
+});
+// A click elsewhere closes it; the path, since playing a row redraws it.
+document.addEventListener('click', (e) => {
+  const path = e.composedPath();
+  if (!upNext.hidden && !path.includes(upNext) && !path.includes(bar)) toggleUpNext(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !upNext.hidden) toggleUpNext(false);
+});
+window.addEventListener('hashchange', () => toggleUpNext(false));
 
 // ------------------------------------------------------------ backdrop
 

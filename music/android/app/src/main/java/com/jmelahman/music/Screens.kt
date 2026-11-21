@@ -403,7 +403,6 @@ private fun MixHero(model: Model) {
         if (!mix.isNullOrEmpty()) {
             PillButton("Play", Glyph.Play, { model.playStreams(mix, 0) })
         }
-        SizePicker(model.supermixSize) { model.sizeSupermix(it) }
     }
 }
 

@@ -41,10 +41,6 @@ class Settings(context: Context) {
         get() = prefs.getInt("mix_size", MIX_SIZES.first())
         set(value) = prefs.edit().putInt("mix_size", value).apply()
 
-    var supermixSize: Int
-        get() = prefs.getInt("supermix_size", MIX_SIZES.first())
-        set(value) = prefs.edit().putInt("supermix_size", value).apply()
-
     // Whether the albums saved before there was a kept set have joined it.
     var keptMigrated: Boolean
         get() = prefs.getBoolean("kept_migrated", false)

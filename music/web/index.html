@@ -58,6 +58,8 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+  <aside id="up-next" class="up-next" aria-label="Up next" hidden></aside>
+
   <footer id="player-bar" class="player-bar" hidden>
     <input id="seek" class="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek">
     <div class="middle">
@@ -78,6 +80,7 @@
       </div>
     </div>
     <div class="aux">
+      <button type="button" id="queue" class="icon-btn" aria-label="Up next" title="Up next" aria-controls="up-next" aria-expanded="false"><svg><use href="#i-list"/></svg></button>
       <button type="button" id="mute" class="icon-btn" aria-label="Mute"><svg><use href="#i-volume"/></svg></button>
       <input id="volume" class="volume" type="range" min="0" max="100" value="100" aria-label="Volume">
     </div>

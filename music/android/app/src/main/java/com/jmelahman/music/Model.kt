@@ -81,8 +81,6 @@ class Model(app: Application) : AndroidViewModel(app) {
     // How many tracks each mix holds (Settings.MIX_SIZES).
     var mixSize by mutableStateOf(settings.mixSize)
         private set
-    var supermixSize by mutableStateOf(settings.supermixSize)
-        private set
 
     // Whether the server has YouTube Music set up; the supermix is
     // offered only then.
@@ -309,7 +307,7 @@ class Model(app: Application) : AndroidViewModel(app) {
         val fresh = mix != null
         viewModelScope.launch {
             try {
-                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(supermixSize, fresh) }
+                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(fresh) }
                 mix = m
                 mixSource = source
                 if (m.isNotEmpty()) playStreams(m, 0)
@@ -458,14 +456,6 @@ class Model(app: Application) : AndroidViewModel(app) {
         libraryMix = null
         loadLibraryMix()
         if (Settings.LIBRARY_MIX in kept) Sync.now(context)
-    }
-
-    // sizeSupermix sets how long the next supermix is.
-    fun sizeSupermix(n: Int) {
-        if (n == supermixSize) return
-        supermixSize = n
-        settings.supermixSize = n
-        mix = null
     }
 
     // exclude keeps a track (a path, or yt:<id>) out of the mixes, or lets
