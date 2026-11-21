@@ -353,13 +353,27 @@ function renderHome() {
   );
 }
 
+// mixArt leads a mix's card with four of the covers it will play, or one
+// when it has fewer, or the mix's mark before it has any. Each is a
+// [name, cover] pair, the name drawing the tile when the cover won't.
+function mixArt(covers) {
+  const seen = new Set();
+  const picked = covers.filter(([name, src]) => src && !seen.has(src) && seen.add(src)).slice(0, 4);
+  const shown = picked.length === 4 ? picked : picked.slice(0, 1);
+  return el(
+    'div',
+    { className: `mix-art${shown.length === 1 ? ' one' : ''}`, 'aria-hidden': 'true' },
+    shown.length ? shown.map(([name, src]) => art(name, src, { eager: true })) : icon('mix')
+  );
+}
+
 // The supermix streams YouTube Music's own for the account, or a radio
 // seeded from the library when the account doesn't answer.
 function supermixHero() {
   return el(
     'section',
     { className: `hero${mix === 'loading' ? ' spinning' : ''}`, 'aria-labelledby': 'mix-title' },
-    el('div', { className: 'hero-disc', 'aria-hidden': 'true' }),
+    mixArt(Array.isArray(mix) ? mix.map((t) => [t.title, t.thumb]) : []),
     el(
       'div',
       {},
@@ -406,6 +420,7 @@ function connectHero() {
   return el(
     'section',
     { className: 'hero connect', 'aria-labelledby': 'connect-title' },
+    mixArt([]),
     el(
       'div',
       {},
@@ -547,8 +562,8 @@ function libraryMixHero() {
   const ready = Array.isArray(libMix) && libMix.length > 0;
   return el(
     'section',
-    { className: 'hero owned-mix', 'aria-labelledby': 'libmix-title' },
-    el('div', { className: 'hero-disc', 'aria-hidden': 'true' }),
+    { className: 'hero', 'aria-labelledby': 'libmix-title' },
+    mixArt(ready ? libMix.map((t) => [t.album, coverUrl(t.artist, t.album)]) : []),
     el(
       'div',
       {},
