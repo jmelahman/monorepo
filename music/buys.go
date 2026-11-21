@@ -81,6 +81,8 @@ type buyQueue struct {
 	proxy string // the HTTP proxy the provider's traffic leaves through, if any
 	file  string // where the queue is saved
 	links string // where the store links are saved
+	// covers gives a bought album art it lacks; nil leaves it be.
+	covers *coverFetcher
 
 	mu    sync.Mutex
 	buys  []*buy      // oldest first
@@ -100,6 +102,7 @@ func routeBuys(ctx context.Context, mux *http.ServeMux, store, proxy, music, sta
 			fail(err)
 		}
 		q.proxy = proxy
+		q.covers = newCoverFetcher()
 		go q.run(ctx)
 	}
 	mux.HandleFunc("POST /api/buy", func(w http.ResponseWriter, r *http.Request) {
@@ -427,6 +430,9 @@ func (q *buyQueue) finish(id string, res *buyResult, err error) {
 	case err == nil:
 		b.Status, b.Result, b.Error = buyDone, res, ""
 		slog.Info("buys: bought", "artist", res.Artist, "album", res.Album, "title", res.Title, "owned", res.AlreadyOwned)
+		if q.covers != nil && !res.AlreadyOwned {
+			go fetchCoverFor(context.Background(), q.covers, res)
+		}
 	case b.Attempts <= len(buyBackoff):
 		b.Status, b.Error = buyQueued, err.Error()
 		b.Next = time.Now().Add(buyBackoff[b.Attempts-1])

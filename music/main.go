@@ -36,8 +36,12 @@ import (
 var embedded embed.FS
 
 func main() {
+	if len(os.Args) >= 2 && os.Args[1] == "covers" {
+		runCovers(os.Args[2:])
+		return
+	}
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintln(os.Stderr, "usage: music serve [flags]   (music serve -h for the flags)")
+		fmt.Fprintln(os.Stderr, "usage: music serve|covers [flags]   (music serve -h for the flags)")
 		os.Exit(2)
 	}
 	fl := flag.NewFlagSet("serve", flag.ExitOnError)
