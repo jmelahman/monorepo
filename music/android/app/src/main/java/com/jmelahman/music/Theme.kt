@@ -26,14 +26,8 @@ object Palette {
     val OnChrome = Color(0xFF111214)
     val Track = Color(0x24FFFFFF)
 
-    // Polished: a bright top, a dark band through the middle, a lift at
-    // the bottom, as light falls on a curved plate.
-    val Chrome = Brush.verticalGradient(
-        0f to Color(0xFFFBFBFC),
-        0.42f to Color(0xFFD9DBE0),
-        0.58f to Color(0xFFA9ADB5),
-        1f to Color(0xFFE4E6EA),
-    )
+    // The main buttons: flat white on the dark, as the web app's are.
+    val Chrome: Brush = SolidColor(Color(0xFFF1F1F3))
 
     // Brushed graphite, for the bars that frame the screen.
     val Metal = Brush.verticalGradient(
