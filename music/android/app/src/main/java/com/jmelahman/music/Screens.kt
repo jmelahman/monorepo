@@ -119,6 +119,22 @@ fun ChromeButton(text: String, icon: ImageVector?, onClick: () -> Unit, enabled:
     }
 }
 
+// RoundButton is a PillButton with only its icon, where room is short.
+@Composable
+fun RoundButton(text: String, icon: ImageVector, onClick: () -> Unit, enabled: Boolean = true) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Palette.CardHi)
+            .border(1.dp, Palette.Edge, CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, text, tint = if (enabled) Palette.Chalk else Palette.Dim, modifier = Modifier.size(18.dp))
+    }
+}
+
 // PillButton is the quieter one beside it.
 @Composable
 fun PillButton(text: String, icon: ImageVector?, onClick: () -> Unit, enabled: Boolean = true) {
@@ -399,14 +415,20 @@ private fun MixCard(
             Modifier.then(if (open != null) Modifier.clickable(onClick = open) else Modifier),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MixArt(covers, 88.dp) { Disc(88) }
+            MixArt(covers, 96.dp) { Disc(96) }
+            // The name, and the buttons beside the covers under it, as the
+            // web's card has them on a phone.
             Column(Modifier.padding(start = 16.dp)) {
                 Kicker(kicker)
                 Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                Row(
+                    Modifier.padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) { actions() }
             }
         }
-        if (note != null) Text(note, Modifier.padding(top = 10.dp), color = Palette.Dim, fontSize = 13.sp)
-        Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
+        if (note != null) Text(note, Modifier.padding(top = 12.dp), color = Palette.Dim, fontSize = 13.sp)
     }
 }
 
@@ -453,8 +475,8 @@ private fun LibraryMixHero(model: Model) {
         open = { model.go(Screen.LibraryMix) },
     ) {
         ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
-        PillButton("Remix", Glyph.Mix, { model.remixLibrary() }, enabled = mix != null)
-        KeepButton(model, Settings.LIBRARY_MIX, "the library mix")
+        RoundButton("Remix", Glyph.Mix, { model.remixLibrary() }, enabled = mix != null)
+        KeepButton(model, Settings.LIBRARY_MIX, "the library mix", round = true)
     }
 }
 
@@ -562,7 +584,7 @@ private fun androidx.compose.foundation.lazy.grid.LazyGridScope.playlistShelf(mo
 fun Header(
     kicker: String,
     title: String,
-    meta: String,
+    meta: String?,
     art: @Composable () -> Unit,
     actions: @Composable () -> Unit,
 ) {
@@ -583,7 +605,8 @@ fun Header(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 4.dp),
         )
-        Text(meta, color = Palette.Dim, modifier = Modifier.padding(top = 4.dp, bottom = 16.dp))
+        if (meta != null) Text(meta, color = Palette.Dim, modifier = Modifier.padding(top = 4.dp))
+        Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
     }
 }

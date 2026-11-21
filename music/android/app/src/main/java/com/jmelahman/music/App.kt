@@ -1,6 +1,10 @@
 package com.jmelahman.music
 
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -70,6 +74,13 @@ fun MusicApp(model: Model) {
         }
         BackHandler(enabled = model.expanded || model.stack != listOf(Screen.Home)) { model.back() }
         var settingsOpen by remember { mutableStateOf(false) }
+        // Saving to the phone says how it is going in a notification, which
+        // Android 13 on asks for first: once, when something is first kept.
+        val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+        val keeping = model.kept.isNotEmpty()
+        LaunchedEffect(keeping) {
+            if (keeping && Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         Box(
             Modifier

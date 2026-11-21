@@ -16,8 +16,15 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val url = inputData.getString("url") ?: return Result.failure()
         val rel = inputData.getString("dest") ?: return Result.failure()
+        val result = fetch(rel)
+        // A retry is still on its way; anything else has finished.
+        if (result !is Result.Retry) Progress.finished(applicationContext, rel, result is Result.Success)
+        return result
+    }
+
+    private suspend fun fetch(rel: String): Result {
+        val url = inputData.getString("url") ?: return Result.failure()
         val dest = Downloads.fileFor(applicationContext, rel) ?: return Result.failure()
         val part = File(dest.path + ".part")
         return withContext(Dispatchers.IO) {

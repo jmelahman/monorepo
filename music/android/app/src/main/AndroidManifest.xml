@@ -6,6 +6,7 @@
     <!-- Without it the system installer refuses the update the app
          downloads from its server. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Cleartext is allowed because the settings take an http://
          server, for a homelab reached on its LAN; the default is https. -->

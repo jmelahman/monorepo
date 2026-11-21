@@ -265,7 +265,7 @@ fun LibraryMixScreen(model: Model, padding: PaddingValues) {
             Header(
                 "Made from your library",
                 "Library mix",
-                "${plural(mix?.size ?: 0, "track")} you own, new each day",
+                null,
                 art = { MixArt(mix.orEmpty().map { it.album to Api.coverUrl(it.artist, it.album) }, 200.dp) { Disc(160) } },
             ) {
                 ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
@@ -286,9 +286,11 @@ fun LibraryMixScreen(model: Model, padding: PaddingValues) {
 
 // KeepButton keeps something on the phone, in step with the server.
 @Composable
-fun KeepButton(model: Model, key: String, name: String) {
+fun KeepButton(model: Model, key: String, name: String, round: Boolean = false) {
     val on = key in model.kept
-    PillButton(if (on) "Kept" else "Keep", if (on) Glyph.Saved else Glyph.Save, { model.keep(key, !on, name) })
+    val text = if (on) "Kept" else "Keep"
+    val icon = if (on) Glyph.Saved else Glyph.Save
+    if (round) RoundButton(text, icon, { model.keep(key, !on, name) }) else PillButton(text, icon, { model.keep(key, !on, name) })
 }
 
 // ownedRows lists owned tracks with their art, each with its menu.

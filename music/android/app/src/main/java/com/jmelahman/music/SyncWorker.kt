@@ -112,8 +112,9 @@ object Sync {
     fun download(context: Context, settings: Settings, tracks: Collection<Owned>) {
         val wm = WorkManager.getInstance(context)
         val network = if (settings.allowDownloadsMetered) NetworkType.CONNECTED else NetworkType.UNMETERED
-        for (o in tracks) {
-            if (Downloads.saved(context, o.track)) continue
+        val missing = tracks.filter { !Downloads.saved(context, it.track) }
+        Progress.queued(context, missing.map { it.track.path })
+        for (o in missing) {
             val request = OneTimeWorkRequestBuilder<DownloadWorker>()
                 .setInputData(workDataOf("url" to Api.audioUrl(o.track.path), "dest" to o.track.path))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
