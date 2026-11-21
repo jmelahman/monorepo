@@ -240,13 +240,13 @@ function keep(key, value) {
 
 // --------------------------------------------------------------- routes
 
-// route reads the hash: #/, #/library[/artists|/playlists], #/artist/A,
+// route reads the hash: #/, #/library[/albums|/playlists], #/artist/A,
 // #/album/A/B, #/playlist/ID, #/mix/supermix|library, #/buys or #/search/Q.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   switch (parts[0]) {
     case 'library':
-      return { kind: 'library', tab: ['artists', 'playlists'].includes(parts[1]) ? parts[1] : 'albums' };
+      return { kind: 'library', tab: ['albums', 'playlists'].includes(parts[1]) ? parts[1] : 'artists' };
     case 'playlist':
       return { kind: 'playlist', id: parts[1] || '' };
     case 'artist':
@@ -389,7 +389,7 @@ function renderHome() {
     el('div', { className: 'mixes' }, supermixReady ? supermixHero() : connectHero(), libraryMixHero()),
     libraryPending(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
-    all.length > 0 && shelf('From your library', '#/library', albumRow(shuffled(all).slice(0, 18)))
+    all.length > 0 && shelf('From your library', '#/library/albums', albumRow(shuffled(all).slice(0, 18)))
   );
 }
 
@@ -804,10 +804,10 @@ function renderLibrary(tab) {
   const chips = el(
     'div',
     { className: 'chips', role: 'group', 'aria-label': 'Show' },
-    ['albums', 'artists', 'playlists'].map((t) =>
+    ['artists', 'albums', 'playlists'].map((t) =>
       el('a', {
         className: 'chip',
-        href: t === 'albums' ? '#/library' : `#/library/${t}`,
+        href: t === 'artists' ? '#/library' : `#/library/${t}`,
         textContent: t[0].toUpperCase() + t.slice(1),
         'aria-current': t === tab ? 'page' : 'false',
       })

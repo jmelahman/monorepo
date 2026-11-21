@@ -311,7 +311,7 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionTitle("From your library", Modifier.weight(1f))
-                    TextButton(onClick = { model.tab(Screen.Library()) }) { Text("See all", color = Palette.Dim) }
+                    TextButton(onClick = { model.tab(Screen.Library(Shelf.Albums)) }) { Text("See all", color = Palette.Dim) }
                 }
             }
             item { AlbumRow(model, sample) }

@@ -32,7 +32,7 @@ import kotlin.random.Random
 // switches between; the rest stack on top.
 sealed class Screen {
     data object Home : Screen()
-    data class Library(val view: Shelf = Shelf.Albums) : Screen()
+    data class Library(val view: Shelf = Shelf.Artists) : Screen()
     data class ArtistPage(val artist: String) : Screen()
     data class AlbumPage(val artist: String, val album: String) : Screen()
     data object Search : Screen()
@@ -41,7 +41,7 @@ sealed class Screen {
 }
 
 // The library's three views.
-enum class Shelf { Albums, Artists, Playlists }
+enum class Shelf { Artists, Albums, Playlists }
 
 // What the player is on, as the screens draw it.
 data class NowPlaying(
