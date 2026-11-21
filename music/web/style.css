@@ -263,8 +263,18 @@ svg {
 main {
   max-width: 82rem;
   margin: 0 auto;
-  padding: 1.75rem var(--gutter) calc(var(--bar-h) + 3rem);
+  padding: 1.75rem var(--gutter);
   outline: none;
+}
+
+/* Room under the page for the player bar only while it shows, so a
+   short page doesn't scroll for space nothing fills. */
+body:has(.player-bar:not([hidden])) main {
+  padding-bottom: calc(var(--bar-h) + 1.75rem);
+}
+
+main > :last-child {
+  margin-bottom: 0;
 }
 
 .shelf {
