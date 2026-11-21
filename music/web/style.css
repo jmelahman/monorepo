@@ -1177,7 +1177,9 @@ main > .view-title {
   width: 6rem;
 }
 
+/* As wide as "Buy", so "Owned" sits centred where the button was. */
 .buy {
+  min-width: 3.25rem;
   height: 1.875rem;
   padding: 0 0.875rem;
   border: 1px solid var(--edge);
@@ -1199,6 +1201,7 @@ main > .view-title {
 }
 
 .buy.owned {
+  padding: 0;
   border-color: transparent;
   background: none;
   color: #4fd18b;

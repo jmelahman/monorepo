@@ -340,6 +340,7 @@ const findArtist = (name) => library.find((a) => a.name === name);
 // ----------------------------------------------------------------- home
 
 function renderHome() {
+  if (supermixReady && mix === null) loadSupermix();
   const recent = remember('music-recent', [])
     .map((r) => {
       const a = findArtist(r.artist);
@@ -672,7 +673,7 @@ async function loadSupermix() {
     mixSource = r.headers.get('X-Mix-Source') || '';
     mix = await r.json();
   } catch (err) {
-    mix = null;
+    mix = 'failed'; // Play asks again; rendering doesn't
     notice(`The mix could not be built: ${err.message}`);
   }
   if (onMixes()) render();
@@ -735,7 +736,9 @@ function renderSupermix() {
     ),
     mix === 'loading'
       ? el('p', { className: 'empty', textContent: 'Mixing…' })
-      : Array.isArray(mix) && streamList(mix)
+      : mix === 'failed'
+        ? el('p', { className: 'empty' }, "The mix didn't load. ", button('btn', loadSupermix, 'Try again'))
+        : Array.isArray(mix) && streamList(mix)
   );
 }
 
