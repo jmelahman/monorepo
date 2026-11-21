@@ -3,6 +3,7 @@ package com.jmelahman.music
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -490,7 +492,25 @@ fun SizePicker(size: Int, pick: (Int) -> Unit) {
 
 @Composable
 fun LibraryScreen(model: Model, view: Shelf, padding: PaddingValues) {
-    val library = model.library
+    val context = LocalContext.current
+    // Downloaded narrows the albums and artists to what the phone holds,
+    // read again as each download lands.
+    val filtering = model.downloadedOnly && view != Shelf.Playlists
+    val landed by remember { WorkManager.getInstance(context).getWorkInfosByTagFlow(Downloads.TAG) }
+        .collectAsState(initial = emptyList())
+    val done = landed.count { it.state == WorkInfo.State.SUCCEEDED }
+    LaunchedEffect(filtering, done) { if (filtering) model.refreshOnPhone() }
+    val library = model.library?.let { all ->
+        if (!filtering) {
+            all
+        } else {
+            all.mapNotNull { a ->
+                a.albums.filter { al -> al.tracks.any { it.path in model.onPhone } }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { a.copy(albums = it) }
+            }
+        }
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
         contentPadding = PaddingValues(
@@ -503,10 +523,20 @@ fun LibraryScreen(model: Model, view: Shelf, padding: PaddingValues) {
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
-                Modifier.padding(4.dp, 16.dp, 4.dp, 8.dp),
+                Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(4.dp, 16.dp, 4.dp, 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 for (v in Shelf.entries) Chip(v.name, v == view) { model.tab(Screen.Library(v)) }
+                if (view != Shelf.Playlists) {
+                    Chip("Downloaded", model.downloadedOnly) { model.downloadedOnly = !model.downloadedOnly }
+                }
+            }
+        }
+        if (filtering && library != null && library.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Empty("Nothing is on the phone yet. Keep an album or an artist to download it.")
             }
         }
         if (view == Shelf.Playlists) {
@@ -523,7 +553,7 @@ fun LibraryScreen(model: Model, view: Shelf, padding: PaddingValues) {
             val albums = library.flatMap { a -> a.albums.map { a to it } }
             items(albums, key = { (a, al) -> "${a.name}/${al.name}" }) { (a, al) -> AlbumTile(model, a, al) }
         }
-        if (view != Shelf.Playlists && library != null) {
+        if (view != Shelf.Playlists && !library.isNullOrEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     libraryStats(library),

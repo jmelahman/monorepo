@@ -124,6 +124,15 @@ class Model(app: Application) : AndroidViewModel(app) {
         private set
 
     // What the phone keeps in step with the server; see Settings.kept.
+    // The library shows only what is on the phone, and what that is.
+    var downloadedOnly by mutableStateOf(false)
+    var onPhone by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    fun refreshOnPhone() {
+        viewModelScope.launch { onPhone = withContext(Dispatchers.IO) { Downloads.onPhone(context) } }
+    }
+
     var kept by mutableStateOf(settings.kept)
         private set
 

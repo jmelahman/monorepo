@@ -28,6 +28,15 @@ object Downloads {
     fun saved(context: Context, track: Track): Boolean =
         (fileFor(context, track.path)?.length() ?: 0) > 0
 
+    // onPhone is every track on the phone, by path: one walk of the
+    // folder, for a background thread.
+    fun onPhone(context: Context): Set<String> {
+        val root = root(context)
+        return root.walkTopDown()
+            .filter { it.isFile && it.length() > 0 && !it.name.endsWith(".part") }
+            .mapTo(HashSet()) { it.relativeTo(root).path }
+    }
+
     // savedPaths is which of an album's tracks are on the phone; a disk
     // read per track, so it is for a background thread.
     fun savedPaths(context: Context, album: Album): Set<String> =
