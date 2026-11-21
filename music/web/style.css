@@ -682,6 +682,10 @@ main > .view-title {
   grid-auto-flow: column;
   grid-template-columns: none;
   overflow-x: auto;
+  /* A scroller clips both ways: room above for a cover lifted on hover,
+     taken back from the margin so the row stays put. */
+  margin-top: -0.5rem;
+  padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   scroll-snap-type: x mandatory;
   scrollbar-width: thin;
