@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Music: Connect YouTube Music",
+  "version": "0.1.0",
+  "description": "Sends your YouTube Music sign-in, and your Supermix, to your own music server.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "music-ytm-connect@lahmanja.dev",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": ["authenticationInfo"]
+      }
+    }
+  },
+  "permissions": ["cookies", "storage"],
+  "host_permissions": ["*://*.youtube.com/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "action": {
+    "default_title": "Connect YouTube Music",
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  }
+}

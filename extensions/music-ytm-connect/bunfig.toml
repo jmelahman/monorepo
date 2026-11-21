@@ -1,0 +1,3 @@
+# Run package binaries on Bun rather than Node.
+[run]
+bun = true

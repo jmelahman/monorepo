@@ -1,0 +1,110 @@
+/* The music app's look: near-black, gray text, the coral accent. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0a0c;
+  --panel: #16161a;
+  --line: #2a2a31;
+  --fg: #ececf1;
+  --muted: #9a9aa6;
+  --accent: #f4635e;
+  --good: #6fcf97;
+}
+
+body {
+  width: 320px;
+  margin: 0;
+  padding: 14px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.45 system-ui, sans-serif;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.chrome {
+  width: 100%;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+#actions {
+  display: grid;
+  gap: 8px;
+}
+
+#actions[hidden],
+button[hidden] {
+  display: none;
+}
+
+.status,
+.help,
+.result {
+  margin: 10px 0;
+  color: var(--muted);
+}
+
+.help {
+  margin: -2px 0 2px;
+  font-size: 12px;
+}
+
+.result:empty {
+  display: none;
+}
+
+.good {
+  color: var(--good);
+}
+
+.bad {
+  color: var(--accent);
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Connect YouTube Music</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Connect YouTube Music</h1>
+
+  <form id="server-form">
+    <label for="server">Music server</label>
+    <div class="row">
+      <input id="server" type="text" placeholder="http://homelab/music" autocomplete="off" spellcheck="false">
+      <button type="submit" class="ghost">Save</button>
+    </div>
+  </form>
+
+  <p id="status" class="status" role="status"></p>
+
+  <div id="actions" hidden>
+    <button type="button" id="send-cookies" class="chrome">Send my sign-in</button>
+    <p class="help" id="cookies-help"></p>
+    <button type="button" id="send-supermix" class="ghost" hidden>Use this playlist as my Supermix</button>
+    <button type="button" id="check" class="ghost">Test</button>
+  </div>
+
+  <p id="result" class="result" role="status"></p>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "music-ytm-connect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Firefox extension that connects YouTube Music to the homelab music server",
+  "type": "module",
+  "scripts": {
+    "test": "bun test test/",
+    "lint": "web-ext lint --source-dir=.",
+    "start": "web-ext run --source-dir=. --start-url https://music.youtube.com/",
+    "build": "web-ext build --source-dir=. --overwrite-dest"
+  },
+  "devDependencies": {
+    "web-ext": "^10.8.0"
+  }
+}
