@@ -72,6 +72,13 @@ chose.
 A track excluded from mixing, from its ⋮ menu (Exclude from mixing),
 comes up in neither mix.
 
+## Library
+
+The Library page ends with its totals, as iTunes did: songs, how long
+they play and how much room they take. The server reads each mp3's
+length from its first frame (a Xing, Info or VBRI header, or the
+bitrate and size) and keeps it while the file stays the same.
+
 ## Playlists
 
 Playlists are plain (a list of owned tracks) or smart (rules on artist,

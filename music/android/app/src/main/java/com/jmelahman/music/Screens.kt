@@ -57,6 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -67,6 +68,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.math.roundToInt
 
 // ---------------------------------------------------------------- parts
 
@@ -464,7 +466,38 @@ fun LibraryScreen(model: Model, view: Shelf, padding: PaddingValues) {
             val albums = library.flatMap { a -> a.albums.map { a to it } }
             items(albums, key = { (a, al) -> "${a.name}/${al.name}" }) { (a, al) -> AlbumTile(model, a, al) }
         }
+        if (view != Shelf.Playlists && library != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    libraryStats(library),
+                    Modifier.fillMaxWidth().padding(top = 20.dp),
+                    color = Palette.Dim,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
+}
+
+// libraryStats is the line iTunes kept under its library: how many songs,
+// how long they play and how much room they take.
+private fun libraryStats(library: List<Artist>): String {
+    val tracks = library.flatMap { a -> a.albums.flatMap { it.tracks } }
+    val secs = tracks.sumOf { it.duration }
+    val bytes = tracks.sumOf { it.size }
+    val time = when {
+        secs >= 86400 -> String.format(Locale.ROOT, "%.1f days", secs / 86400)
+        secs >= 3600 -> String.format(Locale.ROOT, "%.1f hours", secs / 3600)
+        else -> plural((secs / 60).roundToInt(), "minute")
+    }
+    val size = if (bytes >= 1L shl 30) {
+        String.format(Locale.ROOT, "%.2f GB", bytes / (1L shl 30).toDouble())
+    } else {
+        String.format(Locale.ROOT, "%.1f MB", bytes / (1L shl 20).toDouble())
+    }
+    val songs = "%,d song%s".format(tracks.size, if (tracks.size == 1) "" else "s")
+    return "$songs, $time, $size"
 }
 
 // playlistShelf is the library's playlists, with the two ways to start

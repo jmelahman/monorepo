@@ -124,6 +124,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 // routeLibrary serves the owned library: its listing, its audio and its
 // albums' art.
 func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
+	var lengths lengths
 	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
 		artists, err := walkLibrary(music)
 		if err != nil {
@@ -131,6 +132,7 @@ func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
 			return
 		}
 		shelf.decorate(artists)
+		lengths.fill(music, artists)
 		writeJSON(w, artists)
 	})
 	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {
@@ -299,12 +301,15 @@ func defaultState() string {
 // track is one file of the owned library, with its path relative to the
 // library's root so the audio endpoint can ask for it by name.
 type track struct {
-	Name     string `json:"name"`
-	Path     string `json:"path"`
-	Size     int64  `json:"size"`
-	Added    int64  `json:"added"` // when the file landed, in Unix seconds
-	Plays    int    `json:"plays,omitempty"`
-	Excluded bool   `json:"excluded,omitempty"` // kept out of the mixes
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Size  int64  `json:"size"`
+	Added int64  `json:"added"` // when the file landed, in Unix seconds
+	// Duration is how long it plays, in seconds; only the library's
+	// listing reads it.
+	Duration float64 `json:"duration,omitempty"`
+	Plays    int     `json:"plays,omitempty"`
+	Excluded bool    `json:"excluded,omitempty"` // kept out of the mixes
 }
 
 // album groups its tracks.

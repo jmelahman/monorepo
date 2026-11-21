@@ -16,6 +16,8 @@ data class Track(
     val size: Long,
     val plays: Int = 0,
     val excluded: Boolean = false,
+    // How long it plays, in seconds; 0 when the server couldn't tell.
+    val duration: Double = 0.0,
 ) {
     // The name without the leading track number a file name carries.
     val title: String get() = name.replace(TRACK_NUMBER, "").ifEmpty { name }
@@ -168,6 +170,7 @@ object Api {
         t.getLong("size"),
         t.optInt("plays"),
         t.optBoolean("excluded"),
+        t.optDouble("duration", 0.0),
     )
 
     private fun parseOwned(t: JSONObject) = Owned(parseTrack(t), t.getString("artist"), t.getString("album"))

@@ -180,6 +180,22 @@ function fmtTime(seconds) {
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+// libraryStats is the line iTunes kept under its library: how many songs,
+// how long they play and how much room they take.
+function libraryStats() {
+  const tracks = library.flatMap((a) => a.albums.flatMap((al) => al.tracks));
+  const secs = tracks.reduce((n, t) => n + (t.duration || 0), 0);
+  const bytes = tracks.reduce((n, t) => n + t.size, 0);
+  const time =
+    secs >= 86400
+      ? `${(secs / 86400).toFixed(1)} days`
+      : secs >= 3600
+        ? `${(secs / 3600).toFixed(1)} hours`
+        : plural(Math.round(secs / 60), 'minute');
+  const size = bytes >= 2 ** 30 ? `${(bytes / 2 ** 30).toFixed(2)} GB` : `${(bytes / 2 ** 20).toFixed(1)} MB`;
+  return `${plural(tracks.length, 'song').replace(/^\d+/, (n) => Number(n).toLocaleString())}, ${time}, ${size}`;
+}
+
 function shuffled(xs) {
   const out = xs.slice();
   for (let i = out.length - 1; i > 0; i--) {
@@ -665,7 +681,8 @@ function renderLibrary(tab) {
       library.flatMap((a) => a.albums.map((al) => el('li', {}, albumTile(a, al))))
     );
   }
-  show(el('h2', { className: 'view-title', textContent: 'Library' }), chips, body);
+  const stats = tab !== 'playlists' && !pending && el('p', { className: 'library-stats', textContent: libraryStats() });
+  show(el('h2', { className: 'view-title', textContent: 'Library' }), chips, body, stats);
 }
 
 function albumTile(artist, album) {

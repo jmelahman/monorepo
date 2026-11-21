@@ -292,6 +292,15 @@ main > .view-title {
   color: var(--dim);
 }
 
+/* The library's totals, centred under it like iTunes' status bar. */
+.library-stats {
+  margin: 2rem 0 0;
+  color: var(--dim);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 /* The supermix, as the one big thing on the home page. */
 
 .hero {
