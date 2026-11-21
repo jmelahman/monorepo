@@ -50,8 +50,14 @@ func TestSongOf(t *testing.T) {
 		{"Dead Or Alive - You Spin Me Round (Like a Record) (Official Video)", "deadoralivetv", "You Spin Me Round (Like a Record)", "Dead Or Alive"},
 		{"Here Comes The Sun - Remastered 2019", "The Beatles - Topic", "Here Comes The Sun - Remastered 2019", "The Beatles"},
 		{"Bad Romance (Official Music Video)", "LadyGagaVEVO", "Bad Romance", "LadyGaga"},
+		{"Wet- Dazey and The Scouts", "Brennan Wedl", "Wet", "Dazey and The Scouts"},
+		{"Panic! At The Disco - House of Memories | Lyrics", "", "House of Memories", "Panic! At The Disco"},
+		{`Plain White T's - "Hey There Delilah" (Official Music Video)`, "", "Hey There Delilah", "Plain White T's"},
+		{"One Way Or Another", "BlondieMusicOfficial", "One Way Or Another", "Blondie"},
+		{"The All-American Rejects - Dirty Little Secret (Official Music Video)", "", "Dirty Little Secret", "The All-American Rejects"},
+		{"Mitski – Washing Machine Heart [Official Music Video] [4K Remaster]", "", "Washing Machine Heart", "Mitski"},
 	} {
-		if name, artist := songOf(c.title, c.channel); name != c.name || artist != c.artist {
+		if name, artist := songOf(c.title, c.channel, map[string]bool{"dazey and the scouts": true}); name != c.name || artist != c.artist {
 			t.Errorf("songOf(%q, %q) = %q, %q; want %q, %q", c.title, c.channel, name, artist, c.name, c.artist)
 		}
 	}

@@ -493,23 +493,33 @@ func ytFlat(ctx context.Context, url string, limit int, extra ...string) ([]ytTr
 	if err != nil {
 		return nil, err
 	}
-	var tracks []ytTrack
+	type entry struct {
+		ID       string `json:"id"`
+		Title    string `json:"title"`
+		Channel  string `json:"channel"`
+		Uploader string `json:"uploader"`
+		Duration int    `json:"duration"`
+	}
+	var raws []entry
+	// The artists the batch's Topic channels name, to tell which side of
+	// a fan upload's dash is the artist.
+	known := map[string]bool{}
 	for line := range strings.SplitSeq(string(out), "\n") {
-		var raw struct {
-			ID       string `json:"id"`
-			Title    string `json:"title"`
-			Channel  string `json:"channel"`
-			Uploader string `json:"uploader"`
-			Duration int    `json:"duration"`
-		}
+		var raw entry
 		if json.Unmarshal([]byte(line), &raw) != nil || raw.ID == "" || raw.Title == "" {
 			continue
 		}
-		channel := raw.Channel
-		if channel == "" {
-			channel = raw.Uploader
+		if raw.Channel == "" {
+			raw.Channel = raw.Uploader
 		}
-		title, artist := songOf(raw.Title, channel)
+		if a, ok := strings.CutSuffix(raw.Channel, " - Topic"); ok {
+			known[strings.ToLower(a)] = true
+		}
+		raws = append(raws, raw)
+	}
+	var tracks []ytTrack
+	for _, raw := range raws {
+		title, artist := songOf(raw.Title, raw.Channel, known)
 		tracks = append(tracks, ytTrack{
 			VideoID: raw.ID, Title: title, Artist: artist, Duration: raw.Duration,
 			Thumb: "https://i.ytimg.com/vi/" + raw.ID + "/mqdefault.jpg",
@@ -519,27 +529,54 @@ func ytFlat(ctx context.Context, url string, limit int, extra ...string) ([]ytTr
 }
 
 // videoTags are what music videos add to a song's name: "(Official
-// Video)", "[4K Remaster]", "(Lyrics)" and the like.
-var videoTags = regexp.MustCompile(`(?i)\s*[(\[][^)\]]*\b(official|video|audio|lyrics?|visualizer|remaster(ed)?|hd|4k|mv)\b[^)\]]*[)\]]`)
+// Video)", "[4K Remaster]", "(Lyrics)", "| Lyrics" and the like.
+var videoTags = regexp.MustCompile(`(?i)\s*([(\[][^)\]]*\b(official|video|audio|lyrics?|visualizer|remaster(ed)?|hd|4k|mv)\b[^)\]]*[)\]]|\|\s*(official|lyrics?|audio|video)\b.*$)`)
+
+// titleDash splits "Artist - Song", and the "Song- Artist" fan uploads
+// write: a dash with a space on at least one side, which leaves names
+// like "Spider-Man" alone.
+var titleDash = regexp.MustCompile(`\s+[-–—]\s*|\s*[-–—]\s+`)
+
+// channelSuffix is what a label's or an artist's own channel adds to the
+// artist's name: "BlondieMusicOfficial", "LadyGagaVEVO".
+var channelSuffix = regexp.MustCompile(`(?i)(vevo|official|music|tv)+$`)
 
 // songOf reads a song's name and artist from a video's title and channel.
 // An artist's "Topic" channel names the song as it is; otherwise the
 // title is most often "Artist - Song (Official Video)", and the channel
-// a label's or "ArtistVEVO".
-func songOf(title, channel string) (name, artist string) {
+// a label's or "ArtistVEVO". A fan's upload may put the song first; known
+// holds artists (lower-cased) seen elsewhere, to catch that.
+func songOf(title, channel string, known map[string]bool) (name, artist string) {
 	if a, ok := strings.CutSuffix(channel, " - Topic"); ok {
 		return title, a
 	}
 	name = strings.TrimSpace(videoTags.ReplaceAllString(title, ""))
-	for _, dash := range []string{" - ", " – ", " — "} {
-		if a, song, ok := strings.Cut(name, dash); ok && strings.TrimSpace(a) != "" && strings.TrimSpace(song) != "" {
-			return strings.TrimSpace(song), strings.TrimSpace(a)
+	if parts := titleDash.Split(name, 2); len(parts) == 2 {
+		a, song := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		if a != "" && song != "" {
+			if known[strings.ToLower(song)] && !known[strings.ToLower(a)] {
+				a, song = song, a
+			}
+			return unquote(song), a
 		}
 	}
 	if name == "" {
 		name = title
 	}
-	return name, strings.TrimSuffix(channel, "VEVO")
+	if a := channelSuffix.ReplaceAllString(channel, ""); a != "" {
+		channel = a
+	}
+	return unquote(name), channel
+}
+
+// unquote takes the quotes off a song's name: `"Hey There Delilah"`.
+func unquote(s string) string {
+	for _, q := range [][2]string{{`"`, `"`}, {"“", "”"}, {"'", "'"}} {
+		if len(s) > 2 && strings.HasPrefix(s, q[0]) && strings.HasSuffix(s, q[1]) {
+			return strings.TrimSpace(s[len(q[0]) : len(s)-len(q[1])])
+		}
+	}
+	return s
 }
 
 // ytdlp runs yt-dlp and returns what it printed, or the last thing it
