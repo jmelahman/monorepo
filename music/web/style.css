@@ -492,6 +492,12 @@ main > .view-title {
   background: transparent;
 }
 
+.btn.icon-only {
+  justify-content: center;
+  width: 2.375rem;
+  padding: 0;
+}
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;
@@ -1379,9 +1385,48 @@ body:not(.playing-bar) .toast {
     padding-top: 1.25rem;
   }
 
+  /* The cover beside the name, and the buttons a row of their own
+     under both, so they don't wrap. */
   .hero {
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto;
+    gap: 0 1rem;
     padding: 1rem;
+  }
+
+  .hero > div:not(.mix-art) {
+    display: contents;
+  }
+
+  .hero .mix-art {
+    grid-row: 1 / span 3;
+  }
+
+  .hero .kicker {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .hero h2 {
+    grid-row: 3;
+    grid-column: 2;
+    margin: 0;
+  }
+
+  .hero .btn-row,
+  .hero p:not(.kicker) {
+    grid-column: 1 / -1;
+  }
+
+  .hero .btn-row,
+  .hero p + .btn-row {
+    flex-wrap: nowrap;
+    margin-top: 0.875rem;
+  }
+
+  .hero p:not(.kicker) {
+    margin: 0.75rem 0 0;
   }
 
   .mix-art {

@@ -395,12 +395,18 @@ function supermixHero() {
             'button',
             { className: 'btn ghost', type: 'button', onclick: () => buildMix(true) },
             icon('mix'),
-            'New mix'
+            'Remix'
           ),
         el(
           'button',
-          { className: 'btn ghost', type: 'button', title: 'The YouTube Music account', onclick: openYTAccount },
-          'Account'
+          {
+            className: 'btn ghost icon-only',
+            type: 'button',
+            title: 'The YouTube Music account',
+            'aria-label': 'The YouTube Music account',
+            onclick: openYTAccount,
+          },
+          icon('more')
         )
       )
     )

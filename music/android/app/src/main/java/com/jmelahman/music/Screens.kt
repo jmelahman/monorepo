@@ -392,7 +392,7 @@ private fun MixHero(model: Model) {
         ChromeButton(
             when {
                 model.mixing -> "Mixing…"
-                model.mix != null -> "Mix again"
+                model.mix != null -> "Remix"
                 else -> "Start"
             },
             Glyph.Mix,
