@@ -29,6 +29,12 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("downloads_metered", false)
         set(value) = prefs.edit().putBoolean("downloads_metered", value).apply()
 
+    // Whether the background sync waits for the night, on Wi-Fi and the
+    // charger, instead of running a few times a day.
+    var syncOvernight: Boolean
+        get() = prefs.getBoolean("sync_overnight", false)
+        set(value) = prefs.edit().putBoolean("sync_overnight", value).apply()
+
     // What the phone keeps in step with the server on Wi-Fi: playlist:<id>,
     // album:<artist>/<album>, and mix:library for the day's library mix.
     var kept: Set<String>

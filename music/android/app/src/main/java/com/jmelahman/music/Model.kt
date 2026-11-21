@@ -253,7 +253,7 @@ class Model(app: Application) : AndroidViewModel(app) {
         reload()
         checkForUpdate()
         viewModelScope.launch { refreshBuys() }
-        Sync.schedule(context)
+        Sync.schedule(context, settings.syncOvernight)
         Sync.now(context)
     }
 
@@ -718,7 +718,7 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     // ------------------------------------------------------------ settings
 
-    fun saveSettings(url: String, allowMetered: Boolean, allowDownloadsMetered: Boolean) {
+    fun saveSettings(url: String, allowMetered: Boolean, allowDownloadsMetered: Boolean, syncOvernight: Boolean) {
         val base = url.trim().trimEnd('/')
         if (!base.startsWith("http://") && !base.startsWith("https://")) {
             notice("The server needs an http:// or https:// address")
@@ -729,6 +729,10 @@ class Model(app: Application) : AndroidViewModel(app) {
         server = base
         settings.allowMetered = allowMetered
         settings.allowDownloadsMetered = allowDownloadsMetered
+        if (syncOvernight != settings.syncOvernight) {
+            settings.syncOvernight = syncOvernight
+            if (!moved) Sync.schedule(context, syncOvernight, changed = true)
+        }
         if (moved) {
             library = null
             playlists = null

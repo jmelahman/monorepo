@@ -904,6 +904,7 @@ fun SettingsDialog(model: Model, onDismiss: () -> Unit) {
     var url by remember { mutableStateOf(model.settings.baseUrl) }
     var allowMetered by remember { mutableStateOf(model.settings.allowMetered) }
     var allowDownloadsMetered by remember { mutableStateOf(model.settings.allowDownloadsMetered) }
+    var syncOvernight by remember { mutableStateOf(model.settings.syncOvernight) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -920,13 +921,25 @@ fun SettingsDialog(model: Model, onDismiss: () -> Unit) {
                 )
                 SwitchRow("Stream on mobile data", allowMetered) { allowMetered = it }
                 SwitchRow("Download on mobile data", allowDownloadsMetered) { allowDownloadsMetered = it }
+                Column {
+                    SwitchRow("Sync overnight only", syncOvernight) { syncOvernight = it }
+                    Text(
+                        if (syncOvernight) {
+                            "Checks once a night, on Wi-Fi while charging. Opening the app and saving still sync at once."
+                        } else {
+                            "Checks a few times a day on any network."
+                        },
+                        color = Palette.Dim,
+                        fontSize = 12.sp,
+                    )
+                }
                 Text("Version ${BuildConfig.VERSION_NAME}", color = Palette.Dim, fontSize = 12.sp)
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    model.saveSettings(url, allowMetered, allowDownloadsMetered)
+                    model.saveSettings(url, allowMetered, allowDownloadsMetered, syncOvernight)
                     onDismiss()
                 },
             ) { Text("Save") }

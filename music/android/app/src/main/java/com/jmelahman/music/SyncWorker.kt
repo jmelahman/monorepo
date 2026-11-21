@@ -14,6 +14,9 @@ import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 // SyncWorker keeps the phone in step with what it was asked to keep: the
@@ -27,6 +30,21 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val settings = Settings(applicationContext)
         if (settings.baseUrl.isEmpty()) return@withContext Result.success()
         Api.baseUrl = settings.baseUrl
+        if (inputData.getBoolean(Sync.NIGHT, false)) {
+            // Tomorrow night's is queued behind this one, once, whatever
+            // comes of it; one the charger only allowed after the night
+            // waits for it.
+            if (runAttemptCount == 0) Sync.tonight(applicationContext, ExistingWorkPolicy.APPEND_OR_REPLACE)
+            if (LocalTime.now().hour !in Sync.NIGHT_HOURS) return@withContext Result.success()
+            return@withContext when (val r = sync(settings)) {
+                is Result.Failure -> Result.success()
+                else -> r
+            }
+        }
+        sync(settings)
+    }
+
+    private fun sync(settings: Settings): Result =
         try {
             followMoves(settings)
             val wanted = wanted(settings)
@@ -38,7 +56,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         } catch (e: org.json.JSONException) {
             Result.failure()
         }
-    }
 
     // followMoves makes the server's renames to the phone's copies and
     // to the albums it keeps, before anything is pruned for missing.
@@ -117,14 +134,47 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 object Sync {
     private const val PERIODIC = "sync"
     private const val NOW = "sync-now"
+    const val NIGHT = "sync-night"
+
+    // The hours an overnight sync may run in, from the first.
+    val NIGHT_HOURS = 2..5
 
     // schedule runs the sync a few times a day, whenever there is a
-    // network; the downloads it queues wait for the one they may use.
-    fun schedule(context: Context) {
+    // network, or once a night; the downloads it queues wait for the
+    // network they may use. changed says the choice was just switched,
+    // so the other schedule goes.
+    fun schedule(context: Context, overnight: Boolean, changed: Boolean = false) {
+        val wm = WorkManager.getInstance(context)
+        if (overnight) {
+            wm.cancelUniqueWork(PERIODIC)
+            tonight(context, if (changed) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP)
+            return
+        }
+        wm.cancelUniqueWork(NIGHT)
         val request = PeriodicWorkRequestBuilder<SyncWorker>(6, TimeUnit.HOURS)
             .setConstraints(connected())
             .build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, request)
+        wm.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    // tonight queues one sync for the coming night, on Wi-Fi and the
+    // charger. Android may hold it a while; each run queues the next, so
+    // a late one doesn't push the nights after it later.
+    fun tonight(context: Context, policy: ExistingWorkPolicy) {
+        val now = LocalDateTime.now()
+        var at = now.toLocalDate().atTime(NIGHT_HOURS.first, 0)
+        if (!at.isAfter(now)) at = at.plusDays(1)
+        val request = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setInitialDelay(Duration.between(now, at))
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.UNMETERED)
+                    .setRequiresCharging(true)
+                    .build(),
+            )
+            .setInputData(workDataOf(NIGHT to true))
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(NIGHT, policy, request)
     }
 
     // now syncs as soon as there is a network, after something kept
