@@ -846,7 +846,15 @@ function renderLibrary(tab) {
 // albumTile links to an album; hovering its cover shows a button that
 // plays it straight away, as YouTube Music's do.
 function albumTile(artist, album) {
-  return el(
+  const play = el(
+    'button',
+    {
+      type: 'button',
+      onclick: () => (playingHere(box) ? togglePlay() : playQueue(ownedItems(artist, album), 0)),
+    },
+    icon('play')
+  );
+  const box = el(
     'div',
     { className: 'tile-box' },
     el(
@@ -856,20 +864,31 @@ function albumTile(artist, album) {
       el('span', { className: 'tile-title', textContent: album.name }),
       el('span', { className: 'tile-sub', textContent: artist.name })
     ),
-    el(
-      'div',
-      { className: 'art-play' },
-      el(
-        'button',
-        {
-          type: 'button',
-          'aria-label': `Play ${album.name}`,
-          onclick: () => playQueue(ownedItems(artist, album), 0),
-        },
-        icon('play')
-      )
-    )
+    el('div', { className: 'art-play' }, play)
   );
+  box.paths = new Set(album.tracks.map((t) => t.path));
+  box.label = album.name;
+  syncTile(box);
+  return box;
+}
+
+// A tile's button pauses while its album plays, and resumes it rather
+// than starting over while it is paused.
+function playingHere(box) {
+  return box.paths.has(queue[playingIndex]?.key);
+}
+
+function syncTile(box) {
+  const here = playingHere(box);
+  const pause = here && !player.paused;
+  const btn = box.querySelector('.art-play button');
+  setIcon(btn, pause ? 'pause' : 'play');
+  btn.setAttribute('aria-label', `${pause ? 'Pause' : 'Play'} ${box.label}`);
+  box.classList.toggle('playing', here);
+}
+
+function syncTiles() {
+  for (const box of document.querySelectorAll('.tile-box')) if (box.paths) syncTile(box);
 }
 
 function renderArtist(name) {
@@ -2230,6 +2249,7 @@ function syncPlaying() {
   setIcon(playpause, paused ? 'play' : 'pause');
   playpause.setAttribute('aria-label', paused ? 'Play' : 'Pause');
   document.body.classList.toggle('paused', paused);
+  syncTiles();
 }
 
 player.addEventListener('play', syncPlaying);
@@ -2299,6 +2319,7 @@ syncVolume();
 
 // Highlights the row of what is playing, in whichever list holds it.
 function markTrack() {
+  syncTiles();
   const current = queue[playingIndex]?.key;
   for (const row of document.querySelectorAll('.track[data-key]')) {
     const on = row.dataset.key === current;
