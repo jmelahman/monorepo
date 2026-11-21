@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -60,6 +61,11 @@ type buy struct {
 	Created  time.Time  `json:"created"`
 	Next     time.Time  `json:"next"`           // when a queued buy may run
 	Link     string     `json:"link,omitempty"` // the store link the last attempt bought from
+	// A track picked off a store album's page is bought from that page,
+	// by its number there.
+	Album  string `json:"album,omitempty"`
+	Number int    `json:"number,omitempty"`
+	Page   string `json:"page,omitempty"`
 }
 
 // storeLink is an album page in the store found by hand for a track the
@@ -105,6 +111,7 @@ func routeBuys(ctx context.Context, mux *http.ServeMux, store, proxy, music, sta
 		q.covers = newCoverFetcher()
 		go q.run(ctx)
 	}
+	routeStore(mux, q)
 	mux.HandleFunc("POST /api/buy", func(w http.ResponseWriter, r *http.Request) {
 		if q == nil {
 			http.Error(w, "no store provider configured", http.StatusServiceUnavailable)
@@ -227,6 +234,35 @@ func newBuyQueue(store, music, state string) (*buyQueue, error) {
 func (q *buyQueue) add(artist, title string) (buy, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	b, err := q.addLocked(buy{Artist: artist, Title: title})
+	if err != nil {
+		return buy{}, err
+	}
+	q.poke()
+	return b, nil
+}
+
+// addAlbum queues the tracks picked off a store album's page, each bought
+// from that page by its number, as add queues one.
+func (q *buyQueue) addAlbum(artist, album, page string, tracks []albumPick) ([]buy, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	var out []buy
+	for _, t := range tracks {
+		b, err := q.addLocked(buy{Artist: artist, Title: t.Title, Album: album, Number: t.Number, Page: page})
+		if err != nil {
+			return out, err
+		}
+		out = append(out, b)
+	}
+	q.poke()
+	return out, nil
+}
+
+// addLocked queues n, or hands back the buy already waiting or running
+// for the same track, now bought from where n says.
+func (q *buyQueue) addLocked(n buy) (buy, error) {
+	artist, title := n.Artist, n.Title
 	same := func(b *buy) bool { return strings.EqualFold(b.Artist, artist) && strings.EqualFold(b.Title, title) }
 	for _, b := range slices.Backward(q.buys) {
 		if !same(b) {
@@ -240,25 +276,27 @@ func (q *buyQueue) add(artist, title string) (buy, error) {
 		}
 		if b.Status == buyQueued {
 			b.Next = time.Now()
+			if n.Page != "" {
+				b.Album, b.Number, b.Page = n.Album, n.Number, n.Page
+			}
 		}
 		// Older failures of the same track are this one's history.
 		q.buys = slices.DeleteFunc(q.buys, func(o *buy) bool { return o != b && same(o) && o.Status == buyFailed })
 		if err := q.saveLocked(); err != nil {
 			return buy{}, err
 		}
-		q.poke()
 		return *b, nil
 	}
 	id := make([]byte, 8)
 	_, _ = rand.Read(id)
 	now := time.Now()
-	b := &buy{ID: hex.EncodeToString(id), Artist: artist, Title: title, Status: buyQueued, Created: now, Next: now}
+	b := &n
+	b.ID, b.Status, b.Created, b.Next = hex.EncodeToString(id), buyQueued, now, now
 	q.buys = append(q.buys, b)
 	if err := q.saveLocked(); err != nil {
 		q.buys = q.buys[:len(q.buys)-1]
 		return buy{}, err
 	}
-	q.poke()
 	return *b, nil
 }
 
@@ -340,7 +378,7 @@ func (q *buyQueue) run(ctx context.Context) {
 			}
 			continue
 		}
-		res, err := q.attempt(ctx, b.Artist, b.Title, b.Link)
+		res, err := q.attempt(ctx, b)
 		if ctx.Err() != nil {
 			// Stopped mid-buy; it runs again on the next start.
 			return
@@ -366,7 +404,10 @@ func (q *buyQueue) next() (*buy, time.Duration) {
 		}
 		b.Status = buyBuying
 		b.Attempts++
-		b.Link = q.linkForLocked(b.Artist, b.Title)
+		b.Link = b.Page
+		if b.Link == "" {
+			b.Link = q.linkForLocked(b.Artist, b.Title)
+		}
 		if err := q.saveLocked(); err != nil {
 			slog.Error("buys: save", "err", err)
 		}
@@ -378,16 +419,33 @@ func (q *buyQueue) next() (*buy, time.Duration) {
 
 // attempt runs the store provider once for a track, from the store link
 // found for it by hand when there is one.
-func (q *buyQueue) attempt(ctx context.Context, artist, title, link string) (*buyResult, error) {
+func (q *buyQueue) attempt(ctx context.Context, b *buy) (*buyResult, error) {
 	cctx, cancel := context.WithTimeout(ctx, buyAttempt)
 	defer cancel()
 	// The values ride in the flags themselves, so a title that starts
 	// with a dash can't be read as a flag of its own.
-	args := []string{"buy", "--artist=" + artist, "--title=" + title, "--dir=" + q.music}
-	if link != "" {
-		args = append(args, "--link="+link)
+	args := []string{"buy", "--artist=" + b.Artist, "--title=" + b.Title, "--dir=" + q.music}
+	if b.Link != "" {
+		args = append(args, "--link="+b.Link)
+		if b.Page != "" && b.Number > 0 {
+			args = append(args, "--number="+strconv.Itoa(b.Number))
+		}
 	}
-	cmd := exec.CommandContext(cctx, q.store, args...)
+	out, err := q.provider(cctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	var res buyResult
+	if err := json.Unmarshal(out, &res); err != nil {
+		return nil, errors.New("the store provider's answer could not be read: " + err.Error())
+	}
+	return &res, nil
+}
+
+// provider runs the store provider with args and returns what it prints,
+// or what it said when it failed.
+func (q *buyQueue) provider(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, q.store, args...)
 	// A provider that leaves a browser or a download behind it must not
 	// hold the queue past the attempt's own limit.
 	cmd.WaitDelay = 10 * time.Second
@@ -409,11 +467,7 @@ func (q *buyQueue) attempt(ctx context.Context, artist, title, link string) (*bu
 		}
 		return nil, errors.New(msg)
 	}
-	var res buyResult
-	if err := json.Unmarshal(out, &res); err != nil {
-		return nil, errors.New("the store provider's answer could not be read: " + err.Error())
-	}
-	return &res, nil
+	return out, nil
 }
 
 // finish records an attempt's outcome: done, queued again after a wait,

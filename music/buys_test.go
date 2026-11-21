@@ -131,7 +131,7 @@ echo "{\"artist\":\"A\",\"album\":\"B\",\"title\":\"$HTTPS_PROXY\",\"file\":\"/m
 		t.Fatal(err)
 	}
 	q.proxy = "http://gluetun:8888"
-	res, err := q.attempt(t.Context(), "A", "C", "")
+	res, err := q.attempt(t.Context(), &buy{Artist: "A", Title: "C"})
 	if err != nil {
 		t.Fatal(err)
 	}
