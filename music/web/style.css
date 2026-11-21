@@ -1153,6 +1153,18 @@ main > .view-title {
   min-width: 0;
 }
 
+/* A name to edit, its label above it. */
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.edit-field span {
+  color: var(--dim);
+  font-size: 0.875rem;
+}
+
 /* The album cover panel: the covers to pick from, a grid that scrolls. */
 .cover-choices {
   display: grid;

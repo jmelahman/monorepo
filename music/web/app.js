@@ -30,6 +30,7 @@ let lastSearch = { q: '', tracks: null }; // the search last run, so back doesn'
 let apkReady = false; // whether the Android client can be offered
 let mixSize = remember('music-mix-size', 50); // tracks in the library mix
 let supermixReady = false; // whether the server has YouTube Music set up for the supermix
+let movesSeq = remember('music-moves-seq', 0); // the last of the server's renames applied here
 
 // The same cache names the service worker keeps (web/sw.js).
 const AUDIO = 'music-audio-v1';
@@ -57,7 +58,7 @@ function setStatus(up, text) {
   s.setAttribute('aria-label', text);
 }
 
-loadLibrary();
+applyMoves().finally(loadLibrary);
 loadPlaylists();
 fetch('api/excluded')
   .then((r) => (r.ok ? r.json() : []))
@@ -906,7 +907,8 @@ function renderArtist(name) {
             { className: 'btn', type: 'button', onclick: () => playQueue(shuffled(tracks), 0) },
             icon('shuffle'),
             'Shuffle'
-          )
+          ),
+          button('btn ghost', () => editArtist(a.name), 'Edit')
         )
       )
     ),
@@ -1039,7 +1041,8 @@ function renderAlbum(artistName, albumName) {
             'Shuffle'
           ),
           saveBtn,
-          album.name !== 'Singles' && button('btn ghost', () => openCoverEditor(a.name, album.name), 'Change cover')
+          album.name !== 'Singles' && button('btn ghost', () => openCoverEditor(a.name, album.name), 'Change cover'),
+          album.name !== 'Singles' && button('btn ghost', () => editAlbum(a.name, album.name), 'Edit')
         )
       )
     ),
@@ -1158,6 +1161,213 @@ function openCoverEditor(artist, album) {
   document.body.append(dialog);
   dialog.showModal();
   search();
+}
+
+// ------------------------------------------------------------- editing
+
+// The library's names are its folders' and files' names, so an edit is a
+// rename on the server. Each is logged, and applyMoves replays the log on
+// what this browser keeps by path: saved audio, the queue, recent albums.
+async function applyMoves() {
+  const r = await fetch(`api/moves?since=${movesSeq}`).catch(() => null);
+  if (!r || !r.ok) return;
+  const { seq, moves } = await r.json();
+  const cache = moves.length && 'caches' in window ? await caches.open(AUDIO).catch(() => null) : null;
+  let recent = remember('music-recent', []);
+  for (const m of moves) {
+    if (m.album) {
+      const [from, to] = [splitAlbum(m.from), splitAlbum(m.to)];
+      recent = recent.map((x) => (x.artist === from.artist && x.album === from.album ? to : x));
+      continue;
+    }
+    if (cache) {
+      const hit = await cache.match(offlineKey(m.from));
+      if (hit) {
+        await cache.put(offlineKey(m.to), hit);
+        await cache.delete(offlineKey(m.from));
+      }
+    }
+    for (const item of queue) {
+      if (item.path !== m.from) continue;
+      const { artist, album } = splitTrack(m.to);
+      Object.assign(item, libItems([{ path: m.to, name: fileStem(m.to), size: item.size, artist, album }])[0]);
+    }
+  }
+  if (moves.length) {
+    keep('music-recent', recent.filter((x, i) => recent.findIndex((y) => y.artist === x.artist && y.album === x.album) === i));
+    if (excluded.size) {
+      const keys = await fetch('api/excluded').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (keys) excluded = new Set(keys);
+    }
+  }
+  movesSeq = seq;
+  keep('music-moves-seq', seq);
+}
+
+// An artist's name can't hold a slash, so the first one ends it.
+const splitAlbum = (s) => ({ artist: s.slice(0, s.indexOf('/')), album: s.slice(s.indexOf('/') + 1) });
+const fileStem = (path) => path.slice(path.lastIndexOf('/') + 1).replace(/\.[^.]*$/, '');
+function splitTrack(path) {
+  const parts = path.split('/');
+  return { artist: parts[0], album: parts.length === 3 ? parts[1] : 'Singles' };
+}
+
+// openEditor asks for new names and makes the edit. A plain rename goes
+// straight through; a merge into what is already there is shown first,
+// and two different tracks of one name stop it.
+function openEditor({ title, about, fields, request, done }) {
+  const status = el('p', { className: 'yt-status', role: 'status' });
+  const save = el('button', { className: 'btn chrome', type: 'submit', textContent: 'Save' });
+  let shown = null; // the request whose plan is on show, waiting to be confirmed
+
+  const inputs = fields.map((f) => {
+    const input = el('input', { type: 'text', value: f.value, required: true, spellcheck: false });
+    if (f.options) {
+      // Filled as it is wanted, since a track's albums follow its artist.
+      const list = el('datalist', { id: `edit-${f.name}` });
+      input.setAttribute('list', list.id);
+      input.addEventListener('focus', () => list.replaceChildren(...f.options().map((o) => el('option', { value: o }))));
+      f.list = list;
+    }
+    input.addEventListener('input', () => {
+      shown = null;
+      save.textContent = 'Save';
+      status.textContent = '';
+    });
+    f.input = input;
+    return el('label', { className: 'edit-field' }, el('span', { textContent: f.label }), input, f.list);
+  });
+  const values = () => Object.fromEntries(fields.map((f) => [f.name, f.input.value.trim()]));
+
+  async function post(body, dry) {
+    const r = await fetch(`api/edit${dry ? '?dry=1' : ''}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    if (!r) throw new Error('The server could not be reached.');
+    if (!r.ok) throw new Error((await r.text()).trim());
+    return r.json();
+  }
+
+  async function submit() {
+    const v = values();
+    const body = request(v);
+    if (!body) {
+      dialog.close();
+      return;
+    }
+    const key = JSON.stringify(body);
+    save.disabled = true;
+    try {
+      if (shown !== key) {
+        const plan = await post(body, true);
+        if (plan.conflicts?.length) {
+          status.textContent = `Can't: ${plan.conflicts.join(', ')} is already there, a different track of the same name. Rename one first.`;
+          return;
+        }
+        if (plan.merge) {
+          const dups = plan.duplicates?.length || 0;
+          status.textContent =
+            `${plan.to} is already there: ${plural(plan.tracks, 'track')} will join it.` +
+            (dups ? ` ${plural(dups, 'track')} it already has will be set aside in the library's .trash folder.` : '');
+          shown = key;
+          save.textContent = 'Merge';
+          return;
+        }
+      }
+      status.textContent = 'Saving…';
+      await post(body, false);
+      dialog.close();
+      await applyMoves();
+      playlistTracks.clear();
+      libMix = null;
+      notice('Renamed');
+      await loadLibrary();
+      done(v);
+    } catch (e) {
+      status.textContent = e.message;
+    } finally {
+      save.disabled = false;
+    }
+  }
+
+  const form = el(
+    'form',
+    { className: 'editor yt-account' },
+    el('h2', { textContent: title }),
+    el('p', { className: 'yt-help', textContent: about }),
+    inputs,
+    status,
+    el('div', { className: 'btn-row' }, save, button('btn ghost', () => dialog.close(), 'Cancel'))
+  );
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    submit();
+  };
+  const dialog = el('dialog', { className: 'sheet' }, form);
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+  fields[0].input.select();
+}
+
+const artistNames = () => library.map((a) => a.name);
+
+function editAlbum(artist, album) {
+  openEditor({
+    title: 'Edit album',
+    about: 'Renames the album’s folder. Under another artist it moves there; onto an album that is already there it joins it.',
+    fields: [
+      { name: 'album', label: 'Album', value: album },
+      { name: 'artist', label: 'Artist', value: artist, options: artistNames },
+    ],
+    request: (v) =>
+      v.album === album && v.artist === artist
+        ? null
+        : { artist, album, to: v.album, toArtist: v.artist === artist ? '' : v.artist },
+    done: (v) => (location.hash = href('album', v.artist, v.album)),
+  });
+}
+
+function editArtist(artist) {
+  openEditor({
+    title: 'Edit artist',
+    about: 'Renames the artist’s folder. Onto an artist that is already there, the albums join theirs.',
+    fields: [{ name: 'artist', label: 'Artist', value: artist, options: artistNames }],
+    request: (v) => (v.artist === artist ? null : { artist, to: v.artist }),
+    done: (v) => (location.hash = href('artist', v.artist)),
+  });
+}
+
+function editTrack(item) {
+  const { artist, album } = splitTrack(item.path);
+  const fields = [
+    { name: 'name', label: 'File name', value: fileStem(item.path) },
+    {
+      name: 'album',
+      label: 'Album',
+      value: album,
+      options: () => ['Singles', ...(findArtist(fields[2].input.value.trim())?.albums.map((a) => a.name) || [])],
+    },
+    { name: 'artist', label: 'Artist', value: artist, options: artistNames },
+  ];
+  openEditor({
+    title: 'Edit track',
+    about: 'Renames the track’s file; a number at the front orders the album. “Singles” keeps it loose under the artist.',
+    fields,
+    request: (v) => {
+      const moved = v.artist !== artist || v.album !== album;
+      if (!moved && v.name === fileStem(item.path)) return null;
+      return {
+        track: item.path,
+        to: v.name,
+        toArtist: v.artist === artist ? '' : v.artist,
+        toAlbum: moved ? v.album || 'Singles' : '',
+      };
+    },
+    done: () => render(),
+  });
 }
 
 // --------------------------------------------------------------- search
@@ -1620,6 +1830,7 @@ function openMenu(anchor, item, inPlaylist) {
     owned && el('hr'),
     inPlaylist && entry(`Remove from ${inPlaylist.name}`, () => removeFromPlaylist(inPlaylist, item.path)),
     entry(out ? 'Include in mixing' : 'Exclude from mixing', () => setExcluded(item.key, !out)),
+    owned && item.path && entry('Edit track…', () => editTrack(item)),
     item.album && entry('Go to album', () => (location.hash = href('album', item.album.artist, item.album.album)))
   );
   document.body.append(menu);
