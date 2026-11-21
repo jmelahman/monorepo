@@ -339,6 +339,17 @@ class Model(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // backdrop is the cover whose colour washes the top of the screen:
+    // the album's or artist's in view, the library mix's first, or else
+    // what is playing.
+    fun backdrop(): String? = when (val s = screen) {
+        is Screen.AlbumPage -> Api.coverUrl(s.artist, s.album)
+        is Screen.ArtistPage ->
+            library?.find { it.name == s.artist }?.albums?.firstOrNull()?.let { Api.coverUrl(s.artist, it.name) }
+        Screen.LibraryMix -> libraryMix?.firstOrNull()?.let { Api.coverUrl(it.artist, it.album) }
+        else -> null
+    } ?: playing?.art
+
     // ---------------------------------------------------------------- play
 
     private fun streamingAllowed() = settings.allowMetered || !Settings.metered(context)

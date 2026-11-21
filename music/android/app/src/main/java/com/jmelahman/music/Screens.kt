@@ -358,7 +358,8 @@ private fun MixCard(kicker: String, title: String, tint: Color, note: String? = 
             .padding(start = 16.dp, end = 16.dp, top = 12.dp)
             .fillMaxWidth()
             .clip(shape)
-            .background(Palette.Card)
+            // Flat enough for the wash to show through, as on the web.
+            .background(Palette.Card.copy(alpha = 0.72f))
             .background(
                 Brush.radialGradient(
                     listOf(tint.copy(alpha = 0.22f), Color.Transparent),

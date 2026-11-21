@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,8 +77,9 @@ fun MusicApp(model: Model) {
                 .fillMaxSize()
                 .background(Palette.Graphite),
         ) {
+            Wash(model.backdrop())
             Scaffold(
-                containerColor = Palette.Graphite,
+                containerColor = Color.Transparent,
                 contentWindowInsets = WindowInsets(0),
                 topBar = { TopBar(model) { settingsOpen = true } },
                 bottomBar = {
