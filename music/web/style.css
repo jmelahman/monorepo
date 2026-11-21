@@ -396,6 +396,48 @@ main > .view-title {
   animation: spin 2.4s linear infinite;
 }
 
+/* A mix's card opens its page: the title's link covers the card, the
+   buttons sitting above it. */
+.hero h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.hero h2 a:hover {
+  text-decoration: underline;
+}
+
+.hero .btn-row,
+.hero .card-more {
+  position: relative;
+  z-index: 1;
+}
+
+/* On a mix's own page, the covers stand as an album's cover does. */
+.album-head .mix-art {
+  width: clamp(9rem, 24vw, 15rem);
+  height: clamp(9rem, 24vw, 15rem);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 16px 40px rgb(0 0 0 / 0.5);
+}
+
+.album-head .mix-art .art {
+  width: 100%;
+  align-self: stretch;
+  box-shadow: none;
+}
+
+.album-head .mix-art > svg {
+  width: 4rem;
+  height: 4rem;
+}
+
 @keyframes spin {
   to {
     transform: rotate(1turn);
@@ -1441,9 +1483,14 @@ body:not(.playing-bar) .toast {
     gap: 1.25rem;
   }
 
-  .album-head .art {
+  .album-head .art,
+  .album-head .mix-art {
     width: min(14rem, 60vw);
     align-self: center;
+  }
+
+  .album-head .mix-art {
+    height: min(14rem, 60vw);
   }
 
   /* The bar keeps the essentials: what is playing, and play/next. */

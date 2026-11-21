@@ -19,7 +19,7 @@ let libraryState = 'loading'; // loading, ready or failed
 let queue = []; // { key, name, sub, url, art, album }: owned tracks and streams alike
 let playingIndex = -1; // where in the queue the player is
 let order = []; // the queue's indices in the order they play: shuffled, or not
-let mix = null; // the supermix last built, kept for the home page
+let mix = null; // the supermix last built, kept for its page
 let mixSource = ''; // account (YouTube Music's own) or radio (seeded from the library)
 let libMix = null; // the library mix: null until asked for, then 'loading', a list or 'failed'
 let playlists = null; // from api/playlists, without their tracks
@@ -71,7 +71,7 @@ fetch('api/mix')
   .then((r) => (r.ok ? r.json() : {}))
   .then((m) => {
     supermixReady = !!m.supermix;
-    if (supermixReady && route().kind === 'home') render();
+    if (supermixReady && onMixes()) render();
   })
   .catch(() => {});
 
@@ -226,7 +226,7 @@ function keep(key, value) {
 // --------------------------------------------------------------- routes
 
 // route reads the hash: #/, #/library[/artists|/playlists], #/artist/A,
-// #/album/A/B, #/playlist/ID or #/search/Q.
+// #/album/A/B, #/playlist/ID, #/mix/supermix|library or #/search/Q.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   switch (parts[0]) {
@@ -238,6 +238,8 @@ function route() {
       return { kind: 'artist', artist: parts[1] || '' };
     case 'album':
       return { kind: 'album', artist: parts[1] || '', album: parts.slice(2).join('/') };
+    case 'mix':
+      return { kind: 'mix', which: parts[1] === 'library' ? 'library' : 'supermix' };
     case 'search':
       return { kind: 'search', q: parts.slice(1).join('/') };
     default:
@@ -247,11 +249,17 @@ function route() {
 
 const href = (...parts) => '#/' + parts.map(encodeURIComponent).join('/');
 
+// onMixes is whether the page shows a mix: home's cards or a mix's page.
+const onMixes = () => ['home', 'mix'].includes(route().kind);
+
 function render() {
   const r = route();
   for (const a of document.querySelectorAll('.tabs a')) {
     const inLibrary = ['artist', 'album', 'playlist'].includes(r.kind);
-    const on = a.dataset.tab === r.kind || (a.dataset.tab === 'library' && inLibrary);
+    const on =
+      a.dataset.tab === r.kind ||
+      (a.dataset.tab === 'library' && inLibrary) ||
+      (a.dataset.tab === 'home' && r.kind === 'mix');
     if (on) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
@@ -268,6 +276,10 @@ function render() {
       break;
     case 'playlist':
       renderPlaylist(r.id);
+      break;
+    case 'mix':
+      if (r.which === 'library') renderLibraryMix();
+      else renderSupermix();
       break;
     case 'search':
       $('search-q').value = r.q;
@@ -344,8 +356,6 @@ function renderHome() {
         el('a', { className: 'btn chrome', href: 'api/apk', download: '' }, icon('save'), 'Get the Android app')
       ),
     el('div', { className: 'mixes' }, supermixReady ? supermixHero() : connectHero(), libraryMixHero()),
-    Array.isArray(libMix) && libMix.length > 0 && shelf('Library mix', null, ownedList(libItems(libMix))),
-    supermixReady && Array.isArray(mix) && shelf('Supermix', null, streamList(mix)),
     libraryPending(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
     all.length > 0 && shelf('From your library', '#/library', albumRow(shuffled(all).slice(0, 18)))
@@ -380,20 +390,27 @@ function supermixHero() {
         className: 'kicker',
         textContent: mixSource === 'radio' ? 'Radio from your library' : 'From YouTube Music',
       }),
-      el('h2', { id: 'mix-title', textContent: 'Supermix' }),
+      el('h2', { id: 'mix-title' }, el('a', { href: href('mix', 'supermix'), textContent: 'Supermix' })),
       el(
         'div',
         { className: 'btn-row' },
         el(
           'button',
-          { className: 'btn chrome', type: 'button', disabled: mix === 'loading', onclick: () => buildMix(false) },
+          { className: 'btn chrome', type: 'button', disabled: mix === 'loading', onclick: () => openMix('supermix') },
           icon('play'),
           mix === 'loading' ? 'Mixing…' : 'Play'
         ),
         Array.isArray(mix) &&
           el(
             'button',
-            { className: 'btn ghost', type: 'button', onclick: () => buildMix(true) },
+            {
+              className: 'btn ghost',
+              type: 'button',
+              onclick: () => {
+                location.hash = href('mix', 'supermix');
+                remix();
+              },
+            },
             icon('mix'),
             'Remix'
           )
@@ -465,7 +482,7 @@ async function openYTAccount() {
     check.disabled = !a.ready;
     if (supermixReady !== a.ready) {
       supermixReady = a.ready;
-      if (route().kind === 'home') render();
+      if (onMixes()) render();
     }
   };
 
@@ -566,26 +583,30 @@ function libraryMixHero() {
       'div',
       {},
       el('p', { className: 'kicker', textContent: 'Made from your library' }),
-      el('h2', { id: 'libmix-title', textContent: 'Library mix' }),
+      el('h2', { id: 'libmix-title' }, el('a', { href: href('mix', 'library'), textContent: 'Library mix' })),
       libMix === 'failed' && el('p', { textContent: 'The mix could not be read.' }),
       el(
         'div',
         { className: 'btn-row' },
         el(
           'button',
-          { className: 'btn chrome', type: 'button', disabled: !ready, onclick: () => playQueue(libItems(libMix), 0) },
+          { className: 'btn chrome', type: 'button', disabled: !ready, onclick: () => openMix('library') },
           icon('play'),
           'Play'
         ),
-        sizePicker(mixSize, (n) => {
-          mixSize = n;
-          keep('music-mix-size', n);
-          libMix = null;
-          render();
-        })
+        mixSizePicker()
       )
     )
   );
+}
+
+function mixSizePicker() {
+  return sizePicker(mixSize, (n) => {
+    mixSize = n;
+    keep('music-mix-size', n);
+    libMix = null;
+    render();
+  });
 }
 
 // sizePicker chooses how many tracks a mix holds, from what the server
@@ -607,7 +628,7 @@ async function loadLibraryMix() {
   } catch {
     libMix = 'failed';
   }
-  if (route().kind === 'home') render();
+  if (onMixes()) render();
 }
 
 function shelf(title, more, body) {
@@ -628,13 +649,20 @@ function albumRow(items) {
   return el('ul', { className: 'grid row-scroll' }, items.map((x) => el('li', {}, albumTile(x.artist, x.album))));
 }
 
-// buildMix plays the supermix, reading it first if it isn't here yet;
-// fresh asks the server for a new one.
-async function buildMix(fresh) {
-  if (Array.isArray(mix) && !fresh) {
-    if (mix.length) playStreams(mix, 0);
+// openMix plays a mix from the top and opens its page, as YouTube Music
+// does; the supermix is read first if it isn't here yet.
+async function openMix(which) {
+  location.hash = href('mix', which);
+  if (which === 'library') {
+    if (Array.isArray(libMix) && libMix.length) playQueue(libItems(libMix), 0);
     return;
   }
+  if (!Array.isArray(mix)) await loadSupermix(false);
+  if (Array.isArray(mix) && mix.length) playStreams(mix, 0);
+}
+
+// loadSupermix reads the supermix; fresh asks the server for a new one.
+async function loadSupermix(fresh) {
   mix = 'loading';
   render();
   try {
@@ -646,8 +674,92 @@ async function buildMix(fresh) {
     mix = null;
     notice(`The mix could not be built: ${err.message}`);
   }
-  if (route().kind === 'home') render();
+  if (onMixes()) render();
+}
+
+// remix asks for a new supermix and plays it.
+async function remix() {
+  await loadSupermix(true);
   if (Array.isArray(mix) && mix.length) playStreams(mix, 0);
+}
+
+// The mixes' pages: the mix's covers, its buttons, then its tracks.
+
+function mixHead(covers, kicker, title, meta, ...buttons) {
+  return el(
+    'header',
+    { className: 'album-head' },
+    mixArt(covers),
+    el(
+      'div',
+      {},
+      el('p', { className: 'kicker', textContent: kicker }),
+      el('h2', { textContent: title }),
+      meta && el('p', { className: 'meta', textContent: meta }),
+      el('div', { className: 'btn-row' }, ...buttons)
+    )
+  );
+}
+
+function renderSupermix() {
+  if (!supermixReady) {
+    show(connectHero());
+    return;
+  }
+  if (mix === null) loadSupermix(false);
+  const ready = Array.isArray(mix) && mix.length > 0;
+  show(
+    mixHead(
+      ready ? mix.map((t) => [t.title, t.thumb]) : [],
+      mixSource === 'radio' ? 'Radio from your library' : 'From YouTube Music',
+      'Supermix',
+      ready && plural(mix.length, 'track'),
+      ready && button('btn chrome', () => playStreams(mix, 0), icon('play'), 'Play'),
+      ready && button('btn', () => playStreams(shuffled(mix), 0), icon('shuffle'), 'Shuffle'),
+      el(
+        'button',
+        { className: 'btn ghost', type: 'button', disabled: mix === 'loading', onclick: remix },
+        icon('mix'),
+        'Remix'
+      ),
+      el(
+        'button',
+        {
+          className: 'icon-btn',
+          type: 'button',
+          title: 'The YouTube Music account',
+          'aria-label': 'The YouTube Music account',
+          onclick: openYTAccount,
+        },
+        icon('more')
+      )
+    ),
+    mix === 'loading'
+      ? el('p', { className: 'empty', textContent: 'Mixing…' })
+      : Array.isArray(mix) && streamList(mix)
+  );
+}
+
+function renderLibraryMix() {
+  if (libMix === null) loadLibraryMix();
+  const ready = Array.isArray(libMix) && libMix.length > 0;
+  const items = ready ? libItems(libMix) : [];
+  show(
+    mixHead(
+      ready ? libMix.map((t) => [t.album, coverUrl(t.artist, t.album)]) : [],
+      'Made from your library',
+      'Library mix',
+      ready && `${plural(items.length, 'track')} · a new one each day`,
+      ready && button('btn chrome', () => playQueue(items, 0), icon('play'), 'Play'),
+      ready && button('btn', () => playQueue(shuffled(items), 0), icon('shuffle'), 'Shuffle'),
+      mixSizePicker()
+    ),
+    libMix === 'failed'
+      ? el('p', { className: 'empty', textContent: 'The mix could not be read.' })
+      : ready
+        ? ownedList(items)
+        : el('p', { className: 'empty', textContent: 'Mixing…' })
+  );
 }
 
 // -------------------------------------------------------------- library
@@ -1388,11 +1500,11 @@ async function setExcluded(key, out) {
   markExcluded();
   if (out && Array.isArray(libMix) && libMix.some((t) => t.path === key)) {
     libMix = libMix.filter((t) => t.path !== key);
-    if (route().kind === 'home') render();
+    if (onMixes()) render();
   }
   if (out && Array.isArray(mix) && key.startsWith('yt:')) {
     mix = mix.filter((t) => `yt:${t.videoId}` !== key);
-    if (route().kind === 'home') render();
+    if (onMixes()) render();
   }
   notice(out ? 'Excluded from mixing' : 'Included in mixing again');
 }
@@ -1636,6 +1748,10 @@ window.addEventListener('hashchange', () => toggleUpNext(false));
 // album's or artist's in view, or else what is playing.
 function backdropFor(r) {
   if (r.kind === 'album') return coverUrl(r.artist, r.album);
+  if (r.kind === 'mix') {
+    const first = r.which === 'library' ? Array.isArray(libMix) && libMix[0] : Array.isArray(mix) && mix[0];
+    if (first) return r.which === 'library' ? coverUrl(first.artist, first.album) : first.thumb;
+  }
   if (r.kind === 'artist') {
     const a = findArtist(r.artist);
     if (a) return artistCover(a);
