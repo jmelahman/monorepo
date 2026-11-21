@@ -84,6 +84,8 @@ form.addEventListener("submit", (e) => {
   });
 });
 
+const YOUTUBE = "*://*.youtube.com/*";
+
 // youTubeCookies reads YouTube's cookies from the store the tab lives in,
 // so a private window or a container sends its own sign-in.
 async function youTubeCookies() {
@@ -100,12 +102,22 @@ async function youTubeCookies() {
 }
 
 sendCookies.addEventListener("click", async () => {
+  // Under Manifest V3 the youtube.com access can be switched off, and then
+  // Firefox hands over no cookies at all. Asking straight from the click
+  // turns it back on; when it is already on, nothing is shown.
+  const access = browser.permissions.request({ origins: [YOUTUBE] });
   sendCookies.disabled = true;
   say(result, "Sending…");
   try {
+    if (!(await access)) {
+      throw new Error("Without access to youtube.com, the extension can't read the sign-in.");
+    }
     const cookies = await youTubeCookies();
+    if (!cookies.length) {
+      throw new Error("Firefox gave no YouTube cookies for this window. Open music.youtube.com in it, then try again.");
+    }
     if (!cookies.some((c) => c.name === "SAPISID" || c.name === "__Secure-3PAPISID")) {
-      throw new Error("This window isn't signed in to YouTube; sign in on music.youtube.com first.");
+      throw new Error(`This window has ${cookies.length} YouTube cookies but no sign-in; sign in on music.youtube.com first.`);
     }
     const a = await api("PUT", "/api/yt/account/cookies", toCookiesTxt(cookies), "text/plain");
     say(status, describe(a));
