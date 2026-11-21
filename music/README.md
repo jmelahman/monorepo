@@ -79,6 +79,14 @@ they play and how much room they take. The server reads each mp3's
 length from its first frame (a Xing, Info or VBRI header, or the
 bitrate and size) and keeps it while the file stays the same.
 
+## Playing
+
+The player bar has shuffle (the track playing stays, the rest of the
+queue is shuffled) and repeat (the queue, then the track), both kept
+between visits. Hovering an album's cover shows a button that plays it.
+The top of the page is washed in the colour of the cover in view, or of
+what is playing.
+
 ## Playlists
 
 Playlists are plain (a list of owned tracks) or smart (rules on artist,

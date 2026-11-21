@@ -18,6 +18,7 @@ let library = []; // the artists, from api/library
 let libraryState = 'loading'; // loading, ready or failed
 let queue = []; // { key, name, sub, url, art, album }: owned tracks and streams alike
 let playingIndex = -1; // where in the queue the player is
+let order = []; // the queue's indices in the order they play: shuffled, or not
 let mix = null; // the supermix last built, kept for the home page
 let mixSource = ''; // account (YouTube Music's own) or radio (seeded from the library)
 let libMix = null; // the library mix: null until asked for, then 'loading', a list or 'failed'
@@ -279,6 +280,7 @@ function render() {
   markTrack();
   markBuys();
   markExcluded();
+  backdrop(backdropFor(r));
 }
 
 window.addEventListener('hashchange', () => {
@@ -685,13 +687,32 @@ function renderLibrary(tab) {
   show(el('h2', { className: 'view-title', textContent: 'Library' }), chips, body, stats);
 }
 
+// albumTile links to an album; hovering its cover shows a button that
+// plays it straight away, as YouTube Music's do.
 function albumTile(artist, album) {
   return el(
-    'a',
-    { className: 'tile', href: href('album', artist.name, album.name) },
-    art(album.name, coverUrl(artist.name, album.name)),
-    el('span', { className: 'tile-title', textContent: album.name }),
-    el('span', { className: 'tile-sub', textContent: artist.name })
+    'div',
+    { className: 'tile-box' },
+    el(
+      'a',
+      { className: 'tile', href: href('album', artist.name, album.name) },
+      art(album.name, coverUrl(artist.name, album.name)),
+      el('span', { className: 'tile-title', textContent: album.name }),
+      el('span', { className: 'tile-sub', textContent: artist.name })
+    ),
+    el(
+      'div',
+      { className: 'art-play' },
+      el(
+        'button',
+        {
+          type: 'button',
+          'aria-label': `Play ${album.name}`,
+          onclick: () => playQueue(ownedItems(artist, album), 0),
+        },
+        icon('play')
+      )
+    )
   );
 }
 
@@ -1431,7 +1452,10 @@ async function toggleSave(album, btn) {
 // and streams alike, each with the key its row is marked by.
 function playQueue(items, index) {
   if (!items.length) return;
-  queue = items;
+  if (items !== queue) {
+    queue = items;
+    arrange(index);
+  }
   playingIndex = index;
   counted = false;
   const t = items[index];
@@ -1444,6 +1468,7 @@ function playQueue(items, index) {
   $('np-title').textContent = t.name;
   $('np-sub').textContent = t.sub;
   $('np-art').replaceWith(Object.assign(art(t.name, t.art, { eager: true }), { id: 'np-art' }));
+  backdrop(backdropFor(route()));
   updateTime();
   markTrack();
 
@@ -1476,11 +1501,141 @@ function step(delta) {
     player.currentTime = 0;
     return;
   }
-  const next = playingIndex + delta;
-  if (next >= 0 && next < queue.length) playQueue(queue, next);
+  let next = order.indexOf(playingIndex) + delta;
+  if (repeat === 'all') next = (next + queue.length) % queue.length;
+  if (next >= 0 && next < queue.length) playQueue(queue, order[next]);
 }
 
-player.addEventListener('ended', () => step(1));
+player.addEventListener('ended', () => {
+  if (repeat === 'one') {
+    player.currentTime = 0;
+    player.play().catch(() => {});
+  } else step(1);
+});
+
+// ------------------------------------------------------ shuffle, repeat
+
+let shuffle = remember('music-shuffle', false);
+let repeat = remember('music-repeat', 'off'); // 'off', 'all' or 'one'
+
+// arrange sets the order the queue plays in: as listed, or the track
+// playing first and the rest shuffled.
+function arrange(start) {
+  order = queue.map((_, i) => i);
+  if (!shuffle) return;
+  const rest = order.filter((i) => i !== start);
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  order = start >= 0 ? [start, ...rest] : rest;
+}
+
+function syncModes() {
+  const sh = $('shuffle');
+  sh.setAttribute('aria-pressed', String(shuffle));
+  sh.title = shuffle ? 'Shuffle is on' : 'Shuffle';
+  const re = $('repeat');
+  re.setAttribute('aria-pressed', String(repeat !== 'off'));
+  re.title = { off: 'Repeat', all: 'Repeating the queue', one: 'Repeating this track' }[repeat];
+  setIcon(re, repeat === 'one' ? 'repeat-one' : 'repeat');
+}
+
+$('shuffle').addEventListener('click', () => {
+  shuffle = !shuffle;
+  keep('music-shuffle', shuffle);
+  arrange(playingIndex);
+  syncModes();
+});
+
+$('repeat').addEventListener('click', () => {
+  repeat = { off: 'all', all: 'one', one: 'off' }[repeat];
+  keep('music-repeat', repeat);
+  syncModes();
+});
+
+syncModes();
+
+// ------------------------------------------------------------ backdrop
+
+// backdropFor is the cover whose colour washes the top of the page: the
+// album's or artist's in view, or else what is playing.
+function backdropFor(r) {
+  if (r.kind === 'album') return coverUrl(r.artist, r.album);
+  if (r.kind === 'artist') {
+    const a = findArtist(r.artist);
+    if (a) return artistCover(a);
+  }
+  const t = queue[playingIndex];
+  return t ? t.art : '';
+}
+
+const glows = new Map(); // cover → its colour, or '' when it has none to give
+let glowFor = null;
+
+// backdrop sets the wash to a cover's colour: its pixels averaged, the
+// more colourful ones counting most, then made vivid enough to show.
+function backdrop(src) {
+  glowFor = src;
+  const set = (c) => {
+    if (glowFor !== src) return;
+    if (c) document.documentElement.style.setProperty('--glow', c);
+    else document.documentElement.style.removeProperty('--glow');
+  };
+  if (!src) return set('');
+  if (glows.has(src)) return set(glows.get(src));
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    let c = '';
+    try {
+      const canvas = Object.assign(document.createElement('canvas'), { width: 24, height: 24 });
+      const g = canvas.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0, 24, 24);
+      const px = g.getImageData(0, 0, 24, 24).data;
+      let r = 0, gr = 0, b = 0, w = 0;
+      for (let i = 0; i < px.length; i += 4) {
+        const max = Math.max(px[i], px[i + 1], px[i + 2]);
+        const min = Math.min(px[i], px[i + 1], px[i + 2]);
+        const weight = 0.05 + (max - min) / 255;
+        r += px[i] * weight;
+        gr += px[i + 1] * weight;
+        b += px[i + 2] * weight;
+        w += weight;
+      }
+      c = vivid(r / w, gr / w, b / w);
+    } catch {
+      // A cover from elsewhere that won't be read; the default stays.
+    }
+    glows.set(src, c);
+    set(c);
+  };
+  img.onerror = () => {
+    glows.set(src, '');
+    set('');
+  };
+  img.src = src;
+}
+
+// vivid lifts a colour's saturation and sets its lightness into a band
+// that shows against the page without glaring.
+function vivid(r, g, b) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+  }
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return `hsl(${Math.round(((h * 60) + 360) % 360)} ${Math.round(Math.min(1, s * 1.7) * 100)}% ${Math.round(Math.min(0.55, Math.max(0.4, l)) * 100)}%)`;
+}
 
 // An owned track counts as played once half of it, or half a minute, has
 // played; smart playlists and the library mix go by the counts.
