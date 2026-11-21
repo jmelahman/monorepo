@@ -566,6 +566,12 @@ func songOf(title, channel string, known map[string]bool) (name, artist string) 
 	if a := channelSuffix.ReplaceAllString(channel, ""); a != "" {
 		channel = a
 	}
+	// "Paramore: Decode" — but only when the channel or the batch names
+	// the artist, as a colon is as often a part of a song's name.
+	if a, song, ok := strings.Cut(name, ": "); ok && song != "" &&
+		(strings.EqualFold(a, channel) || known[strings.ToLower(a)]) {
+		return unquote(strings.TrimSpace(song)), a
+	}
 	return unquote(name), channel
 }
 

@@ -55,6 +55,8 @@ func TestSongOf(t *testing.T) {
 		{`Plain White T's - "Hey There Delilah" (Official Music Video)`, "", "Hey There Delilah", "Plain White T's"},
 		{"One Way Or Another", "BlondieMusicOfficial", "One Way Or Another", "Blondie"},
 		{"The All-American Rejects - Dirty Little Secret (Official Music Video)", "", "Dirty Little Secret", "The All-American Rejects"},
+		{"Paramore: Decode [OFFICIAL VIDEO]", "Paramore", "Decode", "Paramore"},
+		{"Star Wars: Main Title", "John Williams", "Star Wars: Main Title", "John Williams"},
 		{"Mitski – Washing Machine Heart [Official Music Video] [4K Remaster]", "", "Washing Machine Heart", "Mitski"},
 	} {
 		if name, artist := songOf(c.title, c.channel, map[string]bool{"dazey and the scouts": true}); name != c.name || artist != c.artist {
