@@ -784,7 +784,8 @@ private fun LazyListScope.streamRows(model: Model, tracks: List<YTTrack>, buy: (
 @Composable
 fun BuyButton(buy: Buy?, onClick: () -> Unit) {
     val label = when (buy?.status) {
-        "queued" -> "Queued"
+        // A queued buy with an error has failed once and waits to try again.
+        "queued" -> if (buy?.error.isNullOrEmpty()) "Queued" else "Retrying"
         "buying" -> "Buying…"
         "done" -> "Owned"
         "failed" -> "Retry"

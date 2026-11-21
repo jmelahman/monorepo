@@ -2043,7 +2043,8 @@ function markBuys() {
   for (const btn of view.querySelectorAll('.buy')) {
     const b = newest.get(btn.dataset.buy);
     if (!b) continue;
-    btn.textContent = BUY_LABELS[b.status] || 'Buy';
+    // A queued buy with an error has failed once and waits to try again.
+    btn.textContent = b.status === 'queued' && b.error ? 'Retrying' : BUY_LABELS[b.status] || 'Buy';
     btn.disabled = b.status !== 'failed';
     btn.classList.toggle('owned', b.status === 'done');
     if (b.status === 'failed') btn.title = `The last try failed: ${b.error}`;
