@@ -55,6 +55,8 @@ Home shows up to two mixes side by side:
   takes the Supermix's share link; the server keeps both in its state
   directory (the cookies readable by it alone) and never hands the
   cookies back. Its **Test** button asks YouTube there and then. The
+  Firefox extension in `extensions/music-ytm-connect` sends both from
+  music.youtube.com in a click instead. The
   `MUSIC_YTM_COOKIES` and `MUSIC_YTM_SUPERMIX` variables still work, and
   what the panel saves wins over them. When YouTube refuses the account,
   the mix is a radio seeded from random owned tracks, and the panel says
