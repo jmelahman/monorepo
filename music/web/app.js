@@ -626,7 +626,7 @@ function ownedList(items, opts = {}) {
         el(
           'span',
           { className: 'end' },
-          el('span', { className: 'no-mix', title: 'Kept out of the mixes', textContent: 'No mix' }),
+          el('span', { className: 'no-mix', title: 'Excluded from mixing', textContent: 'No mix' }),
           opts.numbered && t.size && el('span', { className: 'size', textContent: mb(t.size) }),
           menuButton(t, opts.playlist)
         ),
@@ -784,7 +784,7 @@ function streamList(tracks) {
         el(
           'span',
           { className: 'end' },
-          el('span', { className: 'no-mix', title: 'Kept out of the mixes', textContent: 'No mix' }),
+          el('span', { className: 'no-mix', title: 'Excluded from mixing', textContent: 'No mix' }),
           el('span', { textContent: t.duration ? fmtTime(t.duration) : '' }),
           el('button', {
             className: 'buy',
@@ -1175,7 +1175,7 @@ function openMenu(anchor, item, inPlaylist) {
     owned && entry('New playlist…', () => addToPlaylist(null, [item.path])),
     owned && el('hr'),
     inPlaylist && entry(`Remove from ${inPlaylist.name}`, () => removeFromPlaylist(inPlaylist, item.path)),
-    entry(out ? 'Allow in mixes' : 'Keep out of mixes', () => setExcluded(item.key, !out)),
+    entry(out ? 'Include in mixing' : 'Exclude from mixing', () => setExcluded(item.key, !out)),
     item.album && entry('Go to album', () => (location.hash = href('album', item.album.artist, item.album.album)))
   );
   document.body.append(menu);
@@ -1207,7 +1207,7 @@ async function setExcluded(key, out) {
     mix = mix.filter((t) => `yt:${t.videoId}` !== key);
     if (route().kind === 'home') render();
   }
-  notice(out ? 'Kept out of the mixes' : 'Allowed back in the mixes');
+  notice(out ? 'Excluded from mixing' : 'Included in mixing again');
 }
 
 function markExcluded() {

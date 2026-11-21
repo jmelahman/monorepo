@@ -475,7 +475,7 @@ class Model(app: Application) : AndroidViewModel(app) {
             try {
                 withContext(Dispatchers.IO) { Api.setExcluded(key, out) }
                 excluded = if (out) excluded + key else excluded - key
-                notice(if (out) "Kept out of the mixes" else "Back in the mixes")
+                notice(if (out) "Excluded from mixing" else "Included in mixing again")
                 if (out) {
                     mix = mix?.filter { "yt:${it.videoId}" != key }
                     libraryMix = libraryMix?.filter { it.track.path != key }

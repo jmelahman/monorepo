@@ -381,7 +381,7 @@ fun TrackMenu(model: Model, o: Owned, playlist: Playlist? = null, toAlbum: Boole
                 }
             }
             val out = path in model.excluded
-            MenuItem(if (out) "Allow in mixes" else "Keep out of mixes", null) {
+            MenuItem(if (out) "Include in mixing" else "Exclude from mixing", null) {
                 open = false
                 model.exclude(path, !out)
             }
@@ -409,7 +409,7 @@ fun StreamMenu(model: Model, t: YTTrack) {
             Icon(Glyph.More, "More", tint = Palette.Dim, modifier = Modifier.size(20.dp))
         }
         DropdownMenu(open, { open = false }, containerColor = Palette.CardHi) {
-            MenuItem(if (out) "Allow in mixes" else "Keep out of mixes", null) {
+            MenuItem(if (out) "Include in mixing" else "Exclude from mixing", null) {
                 open = false
                 model.exclude(key, !out)
             }

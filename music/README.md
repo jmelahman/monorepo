@@ -62,7 +62,8 @@ chosen beside its buttons; the Supermix is as long as the account's
 playlist runs. The phone keeps the library mix at the length it last
 chose.
 
-A track kept out of the mixes, from its ⋮ menu, comes up in neither.
+A track excluded from mixing, from its ⋮ menu (Exclude from mixing),
+comes up in neither mix.
 
 ## Playlists
 
