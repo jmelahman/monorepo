@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.random.Random
 
 // The screens, by name rather than by object, so a reloaded library
 // still resolves them. Home and Library are the roots the bottom bar
@@ -73,6 +74,15 @@ class Model(app: Application) : AndroidViewModel(app) {
     var mixing by mutableStateOf(false)
         private set
 
+    // Whether the supermix's last read failed; the card offers another.
+    var mixFailed by mutableStateOf(false)
+        private set
+
+    // Why the account's own mix last failed, such as expired cookies,
+    // when the supermix fell back to the radio.
+    var accountFailed by mutableStateOf("")
+        private set
+
     // Where the supermix came from: "account", the YouTube Music
     // account's own, or "radio", seeded from the library.
     var mixSource by mutableStateOf("")
@@ -90,6 +100,10 @@ class Model(app: Application) : AndroidViewModel(app) {
     // The day's mix of owned tracks.
     var libraryMix by mutableStateOf<List<Owned>?>(null)
         private set
+
+    // Which of the day's other library mixes is showing; 0 is its own,
+    // the one the phone keeps.
+    private var libRemix = 0
 
     // The server, empty until the first launch is told one.
     var server by mutableStateOf(settings.baseUrl)
@@ -113,6 +127,10 @@ class Model(app: Application) : AndroidViewModel(app) {
         private set
 
     var buys by mutableStateOf<List<Buy>>(emptyList())
+        private set
+
+    // Whether the server has a store to buy from.
+    var buysReady by mutableStateOf(false)
         private set
     private var buysPoll: Job? = null
 
@@ -301,20 +319,23 @@ class Model(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun buildMix() {
+    // loadMix reads the supermix. There is no remixing it: YouTube Music
+    // makes it, and asking again brings the same.
+    fun loadMix() {
         if (mixing) return
         mixing = true
-        val fresh = mix != null
+        mixFailed = false
         viewModelScope.launch {
             try {
-                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix(fresh) }
+                val (m, source) = withContext(Dispatchers.IO) { Api.ytSupermix() }
                 mix = m
                 mixSource = source
-                if (m.isNotEmpty()) playStreams(m, 0)
             } catch (e: Exception) {
+                mixFailed = true
                 notice("The mix could not be built: ${e.message}")
             }
             mixing = false
+            accountFailed = runCatching { withContext(Dispatchers.IO) { Api.ytAccountFailed() } }.getOrDefault("")
         }
     }
 
@@ -438,12 +459,26 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     // ------------------------------------------------------------- mixes
 
-    fun loadLibraryMix() {
-        viewModelScope.launch {
-            runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix(mixSize) } }
-        }
+    // loadLibraryMix reads the library mix, and the supermix once the
+    // server has one; the job is the library mix's.
+    fun loadLibraryMix(): Job {
         viewModelScope.launch {
             runCatching { supermixReady = withContext(Dispatchers.IO) { Api.supermixReady() } }
+            if (supermixReady && mix == null) loadMix()
+        }
+        return viewModelScope.launch {
+            runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix(mixSize, libRemix) } }
+        }
+    }
+
+    // remixLibrary draws another of the day's library mixes and plays it.
+    // The phone keeps the day's own.
+    fun remixLibrary() {
+        libRemix = 1 + Random.nextInt(1_000_000_000)
+        libraryMix = null
+        viewModelScope.launch {
+            loadLibraryMix().join()
+            libraryMix?.takeIf { it.isNotEmpty() }?.let { play(it, 0) }
         }
     }
 
@@ -563,6 +598,17 @@ class Model(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // failedBuys is how many buys need a hand.
+    val failedBuys get() = buys.count { it.status == "failed" }
+
+    // openPurchases shows the web app's purchases page, where failed buys
+    // are retried or matched to a store link found by hand.
+    fun openPurchases() {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse("$server/#/buys")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+
     // buyFor is the newest buy of a track, if it has one.
     fun buyFor(track: YTTrack): Buy? = buys.firstOrNull {
         it.artist.equals(track.artist, ignoreCase = true) && it.title.equals(track.title, ignoreCase = true)
@@ -576,6 +622,7 @@ class Model(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             return
         }
+        buysReady = true
         val before = buys.associate { it.id to it.status }
         var landed = false
         for (b in next) {

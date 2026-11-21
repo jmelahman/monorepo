@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -114,6 +116,22 @@ fun MusicApp(model: Model) {
 
 // TopBar is the brand and the tools on a root, a way back and a title
 // on anything stacked over one.
+// PurchasesButton opens the web app's purchases page, counting the buys
+// that failed and need a hand.
+@Composable
+private fun PurchasesButton(model: Model) {
+    val failed = model.failedBuys
+    IconButton(onClick = { model.openPurchases() }) {
+        BadgedBox(badge = {
+            if (failed > 0) {
+                Badge(containerColor = Palette.Accent) { Text(if (failed > 9) "9+" else "$failed") }
+            }
+        }) {
+            Icon(Glyph.Bag, if (failed > 0) "Purchases: $failed failed" else "Purchases", Modifier.size(22.dp))
+        }
+    }
+}
+
 @Composable
 private fun TopBar(model: Model, openSettings: () -> Unit) {
     val root = model.stack.size == 1
@@ -154,6 +172,7 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
             IconButton(onClick = { model.go(Screen.Search) }) {
                 Icon(Glyph.Search, "Search", Modifier.size(22.dp))
             }
+            if (model.buysReady) PurchasesButton(model)
             IconButton(onClick = openSettings) { Icon(Glyph.Tune, "Settings", Modifier.size(22.dp)) }
         } else {
             IconButton(onClick = { model.back() }) { Icon(Glyph.Back, "Back", Modifier.size(22.dp)) }

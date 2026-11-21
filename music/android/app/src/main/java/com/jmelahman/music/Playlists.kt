@@ -273,6 +273,11 @@ fun LibraryMixScreen(model: Model, padding: PaddingValues) {
                 KeepButton(model, Settings.LIBRARY_MIX, "the library mix")
             }
         }
+        item {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                SizePicker(model.mixSize) { model.sizeLibraryMix(it) }
+            }
+        }
         if (mix == null) item { Empty("Mixing…") }
         ownedRows(model, mix.orEmpty(), null)
         item { Spacer(Modifier.height(24.dp)) }

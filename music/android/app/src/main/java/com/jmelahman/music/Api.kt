@@ -243,7 +243,9 @@ object Api {
     // the supermix is worth offering.
     fun supermixReady(): Boolean = JSONObject(request("/api/mix")).optBoolean("supermix")
 
-    fun libraryMix(size: Int): List<Owned> = list(JSONArray(request("/api/mix/library?size=$size")), ::parseOwned)
+    // A remix other than 0 is another of the day's mixes.
+    fun libraryMix(size: Int, remix: Int = 0): List<Owned> =
+        list(JSONArray(request("/api/mix/library?size=$size${if (remix != 0) "&remix=$remix" else ""}")), ::parseOwned)
 
     // played counts a play of an owned track toward its smart playlists
     // and the library mix.
@@ -271,11 +273,14 @@ object Api {
 
     // ytSupermix is the supermix and where it came from: "account", the
     // YouTube Music account's own, or "radio", seeded from the library.
-    fun ytSupermix(fresh: Boolean): Pair<List<YTTrack>, String> {
+    fun ytSupermix(): Pair<List<YTTrack>, String> {
         var source = ""
-        val body = request("/api/yt/supermix${if (fresh) "?fresh=1" else ""}") { source = it.getHeaderField("X-Mix-Source").orEmpty() }
+        val body = request("/api/yt/supermix") { source = it.getHeaderField("X-Mix-Source").orEmpty() }
         return parseYT(body) to source
     }
+
+    // ytAccountFailed is why the account's own mix last failed, if it did.
+    fun ytAccountFailed(): String = JSONObject(request("/api/yt/account")).optString("failed")
 
     private fun yt(path: String): List<YTTrack> = parseYT(request(path))
 

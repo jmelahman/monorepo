@@ -128,6 +128,7 @@ object Glyph {
         "more",
         "M12 5.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z",
     )
+    val Bag = icon("bag", "M5.5 8h13l-1 12h-11zM9 10V7a3 3 0 0 1 6 0v3", stroke = 1.8f)
     val Plus = icon("plus", "M12 5v14M5 12h14", stroke = 1.8f)
     val List = icon("list", "M4 6h12M4 11h12M4 16h7M18 9v8.5", stroke = 1.8f)
     val Smart = icon(

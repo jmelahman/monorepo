@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -350,7 +351,7 @@ fun Disc(size: Int) {
 // MixCard is one of the two mixes on the home page, tinted by its kind:
 // the accent for streams, green for what is owned.
 @Composable
-private fun MixCard(kicker: String, title: String, tint: Color, actions: @Composable () -> Unit) {
+private fun MixCard(kicker: String, title: String, tint: Color, note: String? = null, actions: @Composable () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
@@ -376,32 +377,36 @@ private fun MixCard(kicker: String, title: String, tint: Color, actions: @Compos
                 Text(title, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             }
         }
+        if (note != null) Text(note, Modifier.padding(top = 10.dp), color = Palette.Dim, fontSize = 13.sp)
         Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { actions() }
     }
 }
 
 // MixHero is the supermix: YouTube Music's own for the account, or a
-// radio seeded from the library when the account doesn't answer.
+// radio seeded from the library when the account doesn't answer. It
+// loads by itself; asking again brings the same, so there's no remix.
 @Composable
 private fun MixHero(model: Model) {
+    val mix = model.mix
     MixCard(
         if (model.mixSource == "radio") "Seeded from your library" else "From YouTube Music",
         "Supermix",
         Palette.Accent,
+        note = when {
+            model.mixFailed -> "The mix didn't load."
+            model.mixSource == "radio" && model.accountFailed.isNotEmpty() -> model.accountFailed
+            else -> null
+        },
     ) {
-        ChromeButton(
-            when {
-                model.mixing -> "Mixing…"
-                model.mix != null -> "Remix"
-                else -> "Start"
-            },
-            Glyph.Mix,
-            { model.buildMix() },
-            enabled = !model.mixing,
-        )
-        val mix = model.mix
-        if (!mix.isNullOrEmpty()) {
-            PillButton("Play", Glyph.Play, { model.playStreams(mix, 0) })
+        if (model.mixFailed) {
+            ChromeButton("Try again", Glyph.Mix, { model.loadMix() })
+        } else {
+            ChromeButton(
+                if (model.mixing) "Mixing…" else "Play",
+                Glyph.Play,
+                { if (!mix.isNullOrEmpty()) model.playStreams(mix, 0) },
+                enabled = !mix.isNullOrEmpty(),
+            )
         }
     }
 }
@@ -417,14 +422,14 @@ private fun LibraryMixHero(model: Model) {
         Palette.Owned,
     ) {
         ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
+        PillButton("Remix", Glyph.Mix, { model.remixLibrary() }, enabled = mix != null)
         KeepButton(model, Settings.LIBRARY_MIX, "the library mix")
-        SizePicker(model.mixSize) { model.sizeLibraryMix(it) }
     }
 }
 
 // SizePicker chooses how many tracks a mix holds.
 @Composable
-private fun SizePicker(size: Int, pick: (Int) -> Unit) {
+fun SizePicker(size: Int, pick: (Int) -> Unit) {
     Picker(Settings.MIX_SIZES.associate { "$it" to "$it tracks" }, "$size") { pick(it.toInt()) }
 }
 
@@ -802,7 +807,9 @@ fun BuyButton(buy: Buy?, onClick: () -> Unit) {
                 else Modifier.background(Palette.CardHi).border(1.dp, Palette.Edge, CircleShape),
             )
             .clickable(enabled = enabled, onClick = onClick)
+            .widthIn(min = 76.dp)
             .padding(horizontal = 14.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             label,
