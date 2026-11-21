@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSameName(t *testing.T) {
@@ -35,12 +36,19 @@ func TestSameName(t *testing.T) {
 // a search answering wrong albums before the right one, and art for two
 // of them.
 func fakeCoverServices(t *testing.T) {
+	busy := true
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("User-Agent") != coverAgent {
 			t.Errorf("%s asked without the User-Agent", r.URL.Path)
 		}
 		switch r.URL.Path {
 		case "/mb/release-group/":
+			// The first search finds MusicBrainz busy.
+			if busy {
+				busy = false
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
 			if !strings.Contains(r.URL.Query().Get("query"), `releasegroup:"Control System"`) {
 				_, _ = w.Write([]byte(`{"release-groups":[]}`))
 				return
@@ -70,7 +78,7 @@ func fakeCoverServices(t *testing.T) {
 func TestFindCoverArt(t *testing.T) {
 	fakeCoverServices(t)
 	f := newCoverFetcher()
-	f.gap = 0
+	f.gap, f.busy = 0, time.Millisecond
 	ctx := context.Background()
 
 	// The edition note is tried without, once the full name finds nothing.

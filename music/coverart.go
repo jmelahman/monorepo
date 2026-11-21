@@ -35,11 +35,12 @@ type coverFetcher struct {
 	client *http.Client
 	mu     sync.Mutex
 	last   time.Time
-	gap    time.Duration
+	gap    time.Duration // between MusicBrainz requests
+	busy   time.Duration // the first wait after a busy answer, doubling
 }
 
 func newCoverFetcher() *coverFetcher {
-	return &coverFetcher{client: &http.Client{Timeout: 30 * time.Second}, gap: 1100 * time.Millisecond}
+	return &coverFetcher{client: &http.Client{Timeout: 30 * time.Second}, gap: 1100 * time.Millisecond, busy: 5 * time.Second}
 }
 
 // coverMatch is the album MusicBrainz found for a folder.
@@ -174,41 +175,61 @@ func (f *coverFetcher) save(ctx context.Context, m coverMatch, dir string) error
 
 var errNotFound = errors.New("not found")
 
-// get fetches a URL, waiting out MusicBrainz's pace when paced.
+// get fetches a URL, waiting out MusicBrainz's pace when paced. A busy
+// answer (503 or 429), which MusicBrainz gives when it is pressed, is
+// tried again after a growing wait.
 func (f *coverFetcher) get(ctx context.Context, u string, paced bool) (io.ReadCloser, error) {
-	if paced {
-		f.mu.Lock()
-		wait := f.gap - time.Since(f.last)
-		if wait > 0 {
-			select {
-			case <-time.After(wait):
-			case <-ctx.Done():
-				f.mu.Unlock()
-				return nil, ctx.Err()
+	for try := 0; ; try++ {
+		if paced {
+			f.mu.Lock()
+			err := sleep(ctx, f.gap-time.Since(f.last))
+			f.last = time.Now()
+			f.mu.Unlock()
+			if err != nil {
+				return nil, err
 			}
 		}
-		f.last = time.Now()
-		f.mu.Unlock()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("User-Agent", coverAgent)
+		req.Header.Set("Accept", "application/json")
+		resp, err := f.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		switch {
+		case resp.StatusCode/100 == 2:
+			return resp.Body, nil
+		case resp.StatusCode == http.StatusNotFound:
+			resp.Body.Close()
+			return nil, errNotFound
+		case (resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusTooManyRequests) && try < coverRetries:
+			resp.Body.Close()
+			if err := sleep(ctx, f.busy<<try); err != nil {
+				return nil, err
+			}
+		default:
+			resp.Body.Close()
+			return nil, fmt.Errorf("%s: %s", req.URL.Host, resp.Status)
+		}
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
+}
+
+const coverRetries = 4
+
+// sleep waits d, or less if ctx ends first.
+func sleep(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return ctx.Err()
 	}
-	req.Header.Set("User-Agent", coverAgent)
-	req.Header.Set("Accept", "application/json")
-	resp, err := f.client.Do(req)
-	if err != nil {
-		return nil, err
+	select {
+	case <-time.After(d):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		resp.Body.Close()
-		return nil, errNotFound
-	case resp.StatusCode/100 != 2:
-		resp.Body.Close()
-		return nil, fmt.Errorf("%s: %s", req.URL.Host, resp.Status)
-	}
-	return resp.Body, nil
 }
 
 // phrase escapes a name for a quoted Lucene phrase.
