@@ -155,17 +155,12 @@ services:
     # The AMD iGPU, for the Vulkan backend
     devices:
       - /dev/dri:/dev/dri
-    # 18080 in-container and on the host, so the same URL works everywhere:
-    # http://llama:18080/v1 in kanban devcontainers (docker DNS) and
-    # http://localhost:18080/v1 on the host.
+    # Offline: the only network is internal, so it has no route out. The
+    # llama-proxy below is its way in.
     expose:
       - 18080
-    ports:
-      - "18080:18080"
     networks:
-      - default
-      # agentic-kanban's devcontainers live on this network
-      - kanban-net
+      - llama-internal
     # Router mode: one endpoint for every model in llama.cpp/models.ini,
     # loaded on first request and swapped out when another one needs the
     # memory. The presets keep the Ollama-era ids as aliases, so existing
@@ -189,6 +184,29 @@ services:
       retries: 3
       start_period: 5m
 
+  # Forwards to llama, which has no network of its own to publish from.
+  # 18080 in-container and on the host, so the same URL works everywhere:
+  # http://llama:18080/v1 in nginx and kanban devcontainers (docker DNS) and
+  # http://localhost:18080/v1 on the host.
+  llama-proxy:
+    image: alpine/socat
+    container_name: llama-proxy
+    restart: unless-stopped
+    command: ["TCP-LISTEN:18080,fork,reuseaddr", "TCP:llama:18080"]
+    ports:
+      - "18080:18080"
+    networks:
+      llama-internal:
+      default:
+        aliases:
+          - llama
+      # agentic-kanban's devcontainers live on this network
+      kanban-net:
+        aliases:
+          - llama
+    depends_on:
+      - llama
+
 volumes:
   jellyfin_data:
   notebook_state:
@@ -196,6 +214,9 @@ volumes:
   music_state:
 
 networks:
+  # No route out: llama's weights are local, so it needs none.
+  llama-internal:
+    internal: true
   # Declared by the agentic-kanban compose project and shared with its
   # devcontainers, which reach the model server as http://llama:18080/v1.
   kanban-net:
