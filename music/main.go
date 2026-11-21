@@ -88,6 +88,11 @@ func main() {
 	}
 	routeLibrary(mux, *music, shelf)
 	routeShelf(mux, shelf, *music)
+	editor, err := newEditor(*music, *state, shelf)
+	if err != nil {
+		fail(err)
+	}
+	routeEdit(mux, editor)
 	routeMixes(mux, &mixer{
 		music: *music, shelf: shelf,
 		cookies: os.Getenv("MUSIC_YTM_COOKIES"), supermix: os.Getenv("MUSIC_YTM_SUPERMIX"),
@@ -364,7 +369,8 @@ func walkLibrary(root string) ([]artist, error) {
 	}
 	var artists []artist
 	for _, ad := range artistDirs {
-		if !ad.IsDir() {
+		// A dot folder, as the edits' .trash, isn't the library's.
+		if !ad.IsDir() || strings.HasPrefix(ad.Name(), ".") {
 			continue
 		}
 		a := artist{Name: ad.Name()}
@@ -375,7 +381,9 @@ func walkLibrary(root string) ([]artist, error) {
 		var singles album
 		singles.Name = singlesName
 		for _, ed := range entries {
-			if ed.IsDir() {
+			if ed.IsDir() && strings.HasPrefix(ed.Name(), ".") {
+				continue
+			} else if ed.IsDir() {
 				files, err := os.ReadDir(filepath.Join(root, ad.Name(), ed.Name()))
 				if err != nil {
 					continue
