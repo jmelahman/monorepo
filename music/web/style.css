@@ -767,34 +767,6 @@ main > .view-title {
   fill: currentColor;
 }
 
-/* A page's cover: on hover it darkens to a vignette with the play
-   button in its middle. */
-.head-art {
-  position: relative;
-  flex: none;
-  align-self: flex-end;
-}
-
-.head-art .art-play {
-  place-items: center;
-  background: radial-gradient(circle, rgb(0 0 0 / 0.35) 30%, rgb(0 0 0 / 0.7) 100%);
-}
-
-.head-art:hover .art-play,
-.head-art:focus-within .art-play {
-  opacity: 1;
-}
-
-.head-art .art-play button {
-  width: 4rem;
-  height: 4rem;
-}
-
-.head-art .art-play svg {
-  width: 2rem;
-  height: 2rem;
-}
-
 @media (hover: none) {
   .art-play {
     display: none;
@@ -903,6 +875,24 @@ main > .view-title {
   clip-path: polygon(20% 8%, 92% 50%, 20% 92%);
   color: var(--chalk);
   content: "";
+}
+
+/* A row's cover, hovered, darkens to a vignette with a play button in
+   it, as YouTube Music's lists do. */
+.track > .art::after {
+  position: absolute;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13l11-6.5z' fill='%23fff'/%3E%3C/svg%3E") center / 55% no-repeat,
+    radial-gradient(circle, rgb(0 0 0 / 0.35) 20%, rgb(0 0 0 / 0.7) 100%);
+  content: "";
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.track:hover > .art::after,
+.track:focus-visible > .art::after {
+  opacity: 1;
 }
 
 /* What is playing: its row lit, its number a meter. */
@@ -1524,10 +1514,6 @@ body:not(.playing-bar) .toast {
   .album-head .art,
   .album-head .mix-art {
     width: min(14rem, 60vw);
-    align-self: center;
-  }
-
-  .head-art {
     align-self: center;
   }
 

@@ -685,11 +685,11 @@ async function remix() {
 
 // The mixes' pages: the mix's covers, its buttons, then its tracks.
 
-function mixHead(covers, kicker, title, meta, play, ...buttons) {
+function mixHead(covers, kicker, title, meta, ...buttons) {
   return el(
     'header',
     { className: 'album-head' },
-    play ? headArt(mixArt(covers), `Play ${title}`, play) : mixArt(covers),
+    mixArt(covers),
     el(
       'div',
       {},
@@ -714,7 +714,6 @@ function renderSupermix() {
       mixSource === 'radio' ? 'Radio from your library' : 'From YouTube Music',
       'Supermix',
       ready && plural(mix.length, 'track'),
-      ready && (() => playStreams(mix, 0)),
       ready && button('btn chrome', () => playStreams(mix, 0), icon('play'), 'Play'),
       ready && button('btn', () => playStreams(shuffled(mix), 0), icon('shuffle'), 'Shuffle'),
       el(
@@ -751,7 +750,6 @@ function renderLibraryMix() {
       'Made from your library',
       'Library mix',
       ready && `${plural(items.length, 'track')} · a new one each day`,
-      ready && (() => playQueue(items, 0)),
       ready && button('btn chrome', () => playQueue(items, 0), icon('play'), 'Play'),
       ready && button('btn', () => playQueue(shuffled(items), 0), icon('shuffle'), 'Shuffle'),
       mixSizePicker()
@@ -816,21 +814,6 @@ function renderLibrary(tab) {
 
 // albumTile links to an album; hovering its cover shows a button that
 // plays it straight away, as YouTube Music's do.
-// headArt is a page's cover with a play button over it on hover, as
-// YouTube Music's album and playlist pages have.
-function headArt(cover, label, play) {
-  return el(
-    'div',
-    { className: 'head-art' },
-    cover,
-    el(
-      'div',
-      { className: 'art-play' },
-      el('button', { type: 'button', 'aria-label': label, onclick: play }, icon('play'))
-    )
-  );
-}
-
 function albumTile(artist, album) {
   return el(
     'div',
@@ -998,9 +981,7 @@ function renderAlbum(artistName, albumName) {
     el(
       'header',
       { className: 'album-head' },
-      headArt(art(album.name, coverUrl(a.name, album.name), { eager: true }), `Play ${album.name}`, () =>
-        playQueue(items, 0)
-      ),
+      art(album.name, coverUrl(a.name, album.name), { eager: true }),
       el(
         'div',
         {},
@@ -1215,9 +1196,7 @@ function showPlaylist(p) {
     el(
       'header',
       { className: 'album-head' },
-      items.length > 0
-        ? headArt(playlistArt(p, { eager: true }), `Play ${p.name}`, () => playQueue(items, 0))
-        : playlistArt(p, { eager: true }),
+      playlistArt(p, { eager: true }),
       el(
         'div',
         {},
