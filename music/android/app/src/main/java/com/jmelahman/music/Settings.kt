@@ -36,7 +36,8 @@ class Settings(context: Context) {
         set(value) = prefs.edit().putBoolean("sync_overnight", value).apply()
 
     // What the phone keeps in step with the server on Wi-Fi: playlist:<id>,
-    // album:<artist>/<album>, and mix:library for the day's library mix.
+    // album:<artist>/<album>, artist:<artist> for everything by them, new
+    // albums too, and mix:library for the day's library mix.
     var kept: Set<String>
         get() = prefs.getStringSet("kept", null) ?: setOf(LIBRARY_MIX)
         set(value) = prefs.edit().putStringSet("kept", HashSet(value)).apply()
@@ -78,6 +79,8 @@ class Settings(context: Context) {
         fun playlistKey(id: String) = "playlist:$id"
 
         fun albumKey(artist: String, album: String) = "album:$artist/$album"
+
+        fun artistKey(artist: String) = "artist:$artist"
 
         fun metered(context: Context): Boolean {
             val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false

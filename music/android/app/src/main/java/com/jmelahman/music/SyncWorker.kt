@@ -46,8 +46,9 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     private fun sync(settings: Settings): Result =
         try {
-            followMoves(settings)
-            val wanted = wanted(settings)
+            val library = Api.library()
+            followMoves(settings, library)
+            val wanted = wanted(settings, library)
             Sync.download(applicationContext, settings, wanted.values)
             Downloads.prune(applicationContext, wanted.keys)
             Result.success()
@@ -59,7 +60,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     // followMoves makes the server's renames to the phone's copies and
     // to the albums it keeps, before anything is pruned for missing.
-    private fun followMoves(settings: Settings) {
+    // A kept artist whose albums all went elsewhere was renamed or merged,
+    // and the keeping follows; one that is still there keeps what it has,
+    // and the albums that left it stay kept as albums.
+    private fun followMoves(settings: Settings, library: List<Artist>) {
         val (seq, moves) = try {
             Api.moves(settings.movesSeq)
         } catch (e: HttpException) {
@@ -75,6 +79,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                     if (from in kept) kept = kept - from + "album:${m.to}"
                     val was = m.from.substringBefore('/') to m.from.substringAfter('/')
                     val now = m.to.substringBefore('/') to m.to.substringAfter('/')
+                    val artist = Settings.artistKey(was.first)
+                    if (was.first != now.first && artist in kept) {
+                        kept = if (library.none { it.name == was.first }) {
+                            kept - artist + Settings.artistKey(now.first)
+                        } else {
+                            kept + "album:${m.to}"
+                        }
+                    }
                     recent = recent.map { if (it == was) now else it }.distinct()
                 } else {
                     Downloads.move(applicationContext, m.from, m.to)
@@ -88,8 +100,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     // wanted is every track something kept holds, by path. A kept album
     // or playlist the server no longer has is let go.
-    private fun wanted(settings: Settings): Map<String, Owned> {
-        val library = Api.library()
+    private fun wanted(settings: Settings, library: List<Artist>): Map<String, Owned> {
         val ctx = applicationContext
         var kept = settings.kept
         if (!settings.keptMigrated) {
@@ -113,6 +124,14 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 } catch (e: HttpException) {
                     if (e.code != 404) throw e
                     gone += key
+                }
+                key.startsWith("artist:") -> {
+                    val a = library.find { Settings.artistKey(it.name) == key }
+                    if (a == null) {
+                        gone += key
+                    } else {
+                        for (al in a.albums) for (t in al.tracks) out[t.path] = Owned(t, a.name, al.name)
+                    }
                 }
                 key.startsWith("album:") -> {
                     val found = library.firstNotNullOfOrNull { a ->

@@ -505,6 +505,15 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     fun removeAlbum(artist: Artist, album: Album) = keep(Settings.albumKey(artist.name, album.name), false, album.name)
 
+    // keepArtist keeps all of an artist's albums, and any they gain. Letting
+    // the artist go lets their albums kept one by one go too.
+    fun keepArtist(artist: Artist, on: Boolean) {
+        if (!on) {
+            settings.kept = settings.kept - artist.albums.map { Settings.albumKey(artist.name, it.name) }.toSet()
+        }
+        keep(Settings.artistKey(artist.name), on, artist.name)
+    }
+
     // ------------------------------------------------------------- mixes
 
     // loadLibraryMix reads the library mix, and the supermix once the

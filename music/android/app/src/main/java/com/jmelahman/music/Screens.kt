@@ -638,6 +638,11 @@ fun ArtistScreen(model: Model, name: String, padding: PaddingValues) {
             ) {
                 ChromeButton("Play", Glyph.Play, { model.playArtist(a, shuffle = false) })
                 PillButton("Shuffle", Glyph.Shuffle, { model.playArtist(a, shuffle = true) })
+                if (Settings.artistKey(a.name) in model.kept) {
+                    PillButton("Kept", Glyph.Saved, { model.keepArtist(a, false) })
+                } else {
+                    PillButton("Keep all", Glyph.Save, { model.keepArtist(a, true) })
+                }
             }
         }
         items(a.albums, key = { it.name }) { al -> AlbumTile(model, a, al) }
@@ -685,6 +690,11 @@ fun AlbumScreen(model: Model, artistName: String, albumName: String, padding: Pa
                 PillButton("Shuffle", Glyph.Shuffle, { model.playAlbum(artist, album, shuffle = true) })
                 val kept = Settings.albumKey(artist.name, album.name) in model.kept
                 when {
+                    Settings.artistKey(artist.name) in model.kept -> PillButton(
+                        if (active > 0) "${saved.size}/${album.tracks.size}" else "Kept",
+                        Glyph.Saved,
+                        { model.notice("Kept with all of ${artist.name}; let them go on the artist's page") },
+                    )
                     kept && active > 0 -> PillButton("${saved.size}/${album.tracks.size}", Glyph.Save, {
                         model.removeAlbum(artist, album)
                         removed++
