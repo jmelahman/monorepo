@@ -57,6 +57,7 @@ var errNoMatch = errors.New("no matching album with art")
 // edition notes are set aside, counts: a wrong cover is worse than none.
 // It answers the first match the archive has a front cover for.
 func (f *coverFetcher) find(ctx context.Context, artist, album string) (coverMatch, error) {
+	artist, album = folderName(artist), discless(folderName(album))
 	titles := []string{album}
 	if bare := stripEdition(album); bare != album && bare != "" {
 		titles = append(titles, bare)
@@ -248,6 +249,21 @@ func stripEdition(s string) string {
 		}
 		s = t
 	}
+}
+
+// folderName undoes what a folder's name had to give up: the characters
+// a filesystem won't take, like ":" and "/", stand as underscores, which
+// would otherwise break a search phrase.
+func folderName(s string) string {
+	return strings.Join(strings.Fields(strings.ReplaceAll(s, "_", " ")), " ")
+}
+
+// discNote is a disc's number after an album's name, as in "Hozier CD2":
+// each disc's folder is the one album's.
+var discNote = regexp.MustCompile(`(?i)\s+(cd|disc)\s*\d+$`)
+
+func discless(s string) string {
+	return discNote.ReplaceAllString(s, "")
 }
 
 // sameName compares names as letters and digits alone, edition notes

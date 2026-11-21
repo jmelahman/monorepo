@@ -32,6 +32,21 @@ func TestSameName(t *testing.T) {
 	}
 }
 
+func TestFolderNames(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{"K_I_D_S", "K I D S"},
+		{"Florence _ The Machine", "Florence The Machine"},
+		{"Hozier (Deluxe Edition) CD2", "Hozier (Deluxe Edition)"},
+		{"Fire & Ice cd 1", "Fire & Ice"},
+		{"CD1", "CD1"},
+		{"Section_80", "Section 80"},
+	} {
+		if got := discless(folderName(c.in)); got != c.want {
+			t.Errorf("discless(folderName(%q)) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 // fakeCoverServices stands in for MusicBrainz and the Cover Art Archive:
 // a search answering wrong albums before the right one, and art for two
 // of them.
@@ -88,6 +103,10 @@ func TestFindCoverArt(t *testing.T) {
 	}
 	if m.ID != "right" {
 		t.Errorf("matched %q, want the group by the same artist with a front cover", m.ID)
+	}
+	// A disc's folder is its album's.
+	if m, err := f.find(ctx, "Ab-Soul", "Control_System CD2"); err != nil || m.ID != "right" {
+		t.Errorf("a disc's folder matched %q, %v", m.ID, err)
 	}
 	if _, err := f.find(ctx, "Ab-Soul", "These Days..."); !errors.Is(err, errNoMatch) {
 		t.Errorf("an album the search lacks: %v, want errNoMatch", err)
