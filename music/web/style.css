@@ -767,6 +767,34 @@ main > .view-title {
   fill: currentColor;
 }
 
+/* A page's cover: on hover it darkens to a vignette with the play
+   button in its middle. */
+.head-art {
+  position: relative;
+  flex: none;
+  align-self: flex-end;
+}
+
+.head-art .art-play {
+  place-items: center;
+  background: radial-gradient(circle, rgb(0 0 0 / 0.35) 30%, rgb(0 0 0 / 0.7) 100%);
+}
+
+.head-art:hover .art-play,
+.head-art:focus-within .art-play {
+  opacity: 1;
+}
+
+.head-art .art-play button {
+  width: 4rem;
+  height: 4rem;
+}
+
+.head-art .art-play svg {
+  width: 2rem;
+  height: 2rem;
+}
+
 @media (hover: none) {
   .art-play {
     display: none;
@@ -1496,6 +1524,10 @@ body:not(.playing-bar) .toast {
   .album-head .art,
   .album-head .mix-art {
     width: min(14rem, 60vw);
+    align-self: center;
+  }
+
+  .head-art {
     align-self: center;
   }
 
