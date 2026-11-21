@@ -1823,3 +1823,67 @@ body:not(.playing-bar) .toast {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* A store album's tracks: a box to pick each, and its price or where it
+   stands. */
+.store-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 5.5rem;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-lg);
+}
+
+.store-track:hover {
+  background: var(--card);
+}
+
+.store-track label {
+  display: grid;
+  grid-template-columns: 1.25rem 1.75rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.store-track input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.store-track .num {
+  color: var(--dim);
+  font: 400 0.8125rem/1 var(--mono);
+  text-align: center;
+}
+
+.store-track .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-track .meta,
+.store-state {
+  color: var(--dim);
+  white-space: nowrap;
+  font: 400 0.8125rem/1 var(--mono);
+  text-align: right;
+}
+
+.store-state.free {
+  color: var(--accent);
+}
+
+.store-track.unpickable label {
+  cursor: default;
+}
+
+.store-track.unpickable .name {
+  color: var(--dim);
+}

@@ -259,6 +259,8 @@ function route() {
       return { kind: 'search', q: parts.slice(1).join('/') };
     case 'buys':
       return { kind: 'buys' };
+    case 'store':
+      return { kind: 'store', artist: parts[1] || '', album: parts.slice(2).join('/') };
     default:
       return { kind: 'home' };
   }
@@ -306,6 +308,9 @@ function render() {
       break;
     case 'buys':
       renderBuys();
+      break;
+    case 'store':
+      renderStoreAlbum(r.artist, r.album);
       break;
     default:
       renderHome();
@@ -1397,11 +1402,12 @@ function editTrack(item) {
 // --------------------------------------------------------------- search
 
 function renderSearch(q) {
+  if (buysReady) searchStore(q);
   if (lastSearch.q === q && lastSearch.tracks) {
-    show(searchHead(q), streamList(lastSearch.tracks));
+    show(searchHead(q), storeShelf(q), streamsHead(q), streamList(lastSearch.tracks));
     return;
   }
-  show(searchHead(q), el('p', { className: 'empty', textContent: 'Searching…' }));
+  show(searchHead(q), storeShelf(q), el('p', { className: 'empty', textContent: 'Searching…' }));
   fetch(`api/yt/search?q=${encodeURIComponent(q)}`)
     .then((r) => {
       if (!r.ok) throw new Error(r.status);
@@ -1413,16 +1419,20 @@ function renderSearch(q) {
     })
     .catch(() => {
       if (route().kind === 'search' && route().q === q) {
-        show(searchHead(q), el('p', { className: 'empty', textContent: 'The search could not be read.' }));
+        show(searchHead(q), storeShelf(q), el('p', { className: 'empty', textContent: 'The search could not be read.' }));
       }
     });
 }
+
+// streamsHead names the streams, once the store's albums sit above them.
+const streamsHead = (q) =>
+  storeShelf(q) && el('div', { className: 'shelf-head' }, el('h2', { textContent: 'Streams' }));
 
 function searchHead(q) {
   return el(
     'div',
     { className: 'shelf-head' },
-    el('div', {}, el('p', { className: 'kicker', textContent: 'Streams for' }), el('h2', { textContent: q }))
+    el('div', {}, el('p', { className: 'kicker', textContent: buysReady ? 'Search' : 'Streams for' }), el('h2', { textContent: q }))
   );
 }
 
@@ -2342,6 +2352,212 @@ function notice(text) {
   }, 6000);
 }
 
+// --------------------------------------------------------------- store
+
+// The store's catalogue: a search lists its albums, and an album's page
+// lists its tracks with their prices, those the library has already
+// left unpicked. Nothing is bought until the picked tracks are confirmed.
+
+let storeSearch = { q: '', albums: null }; // null unread, 'loading', 'failed', or the list
+const storeAlbums = new Map(); // `artist\0album` → 'loading', 'failed', or the album's page
+const storePicks = new Map(); // `artist\0album` → the track numbers picked
+
+async function searchStore(q) {
+  if (storeSearch.q === q && storeSearch.albums !== null) return;
+  storeSearch = { q, albums: 'loading' };
+  let albums = 'failed';
+  try {
+    const r = await fetch(`api/store/search?q=${encodeURIComponent(q)}`);
+    if (r.ok) albums = await r.json();
+  } catch {}
+  if (storeSearch.q !== q) return;
+  storeSearch.albums = albums;
+  if (route().kind === 'search' && route().q === q) render();
+}
+
+// inLibrary is the library's album of the same name by the same artist.
+function inLibrary(artist, album) {
+  const a = library.find((x) => fold(x.name) === fold(artist));
+  return a && a.albums.find((x) => fold(x.name) === fold(album));
+}
+
+// storeShelf is the store's albums for a search, when the server has a
+// store to buy from.
+function storeShelf(q) {
+  if (!buysReady || storeSearch.q !== q) return null;
+  const albums = storeSearch.albums;
+  const head = el('div', { className: 'shelf-head' }, el('h2', { textContent: 'Albums in the store' }));
+  let body;
+  if (albums === 'loading' || albums === null) body = el('p', { className: 'empty', textContent: 'Looking in the store…' });
+  else if (albums === 'failed') body = el('p', { className: 'empty', textContent: 'The store could not be searched.' });
+  else if (!albums.length) body = el('p', { className: 'empty', textContent: 'The store has no albums like that.' });
+  else
+    body = el(
+      'ul',
+      { className: 'grid' },
+      albums.slice(0, 12).map((a) =>
+        el(
+          'li',
+          {},
+          el(
+            'a',
+            { className: 'tile', href: href('store', a.artist, a.album) },
+            art(a.album, inLibrary(a.artist, a.album) ? coverUrl(a.artist, inLibrary(a.artist, a.album).name) : ''),
+            el('span', { className: 'tile-title', textContent: a.album }),
+            el('span', {
+              className: 'tile-sub',
+              textContent: [a.artist, a.year, inLibrary(a.artist, a.album) && 'In library'].filter(Boolean).join(' · '),
+            })
+          )
+        )
+      )
+    );
+  return el('section', { className: 'shelf' }, head, body);
+}
+
+const dollars = (n) => `$${n.toFixed(2)}`;
+const priceOf = (t) => parseFloat(String(t.price || '').replace(/[^\d.]/g, '')) || 0;
+
+async function loadStoreAlbum(artist, album) {
+  const key = `${artist}\0${album}`;
+  storeAlbums.set(key, 'loading');
+  let page = 'failed';
+  try {
+    const r = await fetch(`api/store/album?artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}`);
+    if (r.ok) page = await r.json();
+  } catch {}
+  storeAlbums.set(key, page);
+  const at = route();
+  if (at.kind === 'store' && at.artist === artist && at.album === album) render();
+}
+
+// storeTrackState is where a store track stands for this library: in it,
+// on its way, or to be bought, free when the account bought it before.
+function storeTrackState(artist, t) {
+  if (ownedKeys.has(ownKey(artist, t.title))) return { label: 'In library', pickable: false };
+  const b = buys.find((x) => buyKey(x.artist, x.title) === buyKey(artist, t.title));
+  if (b && b.status === 'done') return { label: 'Bought', pickable: false };
+  if (b && (b.status === 'queued' || b.status === 'buying'))
+    return { label: b.status === 'buying' ? 'Buying…' : 'Queued', pickable: false };
+  return { label: t.download ? 'Free' : t.price || '', pickable: true, free: !!t.download };
+}
+
+function renderStoreAlbum(artist, album) {
+  const key = `${artist}\0${album}`;
+  const page = storeAlbums.get(key);
+  if (page === undefined) loadStoreAlbum(artist, album);
+  if (page === undefined || page === 'loading') {
+    show(el('p', { className: 'empty', textContent: 'Reading the album in the store…' }));
+    return;
+  }
+  if (page === 'failed' || !page.tracks?.length) {
+    show(
+      el('p', { className: 'empty' }, 'The store’s page for this album could not be read. ', button('btn', () => loadStoreAlbum(artist, album), 'Try again'))
+    );
+    return;
+  }
+  const states = page.tracks.map((t) => storeTrackState(artist, t));
+  if (!storePicks.has(key)) storePicks.set(key, new Set(page.tracks.filter((_, i) => states[i].pickable).map((t) => t.number)));
+  const picks = storePicks.get(key);
+  const picked = page.tracks.filter((t, i) => states[i].pickable && picks.has(t.number));
+  const cost = picked.reduce((n, t) => n + (t.download ? 0 : priceOf(t)), 0);
+  const pickable = page.tracks.filter((_, i) => states[i].pickable);
+  const owned = inLibrary(artist, album);
+
+  const pick = (t, on) => {
+    if (on) picks.add(t.number);
+    else picks.delete(t.number);
+    render();
+  };
+  const all = pickable.length > 0 && pickable.every((t) => picks.has(t.number));
+  show(
+    el(
+      'header',
+      { className: 'album-head' },
+      art(album, owned ? coverUrl(artist, owned.name) : '', { eager: true }),
+      el(
+        'div',
+        {},
+        el('p', { className: 'kicker', textContent: 'In the store' }),
+        el('h2', { textContent: page.name || album }),
+        el(
+          'p',
+          { className: 'meta' },
+          findArtist(artist) ? el('a', { href: href('artist', findArtist(artist).name), textContent: artist }) : artist,
+          ` · ${plural(page.tracks.length, 'track')}`,
+          owned && ' · ',
+          owned && el('a', { href: href('album', findArtist(artist).name, owned.name), textContent: 'In the library' })
+        ),
+        el(
+          'div',
+          { className: 'btn-row' },
+          el('button', {
+            className: 'btn chrome',
+            type: 'button',
+            disabled: !picked.length,
+            onclick: () => buyStoreAlbum(artist, album, page, picked, cost),
+            textContent: picked.length
+              ? `Buy ${plural(picked.length, 'track')} · ${dollars(cost)}`
+              : pickable.length
+                ? 'Nothing picked'
+                : 'Nothing left to buy',
+          }),
+          pickable.length > 0 &&
+            button(
+              'btn ghost',
+              () => {
+                for (const t of pickable) all ? picks.delete(t.number) : picks.add(t.number);
+                render();
+              },
+              all ? 'Pick none' : 'Pick all'
+            )
+        )
+      )
+    ),
+    el(
+      'ol',
+      { className: 'tracks store-tracks' },
+      page.tracks.map((t, i) => {
+        const s = states[i];
+        const box = el('input', {
+          type: 'checkbox',
+          checked: s.pickable && picks.has(t.number),
+          disabled: !s.pickable,
+          'aria-label': `Pick ${t.title}`,
+          onchange: (e) => pick(t, e.target.checked),
+        });
+        return el(
+          'li',
+          { className: `store-track${s.pickable ? '' : ' unpickable'}` },
+          el('label', {}, box, el('span', { className: 'num', textContent: t.number }), el('span', { className: 'name', textContent: t.title })),
+          el('span', { className: 'meta', textContent: t.duration || '' }),
+          el('span', { className: `store-state${s.free ? ' free' : ''}`, textContent: s.label })
+        );
+      })
+    )
+  );
+}
+
+// buyStoreAlbum queues the picked tracks once the price is confirmed.
+async function buyStoreAlbum(artist, album, page, picked, cost) {
+  const free = picked.filter((t) => t.download).length;
+  const note = free ? ` (${free} bought before, so free)` : '';
+  if (!confirm(`Buy ${plural(picked.length, 'track')} of ${artist} — ${album} for ${dollars(cost)}${note}?`)) return;
+  const ok = await buysRequest(
+    'POST',
+    'api/buy/album',
+    {
+      artist,
+      album: page.name || album,
+      page: page.url,
+      tracks: picked.map((t) => ({ number: t.number, title: t.title })),
+    },
+    'The album could not be queued'
+  );
+  if (ok) notice(`Queued ${plural(picked.length, 'track')} of ${album}. They show under Purchases as they land.`);
+  render();
+}
+
 // ---------------------------------------------------------------- buys
 
 // The server queues buys and runs them one at a time; the page polls the
@@ -2412,6 +2628,7 @@ async function refreshBuys() {
   markBuys();
   markBuysLink();
   if (route().kind === 'buys') renderBuys();
+  if (route().kind === 'store') render();
   if (landed) loadLibrary();
 
   const pending = buys.some((b) => b.status === 'queued' || b.status === 'buying');
@@ -2497,7 +2714,7 @@ function renderBuys() {
     buysReady &&
       !buys.length &&
       !links.length &&
-      el('p', { className: 'empty', textContent: 'Nothing bought yet. Buy a streamed track and it shows here.' }),
+      el('p', { className: 'empty', textContent: 'Nothing bought yet. Buy a streamed track, or an album found in the store, and it shows here.' }),
     failed.length > 0 && buysShelf('Needs attention', failed.map(failedRow)),
     pending.length > 0 && buysShelf('In progress', pending.map(pendingRow)),
     done.length > 0 && buysShelf('Bought', done.map(doneRow)),
@@ -2524,7 +2741,7 @@ function purchase(b, detail, actions, below) {
       'div',
       { className: 'purchase-text' },
       el('span', { className: 'name', textContent: b.title }),
-      el('span', { className: 'sub', textContent: b.artist }),
+      el('span', { className: 'sub', textContent: b.album ? `${b.artist} · ${b.album}` : b.artist }),
       detail
     ),
     el('div', { className: 'purchase-actions' }, actions),
