@@ -313,97 +313,103 @@ private fun PlayerSheet(model: Model) {
     val shown = if (dragging) dragAt.toLong() else position
     var confirming by remember { mutableStateOf<YTTrack?>(null) }
 
-    Column(
+    // The player has the wash of what is playing, as the screens do.
+    Box(
         Modifier
             .fillMaxSize()
             .background(Palette.Graphite)
-            .background(Palette.Metal)
-            .clickable(enabled = false) {}
-            .systemBarsPadding()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .clickable(enabled = false) {},
     ) {
-        Row(
+        Wash(now.art)
+        Column(
             Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            IconButton(onClick = { model.expanded = false }) { Icon(Glyph.Down, "Close the player") }
-            Text(
-                "NOW PLAYING",
-                Modifier.weight(1f),
-                color = Palette.Dim,
-                fontSize = 11.sp,
-                letterSpacing = 1.8.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            Spacer(Modifier.width(48.dp))
-        }
-        Spacer(Modifier.weight(1f))
-        Cover(
-            now.title,
-            now.art,
-            Modifier
-                .widthIn(max = 420.dp)
-                .fillMaxWidth()
-                .aspectRatio(1f),
-            RoundedCornerShape(10.dp),
-        )
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { model.expanded = false }) { Icon(Glyph.Down, "Close the player") }
                 Text(
-                    now.title,
-                    fontSize = 22.sp,
+                    "NOW PLAYING",
+                    Modifier.weight(1f),
+                    color = Palette.Dim,
+                    fontSize = 11.sp,
+                    letterSpacing = 1.8.sp,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
-                Text(now.subtitle, color = Palette.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(48.dp))
             }
-            model.playingStream?.let { t -> BuyButton(model.buyFor(t), model.owns(t)) { confirming = t } }
-        }
-        Spacer(Modifier.height(16.dp))
-        Slider(
-            value = shown.toFloat().coerceIn(0f, model.duration.toFloat().coerceAtLeast(1f)),
-            onValueChange = {
-                dragging = true
-                dragAt = it
-            },
-            onValueChangeFinished = {
-                model.seekTo(dragAt.toLong())
-                dragging = false
-            },
-            valueRange = 0f..model.duration.toFloat().coerceAtLeast(1f),
-            enabled = model.duration > 0,
-            colors = SliderDefaults.colors(
-                thumbColor = Palette.Chalk,
-                activeTrackColor = Palette.Accent,
-                inactiveTrackColor = Palette.Track,
-            ),
-        )
-        Row(Modifier.fillMaxWidth()) {
-            Text(clock(shown), color = Palette.Dim, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            Text(if (model.duration > 0) clock(model.duration) else "–:––", color = Palette.Dim, fontSize = 12.sp)
-        }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { model.previous() }, Modifier.size(56.dp)) {
-                Icon(Glyph.Prev, "Previous", Modifier.size(30.dp))
+            Spacer(Modifier.weight(1f))
+            Cover(
+                now.title,
+                now.art,
+                Modifier
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
+                RoundedCornerShape(10.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        now.title,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(now.subtitle, color = Palette.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                model.playingStream?.let { t -> BuyButton(model.buyFor(t), model.owns(t)) { confirming = t } }
             }
-            PlayButton(model, 72)
-            IconButton(onClick = { model.next() }, Modifier.size(56.dp), enabled = model.hasNext) {
-                Icon(Glyph.Next, "Next", Modifier.size(30.dp), tint = if (model.hasNext) Palette.Chalk else Palette.Dim)
+            Spacer(Modifier.height(16.dp))
+            Slider(
+                value = shown.toFloat().coerceIn(0f, model.duration.toFloat().coerceAtLeast(1f)),
+                onValueChange = {
+                    dragging = true
+                    dragAt = it
+                },
+                onValueChangeFinished = {
+                    model.seekTo(dragAt.toLong())
+                    dragging = false
+                },
+                valueRange = 0f..model.duration.toFloat().coerceAtLeast(1f),
+                enabled = model.duration > 0,
+                colors = SliderDefaults.colors(
+                    thumbColor = Palette.Chalk,
+                    activeTrackColor = Palette.Accent,
+                    inactiveTrackColor = Palette.Track,
+                ),
+            )
+            Row(Modifier.fillMaxWidth()) {
+                Text(clock(shown), color = Palette.Dim, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(if (model.duration > 0) clock(model.duration) else "–:––", color = Palette.Dim, fontSize = 12.sp)
             }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { model.previous() }, Modifier.size(56.dp)) {
+                    Icon(Glyph.Prev, "Previous", Modifier.size(30.dp))
+                }
+                PlayButton(model, 72)
+                IconButton(onClick = { model.next() }, Modifier.size(56.dp), enabled = model.hasNext) {
+                    Icon(Glyph.Next, "Next", Modifier.size(30.dp), tint = if (model.hasNext) Palette.Chalk else Palette.Dim)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
     }
     BuyDialog(model, confirming) { confirming = null }
 }

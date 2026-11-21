@@ -1,8 +1,10 @@
 package com.jmelahman.music
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -70,8 +72,11 @@ fun MusicTheme(content: @Composable () -> Unit) {
             outline = Palette.Edge,
             error = Palette.Accent,
         ),
-        content = content,
-    )
+    ) {
+        // Text and icons are chalk everywhere, not only on a Surface:
+        // the screens and the player draw on the wash, which has none.
+        CompositionLocalProvider(LocalContentColor provides Palette.Chalk, content = content)
+    }
 }
 
 // The icons, from the same paths as the webapp's sprite. Filled ones are
