@@ -200,6 +200,8 @@ svg {
   flex: 1 1 22rem;
   align-items: center;
   gap: 0.5rem;
+  /* Shrinks to fit beside the tabs rather than wrapping below them. */
+  min-width: 0;
   max-width: 30rem;
   height: var(--control);
   padding: 0 0.6rem;
@@ -228,6 +230,7 @@ svg {
   background: none;
   color: var(--chalk);
   font: 400 0.8125rem/1 var(--mono);
+  text-overflow: ellipsis;
 }
 
 .group {
@@ -1427,16 +1430,6 @@ body:not(.playing-bar) .toast {
 @media (max-width: 760px) {
   :root {
     --bar-h: 4rem;
-  }
-
-  .toolbar {
-    flex-wrap: wrap;
-  }
-
-  .search {
-    flex-basis: 100%;
-    order: 5;
-    max-width: none;
   }
 
   main {
