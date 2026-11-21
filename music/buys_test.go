@@ -131,11 +131,77 @@ echo "{\"artist\":\"A\",\"album\":\"B\",\"title\":\"$HTTPS_PROXY\",\"file\":\"/m
 		t.Fatal(err)
 	}
 	q.proxy = "http://gluetun:8888"
-	res, err := q.attempt(t.Context(), "A", "C")
+	res, err := q.attempt(t.Context(), "A", "C", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Title != q.proxy {
 		t.Fatalf("the provider saw HTTPS_PROXY=%q", res.Title)
+	}
+}
+
+// A failed buy asked for again is queued afresh, not listed twice, and a
+// store link saved for the track reaches the provider.
+func TestBuyFromStoreLink(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store")
+	script := `#!/bin/sh
+for a; do case "$a" in --link=*) link="${a#--link=}";; esac; done
+if [ -z "$link" ]; then
+  echo "no store match" >&2
+  exit 1
+fi
+echo "{\"artist\":\"A\",\"album\":\"B\",\"title\":\"$link\",\"file\":\"/m/A/B/C.mp3\"}"
+`
+	if err := os.WriteFile(store, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	saved := buyBackoff
+	buyBackoff = nil
+	t.Cleanup(func() { buyBackoff = saved })
+	state := t.TempDir()
+	q, err := newBuyQueue(store, t.TempDir(), state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go q.run(t.Context())
+
+	first, err := q.add("A", "C")
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, q, buyFailed)
+
+	const link = "https://store.example/download/A/B"
+	if err := q.setLink("a", "c", link); err != nil {
+		t.Fatal(err)
+	}
+	again, err := q.add("A", "C")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ID != first.ID {
+		t.Fatalf("the retry is a new buy: %s, %s", first.ID, again.ID)
+	}
+	done := waitFor(t, q, buyDone)
+	if done.Result.Title != link || done.Link != link {
+		t.Fatalf("the provider was not handed the link: %+v", done)
+	}
+	if l := q.list(); len(l) != 1 {
+		t.Fatalf("want one buy, have %+v", l)
+	}
+
+	// The link survives a restart, and dismissing forgets the buy.
+	q2, err := newBuyQueue(store, t.TempDir(), state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := q2.linkForLocked("A", "C"); got != link {
+		t.Fatalf("the link after a restart: %q", got)
+	}
+	if err := q2.dismiss(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	if l := q2.list(); len(l) != 0 {
+		t.Fatalf("a dismissed buy is still listed: %+v", l)
 	}
 }

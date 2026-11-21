@@ -41,6 +41,12 @@ with the reason on stderr. The server runs one buy at a time, retries a
 failed one after a minute, five, then thirty, and saves the queue under
 `--state` so a restart picks up where it left off. `api/buys` lists it,
 newest first. Without `MUSIC_STORE`, buying answers 503.
+
+A track the provider can't find can be given the store's album page by
+hand on the Purchases page (`PUT api/buys/links`). The server keeps it
+and hands it to the provider as `--link URL`, which buys the track off
+that album instead of searching. Asking again for a failed buy queues the
+same one afresh, and `DELETE api/buys/ID` dismisses one.
 `MUSIC_STORE_PROXY`, when set, is handed to the provider as its HTTP
 proxy; the homelab points it at gluetun, so purchases leave over the VPN.
 
