@@ -1545,9 +1545,9 @@ body:not(.playing-bar) .toast {
     justify-content: center;
   }
 
-  /* The bar keeps the essentials: previous, play and next at its start,
-     as YouTube Music's desktop bar has them, and what is playing in all
-     the room after. */
+  /* The bar keeps the controls at its start, as YouTube Music's desktop
+     bar has them, packed close, and what is playing in all the room
+     after. */
   .player-bar {
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 0.5rem;
@@ -1557,6 +1557,12 @@ body:not(.playing-bar) .toast {
   .controls {
     grid-column: 1;
     grid-row: 1;
+    gap: 0;
+  }
+
+  .controls .icon-btn:not(.chrome) {
+    width: 2.25rem;
+    height: 2.25rem;
   }
 
   .np {
@@ -1569,8 +1575,6 @@ body:not(.playing-bar) .toast {
     width: 2.75rem;
   }
 
-  #shuffle,
-  #repeat,
   .time,
   #mute,
   .volume {
