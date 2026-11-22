@@ -558,7 +558,7 @@ def sea_material():
         shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
         size = g.const(float(spacing * 4096.0))
         uv_shore = g.add(g.op(unreal.MaterialExpressionDivide, g.mask(wp, "rg"), size), shift)
-        sh = g.sample(shore_tex, uv_shore, "mask")
+        sh = g.sample(shore_tex, uv_shore, "masks")
         sh.set_editor_property(
             "sampler_source", unreal.SamplerSourceMode.SSM_CLAMP_WORLD_GROUP_SETTINGS
         )

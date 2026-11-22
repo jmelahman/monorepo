@@ -1983,6 +1983,256 @@ def shore_distance(g):
     print(f"{SRC}/shore_dist.png written ({n}x{n} padded to {size})", flush=True)
 
 
+def _copy_world_prop(out, name):
+    """Copies a handcrafted Blender world prop from SRC/world_props if present."""
+    prop_file = f"{SRC}/world_props/feat_{name}.gltf"
+    if os.path.isfile(prop_file):
+        shutil.copyfile(prop_file, f"{SRC}/feat_{name}.gltf")
+        out.meshes[name] = f"gltf:{name}"
+        return True
+    return False
+
+
+def world_landmarks(out, g, bio, road, rng, taken):
+    """Places handcrafted Blender open-world landmarks & roadside props across all 5 islands:
+    monumental bridgehead pylons with heraldic banners, scenic alpine wayside pavilions,
+    timber junction signposts, carved stone km milestones, highland standing-stone cairns,
+    and Red Sands sandstone ruin arches."""
+    out.group("WorldLandmarks", cull=0)
+    out.group("Waymarkers", cull=45000)
+    has = {
+        name: _copy_world_prop(out, name)
+        for name in (
+            "bridge_pylon",
+            "alpine_pavilion",
+            "wood_signpost",
+            "stone_milestone",
+            "desert_arch",
+            "moor_cairn",
+        )
+    }
+    line = road.line
+    n = len(line)
+    counts = dict.fromkeys(has, 0)
+
+    def tangent(idx):
+        p0 = line[max(idx - 4, 0), :2]
+        p1 = line[min(idx + 4, n - 1), :2]
+        dx, dy = float(p1[0] - p0[0]), float(p1[1] - p0[1])
+        ln = math.hypot(dx, dy) or 1.0
+        return dx / ln, dy / ln
+
+    # 1. Twin bridgehead pylons flanking both ends of every inter-island bridge + signposts
+    pylon_view_added = False
+    for a, b in road.spans:
+        for end_idx, inward in ((max(a - 8, 4), -1.0), (min(b + 8, n - 5), 1.0)):
+            px, py = float(line[end_idx, 0]), float(line[end_idx, 1])
+            tx, ty = tangent(end_idx)
+            nx, ny = -ty, tx
+            yaw_face = math.degrees(math.atan2(inward * ty, inward * tx))
+            if has["bridge_pylon"]:
+                for side in (-1.0, 1.0):
+                    qx, qy = px + nx * side * 5.8, py + ny * side * 5.8
+                    qz = float(g.z(qx, qy))
+                    if qz > 0.4 and road.dist(qx, qy) > 4.4:
+                        out.add(
+                            "WorldLandmarks",
+                            "bridge_pylon",
+                            qx,
+                            qy,
+                            qz - 0.10,
+                            yaw_face,
+                            mark=(255, 210, 70),
+                        )
+                        taken.append((qx, qy, 2.2))
+                        out.clear.append([round(qx, 1), round(qy, 1), 4.5])
+                        counts["bridge_pylon"] += 1
+                if not pylon_view_added and float(g.z(px, py)) > 1.0:
+                    eye_idx = max(end_idx - 28, 0) if inward < 0 else min(end_idx + 28, n - 1)
+                    ex, ey, ez = line[eye_idx]
+                    out.views.append(
+                        [
+                            "feat_bridge_pylon",
+                            [float(ex), float(ey), float(ez) + 1.8],
+                            [px, py, float(line[end_idx, 2]) + 3.2],
+                        ]
+                    )
+                    pylon_view_added = True
+            # Rustic timber signpost ~22 m ahead of each bridgehead
+            if has["wood_signpost"]:
+                s_idx = int(np.clip(end_idx + (22 if inward > 0 else -22), 10, n - 10))
+                sx, sy = float(line[s_idx, 0]), float(line[s_idx, 1])
+                stx, sty = tangent(s_idx)
+                snx, sny = -sty, stx
+                qx, qy = sx + snx * 5.2, sy + sny * 5.2
+                qz = float(g.z(qx, qy))
+                if qz > 1.2 and road.dist(qx, qy) > 4.4:
+                    out.add(
+                        "Waymarkers",
+                        "wood_signpost",
+                        qx,
+                        qy,
+                        qz - 0.08,
+                        math.degrees(math.atan2(sty, stx)),
+                        mark=(210, 155, 70),
+                    )
+                    taken.append((qx, qy, 1.8))
+                    counts["wood_signpost"] += 1
+
+    # 2. Carved stone km milestones every ~900 m along the tarmac verge
+    if has["stone_milestone"]:
+        for k in range(450, n - 200, 900):
+            px, py = float(line[k, 0]), float(line[k, 1])
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            side = -1.0 if (k // 900) % 2 == 0 else 1.0
+            qx, qy = px + nx * side * 4.7, py + ny * side * 4.7
+            qz = float(g.z(qx, qy))
+            if (
+                qz > 1.8
+                and float(g.at(g.slope, qx, qy)) < 0.35
+                and road.dist(qx, qy) > 4.1
+                and not any(math.hypot(qx - x0, qy - y0) < r0 + 2.0 for x0, y0, r0 in taken)
+            ):
+                # Front plaque (+X) faces diagonally toward oncoming rider
+                yaw = math.degrees(math.atan2(-ty - ny * side * 0.4, -tx - nx * side * 0.4))
+                out.add("Waymarkers", "stone_milestone", qx, qy, qz - 0.06, yaw)
+                taken.append((qx, qy, 1.2))
+                counts["stone_milestone"] += 1
+
+    # 3. Scenic Nordic-alpine timber rest pavilions along Vael, Greenwood, The Moor, and Coast
+    if has["alpine_pavilion"]:
+        pavilion_view_added = False
+        pav_spots = []
+        for k in range(800, n - 400, 340):
+            if counts["alpine_pavilion"] >= 14:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            b = str(bio.best(px, py))
+            if b not in ("forest", "mountain", "heath", "meadow"):
+                continue
+            if any(math.hypot(px - x0, py - y0) < 950 for x0, y0 in pav_spots):
+                continue
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            yaw0 = math.degrees(math.atan2(ty, tx))
+            for side in (-1.0, 1.0):
+                qx, qy = px + nx * side * 9.5, py + ny * side * 9.5
+                # Pavilion front is -Y in Blender -> +Y in UE; rotate so front faces road
+                yaw = yaw0 + (0.0 if side < 0 else 180.0)
+                c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+                corners = [
+                    (qx + dx * c - dy * s, qy + dx * s + dy * c)
+                    for dx in (-2.3, 2.3)
+                    for dy in (-1.6, 1.6)
+                ]
+                zs = [float(g.z(cx, cy)) for cx, cy in corners]
+                if min(zs) < 2.2 or max(zs) - min(zs) > 1.4:
+                    continue
+                if min(float(road.dist(cx, cy)) for cx, cy in corners) < 5.5:
+                    continue
+                if any(math.hypot(qx - x0, qy - y0) < r0 + 4.5 for x0, y0, r0 in taken):
+                    continue
+                z_base = float(np.percentile(zs, 30))
+                out.add(
+                    "WorldLandmarks",
+                    "alpine_pavilion",
+                    qx,
+                    qy,
+                    z_base,
+                    yaw,
+                    mark=(235, 190, 90),
+                )
+                taken.append((qx, qy, 4.0))
+                out.clear.append([round(qx, 1), round(qy, 1), 6.0])
+                pav_spots.append((px, py))
+                counts["alpine_pavilion"] += 1
+                if not pavilion_view_added and b in ("forest", "mountain"):
+                    eye_idx = max(k - 24, 0)
+                    ex, ey, ez = line[eye_idx]
+                    out.views.append(
+                        [
+                            "feat_pavilion",
+                            [float(ex), float(ey), float(ez) + 1.8],
+                            [qx, qy, z_base + 1.8],
+                        ]
+                    )
+                    pavilion_view_added = True
+                break
+
+    # 4. Highland standing-stone cairns on The Moor & Vael + sandstone ruin arches on Red Sands
+    if has["moor_cairn"]:
+        for k in range(400, n - 400, 420):
+            if counts["moor_cairn"] >= 16:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            b = str(bio.best(px, py))
+            if b not in ("heath", "mountain") or rng.random() > 0.65:
+                continue
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            side = rng.choice((-1.0, 1.0))
+            off = rng.uniform(10.0, 26.0)
+            qx, qy = px + nx * side * off, py + ny * side * off
+            qz = float(g.z(qx, qy))
+            if (
+                qz > 4.0
+                and float(g.at(g.slope, qx, qy)) < 0.30
+                and road.dist(qx, qy) > 7.5
+                and not any(math.hypot(qx - x0, qy - y0) < r0 + 3.5 for x0, y0, r0 in taken)
+            ):
+                out.add(
+                    "WorldLandmarks",
+                    "moor_cairn",
+                    qx,
+                    qy,
+                    qz - 0.15,
+                    rng.uniform(0, 360),
+                    rng.uniform(0.9, 1.25),
+                )
+                taken.append((qx, qy, 2.5))
+                counts["moor_cairn"] += 1
+
+    if has["desert_arch"]:
+        arches_placed = []
+        for k in range(300, n - 300, 320):
+            if counts["desert_arch"] >= 7:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            if str(bio.best(px, py)) != "desert":
+                continue
+            if any(math.hypot(px - x0, py - y0) < 600 for x0, y0 in arches_placed):
+                continue
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            side = rng.choice((-1.0, 1.0))
+            off = rng.uniform(16.0, 38.0)
+            qx, qy = px + nx * side * off, py + ny * side * off
+            qz = float(g.z(qx, qy))
+            if (
+                qz > 3.0
+                and float(g.at(g.slope, qx, qy)) < 0.25
+                and road.dist(qx, qy) > 12.0
+                and not any(math.hypot(qx - x0, qy - y0) < r0 + 5.0 for x0, y0, r0 in taken)
+            ):
+                yaw = math.degrees(math.atan2(ty, tx)) + rng.uniform(-35, 35)
+                out.add(
+                    "WorldLandmarks",
+                    "desert_arch",
+                    qx,
+                    qy,
+                    qz - 0.25,
+                    yaw,
+                    rng.uniform(1.0, 1.35),
+                    mark=(240, 130, 60),
+                )
+                taken.append((qx, qy, 4.5))
+                arches_placed.append((px, py))
+                counts["desert_arch"] += 1
+
+    print(f"world_landmarks: {counts}", flush=True)
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -2004,6 +2254,7 @@ def main():
     cairns(out, g, bio, road, np.random.default_rng(SEED + 12), taken)
     hamlets(out, g, bio, road, np.random.default_rng(SEED + 13), taken)
     tower(out, g, bio, road, np.random.default_rng(SEED + 14), taken)
+    world_landmarks(out, g, bio, road, np.random.default_rng(SEED + 16), taken)
     roadside_dressing(out, g, bio, road, np.random.default_rng(SEED + 15), taken)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
