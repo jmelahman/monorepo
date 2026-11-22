@@ -9,7 +9,7 @@ mounts = [
   "type=bind,source=/dev/dri,target=/dev/dri",
   "type=bind,source=${localEnv:HOME}/.cache/opencycle-neural/ue,target=/workspace/ue",
   "type=volume,source=opencycle-ue-ddc,target=/workspace/ddc",
-  "type=bind,source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/opencode.jsonc,readonly",
+  # "type=bind,source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/opencode.jsonc,readonly",
   "type=bind,source=${localEnv:HOME}/.config/opencode/cli.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/cli.json,readonly",
   "type=volume,source=opencycle-opencode-data,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local/share/opencode",
 ]
