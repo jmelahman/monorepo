@@ -23,6 +23,7 @@ struct FRiderAnimProxy : public FAnimInstanceProxy
 
 	TArray<const UAnimSequence*, TInlineAllocator<3>> Takes;
 	float Time = 0.f;
+	float LoopLength = 2.f;
 	float Effort = 1.f;
 };
 
@@ -34,7 +35,8 @@ class VELOVERSEUE_API URiderAnim : public UAnimInstance
 public:
 	// Easiest first. Effort is an index into them: 0 Easy, 1 Pedal, 2 Hard, fractions between.
 	UPROPERTY(Transient) TArray<TObjectPtr<UAnimSequence>> Takes;
-	float Time = 0.f; // seconds into the loop
+	float Time = 0.f;       // seconds into the loop [0, LoopLength)
+	float LoopLength = 2.f; // full revolution duration (60 frames at 30 fps)
 	float Effort = 1.f;
 
 protected:

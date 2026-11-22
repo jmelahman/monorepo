@@ -1215,6 +1215,55 @@ const FVector SteerAxis(-0.2924f, 0.f, 0.9563f);
 constexpr float WheelRadius = 33.9f; // to the tyre's tread
 constexpr float CrankLength = 17.25f; // to the pedal's axle
 constexpr float RiderLoop = 2.f; // s: rider/README.md's Pedal, 60 frames at 30 fps a revolution
+
+// Matches rider/build_rider.py's ANKLING curve (toe-down positive, in radians about +Y):
+// phi is angle past top dead centre in the direction of travel (90 deg = forward at Crank 0).
+float SolePitchRad(float CrankRad, bool bRight)
+{
+	const float Phi = HALF_PI + CrankRad + (bRight ? 0.f : PI);
+	const float Deg = 5.f - 2.f * FMath::Cos(Phi) - 10.f * FMath::Sin(Phi) + 1.f * FMath::Cos(2.f * Phi);
+	return FMath::DegreesToRadians(Deg);
+}
+
+// Positions the cranks and clipless pedals for CrankRad, tilting each pedal about its own spindle
+// to match the rider's shoe ankling so the cleat stays flush on the pedal body all round the stroke.
+void PosePedals(const TArray<TObjectPtr<UStaticMeshComponent>>& Parts, const FVector& Origin, float CrankRad)
+{
+	const FQuat CrankRot(FVector::YAxisVector, CrankRad);
+	Parts[BikeCranks]->SetRelativeLocationAndRotation(
+		Origin + BottomBracket - CrankRot.RotateVector(BottomBracket), CrankRot);
+	const auto PlacePedal = [&](int32 Part, float SignX, bool bRight)
+	{
+		const FVector Arm(SignX * CrankLength, 0.f, 0.f);
+		const FVector Spindle0 = BottomBracket + Arm;
+		const FVector Spindle = BottomBracket + CrankRot.RotateVector(Arm);
+		const FQuat Tilt(FVector::YAxisVector, SolePitchRad(CrankRad, bRight));
+		Parts[Part]->SetRelativeLocationAndRotation(Origin + Spindle - Tilt.RotateVector(Spindle0), Tilt);
+	};
+	PlacePedal(BikePedalR, 1.f, true);
+	PlacePedal(BikePedalL, -1.f, false);
+}
+
+// Evaluates a rider skeletal mesh synchronously right now so its bones match this exact frame's
+// Crank angle with zero 1-frame tick-order lag, even during framerate hitches.
+void SyncRiderPose(USkeletalMeshComponent* Mesh, float TimeSec, float EffortVal)
+{
+	if (!Mesh)
+	{
+		return;
+	}
+	if (URiderAnim* Anim = Cast<URiderAnim>(Mesh->GetAnimInstance()))
+	{
+		Anim->Time = TimeSec;
+		Anim->LoopLength = RiderLoop;
+		Anim->Effort = EffortVal;
+	}
+	Mesh->TickAnimation(0.f, false);
+	Mesh->RefreshBoneTransforms();
+	Mesh->FinalizeBoneTransform();
+	Mesh->MarkRenderTransformDirty();
+	Mesh->MarkRenderDynamicDataDirty();
+}
 } // namespace
 
 void ARidePawn::MakeBikeParts()
@@ -1273,28 +1322,19 @@ void ARidePawn::PoseBike()
 	BikeParts[BikeWheelFront]->SetRelativeLocationAndRotation(
 		PartsOrigin + HeadTube + Steered.RotateVector(FrontHub - Rolled.RotateVector(FrontHub) - HeadTube), Steered * Rolled);
 	Turn(BikeWheelRear, RearHub, Spin);
-	Turn(BikeCranks, BottomBracket, Crank);
-	// The pedals ride round on the cranks' ends but stay level, as a foot keeps them.
-	const FQuat Pedal(FVector::YAxisVector, Crank);
-	const FVector Arm(CrankLength, 0.f, 0.f);
-	BikeParts[BikePedalR]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(Arm) - Arm);
-	BikeParts[BikePedalL]->SetRelativeLocation(PartsOrigin + Pedal.RotateVector(-Arm) + Arm);
+	PosePedals(BikeParts, PartsOrigin, Crank);
 	if (RiderBody && RiderPedal)
 	{
 		// One revolution is frames 0-59 at 30 fps, frame 0 with the drive-side crank ahead as at
-		// Crank 0, and turning the same way (rider/README.md). Past frame 59 it holds that frame.
-		const float Turned = FMath::Fmod(Crank, 2.f * PI) / (2.f * PI);
-		const float At = FMath::Min(Turned * RiderLoop, RiderPedal->GetPlayLength());
-		for (USkeletalMeshComponent* C : {RiderBody.Get(), RiderArms.Get()})
+		// Crank 0, and turning the same way (rider/README.md). RiderAnim wraps [59..60] back to 0.
+		const float Turned = FMath::Fmod(FMath::Fmod(Crank, 2.f * PI) + 2.f * PI, 2.f * PI) / (2.f * PI);
+		const float At = Turned * RiderLoop;
+		SyncRiderPose(RiderBody, At, RiderEffort);
+		if (RiderArms)
 		{
-			if (URiderAnim* Anim = C ? Cast<URiderAnim>(C->GetAnimInstance()) : nullptr)
-			{
-				// Over the bars the arms hold one pose: the take's elbows swing with the stroke while the
-				// bars, carried with the camera, stay put, and the hands read as shaking on them (15 Nov).
-				const bool bHeld = C == RiderArms && bArmsCockpit;
-				Anim->Time = bHeld ? 0.f : At;
-				Anim->Effort = bHeld ? 0.f : RiderEffort; // Cockpit isn't blended
-			}
+			// Over the bars the arms hold one pose: the take's elbows swing with the stroke while the
+			// bars, carried with the camera, stay put, and the hands read as shaking on them (15 Nov).
+			SyncRiderPose(RiderArms, bArmsCockpit ? 0.f : At, bArmsCockpit ? 0.f : RiderEffort);
 		}
 		if (RiderArms && bArmsCockpit && ArmsTilt == 0.f)
 		{
@@ -1330,10 +1370,12 @@ void ARidePawn::MakeRider()
 		return; // not imported yet, or no bike to sit on
 	}
 	// Both copies play the efforts through URiderAnim; PoseBike sets its time and effort.
-	auto Animate = [](USkeletalMeshComponent* C, const TArray<UAnimSequence*>& Plays)
+	auto Animate = [this](USkeletalMeshComponent* C, const TArray<UAnimSequence*>& Plays)
 	{
 		C->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 		C->SetAnimInstanceClass(URiderAnim::StaticClass());
+		C->bEnableUpdateRateOptimizations = false;
+		C->AddTickPrerequisiteActor(this);
 		C->RegisterComponent();
 		if (URiderAnim* Anim = Cast<URiderAnim>(C->GetAnimInstance()))
 		{
@@ -1448,6 +1490,8 @@ void ARidePawn::MakeKitPreview()
 	StudioRider->SetupAttachment(Turntable);
 	StudioRider->SetRelativeLocation(StudioOrigin);
 	StudioRider->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	StudioRider->bEnableUpdateRateOptimizations = false;
+	StudioRider->AddTickPrerequisiteActor(this);
 	StudioRider->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 	StudioRider->SetAnimInstanceClass(URiderAnim::StaticClass());
 	StudioRider->RegisterComponent();
@@ -1520,9 +1564,11 @@ void ARidePawn::MakeKitPreview()
 	StudioCapture->bCaptureEveryFrame = false;
 	StudioCapture->bCaptureOnMovement = false;
 	StudioCapture->bAlwaysPersistRenderingState = true; // keeps the temporal AA's history between frames
-	StudioLook(0);
 	StudioCapture->PostProcessBlendWeight = 1.f;
 	StudioCapture->RegisterComponent();
+	// After registering: OnRegister resets show flags to the class defaults, which let the world's
+	// sky, fog and atmosphere wash out the Kit page's turntable preview.
+	StudioLook(0);
 
 	StudioBrush.SetResourceObject(StudioTarget);
 	StudioBrush.ImageSize = FVector2D(StudioW, StudioH);
@@ -1625,22 +1671,14 @@ void ARidePawn::TurnKitPreview(float Dt)
 	StudioTurn = FMath::Fmod(StudioTurn + StudioSpin * Dt, 360.f);
 	Turntable->SetRelativeRotation(FRotator(0.f, StudioTurn, 0.f));
 	StudioCrank = FMath::Fmod(StudioCrank + 2.f * PI * Dt, 2.f * PI);
-	if (URiderAnim* Anim = Cast<URiderAnim>(StudioRider->GetAnimInstance()))
-	{
-		Anim->Time = FMath::Min(StudioCrank / (2.f * PI) * RiderLoop, RiderPedal ? RiderPedal->GetPlayLength() : RiderLoop);
-		Anim->Effort = 1.f;
-	}
 	const auto Turn = [this](int32 Part, const FVector& Pivot, float Angle)
 	{
 		const FQuat R(FVector::YAxisVector, Angle);
 		StudioParts[Part]->SetRelativeLocationAndRotation(StudioOrigin + Pivot - R.RotateVector(Pivot), R);
 	};
-	Turn(BikeCranks, BottomBracket, StudioCrank);
+	PosePedals(StudioParts, StudioOrigin, StudioCrank);
 	Turn(BikeWheelRear, RearHub, StudioCrank * 2.6f); // 50 x 19: the wheel turns with the cranks
-	const FQuat Pedal(FVector::YAxisVector, StudioCrank);
-	const FVector Arm(CrankLength, 0.f, 0.f);
-	StudioParts[BikePedalR]->SetRelativeLocation(StudioOrigin + Pedal.RotateVector(Arm) - Arm);
-	StudioParts[BikePedalL]->SetRelativeLocation(StudioOrigin + Pedal.RotateVector(-Arm) + Arm);
+	SyncRiderPose(StudioRider, StudioCrank / (2.f * PI) * RiderLoop, 1.f);
 }
 
 void ARidePawn::PlaceRain(float Dt)
