@@ -125,6 +125,21 @@ def _body_mesh_graph(mesh_ob):
     return co, is_body, neighbors
 
 
+def _taubin_smooth(co, neighbors, idx, strength, iters, lam_pos=0.45, lam_neg=-0.40, u_axis=None):
+    """Volume-preserving Taubin smoothing over `idx`, optionally projected off `u_axis`."""
+    for _ in range(iters):
+        for lam in (lam_pos, lam_neg):
+            prev = co.copy()
+            for vi in idx:
+                nbrs = neighbors[vi]
+                if not nbrs:
+                    continue
+                delta = prev[nbrs].mean(axis=0) - prev[vi]
+                if u_axis is not None:
+                    delta = delta - float(delta @ u_axis) * u_axis
+                co[vi] = prev[vi] + (lam * float(strength[vi])) * delta
+
+
 def _smooth_calves(mesh_ob, rig):
     """Refines the overly sharp/bulky calf silhouette on both legs strictly perpendicular to the
     calf bone axis so vertices never slide vertically along the leg (keeping the sock cuff line
@@ -182,28 +197,38 @@ def _smooth_calves(mesh_ob, rig):
 
         # 2) Strictly axis-perpendicular Taubin smoothing (6 iterations of +0.42 / -0.38)
         # Removes sharp polygonal corners without collapsing volume or sliding UV bands along leg
-        for _ in range(6):
-            for lam in (0.42, -0.38):
-                prev = new_co.copy()
-                for vi in idx:
-                    nbrs = neighbors[vi]
-                    if not nbrs:
-                        continue
-                    delta = prev[nbrs].mean(axis=0) - prev[vi]
-                    # Remove axial component so vertices never slide up/down along the shin/calf
-                    delta = delta - float(delta @ u_axis) * u_axis
-                    new_co[vi] = prev[vi] + (lam * float(strength[vi])) * delta
+        _taubin_smooth(new_co, neighbors, idx, strength, 6, 0.42, -0.38, u_axis=u_axis)
 
     me.vertices.foreach_set("co", new_co.ravel())
     me.update()
     return affected
 
 
-def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
-    """Smooths the pelvis/thigh skinning transition and subtle outer-lower glute ridge
-    symmetrically so both glutes deform cleanly without vertical creases across pedal flexion.
+def _smooth_weight_ratios(ratio, neighbors, idx_w, w_hip, y, iters, mix):
+    """Smooths normalized hip weight ratios while keeping thighs strictly on their own side."""
+    for _ in range(iters):
+        prev = ratio.copy()
+        for vi in idx_w:
+            nbrs = [ni for ni in neighbors[vi] if w_hip[ni] > 0.15]
+            if not nbrs:
+                continue
+            s = float(mix[vi])
+            nr = (1.0 - s) * prev[vi] + s * prev[nbrs].mean(axis=0)
+            if y[vi] < 0.005:
+                nr[1] = 0.0
+            if y[vi] > -0.005:
+                nr[2] = 0.0
+            ns = float(nr.sum())
+            if ns > 1e-6:
+                ratio[vi] = nr / ns
 
-    Preserves spine, knee/calf, and midline weights exactly, keeping total weights normalized.
+
+def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
+    """Smooths the pelvis/thigh skinning transition, outer-lower glute ridge, and central
+    saddle-contact cleft symmetrically so both glutes deform cleanly and the bib shorts sit
+    flush on top of the saddle across all pedal phases.
+
+    Preserves spine, knee/calf, and midline weights cleanly, keeping total weights normalized.
     """
     me = mesh_ob.data
     n_v = len(me.vertices)
@@ -228,23 +253,24 @@ def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
     pos = w_hip > 1e-6
     ratio[pos] = w[pos] / w_hip[pos, None]
 
-    for _ in range(weight_iters):
-        prev = ratio.copy()
-        for vi in idx_w:
-            nbrs = [ni for ni in neighbors[vi] if w_hip[ni] > 0.15]
-            if not nbrs:
-                continue
-            avg = prev[nbrs].mean(axis=0)
-            s = 0.5 * float(bell_w[vi])
-            nr = (1.0 - s) * prev[vi] + s * avg
-            # Keep thighs strictly on their own side so midline stays pure pelvis
-            if y[vi] < 0.005:
-                nr[1] = 0.0
-            if y[vi] > -0.005:
-                nr[2] = 0.0
-            ns = float(nr.sum())
-            if ns > 1e-6:
-                ratio[vi] = nr / ns
+    _smooth_weight_ratios(ratio, neighbors, idx_w, w_hip, y, weight_iters, 0.5 * bell_w)
+
+    # Gently anchor the narrow central chamois strip toward pelvis so downstrokes don't pull
+    # the midline bib crotch down into the saddle, then blend the boundary smoothly
+    crotch_pelvis = (
+        (1.0 - _smoothstep(0.016, 0.052, ay))
+        * _smoothstep(0.815, 0.850, z)
+        * (1.0 - _smoothstep(0.910, 0.945, z))
+        * _smoothstep(-0.055, -0.020, x)
+        * (1.0 - _smoothstep(0.060, 0.095, x))
+    )
+    for vi in idx_w:
+        cp = float(crotch_pelvis[vi])
+        if cp > 0.01:
+            ratio[vi] = (1.0 - 0.55 * cp) * ratio[vi] + (0.55 * cp) * np.array(
+                [1.0, 0.0, 0.0], np.float32
+            )
+    _smooth_weight_ratios(ratio, neighbors, idx_w, w_hip, y, 4, np.full(n_v, 0.35, np.float32))
 
     new_w = ratio * w_hip[:, None]
     for vi in idx_w:
@@ -272,19 +298,38 @@ def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
     )
     idx_g = np.where(is_body & (strength_g > 0.01))[0]
     new_co = co.copy()
-    for _ in range(taubin_iters):
-        for lam in (0.45, -0.40):
-            prev = new_co.copy()
-            for vi in idx_g:
-                nbrs = neighbors[vi]
-                if not nbrs:
-                    continue
-                delta = prev[nbrs].mean(axis=0) - prev[vi]
-                new_co[vi] = prev[vi] + (lam * float(strength_g[vi])) * delta
+    _taubin_smooth(new_co, neighbors, idx_g, strength_g, taubin_iters, 0.45, -0.40)
+
+    # 3) Unfold the deep midline gluteal/perineal cleft pocket and lift it gently along world +Z
+    # (pelvis rest direction [-0.685, 0, 0.728] under ~43 deg cycling forward lean) so the
+    # center bib shorts sit cleanly on top of the saddle instead of dipping into the cutout
+    cleft_w = (
+        (1.0 - _smoothstep(0.020, 0.068, ay))
+        * _smoothstep(0.820, 0.855, z)
+        * (1.0 - _smoothstep(0.910, 0.945, z))
+        * _smoothstep(-0.060, -0.025, x)
+        * (1.0 - _smoothstep(0.065, 0.100, x))
+    )
+    idx_c = np.where(is_body & (cleft_w > 0.01))[0]
+    _taubin_smooth(new_co, neighbors, idx_c, cleft_w, 18, 0.45, -0.38)
+
+    x2, y2, z2 = new_co[:, 0], new_co[:, 1], new_co[:, 2]
+    lift_w = (
+        (1.0 - _smoothstep(0.020, 0.064, np.abs(y2)))
+        * _smoothstep(0.820, 0.855, z2)
+        * (1.0 - _smoothstep(0.905, 0.945, z2))
+        * _smoothstep(-0.055, -0.018, x2)
+        * (1.0 - _smoothstep(0.065, 0.100, x2))
+    )
+    lift_dir = np.array([-0.685, 0.0, 0.728], np.float32)
+    lift_dir /= np.linalg.norm(lift_dir)
+    idx_l = np.where(is_body & (lift_w > 0.01))[0]
+    new_co[idx_l] += (0.013 * lift_w[idx_l, None]) * lift_dir
+    _taubin_smooth(new_co, neighbors, idx_c, cleft_w, 4, 0.40, -0.36)
 
     me.vertices.foreach_set("co", new_co.ravel())
     me.update()
-    return len(idx_w), len(idx_g)
+    return len(idx_w), len(idx_g), len(idx_l)
 
 
 def _rasterize_body_xyz(mesh_ob, size):
@@ -454,9 +499,9 @@ def main():
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     mesh_ob = next(o for o in bpy.data.objects if o.type == "MESH" and o.find_armature() == rig)
 
-    # 1) Smooth overly angular calves and outer-lower glute/hip crease on the Rider mesh
+    # 1) Smooth overly angular calves, outer-lower glute crease, and saddle-contact cleft
     calf_v = _smooth_calves(mesh_ob, rig)
-    glute_w_v, glute_g_v = _smooth_glutes(mesh_ob)
+    glute_w_v, glute_g_v, saddle_v = _smooth_glutes(mesh_ob)
 
     # 2) Rasterize body-only xyz at 512x512 and bilinearly upsample to texture resolution
     base = _load_rgba(os.path.join(src, "T_Body_BaseColor.png"))
@@ -596,7 +641,8 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(dst, "rider.blend"))
     print(
         f"Polished rider in {dst}: calf_verts={calf_v}, glute_w_verts={glute_w_v}, "
-        f"glute_geom_verts={glute_g_v}, pocket_px={int((in_pocket > 0.5).sum())}, "
+        f"glute_geom_verts={glute_g_v}, saddle_verts={saddle_v}, "
+        f"pocket_px={int((in_pocket > 0.5).sum())}, "
         f"gripper_px={int((bib_gripper > 0.5).sum())}, sock_cuff_px={int((sock_cuff > 0.5).sum())}",
         flush=True,
     )
