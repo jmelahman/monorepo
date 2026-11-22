@@ -1,0 +1,29 @@
+name: Integration
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions: {}
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+          cache: false
+      # The tests that drive the runner's Docker daemon, which plain
+      # `go test ./...` (and so the pre-commit hook) skips.
+      - name: Run Docker tests
+        env:
+          LOCAL_PREVIEW_DOCKER_TESTS: "1"
+        run: go test -count=1 ./internal/build/ ./internal/supervise/

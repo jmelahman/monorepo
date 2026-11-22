@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/jmelahman/local-preview/internal/devcontainer"
-	"github.com/jmelahman/local-preview/internal/dockerapi"
+	"github.com/jmelahman/local-preview/internal/dockertest"
 )
 
 func specFor(t *testing.T, image string, argv ...string) RunSpec {
@@ -57,31 +57,14 @@ func TestAutoRunnerFallsBackWithoutDocker(t *testing.T) {
 	}
 }
 
-// TestAutoRunnerContainer runs a real one-shot build container. Skipped when
-// no daemon is reachable, or when the daemon doesn't share this process's
-// filesystem (CI job containers talk to the runner host's daemon, so bind
-// mounts resolve on the host and build outputs never appear here).
+// TestAutoRunnerContainer runs a real one-shot build container. Skipped
+// unless dockertest.Connect finds a filesystem-sharing daemon it may use.
 func TestAutoRunnerContainer(t *testing.T) {
-	ctx := context.Background()
-	cli, err := dockerapi.Connect(ctx)
-	if err != nil {
-		t.Skipf("docker unavailable: %v", err)
-	}
 	r := &autoRunner{}
 	spec := specFor(t, "alpine:3.20", "sh", "-c", "pwd && echo containerized > out.txt")
 
-	marker := filepath.Join(spec.ScratchDir, "marker")
-	if err := os.WriteFile(marker, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var probe bytes.Buffer
-	if err := cli.RunStep(ctx, dockerapi.Step{
-		Image: "alpine:3.20",
-		Cmd:   []string{"sh", "-c", "test -f /probe/marker"},
-		Binds: []string{spec.ScratchDir + ":/probe"},
-	}, &probe); err != nil {
-		t.Skipf("daemon does not share this filesystem (sibling daemon?): %v", err)
-	}
+	dockertest.Connect(t, spec.ScratchDir)
+	ctx := context.Background()
 	var out bytes.Buffer
 	if err := r.Run(ctx, spec, &out); err != nil {
 		t.Fatalf("Run: %v\noutput: %s", err, out.String())
@@ -126,13 +109,8 @@ func TestAutoRunnerDevcontainerFallsBackWithoutDocker(t *testing.T) {
 
 // TestAutoRunnerDevcontainer runs a step in the devcontainer default: its
 // cache volume is mounted and HOME points at the remote-user home. Skipped
-// without a filesystem-sharing daemon, like TestAutoRunnerContainer.
+// like TestAutoRunnerContainer.
 func TestAutoRunnerDevcontainer(t *testing.T) {
-	ctx := context.Background()
-	cli, err := dockerapi.Connect(ctx)
-	if err != nil {
-		t.Skipf("docker unavailable: %v", err)
-	}
 	r := &autoRunner{}
 	spec := specFor(t, "", "sh", "-c", "echo home=$HOME && test -d /devc-cache && echo devc-built > out.txt")
 	spec.Devcontainer = devcontainer.Config{
@@ -141,18 +119,8 @@ func TestAutoRunnerDevcontainer(t *testing.T) {
 		Home:   "/home/dev",
 	}
 
-	marker := filepath.Join(spec.ScratchDir, "marker")
-	if err := os.WriteFile(marker, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var probe bytes.Buffer
-	if err := cli.RunStep(ctx, dockerapi.Step{
-		Image: "alpine:3.20",
-		Cmd:   []string{"sh", "-c", "test -f /probe/marker"},
-		Binds: []string{spec.ScratchDir + ":/probe"},
-	}, &probe); err != nil {
-		t.Skipf("daemon does not share this filesystem (sibling daemon?): %v", err)
-	}
+	dockertest.Connect(t, spec.ScratchDir)
+	ctx := context.Background()
 	var out bytes.Buffer
 	if err := r.Run(ctx, spec, &out); err != nil {
 		t.Fatalf("Run: %v\noutput: %s", err, out.String())

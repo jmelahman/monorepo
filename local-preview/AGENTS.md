@@ -61,6 +61,11 @@ zero, and shutting the process down discards everything.
   Not caught by lint, but equally off-limits there: overriding a package-level
   seam variable. Prefer an integration test for new behaviour; a plain
   `_test.go` is for logic that is pure enough not to need one.
+- Tests that drive the real Docker daemon skip unless
+  `LOCAL_PREVIEW_DOCKER_TESTS=1` is set (see `internal/dockertest`), so
+  pre-commit stays off the host's daemon. The `Integration` workflow runs
+  them: `LOCAL_PREVIEW_DOCKER_TESTS=1 go test ./internal/build/ ./internal/supervise/`.
+  Gate any new daemon-backed test with `dockertest.Connect`.
 - Frontend types: `cd web && bun run typecheck`
 - Frontend format: `cd web && bun run format:check` (`format` to apply). The
   `prek` `bun-fmt` hook runs the same check. Lint: `bun run lint` (`lint:fix` to apply), also the `oxlint` hook.

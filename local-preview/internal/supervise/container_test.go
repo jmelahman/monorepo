@@ -12,33 +12,9 @@ import (
 	"github.com/jmelahman/local-preview/internal/db"
 	"github.com/jmelahman/local-preview/internal/devcontainer"
 	"github.com/jmelahman/local-preview/internal/dockerapi"
+	"github.com/jmelahman/local-preview/internal/dockertest"
 	"github.com/jmelahman/local-preview/internal/manifest"
 )
-
-// dockerOrSkip follows containerrunner_test's two-tier skip: no daemon →
-// skip; daemon that doesn't share this filesystem (sibling daemon) → skip,
-// since artifact bind mounts would silently resolve on the wrong host.
-func dockerOrSkip(t *testing.T, probeDir string) *dockerapi.Client {
-	t.Helper()
-	ctx := context.Background()
-	cli, err := dockerapi.Connect(ctx)
-	if err != nil {
-		t.Skipf("docker unavailable: %v", err)
-	}
-	marker := filepath.Join(probeDir, "marker")
-	if err := os.WriteFile(marker, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var sink strings.Builder
-	if err := cli.RunStep(ctx, dockerapi.Step{
-		Image: "busybox:1",
-		Cmd:   []string{"sh", "-c", "test -f /probe/marker"},
-		Binds: []string{probeDir + ":/probe"},
-	}, &sink); err != nil {
-		t.Skipf("daemon does not share this filesystem (sibling daemon?): %v", err)
-	}
-	return cli
-}
 
 // provisionContainer publishes a backend artifact whose run command starts
 // busybox httpd inside a container, dumping its env to a served file first
@@ -95,7 +71,7 @@ func (f *fixture) readRunLog(t *testing.T, beHash string) string {
 
 func TestContainerBackendLifecycle(t *testing.T) {
 	f := newFixture(t)
-	dockerOrSkip(t, t.TempDir())
+	dockertest.Connect(t, t.TempDir())
 
 	const beHash = "be-container-0000"
 	f.provisionContainer(t, beHash, map[string]string{
@@ -161,7 +137,7 @@ func TestContainerBackendLifecycle(t *testing.T) {
 // {backend_url}.
 func TestContainerFrontendBackendPair(t *testing.T) {
 	f := newFixture(t)
-	cli := dockerOrSkip(t, t.TempDir())
+	cli := dockertest.Connect(t, t.TempDir())
 
 	const beHash = "be-pair-000000"
 	const feHash = "fe-pair-000000"
@@ -231,7 +207,7 @@ func TestContainerFrontendBackendPair(t *testing.T) {
 
 func TestContainerReclaimAndPurge(t *testing.T) {
 	f := newFixture(t)
-	cli := dockerOrSkip(t, t.TempDir())
+	cli := dockertest.Connect(t, t.TempDir())
 	ctx := context.Background()
 	port, err := probeFreePort()
 	if err != nil {
@@ -273,7 +249,7 @@ func TestContainerReclaimAndPurge(t *testing.T) {
 // pointed at its remote-user home.
 func TestDevcontainerRuntimeBackend(t *testing.T) {
 	f := newFixture(t)
-	dockerOrSkip(t, t.TempDir())
+	dockertest.Connect(t, t.TempDir())
 
 	const beHash = "be-devc-0000000"
 	f.provisionContainerCfg(t, beHash, backendRunConfig{
