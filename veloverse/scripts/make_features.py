@@ -22,6 +22,7 @@ It also draws features.png, the placements over the ground, to check by eye.
 import json
 import math
 import os
+import shutil
 import sys
 
 import numpy as np
@@ -49,6 +50,8 @@ PAINTS = {
     "navy": [0.03, 0.06, 0.16, 0.5, 0.0],
     "green": [0.04, 0.16, 0.08, 0.55, 0.0],
     "glass": [0.05, 0.07, 0.08, 0.1, 0.0],
+    "warm_glass": [0.95, 0.68, 0.32, 0.15, 0.0],
+    "copper": [0.18, 0.34, 0.28, 0.42, 0.72],
     "deck": [0.32, 0.25, 0.17, 0.85, 0.0],
 }
 
@@ -565,36 +568,40 @@ def rocks(out, g, bio, road, rng):
 # slope they need, how many at most, the faces (key, size m, scale range) and the scree.
 CLIFFS = {
     "mountain": (
-        0.7,
-        1400,
+        0.45,
+        2600,
         [
-            (ms("mountain", "sharp_cliff"), 18.9, (0.9, 1.7)),
-            (ms("mountain", "huge_icelandic_volcanic_cliff"), 15.6, (1.0, 2.0)),
-            (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.6, 1.1)),
+            (ms("mountain", "sharp_cliff"), 18.9, (0.9, 1.8)),
+            (ms("mountain", "huge_icelandic_volcanic_cliff"), 15.6, (1.0, 2.2)),
+            (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.6, 1.2)),
         ],
         [
-            (ms("mountain", "volcanic_scree"), 2.2, (2.0, 4.0)),
-            (ms("mountain", "limestone_rubble"), 2.9, (1.5, 3.0)),
+            (ms("mountain", "volcanic_scree"), 2.2, (2.0, 4.2)),
+            (ms("mountain", "limestone_rubble"), 2.9, (1.5, 3.2)),
         ],
     ),
     "desert": (
-        0.6,
-        700,
+        0.40,
+        1400,
         [
-            (ms("desert", "desert_western_cliff_layered_xl_14"), 25.7, (0.8, 1.5)),
-            (ms("desert", "desert_western_ledge_rock_layered_xl_01"), 22.6, (0.8, 1.4)),
+            (ms("desert", "desert_western_cliff_layered_xl_14"), 25.7, (0.8, 1.6)),
+            (ms("desert", "desert_western_ledge_rock_layered_xl_01"), 22.6, (0.8, 1.5)),
+            (ms("desert", "desert_western_spire_layered_xl_04"), 27.9, (0.5, 1.0)),
         ],
-        [(ms("desert", "desert_western_cluster_rock_medium_05"), 3.0, (1.0, 2.2))],
+        [(ms("desert", "desert_western_cluster_rock_medium_05"), 3.0, (1.2, 2.5))],
     ),
     "heath": (
-        0.75,
-        200,
-        [(ms("mountain", "icelandic_rock_plates"), 6.4, (1.5, 2.8))],
-        [(ms("mountain", "tundra_boulder"), 2.9, (0.8, 1.6))],
+        0.42,
+        700,
+        [
+            (ms("mountain", "icelandic_rock_plates"), 6.4, (1.5, 3.0)),
+            (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.28, 0.55)),
+        ],
+        [(ms("mountain", "tundra_boulder"), 2.9, (0.8, 1.8))],
     ),
     "forest": (
-        0.85,
-        250,
+        0.55,
+        450,
         [(ms("forest", "nordic_forest_cliff_large"), 13.3, (0.9, 1.6))],
         [(ms("forest", "mossy_rocks"), 3.0, (1.0, 2.0))],
     ),
@@ -631,7 +638,7 @@ def cliffs(out, g, bio, road, rng, taken):
     gx, gy = gx[::s, ::s], gy[::s, ::s]
     idx = (np.arange(h.shape[0]) * s - (g.n - 1) / 2) * g.spacing
     y, x = np.meshgrid(idx, idx, indexing="ij")
-    pick = (slope > 0.55) & (h > 6) & (g.inland[::s, ::s] > 40)
+    pick = (slope > 0.38) & (h > 6) & (g.inland[::s, ::s] > 35)
     x, y, h, slope, gx, gy = (a[pick] for a in (x, y, h, slope, gx, gy))
     near = road.dist(x, y)
     keep = near < CLIFF_REACH
@@ -646,7 +653,7 @@ def cliffs(out, g, bio, road, rng, taken):
         for i in range(cx - span, cx + span + 1):
             for j in range(cy - span, cy + span + 1):
                 for qx, qy, qr in grid.get((i, j), ()):
-                    if math.hypot(px - qx, py - qy) < 0.55 * (r + qr):
+                    if math.hypot(px - qx, py - qy) < 0.50 * (r + qr):
                         return False
         return True
 
@@ -656,7 +663,10 @@ def cliffs(out, g, bio, road, rng, taken):
     for tx, ty, tr in taken:
         claim(tx, ty, tr)
     counts = {}
-    for k in rng.permutation(len(x)):
+    # Prioritize slopes closest to the road (with jitter) so valley walls beside the rider
+    # are densely dressed with rock faces rather than spending the budget 1.5 km away.
+    order = np.argsort(near + rng.uniform(0.0, 140.0, len(near)))
+    for k in order:
         biome = str(kinds[k])
         if biome not in CLIFFS:
             continue
@@ -666,7 +676,7 @@ def cliffs(out, g, bio, road, rng, taken):
         mesh, size, (s0, s1) = faces[rng.integers(len(faces))]
         scale = rng.uniform(s0, s1) * (1 + 0.4 * min(slope[k] - need, 1))
         r = size * scale * 0.5
-        if near[k] < r + 14 or not free(x[k], y[k], r):
+        if near[k] < r + 7 or not free(x[k], y[k], r):
             continue
         claim(x[k], y[k], r)
         counts[biome] = counts.get(biome, 0) + 1
@@ -935,17 +945,37 @@ def power_line(out, g, road, rng, taken, name, a, b, side, line=None):
     print(f"power line {name}: {len(towers)} pylons", flush=True)
 
 
+def _copy_harbour_kit(out, name, fallback_fn):
+    """Uses the high-craft Blender mesh from SRC/harbour_kit if present, else builds fallback."""
+    kit_file = f"{SRC}/harbour_kit/feat_{name}.gltf"
+    if os.path.isfile(kit_file):
+        shutil.copyfile(kit_file, f"{SRC}/feat_{name}.gltf")
+        out.meshes[name] = f"gltf:{name}"
+        return True
+    if fallback_fn is not None:
+        out.gltf(name, fallback_fn())
+    return False
+
+
 def harbour(out, g, bio, road, rng, taken):
-    """Piers into the bay with boats tied up beside them, more at anchor, a stone quay, and a
-    lighthouse on the bay's outer point."""
+    """Piers into the bay with boats tied up beside them, more at anchor, a stone quay,
+    a coastal harbour town along the waterfront & bike trail, dockside cranes/bollards,
+    stone gateway arches, and a lighthouse on the bay's outer point."""
     out.group("Harbour", cull=0)
     out.group("Quay", cull=0)
+    out.group("HarbourTown", cull=0)
+    out.group("HarbourProps", cull=35000)
     hx, hy = bio.world["landmarks"]["harbour"]
     for name, spec in BOATS.items():
-        out.gltf(f"boat_{name}", boat(*spec))
+        _copy_harbour_kit(out, f"boat_{name}", lambda s=spec: boat(*s))
     for length in (60, 90):
-        out.gltf(f"pier_{length}", pier(length))
-    out.gltf("lighthouse", lighthouse())
+        _copy_harbour_kit(out, f"pier_{length}", lambda ln=length: pier(ln))
+    _copy_harbour_kit(out, "lighthouse", lighthouse)
+    has_houses = all(
+        _copy_harbour_kit(out, f"harbour_house_{k}", None) for k in ("a", "b", "c", "d")
+    )
+    has_crane = _copy_harbour_kit(out, "harbour_crane", None)
+    has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
     s = g.spacing
     r0 = int((hy / s) + (g.n - 1) / 2)
@@ -1057,7 +1087,175 @@ def harbour(out, g, bio, road, rng, taken):
         x, y, *_ = piers[0]
         target = [*light, 8.0] if light else [hx, hy + 600, 0.0]
         out.views.append(["feat_harbour", [x, y - 60, float(g.z(x, y - 60)) + 20], target])
-    print(f"harbour: {len(piers)} piers, {boats} boats, quay {len(quay) // 2} blocks", flush=True)
+        # Dockside cranes & bollards/ropes along the quay edge near the piers
+        bollard = ms("coast", "wooden_bollard")
+        rope = ms("coast", "harbour_rope_hemp_old_02")
+        for px, py, pyaw, _plen in piers:
+            r = math.radians(pyaw)
+            side_x, side_y = -math.sin(r), math.cos(r)
+            if has_crane:
+                cx, cy = px + side_x * 9.0, py + side_y * 9.0
+                if road.dist(cx, cy) > 6.5:
+                    out.add("Harbour", "harbour_crane", cx, cy, 1.5, pyaw, mark=(180, 140, 80))
+                    taken.append((cx, cy, 3.5))
+            for d_off in (-16, -8, 15, 23):
+                bx, by = px + side_x * d_off, py + side_y * d_off
+                if road.dist(bx, by) > 5.0 and g.z(bx, by) > -0.2:
+                    out.add(
+                        "HarbourProps",
+                        bollard,
+                        bx,
+                        by,
+                        max(1.4, float(g.z(bx, by))),
+                        rng.uniform(0, 360),
+                        rng.uniform(0.9, 1.15),
+                    )
+                    if rng.random() < 0.55:
+                        out.add(
+                            "HarbourProps",
+                            rope,
+                            bx + side_x * 0.8,
+                            by + side_y * 0.8,
+                            max(1.4, float(g.z(bx, by))),
+                            rng.uniform(0, 360),
+                            rng.uniform(0.8, 1.2),
+                        )
+
+    # Harbour Town: coastal houses, tavern, warehouses, benches & planters lining the waterfront
+    # and the opening ~1.1 km of Harbour Isle's bike trail.
+    town_houses = []
+    if has_houses:
+        house_specs = [
+            ("harbour_house_a", 9.6, 7.2),
+            ("harbour_house_b", 12.0, 7.8),
+            ("harbour_house_c", 11.6, 9.2),
+            ("harbour_house_d", 10.6, 6.0),
+        ]
+        line = road.hub if road.hub is not None else road.line
+        bench = ms("urban", "park_bench_wood")
+        planter = ms("urban", "concrete_planter")
+        stone_wall = ms("coast", "modular_stone_wall")
+        # Walk along the harbour road (both out from start and wrapping near end)
+        indices = list(range(25, min(1150, len(line)), 18)) + list(
+            range(max(len(line) - 650, 1200), len(line) - 25, 22)
+        )
+        for k in indices:
+            if len(town_houses) >= 34:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            if math.hypot(px - hx, py - hy) > 1300:
+                continue
+            tx = float(line[min(k + 4, len(line) - 1), 0] - line[max(k - 4, 0), 0])
+            ty = float(line[min(k + 4, len(line) - 1), 1] - line[max(k - 4, 0), 1])
+            norm_t = math.hypot(tx, ty) or 1.0
+            nx, ny = -ty / norm_t, tx / norm_t
+            yaw0 = math.degrees(math.atan2(ty, tx))
+            for side in (-1.0, 1.0):
+                hname, hw, hd = house_specs[int(rng.integers(len(house_specs)))]
+                off = rng.uniform(9.5, 19.5)
+                cx, cy = px + nx * side * off, py + ny * side * off
+                # House front is -Y in Blender -> +Y in UE; rotate so front faces the road
+                yaw = yaw0 + (0.0 if side < 0 else 180.0) + rng.uniform(-6.0, 6.0)
+                c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+                corners = [
+                    (cx + dx * c - dy * s, cy + dx * s + dy * c)
+                    for dx in (-hw * 0.5, hw * 0.5)
+                    for dy in (-hd * 0.5, hd * 0.5)
+                ]
+                zs = [float(g.z(qx, qy)) for qx, qy in corners]
+                if min(zs) < 1.2 or max(zs) - min(zs) > 2.4:
+                    continue
+                if min(float(road.dist(qx, qy)) for qx, qy in corners) < 5.8:
+                    continue
+                reach = math.hypot(hw, hd) * 0.5
+                if any(
+                    math.hypot(cx - qx, cy - qy) < qr + reach + 1.8 for qx, qy, qr in town_houses
+                ):
+                    continue
+                if any(math.hypot(cx - tx2, cy - ty2) < tr + reach + 1.5 for tx2, ty2, tr in taken):
+                    continue
+                z_base = float(np.percentile(zs, 35))
+                out.add("HarbourTown", hname, cx, cy, z_base, yaw, mark=(240, 175, 80))
+                town_houses.append((cx, cy, reach))
+                taken.append((cx, cy, reach))
+                out.clear.append([round(cx, 1), round(cy, 1), round(reach + 4.5, 1)])
+                # Promenade bench or planter between house and road
+                bx, by = px + nx * side * 4.8, py + ny * side * 4.8
+                if road.dist(bx, by) > 3.6 and g.z(bx, by) > 1.0:
+                    prop = bench if rng.random() < 0.6 else planter
+                    out.add(
+                        "HarbourProps",
+                        prop,
+                        bx,
+                        by,
+                        float(g.z(bx, by)) - 0.04,
+                        yaw0 + (0.0 if side < 0 else 180.0),
+                        rng.uniform(0.95, 1.1),
+                    )
+        # Also place stone seawall/harbour walls along the inland quay edge behind the piers
+        for i in range(0, len(quay), 6):
+            qx, qy = quay[i]
+            j = np.argmin(np.hypot(xs - qx, ys - qy))
+            wyaw = math.degrees(math.atan2(ay[j], ax[j])) + 90.0
+            wx, wy = qx - ax[j] * 4.0, qy - ay[j] * 4.0
+            if road.dist(wx, wy) > 5.0 and g.z(wx, wy) > 0.8:
+                out.add("HarbourProps", stone_wall, wx, wy, float(g.z(wx, wy)) - 0.15, wyaw, 1.1)
+
+        if town_houses:
+            # Eye-level view riding through Harbour Town
+            k_view = min(140, len(line) - 35)
+            p0, p1 = line[k_view], line[k_view + 30]
+            out.views.append(
+                [
+                    "feat_harbour_town",
+                    [float(p0[0]), float(p0[1]), float(p0[2]) + 1.8],
+                    [float(p1[0]), float(p1[1]), float(p1[2]) + 2.8],
+                ]
+            )
+
+    # Landmark stone gateway arches spanning the road at the Harbour Town exit & Vael approach
+    arches = 0
+    if has_arch:
+        line = road.line
+        arch_spots = [260]  # 260 m out from Harbour start, right along the waterfront trail
+        for first, _last in _stretch_range("Vael", road)[:1]:
+            arch_spots.append(first + 180)
+        for k in arch_spots:
+            if k < 10 or k >= len(line) - 10:
+                continue
+            p = line[k]
+            if float(p[2]) < 1.5:
+                continue
+            tx = float(line[k + 4, 0] - line[k - 4, 0])
+            ty = float(line[k + 4, 1] - line[k - 4, 1])
+            ayaw = math.degrees(math.atan2(ty, tx))
+            out.add(
+                "HarbourTown",
+                "stone_arch",
+                float(p[0]),
+                float(p[1]),
+                float(p[2]) - 0.05,
+                ayaw,
+                mark=(220, 220, 240),
+            )
+            taken.append((float(p[0]), float(p[1]), 6.5))
+            out.clear.append([round(float(p[0]), 1), round(float(p[1]), 1), 8.0])
+            arches += 1
+            if arches == 1:
+                p_eye = line[max(0, k - 32)]
+                out.views.append(
+                    [
+                        "feat_stone_arch",
+                        [float(p_eye[0]), float(p_eye[1]), float(p_eye[2]) + 1.7],
+                        [float(p[0]), float(p[1]), float(p[2]) + 3.5],
+                    ]
+                )
+
+    print(
+        f"harbour: {len(piers)} piers, {boats} boats, quay {len(quay) // 2} blocks, "
+        f"{len(town_houses)} town houses, {arches} stone arches",
+        flush=True,
+    )
 
 
 def bridges(out, g, road):
@@ -1663,12 +1861,135 @@ def tower(out, g, bio, road, rng, taken):
     )
 
 
+def roadside_dressing(out, g, bio, road, rng, taken):
+    """Close-range biome roadside details (4-20 m from tarmac): mossy dry-stone walls on The Moor
+    & Harbour coast, mossy logs/stumps/boulders in Greenwood, alpine boulders/scree on Vael, and
+    layered sandstone outcrops along Red Sands."""
+    out.group("Roadside", cull=32000)
+    line = road.line
+    n = len(line)
+    # 1. Scenic mossy/dry stone walls running parallel to the road in 35-85 m runs on Moor & Coast
+    wall_moss = ms("coast", "mossy_stone_wall")
+    wall_dry = ms("coast", "modular_stone_wall")
+    walls = 0
+    k = 450
+    while k < n - 120:
+        b = str(bio.best(float(line[k, 0]), float(line[k, 1])))
+        if b in ("heath", "meadow") and rng.random() < 0.28:
+            side = rng.choice((-1.0, 1.0))
+            run_len = int(rng.integers(32, 76))
+            wall_mesh = wall_moss if b == "meadow" else wall_dry
+            step_m = 4.2
+            s_idx = k
+            while s_idx < min(k + run_len, n - 10):
+                px, py = float(line[s_idx, 0]), float(line[s_idx, 1])
+                tx = float(line[min(s_idx + 3, n - 1), 0] - line[max(s_idx - 3, 0), 0])
+                ty = float(line[min(s_idx + 3, n - 1), 1] - line[max(s_idx - 3, 0), 1])
+                norm_t = math.hypot(tx, ty) or 1.0
+                nx, ny = -ty / norm_t, tx / norm_t
+                wx, wy = px + nx * side * 5.2, py + ny * side * 5.2
+                wz = float(g.z(wx, wy))
+                if (
+                    wz > 2.0
+                    and float(g.at(g.slope, wx, wy)) < 0.35
+                    and road.dist(wx, wy) > 4.2
+                    and not any(math.hypot(wx - tx2, wy - ty2) < tr + 2.5 for tx2, ty2, tr in taken)
+                ):
+                    wyaw = math.degrees(math.atan2(ty, tx))
+                    out.add("Roadside", wall_mesh, wx, wy, wz - 0.18, wyaw, rng.uniform(0.95, 1.15))
+                    walls += 1
+                s_idx += round(step_m)
+            k += run_len + int(rng.integers(140, 320))
+        else:
+            k += 65
+
+    # 2. Close-range biome boulders, mossy fallen logs & stumps right along road banks (5-20 m)
+    props_by_biome = {
+        "forest": [
+            (ms("forest", "mossy_rocks"), (0.7, 1.6), 0.12),
+            (ms("forest", "fallen_log"), (0.7, 1.3), 0.10),
+            (ms("forest", "mossy_wood_stump"), (0.8, 1.4), 0.12),
+            (ms("forest", "nordic_forest_cluster_rock_medium"), (0.7, 1.4), 0.12),
+        ],
+        "mountain": [
+            (ms("mountain", "tundra_boulder"), (0.6, 1.5), 0.15),
+            (ms("mountain", "limestone_rocks"), (0.8, 1.8), 0.15),
+            (ms("mountain", "volcanic_scree"), (1.2, 2.4), 0.12),
+        ],
+        "heath": [
+            (ms("mountain", "tundra_boulder"), (0.5, 1.3), 0.15),
+            (ms("mountain", "icelandic_rock_plates"), (0.5, 1.0), 0.15),
+        ],
+        "desert": [
+            (ms("desert", "sandstone_rock_formation"), (0.9, 2.1), 0.15),
+            (ms("desert", "canyon_sandstone_boulder"), (1.2, 2.8), 0.15),
+            (ms("desert", "desert_western_cluster_rock_medium_05"), (0.8, 1.7), 0.15),
+        ],
+        "meadow": [
+            (ms("forest", "mossy_rocks"), (0.6, 1.3), 0.15),
+        ],
+    }
+    placed = 0
+    for k in range(30, n - 30, 14):
+        px, py = float(line[k, 0]), float(line[k, 1])
+        b = str(bio.best(px, py))
+        specs = props_by_biome.get(b)
+        if not specs or rng.random() > 0.55:
+            continue
+        tx = float(line[min(k + 3, n - 1), 0] - line[max(k - 3, 0), 0])
+        ty = float(line[min(k + 3, n - 1), 1] - line[max(k - 3, 0), 1])
+        norm_t = math.hypot(tx, ty) or 1.0
+        nx, ny = -ty / norm_t, tx / norm_t
+        side = rng.choice((-1.0, 1.0))
+        off = rng.uniform(5.2, 18.0)
+        x, y = px + nx * side * off, py + ny * side * off
+        z = float(g.z(x, y))
+        if z < 1.5 or road.dist(x, y) < 4.4:
+            continue
+        mesh, (s0, s1), sink = specs[int(rng.integers(len(specs)))]
+        sc = rng.uniform(s0, s1)
+        out.add(
+            "Roadside",
+            mesh,
+            x,
+            y,
+            z - sink * sc,
+            rng.uniform(0, 360),
+            sc,
+            rng.uniform(-6, 6),
+            rng.uniform(-6, 6),
+        )
+        placed += 1
+    print(f"roadside: {walls} wall pieces, {placed} verge boulders/logs", flush=True)
+
+
+def shore_distance(g):
+    """Writes SRC/shore_dist.png (4096x4096 RGB) aligned identically to road_dist.png:
+    R = distance offshore from nearest land (0..45 m -> 0..255),
+    G = shallow water depth below sea level (0..6 m -> 0..255),
+    B = water mask (255 in sea / shoreline band, 0 deep inland)."""
+    size = 4096
+    out = np.zeros((size, size, 3), np.uint8)
+    out[..., 0] = 255
+    out[..., 1] = 255
+    n = g.n
+    r_ch = np.clip(np.round(g.sea / 45.0 * 255.0), 0, 255).astype(np.uint8)
+    g_ch = np.clip(np.round(np.maximum(0.0, -g.h) / 6.0 * 255.0), 0, 255).astype(np.uint8)
+    b_ch = np.where(g.h < 1.5, 255, 0).astype(np.uint8)
+    out[:n, :n, 0] = r_ch
+    out[:n, :n, 1] = g_ch
+    out[:n, :n, 2] = b_ch
+    Image.fromarray(out).save(f"{SRC}/shore_dist.png")
+    print(f"{SRC}/shore_dist.png written ({n}x{n} padded to {size})", flush=True)
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
         if name.startswith("feat_") and name.endswith(".gltf"):
             os.remove(f"{SRC}/{name}")
     g, bio, road = Ground(), Biomes(), Road()
+    shore_distance(g)
     out = Out()
     bridges(out, g, road)
     taken = []  # (x, y, radius m) of what stands, so nothing is placed through it
@@ -1683,6 +2004,7 @@ def main():
     cairns(out, g, bio, road, np.random.default_rng(SEED + 12), taken)
     hamlets(out, g, bio, road, np.random.default_rng(SEED + 13), taken)
     tower(out, g, bio, road, np.random.default_rng(SEED + 14), taken)
+    roadside_dressing(out, g, bio, road, np.random.default_rng(SEED + 15), taken)
     out.items.sort(key=lambda r: (r[0], r[1]))
     with open(f"{SRC}/features.json", "w") as f:
         json.dump(

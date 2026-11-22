@@ -1,0 +1,1155 @@
+"""Builds high-craft coastal harbour architecture, boats, piers, and lighthouse in Blender
+and writes self-contained glTF 2.0 meshes (`feat_*.gltf`) into OC_SRC (default
+`/home/jamison/.cache/opencycle/world_gen/ride_hub` or `/workspace/ue/world_gen/ride_hub`).
+
+Run headless with Blender 5.x:
+    blender -b -P scripts/build_harbour_kit.py -- --out /path/to/dir [--render]
+
+All geometry is built in Blender metres (+X forward, +Y left, +Z up), UV-mapped at 1 UV unit
+per metre so Unreal's `M_Feature_*` 2K Poly Haven PBR materials tile at true physical scale,
+and written via `gltf_writer.py` (converting to UE cm +X forward, +Y right, +Z up).
+"""
+
+import argparse
+import contextlib
+import math
+import os
+import sys
+
+import bmesh  # ty: ignore[unresolved-import]
+import bpy  # ty: ignore[unresolved-import]
+from mathutils import Matrix, Vector  # ty: ignore[unresolved-import]
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import gltf_writer  # noqa: E402
+
+# ---------------------------------------------------------------------------------------------
+# Mesh builder helpers (Blender bmesh in metres -> gltf_writer in UE cm)
+# ---------------------------------------------------------------------------------------------
+
+
+def clear_scene():
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+
+def make_mat(name, color=(0.5, 0.5, 0.5), rough=0.7, metal=0.0, emit=0.0):
+    m = bpy.data.materials.get(name)
+    if m is not None:
+        return m
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    bsdf = m.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+        bsdf.inputs["Roughness"].default_value = rough
+        bsdf.inputs["Metallic"].default_value = metal
+        if emit > 0 and "Emission Strength" in bsdf.inputs:
+            bsdf.inputs["Emission Color"].default_value = (*color, 1.0)
+            bsdf.inputs["Emission Strength"].default_value = emit
+    return m
+
+
+# Preview colours matching make_features.py PAINTS + TEXTURES
+MAT_SPECS = {
+    "stone": ((0.36, 0.34, 0.31), 0.85, 0.0, 0.0),
+    "plaster": ((0.76, 0.73, 0.67), 0.82, 0.0, 0.0),
+    "ochre": ((0.78, 0.62, 0.42), 0.82, 0.0, 0.0),
+    "slate": ((0.22, 0.24, 0.28), 0.72, 0.0, 0.0),
+    "clay": ((0.52, 0.24, 0.16), 0.78, 0.0, 0.0),
+    "siding": ((0.44, 0.38, 0.31), 0.86, 0.0, 0.0),
+    "boards": ((0.18, 0.12, 0.08), 0.84, 0.0, 0.0),
+    "concrete": ((0.42, 0.41, 0.38), 0.85, 0.0, 0.0),
+    "wood": ((0.22, 0.15, 0.10), 0.88, 0.0, 0.0),
+    "deck": ((0.34, 0.26, 0.18), 0.84, 0.0, 0.0),
+    "white": ((0.80, 0.81, 0.79), 0.45, 0.0, 0.0),
+    "red": ((0.46, 0.05, 0.04), 0.50, 0.0, 0.0),
+    "navy": ((0.04, 0.08, 0.19), 0.45, 0.0, 0.0),
+    "green": ((0.05, 0.18, 0.09), 0.52, 0.0, 0.0),
+    "steel": ((0.26, 0.28, 0.30), 0.42, 0.85, 0.0),
+    "cable": ((0.08, 0.08, 0.08), 0.60, 0.30, 0.0),
+    "glass": ((0.05, 0.08, 0.10), 0.08, 0.10, 0.0),
+    "warm_glass": ((0.95, 0.68, 0.32), 0.15, 0.0, 2.5),
+    "copper": ((0.18, 0.34, 0.28), 0.42, 0.72, 0.0),
+}
+
+
+class KitBuilder:
+    """Accumulates tagged bmesh geometry in Blender metres, computes box-projected metre UVs,
+    and writes a UE-ready glTF via gltf_writer."""
+
+    def __init__(self, name):
+        self.name = name
+        self.bm = bmesh.new()
+        self.mat_names = []
+        self.mat_map = {}
+
+    def mat_idx(self, name):
+        if name not in self.mat_map:
+            self.mat_map[name] = len(self.mat_names)
+            self.mat_names.append(name)
+        return self.mat_map[name]
+
+    def _tag(self, faces, mat_name, smooth=False):
+        idx = self.mat_idx(mat_name)
+        for f in faces:
+            f.material_index = idx
+            f.smooth = smooth
+
+    def box(self, mat, center, size, rot=(0.0, 0.0, 0.0), bevel=0.0):
+        sx, sy, sz = size
+        m = (
+            Matrix.Translation(center)
+            @ Matrix.Rotation(math.radians(rot[2]), 4, "Z")
+            @ Matrix.Rotation(math.radians(rot[1]), 4, "Y")
+            @ Matrix.Rotation(math.radians(rot[0]), 4, "X")
+            @ Matrix.Diagonal((sx, sy, sz, 1.0))
+        )
+        res = bmesh.ops.create_cube(self.bm, size=1.0, matrix=m)
+        verts = res["verts"]
+        faces = list({f for v in verts for f in v.link_faces})
+        if bevel > 0.0:
+            edges = list({e for f in faces for e in f.edges})
+            bev = bmesh.ops.bevel(
+                self.bm,
+                geom=edges,
+                offset=bevel,
+                segments=1,
+                affect="EDGES",
+                clamp_overlap=True,
+            )
+            faces = list({f for f in faces if f.is_valid} | set(bev["faces"]))
+        self._tag(faces, mat, smooth=False)
+        return faces
+
+    def cyl(self, mat, p0, p1, r0, r1=None, seg=12, cap=True, smooth=True):
+        if r1 is None:
+            r1 = r0
+        a, b = Vector(p0), Vector(p1)
+        d = b - a
+        length = d.length
+        if length < 1e-5:
+            return []
+        mid = (a + b) * 0.5
+        quat = Vector((0, 0, 1)).rotation_difference(d.normalized())
+        m = Matrix.Translation(mid) @ quat.to_matrix().to_4x4()
+        res = bmesh.ops.create_cone(
+            self.bm,
+            cap_ends=cap,
+            cap_tris=False,
+            segments=seg,
+            radius1=r0,
+            radius2=r1,
+            depth=length,
+            matrix=m,
+        )
+        verts = res["verts"]
+        faces = list({f for v in verts for f in v.link_faces})
+        self._tag(faces, mat, smooth=smooth)
+        return faces
+
+    def prism_gable(self, mat, cx, cy, z_base, w, d, rise, axis="X"):
+        """Triangular gable end walls (solid prism along X or Y)."""
+        hx, hy = w * 0.5, d * 0.5
+        if axis == "X":
+            pts = [
+                (cx - hx, cy - hy, z_base),
+                (cx - hx, cy + hy, z_base),
+                (cx - hx, cy, z_base + rise),
+                (cx + hx, cy - hy, z_base),
+                (cx + hx, cy + hy, z_base),
+                (cx + hx, cy, z_base + rise),
+            ]
+        else:
+            pts = [
+                (cx - hx, cy - hy, z_base),
+                (cx + hx, cy - hy, z_base),
+                (cx, cy - hy, z_base + rise),
+                (cx - hx, cy + hy, z_base),
+                (cx + hx, cy + hy, z_base),
+                (cx, cy + hy, z_base + rise),
+            ]
+        vs = [self.bm.verts.new(p) for p in pts]
+        faces = []
+        for idx in (
+            (0, 2, 1),
+            (3, 4, 5),
+            (0, 1, 4, 3),
+            (1, 2, 5, 4),
+            (2, 0, 3, 5),
+        ):
+            faces.append(self.bm.faces.new([vs[i] for i in idx]))
+        bmesh.ops.recalc_face_normals(self.bm, faces=faces)
+        self._tag(faces, mat, smooth=False)
+        return faces
+
+    def roof_pitched(
+        self,
+        roof_mat,
+        trim_mat,
+        cx,
+        cy,
+        z_eave,
+        w,
+        d,
+        pitch_deg,
+        over_x=0.45,
+        over_y=0.55,
+        thick=0.18,
+    ):
+        """Pitched roof with overhanging slabs, ridge beam, fascia, bargeboards, and rafters."""
+        pitch = math.radians(pitch_deg)
+        rise = (d * 0.5) * math.tan(pitch)
+        span_y = d * 0.5 + over_y
+        slope_len = span_y / math.cos(pitch)
+        full_x = w + 2.0 * over_x
+        ridge_z = z_eave + rise
+
+        # Two sloped roof slabs
+        for sy in (-1.0, 1.0):
+            mid_y = cy + sy * (span_y * 0.5)
+            mid_z = ridge_z - (span_y * 0.5) * math.tan(pitch) + thick * 0.5 / math.cos(pitch)
+            self.box(
+                roof_mat,
+                (cx, mid_y, mid_z),
+                (full_x, slope_len, thick),
+                rot=(-sy * pitch_deg, 0.0, 0.0),
+            )
+            # Exposed eave fascia board
+            ey = cy + sy * span_y
+            ez = ridge_z - span_y * math.tan(pitch)
+            self.box(trim_mat, (cx, ey, ez), (full_x + 0.06, 0.06, 0.22))
+            # Exposed rafter tails along the eaves
+            n_rafters = max(4, int(full_x / 0.85))
+            for i in range(n_rafters + 1):
+                rx = cx - full_x * 0.48 + (full_x * 0.96) * (i / n_rafters)
+                self.box(
+                    trim_mat,
+                    (rx, cy + sy * (d * 0.5 + over_y * 0.45), ez + 0.08),
+                    (0.09, over_y * 0.95, 0.13),
+                    rot=(-sy * pitch_deg, 0.0, 0.0),
+                )
+            # Bargeboards on both gable ends
+            for sx in (-1.0, 1.0):
+                gx = cx + sx * (full_x * 0.5 - 0.03)
+                self.box(
+                    trim_mat,
+                    (gx, mid_y, mid_z - 0.04),
+                    (0.08, slope_len + 0.12, 0.24),
+                    rot=(-sy * pitch_deg, 0.0, 0.0),
+                )
+
+        # Ridge cap beam
+        self.box(trim_mat, (cx, cy, ridge_z + thick * 0.72), (full_x + 0.12, 0.24, 0.20))
+        return ridge_z
+
+    def window(self, x, y, z, normal_y, w=0.95, h=1.25, lit=False, shutters=True):
+        """Recessed mullioned window with stone sill, timber frame, lintel, and shutters."""
+        s = 1.0 if normal_y > 0 else -1.0
+        # Recessed glass pane
+        glass_mat = "warm_glass" if lit else "glass"
+        self.box(glass_mat, (x, y + s * 0.02, z), (w - 0.12, 0.04, h - 0.12))
+        # Outer frame
+        frame_t = 0.08
+        self.box("boards", (x, y + s * 0.04, z + h * 0.5 - frame_t * 0.5), (w, 0.10, frame_t))
+        self.box("boards", (x, y + s * 0.04, z - h * 0.5 + frame_t * 0.5), (w, 0.10, frame_t))
+        for sx in (-1.0, 1.0):
+            self.box(
+                "boards",
+                (x + sx * (w * 0.5 - frame_t * 0.5), y + s * 0.04, z),
+                (frame_t, 0.10, h),
+            )
+        # Cross mullions
+        self.box("white", (x, y + s * 0.045, z), (0.045, 0.04, h - 0.14))
+        self.box("white", (x, y + s * 0.045, z + h * 0.08), (w - 0.14, 0.04, 0.045))
+        # Stone sill & heavy timber lintel
+        self.box("stone", (x, y + s * 0.09, z - h * 0.5 - 0.05), (w + 0.22, 0.22, 0.11))
+        self.box("boards", (x, y + s * 0.07, z + h * 0.5 + 0.07), (w + 0.26, 0.16, 0.14))
+        if shutters:
+            sw = w * 0.44
+            for sx in (-1.0, 1.0):
+                self.box(
+                    "boards", (x + sx * (w * 0.5 + sw * 0.5 + 0.03), y + s * 0.05, z), (sw, 0.05, h)
+                )
+
+    def door(self, x, y, z_floor, normal_y, w=1.15, h=2.15, double=False):
+        s = 1.0 if normal_y > 0 else -1.0
+        # Stone threshold step
+        self.box("stone", (x, y + s * 0.22, z_floor - 0.06), (w + 0.45, 0.55, 0.18))
+        # Timber jambs & lintel
+        self.box("boards", (x, y + s * 0.06, z_floor + h + 0.09), (w + 0.34, 0.20, 0.18))
+        for sx in (-1.0, 1.0):
+            self.box(
+                "boards",
+                (x + sx * (w * 0.5 + 0.06), y + s * 0.05, z_floor + h * 0.5),
+                (0.12, 0.16, h),
+            )
+        # Recessed plank door panel(s)
+        self.box("wood", (x, y + s * 0.01, z_floor + h * 0.5), (w, 0.08, h))
+        # Cross braces / iron hinges
+        self.box("boards", (x, y + s * 0.055, z_floor + h * 0.78), (w - 0.08, 0.04, 0.11))
+        self.box("boards", (x, y + s * 0.055, z_floor + h * 0.22), (w - 0.08, 0.04, 0.11))
+        if double:
+            self.box("boards", (x, y + s * 0.06, z_floor + h * 0.5), (0.07, 0.05, h))
+        else:
+            self.box("steel", (x + w * 0.34, y + s * 0.08, z_floor + h * 0.46), (0.06, 0.08, 0.18))
+
+    def chimney(self, x, y, z_bot, z_top, w=0.85, d=0.72):
+        h = z_top - z_bot
+        self.box("stone", (x, y, z_bot + h * 0.5), (w, d, h))
+        # Corbelled stone cap
+        self.box("stone", (x, y, z_top + 0.08), (w + 0.18, d + 0.18, 0.16))
+        # Clay chimney pots
+        for sx in (-0.20, 0.20):
+            self.cyl(
+                "clay", (x + sx, y, z_top + 0.14), (x + sx, y, z_top + 0.52), 0.12, 0.10, seg=8
+            )
+
+    def dormer(self, x, y_wall, z_base, normal_y, w=1.45, h=1.25):
+        s = 1.0 if normal_y > 0 else -1.0
+        depth = 1.35
+        cy = y_wall - s * (depth * 0.45)
+        self.box("plaster", (x, cy, z_base + h * 0.5), (w, depth, h))
+        self.prism_gable("plaster", x, cy, z_base + h, w, depth, 0.55, axis="Y")
+        # Mini gable roof over dormer
+        for sx in (-1.0, 1.0):
+            self.box(
+                "slate",
+                (x + sx * (w * 0.32), cy + s * 0.1, z_base + h + 0.32),
+                (w * 0.72, depth + 0.45, 0.10),
+                rot=(0.0, sx * 34.0, 0.0),
+            )
+        self.window(
+            x,
+            cy + s * (depth * 0.5),
+            z_base + h * 0.52,
+            normal_y,
+            w=0.78,
+            h=0.88,
+            lit=True,
+            shutters=False,
+        )
+
+    def loft_hull(self, mat_hull, mat_deck, mat_trim, stations, closed_stern=True):
+        """Builds a smooth curved boat hull from cross-section stations
+        (port gunwale -> keel -> starboard gunwale)."""
+        rings = [[self.bm.verts.new(p) for p in st] for st in stations]
+        hull_faces = []
+        deck_faces = []
+        for i in range(len(rings) - 1):
+            a, b = rings[i], rings[i + 1]
+            for k in range(len(a) - 1):
+                with contextlib.suppress(ValueError):
+                    hull_faces.append(self.bm.faces.new([a[k], a[k + 1], b[k + 1], b[k]]))
+            # Deck panel bridging port gunwale (0) to starboard gunwale (-1)
+            with contextlib.suppress(ValueError):
+                deck_faces.append(self.bm.faces.new([a[0], b[0], b[-1], a[-1]]))
+        if closed_stern:
+            stern = rings[0]
+            with contextlib.suppress(ValueError):
+                hull_faces.append(self.bm.faces.new(stern))
+        bmesh.ops.recalc_face_normals(self.bm, faces=hull_faces + deck_faces)
+        self._tag(hull_faces, mat_hull, smooth=True)
+        self._tag(deck_faces, mat_deck, smooth=False)
+
+        # Rub rail / gunwale along both sides
+        for side_idx in (0, -1):
+            pts = [Vector(st[side_idx]) for st in stations]
+            for i in range(len(pts) - 1):
+                self.cyl(mat_trim, pts[i], pts[i + 1], 0.065, 0.065, seg=6, cap=True, smooth=True)
+
+    def to_blender_object(self):
+        bmesh.ops.triangulate(self.bm, faces=self.bm.faces[:])
+        me = bpy.data.meshes.new(self.name)
+        self.bm.to_mesh(me)
+        for mname in self.mat_names:
+            col, r, met, em = MAT_SPECS.get(mname, ((0.5, 0.5, 0.5), 0.7, 0.0, 0.0))
+            me.materials.append(make_mat(mname, col, r, met, em))
+        ob = bpy.data.objects.new(self.name, me)
+        bpy.context.scene.collection.objects.link(ob)
+        return ob
+
+    def write_gltf(self, path):
+        """Triangulates, computes smooth/flat normals + metre box UVs, writes UE-cm glTF."""
+        bm = self.bm.copy()
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bm.normal_update()
+
+        # Precompute vertex normals for smooth faces
+        v_norm = {}
+        for v in bm.verts:
+            acc = Vector((0.0, 0.0, 0.0))
+            for f in v.link_faces:
+                if f.smooth:
+                    acc += f.normal
+            v_norm[v.index] = acc.normalized() if acc.length > 1e-6 else Vector((0.0, 0.0, 1.0))
+
+        mesh = gltf_writer.Mesh()
+        for f in bm.faces:
+            if len(f.verts) != 3:
+                continue
+            mat_name = self.mat_names[f.material_index]
+            part = mesh.part(mat_name)
+            fn = f.normal
+            ax, ay, az = abs(fn.x), abs(fn.y), abs(fn.z)
+            # Box-project UV in world metres
+            ids = []
+            for v in f.verts:
+                co = v.co
+                n = v_norm[v.index] if f.smooth else fn
+                if az >= ax and az >= ay:
+                    uv = (co.x, -co.y)
+                elif ax >= ay:
+                    uv = (-co.y, -co.z)
+                else:
+                    uv = (co.x, -co.z)
+                # Blender (+X fwd, +Y left, +Z up) -> UE cm (+X fwd, +Y right, +Z up)
+                ue_p = (co.x * 100.0, -co.y * 100.0, co.z * 100.0)
+                ue_n = (n.x, -n.y, n.z)
+                ids.append(part.vertex(ue_p, ue_n, uv))
+            # Flipping Y reverses handedness, so reverse winding to keep outward faces in UE
+            part.triangle(ids[0], ids[2], ids[1])
+        bm.free()
+        mesh.write(path)
+
+
+# ---------------------------------------------------------------------------------------------
+# Harbour Town Buildings (4 distinct coastal Nordic-fantasy architectural styles)
+# ---------------------------------------------------------------------------------------------
+
+
+def build_harbour_house_a():
+    """Two-storey coastal merchant house: battered stone ground floor, jettied overhanging
+    plaster upper storey with dark half-timbering, steep slate roof, dormer, and stone chimney."""
+    b = KitBuilder("harbour_house_a")
+    w, d = 9.4, 6.6
+    # Deep stone foundation plinth so slopes never expose air under corners
+    b.box("stone", (0, 0, -0.7), (w + 0.35, d + 0.35, 2.2))
+    # Ground floor stone masonry (z = 0.4 .. 3.1)
+    b.box("stone", (0, 0, 1.75), (w, d, 2.7))
+    # Corner stone quoins
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            b.box("stone", (sx * w * 0.5, sy * d * 0.5, 1.75), (0.34, 0.34, 2.72))
+
+    # Jettied upper floor overhanging 0.25 m on front/back
+    uw, ud = w + 0.16, d + 0.50
+    b.box("plaster", (0, 0, 4.45), (uw, ud, 2.70))
+    b.prism_gable("plaster", 0, 0, 5.80, uw, ud, (ud * 0.5) * math.tan(math.radians(42.0)))
+
+    # Timber jetty corbel beams & horizontal belt course
+    b.box("boards", (0, 0, 3.10), (uw + 0.08, ud + 0.08, 0.20))
+    for i in range(7):
+        bx = -w * 0.44 + w * 0.88 * (i / 6.0)
+        for sy in (-1.0, 1.0):
+            b.box("boards", (bx, sy * (d * 0.5 + 0.14), 2.94), (0.16, 0.36, 0.24))
+
+    # Half-timbering verticals & diagonals on upper walls
+    for sy in (-1.0, 1.0):
+        wy = sy * (ud * 0.5 + 0.02)
+        b.box("boards", (0, wy, 5.75), (uw + 0.04, 0.09, 0.16))
+        for bx in (-uw * 0.48, -uw * 0.18, uw * 0.18, uw * 0.48):
+            b.box("boards", (bx, wy, 4.45), (0.16, 0.09, 2.70))
+    for sx in (-1.0, 1.0):
+        wx = sx * (uw * 0.5 + 0.02)
+        b.box("boards", (wx, 0, 5.75), (0.09, ud + 0.04, 0.16))
+        for by in (-ud * 0.48, 0.0, ud * 0.48):
+            b.box("boards", (wx, by, 4.45), (0.09, 0.16, 2.70))
+
+    # Steep pitched slate roof + dormer + chimney
+    ridge_z = b.roof_pitched("slate", "boards", 0, 0, 5.80, uw, ud, 42.0, over_x=0.50, over_y=0.60)
+    b.dormer(0.0, -ud * 0.5, 6.15, -1.0, w=1.55, h=1.20)
+    b.chimney(w * 0.34, 0.4, 5.0, ridge_z + 1.15)
+
+    # Door & windows (front is -Y in Blender -> +Y or -Y; both sides detailed!)
+    b.door(-1.3, -d * 0.5, 0.40, -1.0, w=1.15, h=2.15)
+    b.window(1.6, -d * 0.5, 1.85, -1.0, w=1.10, h=1.25, lit=True)
+    b.window(-2.8, -ud * 0.5, 4.50, -1.0, w=1.00, h=1.25, lit=False)
+    b.window(0.0, -ud * 0.5, 4.50, -1.0, w=1.05, h=1.25, lit=True)
+    b.window(2.8, -ud * 0.5, 4.50, -1.0, w=1.00, h=1.25, lit=False)
+    # Back windows
+    for wx, lit in ((-2.4, False), (0.0, True), (2.4, False)):
+        b.window(wx, d * 0.5, 1.85, 1.0, w=0.95, h=1.15, lit=lit)
+        b.window(wx, ud * 0.5, 4.50, 1.0, w=0.95, h=1.20, lit=not lit)
+    return b
+
+
+def build_harbour_house_b():
+    """Waterfront gable warehouse / boathouse: heavy stone base, weathered plank upper loft,
+    clay tile roof, wide double cargo doors, gable hoist beam, and stone buttresses."""
+    b = KitBuilder("harbour_house_b")
+    w, d = 11.8, 7.6
+    b.box("stone", (0, 0, -0.7), (w + 0.4, d + 0.4, 2.2))
+    b.box("stone", (0, 0, 1.85), (w, d, 2.9))
+    # Heavy stone pilasters/buttresses along long walls
+    for sy in (-1.0, 1.0):
+        for bx in (-4.8, -1.6, 1.6, 4.8):
+            b.box("stone", (bx, sy * (d * 0.5 + 0.16), 1.60), (0.55, 0.36, 2.60))
+
+    # Timber-clad upper warehouse loft
+    b.box("siding", (0, 0, 4.55), (w - 0.1, d - 0.1, 2.55))
+    b.prism_gable("siding", 0, 0, 5.82, w - 0.1, d - 0.1, (d * 0.5) * math.tan(math.radians(36.0)))
+    b.box("boards", (0, 0, 3.30), (w + 0.14, d + 0.14, 0.22))
+
+    # Clay-tile pitched roof
+    ridge_z = b.roof_pitched(
+        "clay", "boards", 0, 0, 5.82, w - 0.1, d - 0.1, 36.0, over_x=0.65, over_y=0.55
+    )
+    # Projecting timber hoist beam at the +X gable peak (facing quay)
+    b.box("boards", (w * 0.5 + 0.95, 0.0, ridge_z - 0.55), (2.2, 0.22, 0.22))
+    b.cyl(
+        "steel",
+        (w * 0.5 + 1.80, 0.0, ridge_z - 0.65),
+        (w * 0.5 + 1.80, 0.0, ridge_z - 1.55),
+        0.03,
+        0.03,
+        seg=6,
+    )
+    b.cyl(
+        "steel",
+        (w * 0.5 + 1.80, 0.0, ridge_z - 0.72),
+        (w * 0.5 + 1.80, 0.0, ridge_z - 0.92),
+        0.16,
+        0.16,
+        seg=10,
+    )
+    # Loft loading doors under hoist
+    b.box("boards", (w * 0.5 + 0.02, 0.0, 4.75), (0.12, 1.80, 2.00))
+
+    # Wide double cargo doors + side windows
+    b.door(0.0, -d * 0.5, 0.40, -1.0, w=2.80, h=2.55, double=True)
+    b.window(-3.6, -d * 0.5, 1.95, -1.0, w=1.05, h=1.05, lit=True, shutters=True)
+    b.window(3.6, -d * 0.5, 1.95, -1.0, w=1.05, h=1.05, lit=False, shutters=True)
+    for wx in (-3.6, 0.0, 3.6):
+        b.window(wx, -d * 0.5, 4.65, -1.0, w=0.95, h=1.05, lit=(wx == 0.0), shutters=True)
+        b.window(wx, d * 0.5, 1.95, 1.0, w=1.00, h=1.05, lit=(wx != 0.0), shutters=True)
+        b.window(wx, d * 0.5, 4.65, 1.0, w=0.95, h=1.05, lit=False, shutters=True)
+    return b
+
+
+def build_harbour_house_c():
+    """Coastal harbour tavern / inn: warm ochre plaster over stone, covered timber porch with
+    balcony above, twin roof dormers, hanging sign bracket, and glowing tavern windows."""
+    b = KitBuilder("harbour_house_c")
+    w, d = 11.4, 7.4
+    b.box("stone", (0, 0, -0.7), (w + 0.4, d + 0.4, 2.2))
+    b.box("stone", (0, 0, 1.80), (w, d, 2.80))
+    b.box("ochre", (0, 0, 4.55), (w, d, 2.75))
+    b.prism_gable("ochre", 0, 0, 5.92, w, d, (d * 0.5) * math.tan(math.radians(39.0)))
+    b.box("boards", (0, 0, 3.20), (w + 0.16, d + 0.16, 0.20))
+
+    # Front covered timber porch & upper balcony (-Y side)
+    porch_d = 1.90
+    py = -(d * 0.5 + porch_d * 0.5)
+    b.box("deck", (0, py, 0.42), (w * 0.86, porch_d, 0.18))
+    b.box("stone", (0, py, -0.5), (w * 0.86, porch_d, 1.75))
+    # Balcony floor / porch roof
+    b.box("boards", (0, py, 3.16), (w * 0.88, porch_d + 0.12, 0.20))
+    # Porch columns + knee braces
+    for px in (-4.4, -1.6, 1.6, 4.4):
+        b.box("boards", (px, -(d * 0.5 + porch_d - 0.12), 1.80), (0.20, 0.20, 2.72))
+        b.box("boards", (px, -(d * 0.5 + porch_d - 0.12), 3.72), (0.12, 0.12, 1.05))
+    # Balcony railing & balusters
+    rail_y = -(d * 0.5 + porch_d - 0.12)
+    b.box("boards", (0, rail_y, 4.22), (w * 0.86, 0.11, 0.09))
+    b.box("boards", (0, rail_y, 3.36), (w * 0.86, 0.09, 0.08))
+    for i in range(21):
+        rx = -w * 0.42 + w * 0.84 * (i / 20.0)
+        b.box("boards", (rx, rail_y, 3.79), (0.05, 0.05, 0.84))
+
+    # Hanging inn sign
+    b.box("steel", (-w * 0.5 - 0.65, -d * 0.5 + 0.4, 3.35), (1.30, 0.06, 0.06))
+    b.box("boards", (-w * 0.5 - 0.80, -d * 0.5 + 0.4, 2.80), (0.95, 0.06, 0.72))
+
+    # Roof, twin dormers, chimney
+    ridge_z = b.roof_pitched("slate", "boards", 0, 0, 5.92, w, d, 39.0, over_x=0.55, over_y=0.60)
+    b.dormer(-2.4, -d * 0.5, 6.20, -1.0, w=1.40, h=1.15)
+    b.dormer(2.4, -d * 0.5, 6.20, -1.0, w=1.40, h=1.15)
+    b.chimney(-w * 0.36, 0.6, 5.0, ridge_z + 1.25)
+
+    # Doors & warm windows
+    b.door(0.0, -d * 0.5, 0.50, -1.0, w=1.35, h=2.25, double=True)
+    b.window(-3.1, -d * 0.5, 1.85, -1.0, w=1.25, h=1.30, lit=True)
+    b.window(3.1, -d * 0.5, 1.85, -1.0, w=1.25, h=1.30, lit=True)
+    for wx, lit in ((-3.2, True), (0.0, True), (3.2, False)):
+        b.window(wx, -d * 0.5, 4.55, -1.0, w=1.05, h=1.25, lit=lit)
+        b.window(wx, d * 0.5, 1.85, 1.0, w=1.05, h=1.20, lit=lit)
+        b.window(wx, d * 0.5, 4.55, 1.0, w=1.00, h=1.20, lit=not lit)
+    return b
+
+
+def build_harbour_house_d():
+    """Sturdy stone fisherman's cottage with side timber shed, deep windows, and tall chimney."""
+    b = KitBuilder("harbour_house_d")
+    w, d = 8.2, 5.8
+    b.box("stone", (0, 0, -0.7), (w + 0.35, d + 0.35, 2.2))
+    b.box("stone", (0, 0, 1.95), (w, d, 3.10))
+    b.prism_gable("stone", 0, 0, 3.50, w, d, (d * 0.5) * math.tan(math.radians(40.0)))
+    ridge_z = b.roof_pitched("slate", "boards", 0, 0, 3.50, w, d, 40.0, over_x=0.45, over_y=0.50)
+    b.chimney(w * 0.38, 0.2, 2.8, ridge_z + 1.10)
+
+    # Timber lean-to shed on -X gable end
+    sw, sd = 2.6, 4.0
+    b.box("stone", (-(w * 0.5 + sw * 0.5), 0.2, -0.7), (sw + 0.2, sd + 0.2, 2.1))
+    b.box("siding", (-(w * 0.5 + sw * 0.5), 0.2, 1.40), (sw, sd, 2.10))
+    b.box(
+        "slate",
+        (-(w * 0.5 + sw * 0.5 + 0.15), 0.2, 2.58),
+        (sw + 0.55, sd + 0.55, 0.14),
+        rot=(0.0, -18.0, 0.0),
+    )
+
+    b.door(-0.8, -d * 0.5, 0.40, -1.0, w=1.05, h=2.05)
+    b.window(1.8, -d * 0.5, 1.95, -1.0, w=1.00, h=1.15, lit=True)
+    b.window(-2.5, -d * 0.5, 1.95, -1.0, w=0.90, h=1.15, lit=False)
+    for wx, lit in ((-1.8, True), (1.8, False)):
+        b.window(wx, d * 0.5, 1.95, 1.0, w=0.95, h=1.10, lit=lit)
+    return b
+
+
+# ---------------------------------------------------------------------------------------------
+# Hero Boats (curved hulls, cabins, rigging, deck gear)
+# ---------------------------------------------------------------------------------------------
+
+
+def _boat_stations(length, beam, freeboard, draft, bow_flare=1.25, stern_width=0.65, n=13):
+    """Generates realistic boat cross-sections along +X with graceful sheer and flared bow."""
+    stations = []
+    half = beam * 0.5
+    for i in range(n):
+        t = i / (n - 1)  # 0 stern -> 1 bow
+        x = (t - 0.5) * length
+        if t < 0.995:
+            # Fuller forward/midships, tapered cleanly to stem
+            w_profile = math.sin(math.pi * (0.22 + 0.78 * t)) ** 0.72
+            w_profile = max(w_profile, stern_width * (1.0 - t) + 0.03)
+            w = half * min(1.0, w_profile * 1.06)
+        else:
+            w = 0.06
+        # Classic sweeping sheerline (rises gracefully at bow, slightly at stern)
+        sheer = (
+            freeboard
+            + 0.42 * max(0.0, (t - 0.45) / 0.55) ** 1.8
+            + 0.12 * max(0.0, (0.3 - t) / 0.3) ** 1.6
+        )
+        flare = 1.0 + (bow_flare - 1.0) * max(0.0, (t - 0.5) / 0.5) ** 1.4
+        dp = draft * (0.65 + 0.35 * math.sin(math.pi * t))
+        stations.append(
+            [
+                (x, w * flare, sheer),
+                (x, w * 0.98, sheer * 0.48),
+                (x, w * 0.88, 0.0),
+                (x, w * 0.55, -dp * 0.75),
+                (x, 0.0, -dp),
+                (x, -w * 0.55, -dp * 0.75),
+                (x, -w * 0.88, 0.0),
+                (x, -w * 0.98, sheer * 0.48),
+                (x, -w * flare, sheer),
+            ]
+        )
+    return stations
+
+
+def build_boat_trawler():
+    """16.5 m coastal fishing trawler: flared hull, bulwarks, raked wheelhouse with windows,
+    mast + derrick boom, funnel, and stern gantry."""
+    b = KitBuilder("boat_trawler")
+    L, B = 16.5, 5.2
+    stations = _boat_stations(
+        L, B, freeboard=1.45, draft=1.35, bow_flare=1.22, stern_width=0.72, n=15
+    )
+    b.loft_hull("red", "deck", "white", stations)
+    deck_z = 1.45
+
+    # Bulwark railing posts around aft deck
+    for x in (-6.8, -5.0, -3.2, -1.4):
+        for sy in (-1.0, 1.0):
+            b.cyl("white", (x, sy * 2.25, deck_z), (x, sy * 2.25, deck_z + 0.78), 0.05, 0.05, seg=6)
+    for sy in (-1.0, 1.0):
+        b.box("white", (-4.1, sy * 2.25, deck_z + 0.78), (5.6, 0.11, 0.09))
+
+    # Forward wheelhouse & accommodation cabin
+    b.box("white", (1.2, 0.0, deck_z + 1.25), (4.8, 3.2, 2.50))
+    # Overhanging bridge visor roof
+    b.box("white", (1.35, 0.0, deck_z + 2.58), (5.4, 3.55, 0.18))
+    # Wrap-around bridge windows
+    b.box("glass", (3.62, 0.0, deck_z + 1.85), (0.08, 2.65, 0.82))
+    for sy in (-1.0, 1.0):
+        b.box("glass", (1.6, sy * 1.62, deck_z + 1.85), (3.4, 0.08, 0.82))
+    # Exhaust funnel behind wheelhouse
+    b.cyl("navy", (-1.5, 0.0, deck_z + 1.4), (-1.7, 0.0, deck_z + 3.6), 0.34, 0.28, seg=10)
+    b.cyl("red", (-1.65, 0.0, deck_z + 3.0), (-1.70, 0.0, deck_z + 3.5), 0.30, 0.29, seg=10)
+
+    # Mast, radar bar, derrick boom & stays
+    mast_x = 0.2
+    b.cyl(
+        "white", (mast_x, 0.0, deck_z + 2.5), (mast_x - 0.3, 0.0, deck_z + 9.2), 0.14, 0.07, seg=8
+    )
+    b.box("white", (mast_x - 0.1, 0.0, deck_z + 5.8), (0.14, 2.4, 0.10))
+    b.box("white", (mast_x + 0.25, 0.0, deck_z + 4.4), (0.85, 0.18, 0.14))  # radar scanner
+    # Cargo/net boom angled aft
+    b.cyl("white", (mast_x, 0.0, deck_z + 3.1), (-5.2, 0.0, deck_z + 6.4), 0.09, 0.06, seg=8)
+    # Stays/shrouds
+    b.cyl(
+        "cable", (mast_x - 0.28, 0.0, deck_z + 9.0), (7.6, 0.0, deck_z + 0.7), 0.025, 0.025, seg=4
+    )
+    for sy in (-1.0, 1.0):
+        b.cyl(
+            "cable",
+            (mast_x - 0.2, 0.0, deck_z + 7.5),
+            (mast_x - 0.4, sy * 2.35, deck_z + 0.4),
+            0.025,
+            0.025,
+            seg=4,
+        )
+
+    # Stern A-frame net gantry
+    for sy in (-1.0, 1.0):
+        b.cyl("steel", (-6.8, sy * 2.0, deck_z), (-7.2, sy * 1.4, deck_z + 3.8), 0.11, 0.09, seg=8)
+    b.cyl("steel", (-7.2, -1.4, deck_z + 3.8), (-7.2, 1.4, deck_z + 3.8), 0.10, 0.10, seg=8)
+    # Deck fish boxes
+    b.box("wood", (-3.8, 0.8, deck_z + 0.38), (1.3, 0.85, 0.72))
+    b.box("wood", (-3.8, -0.7, deck_z + 0.38), (1.3, 0.85, 0.72))
+    return b
+
+
+def build_boat_sail():
+    """11.5 m coastal sloop: sleek navy hull, white coachroof with portlights, tall rigged mast
+    with spreaders, furled sail on boom, and cockpit."""
+    b = KitBuilder("boat_sail")
+    L, B = 11.5, 3.4
+    stations = _boat_stations(
+        L, B, freeboard=1.02, draft=0.95, bow_flare=1.15, stern_width=0.52, n=15
+    )
+    b.loft_hull("navy", "white", "wood", stations)
+    deck_z = 1.02
+
+    # Coachroof cabin
+    b.box("white", (0.4, 0.0, deck_z + 0.34), (4.2, 1.95, 0.68), bevel=0.08)
+    for sy in (-1.0, 1.0):
+        b.box("glass", (0.5, sy * 0.98, deck_z + 0.38), (2.6, 0.05, 0.24))
+    # Cockpit coaming & helm pedestal
+    for sy in (-1.0, 1.0):
+        b.box("deck", (-3.1, sy * 0.92, deck_z + 0.16), (2.8, 0.42, 0.32))
+    b.cyl("steel", (-3.7, 0.0, deck_z), (-3.7, 0.0, deck_z + 0.95), 0.07, 0.06, seg=8)
+    b.cyl("steel", (-3.6, 0.0, deck_z + 0.85), (-3.7, 0.0, deck_z + 0.85), 0.42, 0.42, seg=14)
+
+    # Tall tapered mast, spreaders, boom + furled sail, stays
+    mx = 0.9
+    b.cyl("white", (mx, 0.0, deck_z + 0.6), (mx - 0.15, 0.0, deck_z + 12.8), 0.10, 0.055, seg=8)
+    b.cyl(
+        "white",
+        (mx - 0.06, -1.15, deck_z + 6.8),
+        (mx - 0.06, 1.15, deck_z + 6.8),
+        0.035,
+        0.035,
+        seg=6,
+    )
+    # Boom & canvas furled sail cover
+    b.cyl("white", (mx, 0.0, deck_z + 1.85), (mx - 4.4, 0.0, deck_z + 1.92), 0.065, 0.055, seg=8)
+    b.cyl("navy", (mx - 0.2, 0.0, deck_z + 2.02), (mx - 4.2, 0.0, deck_z + 2.04), 0.14, 0.11, seg=8)
+    # Standing rigging (forestay, backstay, shrouds)
+    b.cyl(
+        "cable",
+        (mx - 0.15, 0.0, deck_z + 12.6),
+        (L * 0.48, 0.0, deck_z + 0.35),
+        0.018,
+        0.018,
+        seg=4,
+    )
+    b.cyl(
+        "cable",
+        (mx - 0.15, 0.0, deck_z + 12.6),
+        (-L * 0.47, 0.0, deck_z + 0.20),
+        0.018,
+        0.018,
+        seg=4,
+    )
+    for sy in (-1.0, 1.0):
+        b.cyl(
+            "cable",
+            (mx - 0.12, 0.0, deck_z + 12.2),
+            (mx - 0.06, sy * 1.15, deck_z + 6.8),
+            0.016,
+            0.016,
+            seg=4,
+        )
+        b.cyl(
+            "cable",
+            (mx - 0.06, sy * 1.15, deck_z + 6.8),
+            (mx - 0.25, sy * 1.52, deck_z + 0.1),
+            0.016,
+            0.016,
+            seg=4,
+        )
+    return b
+
+
+def build_boat_launch():
+    """8.2 m coastal wooden/painted work launch with forward cuddy cabin & windshield."""
+    b = KitBuilder("boat_launch")
+    L, B = 8.2, 2.75
+    stations = _boat_stations(
+        L, B, freeboard=0.88, draft=0.65, bow_flare=1.18, stern_width=0.68, n=13
+    )
+    b.loft_hull("green", "deck", "wood", stations)
+    deck_z = 0.88
+
+    # Forward cuddy cabin + angled windshield
+    b.box("white", (0.7, 0.0, deck_z + 0.58), (2.6, 1.85, 1.16), bevel=0.06)
+    b.box("white", (0.65, 0.0, deck_z + 1.20), (2.9, 2.05, 0.10))
+    b.box("glass", (2.02, 0.0, deck_z + 0.82), (0.06, 1.55, 0.52), rot=(0.0, -14.0, 0.0))
+    for sy in (-1.0, 1.0):
+        b.box("glass", (0.8, sy * 0.94, deck_z + 0.82), (1.7, 0.06, 0.48))
+        b.box("deck", (-2.1, sy * 0.90, deck_z + 0.18), (2.4, 0.38, 0.34))
+    # Stern mast light & grab rails
+    b.cyl("steel", (0.5, 0.0, deck_z + 1.24), (0.3, 0.0, deck_z + 2.35), 0.035, 0.03, seg=6)
+    return b
+
+
+def build_boat_dinghy():
+    """4.6 m traditional wooden coastal rowing skiff with open cockpit, thwarts, and rested oars."""
+    b = KitBuilder("boat_dinghy")
+    L, B = 4.6, 1.75
+    stations = _boat_stations(
+        L, B, freeboard=0.52, draft=0.32, bow_flare=1.15, stern_width=0.55, n=11
+    )
+    # Loft the hull, then add recessed dark bilge floor & raised thwarts
+    b.loft_hull("wood", "deck", "boards", stations)
+    # Recessed dark cockpit bilge floor + side benches so it reads as an open skiff
+    b.box("boards", (0.0, 0.0, 0.54), (3.1, 1.15, 0.04))
+    # Three wooden thwarts raised cleanly above cockpit floor
+    for tx in (-1.1, 0.0, 1.15):
+        b.box("deck", (tx, 0.0, 0.58), (0.34, 1.48, 0.05))
+    # Pair of oars resting along inside
+    for sy in (-0.42, 0.42):
+        b.cyl("deck", (-1.5, sy, 0.64), (1.4, sy * 0.85, 0.64), 0.028, 0.024, seg=6)
+        b.box("deck", (-1.65, sy, 0.64), (0.62, 0.14, 0.025))
+    return b
+
+
+def build_harbour_crane():
+    """Traditional weathered timber harbour cargo crane with stacked oak barrels and crates."""
+    b = KitBuilder("harbour_crane")
+    # Heavy stone & timber pedestal base
+    b.box("stone", (0, 0, -0.4), (2.4, 2.4, 1.8))
+    b.box("boards", (0, 0, 0.62), (2.2, 2.2, 0.24))
+    # Main vertical king-post + 4 angled stabilizing struts
+    b.box("boards", (0, 0, 3.3), (0.36, 0.36, 5.4))
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            b.cyl("boards", (sx * 0.95, sy * 0.95, 0.7), (0, 0, 2.55), 0.11, 0.11, seg=6)
+    # Angled timber jib boom extending out along +X toward the water
+    b.cyl("boards", (0, 0, 1.7), (4.6, 0, 6.2), 0.14, 0.11, seg=8)
+    b.cyl("boards", (0, 0, 5.75), (4.5, 0, 6.15), 0.09, 0.09, seg=6)
+    # Iron winch drum, pulley wheel & hanging cable + hook
+    b.cyl("steel", (-0.35, -0.42, 1.55), (-0.35, 0.42, 1.55), 0.24, 0.24, seg=12)
+    b.cyl("steel", (4.55, -0.10, 6.00), (4.55, 0.10, 6.00), 0.22, 0.22, seg=10)
+    b.cyl("cable", (4.55, 0, 5.85), (4.55, 0, 3.10), 0.025, 0.025, seg=4)
+    b.box("steel", (4.55, 0, 2.95), (0.18, 0.18, 0.32))
+    # Stacked cargo crates & oak barrels beside base
+    b.box("deck", (-1.85, 0.65, 0.45), (0.95, 0.95, 0.90))
+    b.box("deck", (-1.75, -0.45, 0.38), (0.80, 0.80, 0.76))
+    b.box("wood", (-1.80, 0.20, 1.25), (0.76, 0.76, 0.70), rot=(0, 0, 18))
+    for bx, by, bz in ((1.65, 0.95, 0.0), (1.75, 1.75, 0.0), (1.05, 1.55, 0.0)):
+        b.cyl("wood", (bx, by, bz), (bx, by, bz + 0.92), 0.30, 0.30, seg=10)
+        b.cyl("steel", (bx, by, bz + 0.18), (bx, by, bz + 0.23), 0.315, 0.315, seg=10)
+        b.cyl("steel", (bx, by, bz + 0.70), (bx, by, bz + 0.75), 0.315, 0.315, seg=10)
+    return b
+
+
+def build_stone_arch():
+    """Weathered coastal stone gateway arch spanning a 7.5 m road (road runs along +X,
+    arch piers stand at Y = +/- 4.6 m, clearance 6.4 m at crown). Twin warm lanterns."""
+    b = KitBuilder("stone_arch")
+    span_half = 4.6  # clear width ~7.0 m between inner faces
+    pier_w, pier_d, pier_h = 2.4, 2.2, 5.2
+    # Two heavy battered stone piers sunk 2 m into the ground
+    for sy in (-1.0, 1.0):
+        b.box("stone", (0, sy * span_half, -0.8), (pier_d + 0.4, pier_w + 0.4, 2.6))
+        b.box("stone", (0, sy * span_half, pier_h * 0.5), (pier_d, pier_w, pier_h))
+        # Capital cornice at springline
+        b.box("stone", (0, sy * span_half, pier_h + 0.14), (pier_d + 0.34, pier_w + 0.34, 0.28))
+        # Iron lantern bracket + warm lantern facing road
+        ly = sy * (span_half - pier_w * 0.5 - 0.32)
+        b.box("steel", (0, sy * (span_half - pier_w * 0.5 - 0.16), 3.65), (0.08, 0.42, 0.08))
+        b.box("warm_glass", (0, ly, 3.35), (0.28, 0.28, 0.40))
+        b.box("steel", (0, ly, 3.60), (0.36, 0.36, 0.08))
+        b.box("steel", (0, ly, 3.12), (0.32, 0.32, 0.06))
+
+    # Semicircular stone voussoir arch ring spanning between piers (radius 3.5 m, center z = 4.2)
+    r_in, r_out = 3.5, 4.4
+    zc = 4.2
+    n_seg = 11
+    for i in range(n_seg):
+        a = math.radians(15.0 + 150.0 * (i + 0.5) / n_seg)
+        rm = 0.5 * (r_in + r_out)
+        ay = rm * math.cos(a)
+        az = zc + rm * math.sin(a)
+        is_key = i == n_seg // 2
+        thick = (r_out - r_in) + (0.28 if is_key else 0.0)
+        depth = pier_d + (0.24 if is_key else 0.08)
+        arc_w = (math.radians(150.0) / n_seg) * r_out * 1.06
+        b.box("stone", (0, ay, az), (depth, arc_w, thick), rot=(math.degrees(a) - 90.0, 0, 0))
+
+    # Upper spandrel wall & parapet coping stones across the top
+    b.box("stone", (0, 0, 7.65), (pier_d - 0.15, span_half * 2.0 + pier_w, 1.65))
+    b.box("stone", (0, 0, 8.60), (pier_d + 0.30, span_half * 2.0 + pier_w + 0.36, 0.30))
+    # Subtle stone battlements/crenels along parapet top
+    for i in range(7):
+        by = -span_half + (span_half * 2.0) * (i / 6.0)
+        b.box("stone", (0, by, 9.05), (pier_d * 0.72, 0.95, 0.62))
+    return b
+
+
+# ---------------------------------------------------------------------------------------------
+# Hero Timber Pier & Stone Lighthouse
+# ---------------------------------------------------------------------------------------------
+
+
+def build_pier(length):
+    """Detailed timber harbour pier along +X: planked deck, stringers, cross-braced round pilings,
+    timber curbs, mooring bollards, and harbour lamp posts."""
+    b = KitBuilder(f"pier_{length}")
+    w = 4.6
+    # Longitudinal heavy timber stringers
+    for sy in (-1.9, -0.65, 0.65, 1.9):
+        b.box("boards", (length * 0.5, sy, -0.22), (length, 0.24, 0.30))
+    # Planked deck (grouped into textured boards with subtle bevel gaps)
+    b.box("deck", (length * 0.5, 0.0, -0.02), (length, w, 0.14))
+    # Timber wheel-guard curbs on both edges
+    for sy in (-1.0, 1.0):
+        b.box("boards", (length * 0.5, sy * (w * 0.5 - 0.12), 0.14), (length, 0.22, 0.18))
+
+    # Heavy pilings every 4.5 m with diagonal X-bracing under deck
+    xs = [x for x in range(2, int(length), 4)]
+    if xs[-1] < length - 1.5:
+        xs.append(length - 1.0)
+    for x in xs:
+        for sy in (-1.0, 1.0):
+            py = sy * (w * 0.5 - 0.22)
+            # Round piling from seabed (-6.5 m) to bollard top (+0.65 m)
+            top = 0.72 if (int(x) % 8 == 2) else 0.20
+            b.cyl("wood", (x, py, -6.5), (x, py, top), 0.18, 0.16, seg=10)
+            if top > 0.5:
+                # Iron cleat / cap ring on mooring bollard piling
+                b.cyl("steel", (x, py, top + 0.02), (x, py, top + 0.08), 0.17, 0.17, seg=10)
+                b.cyl(
+                    "steel",
+                    (x, py - 0.28, top - 0.12),
+                    (x, py + 0.28, top - 0.12),
+                    0.045,
+                    0.045,
+                    seg=6,
+                )
+        # Cross cap beam & diagonal timber bracing
+        b.box("boards", (x, 0.0, -0.45), (0.28, w + 0.10, 0.26))
+        b.cyl("boards", (x, -2.0, -0.5), (x, 2.0, -2.8), 0.08, 0.08, seg=6)
+        b.cyl("boards", (x, 2.0, -0.5), (x, -2.0, -2.8), 0.08, 0.08, seg=6)
+
+    # Pier lantern posts every 18 m along one side + end beacon
+    for x in range(14, int(length), 18):
+        py = -(w * 0.5 - 0.25)
+        b.cyl("steel", (x, py, 0.1), (x, py, 3.6), 0.065, 0.045, seg=8)
+        b.box("steel", (x, py, 3.72), (0.36, 0.36, 0.08))
+        b.box("warm_glass", (x, py, 3.92), (0.26, 0.26, 0.34))
+        b.cyl("copper", (x, py, 4.10), (x, py, 4.35), 0.28, 0.04, seg=8)
+    # End timber cross-beam
+    b.box("boards", (length - 0.12, 0.0, 0.14), (0.24, w, 0.20))
+    return b
+
+
+def build_lighthouse():
+    """Hero stone & banded coastal lighthouse with corbelled gallery, iron railing, glass lantern,
+    glowing optic, weathered copper dome cupola, and attached stone keeper's cottage."""
+    b = KitBuilder("lighthouse")
+    # Heavy octagonal stone foundation plinth
+    b.cyl("stone", (0, 0, -2.0), (0, 0, 2.4), 5.2, 4.4, seg=8, smooth=False)
+    b.cyl("stone", (0, 0, 2.4), (0, 0, 2.85), 4.6, 4.6, seg=8, smooth=False)
+
+    # Tapered masonry tower in crisp red & white bands (z = 2.85 .. 21.0)
+    bands = [
+        (2.85, 6.8, "white"),
+        (6.8, 10.2, "red"),
+        (10.2, 14.0, "white"),
+        (14.0, 17.4, "red"),
+        (17.4, 21.0, "white"),
+    ]
+    for z0, z1, mat in bands:
+        r0 = 3.55 - (z0 - 2.85) * 0.068
+        r1 = 3.55 - (z1 - 2.85) * 0.068
+        b.cyl(mat, (0, 0, z0), (0, 0, z1), r0, r1, seg=20, cap=True, smooth=True)
+
+    # Small recessed tower windows
+    for wz, ang in ((7.8, 0.0), (12.2, 1.6), (16.4, 3.2)):
+        r = 3.55 - (wz - 2.85) * 0.068
+        wx, wy = r * math.cos(ang), r * math.sin(ang)
+        b.box("boards", (wx, wy, wz), (0.28, 0.65, 0.95), rot=(0, 0, math.degrees(ang)))
+        b.box(
+            "warm_glass",
+            (wx * 1.01, wy * 1.01, wz),
+            (0.18, 0.48, 0.78),
+            rot=(0, 0, math.degrees(ang)),
+        )
+
+    # Corbelled stone gallery deck at z = 21.0
+    b.cyl("stone", (0, 0, 20.6), (0, 0, 21.2), 2.35, 3.05, seg=20, smooth=False)
+    b.cyl("stone", (0, 0, 21.2), (0, 0, 21.55), 3.12, 3.12, seg=20, smooth=False)
+    # Gallery iron railing
+    for i in range(16):
+        a = 2.0 * math.pi * i / 16.0
+        a2 = 2.0 * math.pi * (i + 1) / 16.0
+        rx, ry = 2.95 * math.cos(a), 2.95 * math.sin(a)
+        rx2, ry2 = 2.95 * math.cos(a2), 2.95 * math.sin(a2)
+        b.cyl("steel", (rx, ry, 21.55), (rx, ry, 22.65), 0.045, 0.045, seg=6)
+        b.cyl("steel", (rx, ry, 22.60), (rx2, ry2, 22.60), 0.05, 0.05, seg=6)
+        b.cyl("steel", (rx, ry, 22.10), (rx2, ry2, 22.10), 0.035, 0.035, seg=6)
+
+    # Lantern room: lower stone drum, glass cylinder with iron mullions, glowing Fresnel core
+    b.cyl("stone", (0, 0, 21.55), (0, 0, 22.50), 1.95, 1.95, seg=16, smooth=True)
+    b.cyl("glass", (0, 0, 22.50), (0, 0, 25.00), 1.78, 1.78, seg=16, smooth=True)
+    b.cyl("warm_glass", (0, 0, 22.95), (0, 0, 24.55), 0.92, 0.92, seg=12, smooth=True)
+    for i in range(12):
+        a = 2.0 * math.pi * i / 12.0
+        b.cyl(
+            "steel",
+            (1.84 * math.cos(a), 1.84 * math.sin(a), 22.50),
+            (1.84 * math.cos(a), 1.84 * math.sin(a), 25.05),
+            0.045,
+            0.045,
+            seg=6,
+        )
+
+    # Weathered copper cupola dome & lightning finial
+    b.cyl("copper", (0, 0, 25.00), (0, 0, 25.30), 2.15, 2.05, seg=16, smooth=True)
+    b.cyl("copper", (0, 0, 25.30), (0, 0, 26.20), 1.95, 1.20, seg=16, smooth=True)
+    b.cyl("copper", (0, 0, 26.20), (0, 0, 26.85), 1.20, 0.18, seg=16, smooth=True)
+    b.cyl("steel", (0, 0, 26.80), (0, 0, 28.00), 0.06, 0.02, seg=6)
+
+    # Attached stone keeper's cottage beside tower (+X)
+    cx = 6.2
+    b.box("stone", (cx, 0, -0.5), (6.4, 5.4, 3.0))
+    b.box("stone", (cx, 0, 2.45), (6.0, 5.0, 2.95))
+    b.prism_gable("stone", cx, 0, 3.92, 6.0, 5.0, 2.5 * math.tan(math.radians(38.0)))
+    b.roof_pitched("slate", "boards", cx, 0, 3.92, 6.0, 5.0, 38.0, over_x=0.35, over_y=0.45)
+    b.chimney(cx + 2.2, 0.3, 3.2, 6.9)
+    b.door(cx - 0.6, -2.5, 0.98, -1.0, w=1.05, h=2.05)
+    b.window(cx + 1.4, -2.5, 2.45, -1.0, w=0.95, h=1.10, lit=True)
+    b.window(cx + 0.5, 2.5, 2.45, 1.0, w=0.95, h=1.10, lit=True)
+    return b
+
+
+# ---------------------------------------------------------------------------------------------
+# Build all & optional Blender preview render
+# ---------------------------------------------------------------------------------------------
+
+
+BUILDERS = {
+    "harbour_house_a": build_harbour_house_a,
+    "harbour_house_b": build_harbour_house_b,
+    "harbour_house_c": build_harbour_house_c,
+    "harbour_house_d": build_harbour_house_d,
+    "harbour_crane": build_harbour_crane,
+    "stone_arch": build_stone_arch,
+    "boat_trawler": build_boat_trawler,
+    "boat_sail": build_boat_sail,
+    "boat_launch": build_boat_launch,
+    "boat_dinghy": build_boat_dinghy,
+    "pier_60": lambda: build_pier(60),
+    "pier_90": lambda: build_pier(90),
+    "lighthouse": build_lighthouse,
+}
+
+
+def render_preview(out_dir, builders_out):
+    """Renders a clean Cycles/EEVEE overview of the kit assets for quick visual QA."""
+    clear_scene()
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE" if hasattr(bpy.types, "SceneEEVEE") else "CYCLES"
+    scene.render.resolution_x = 1600
+    scene.render.resolution_y = 900
+    if scene.render.engine == "CYCLES":
+        scene.cycles.samples = 24
+
+    # Arrange showcase assets in two neat rows
+    layout = [
+        ("harbour_house_a", (-18, 6, 0), 0),
+        ("harbour_house_b", (-5, 6, 0), 0),
+        ("harbour_house_c", (8, 6, 0), 0),
+        ("harbour_house_d", (19, 6, 0), 0),
+        ("lighthouse", (31, 6, 0), 0),
+        ("boat_trawler", (-15, -9, 0.5), 18),
+        ("boat_sail", (-1, -9, 0.5), 18),
+        ("boat_launch", (11, -9, 0.5), 18),
+        ("boat_dinghy", (20, -9, 0.5), 18),
+    ]
+    for name, loc, yaw in layout:
+        ob = builders_out[name].to_blender_object()
+        ob.location = loc
+        ob.rotation_euler = (0, 0, math.radians(yaw))
+
+    # Ground plane
+    bpy.ops.mesh.primitive_plane_add(size=140, location=(6, 0, 0))
+    ground = bpy.context.active_object
+    ground.data.materials.append(make_mat("ground_prev", (0.14, 0.19, 0.22), 0.7))
+
+    # Sun + sky world
+    world = bpy.data.worlds.new("PreviewWorld")
+    scene.world = world
+    world.use_nodes = True
+    bg = world.node_tree.nodes.get("Background")
+    if bg:
+        bg.inputs["Color"].default_value = (0.35, 0.48, 0.68, 1.0)
+        bg.inputs["Strength"].default_value = 0.8
+    sun_data = bpy.data.lights.new("Sun", type="SUN")
+    sun_data.energy = 3.5
+    sun_obj = bpy.data.objects.new("Sun", sun_data)
+    scene.collection.objects.link(sun_obj)
+    sun_obj.rotation_euler = (math.radians(52), math.radians(12), math.radians(-35))
+
+    cam_data = bpy.data.cameras.new("Cam")
+    cam_data.lens = 35.0
+    cam_obj = bpy.data.objects.new("Cam", cam_data)
+    scene.collection.objects.link(cam_obj)
+    cam_obj.location = (5, -42, 18)
+    direction = Vector((5, 0, 4)) - cam_obj.location
+    cam_obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    scene.camera = cam_obj
+
+    preview_path = os.path.join(out_dir, "harbour_kit_preview.png")
+    scene.render.filepath = preview_path
+    bpy.ops.render.render(write_still=True)
+    print(f"Rendered preview: {preview_path}", flush=True)
+
+
+def main():
+    argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--out", default="/home/jamison/.cache/opencycle/world_gen/ride_hub/harbour_kit"
+    )
+    ap.add_argument("--render", action="store_true")
+    args = ap.parse_args(argv)
+    os.makedirs(args.out, exist_ok=True)
+
+    built = {}
+    for name, fn in BUILDERS.items():
+        kb = fn()
+        out_path = os.path.join(args.out, f"feat_{name}.gltf")
+        kb.write_gltf(out_path)
+        verts = len(kb.bm.verts)
+        faces = len(kb.bm.faces)
+        print(
+            f"harbour_kit: {name:18s} {verts:5d} verts, {faces:5d} faces -> {out_path}", flush=True
+        )
+        built[name] = kb
+
+    if args.render:
+        render_preview(args.out, built)
+    for kb in built.values():
+        kb.bm.free()
+
+
+if __name__ == "__main__":
+    main()

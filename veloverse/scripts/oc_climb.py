@@ -165,8 +165,8 @@ LOOK_GREYS = {
     "Desert": 0.2,
 }
 ROUGHNESS = {"Snow": 0.55}
-# Every other layer is at least this rough: the scans' low roughness made the soil glitter.
-ROUGH_FLOOR = 0.75
+# Every other layer is at least this rough: prevents glossy specular glare on bare soil/verge gaps.
+ROUGH_FLOOR = 0.88
 # Steep ground on these layers is shaded toward darker, browner soil ("<layer> steep" parameter):
 # the cut banks read pale beige against the reference photos' dark earth.
 # v21: (0.7, 0.6, 0.48), a darker, more neutral shade: (0.8, 0.6, 0.38) turned every bank maroon.

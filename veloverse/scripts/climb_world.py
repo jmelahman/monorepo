@@ -502,9 +502,8 @@ def sea_level():
 
 
 def sea_material():
-    """Dark water under drifting wind waves. Built before the level loads, like the road's
-    material. The waves are make_sea_waves.py's normal map at three scales, each drifting with
-    the wind at its own pace, flattening into a mirror with distance as a real sea's chop does."""
+    """Deep Atlantic-to-turquoise coastal water under drifting wind waves, with animated
+    breaking shoreline surf foam driven by SRC/shore_dist.png (when present)."""
     if sea_level() is None:
         return None
     g = lib.Graph("M_ClimbSea", f"{FOLDER}/Sea")
@@ -526,10 +525,9 @@ def sea_material():
         xy = g.mul(g.mask(g.sample(tex, uv, "normal"), "rg"), weight)
         slopes = xy if slopes is None else g.add(slopes, xy)
     slopes = g.mul(slopes, g.param("Sea waves", 1.0))
+    wp = g.node(unreal.MaterialExpressionWorldPosition)
     camera = g.node(unreal.MaterialExpressionCameraPositionWS)
-    far = g.op(
-        unreal.MaterialExpressionDistance, g.node(unreal.MaterialExpressionWorldPosition), camera
-    )
+    far = g.op(unreal.MaterialExpressionDistance, wp, camera)
     # Full chop to 150 m, a fifth of it by 1.2 km: far off the sea reads as sky, not texture.
     calm = g.lerp(g.const(1.0), g.const(0.2), g.saturate(g.mul(g.add(far, -15000.0), 1.0 / 105000)))
     slopes = g.mul(slopes, calm)
@@ -538,8 +536,65 @@ def sea_material():
         g.node(unreal.MaterialExpressionNormalize),
     )
     swell = g.world_noise(0.0015, 0.0, 1.0, 3)
-    colour = g.lerp(g.const((0.006, 0.03, 0.04)), g.const((0.012, 0.06, 0.07)), swell)
-    g.output(colour, normal=normal, rough=g.lerp(g.const(0.04), g.const(0.12), swell), specular=0.5)
+    deep_col = g.lerp(g.const((0.005, 0.024, 0.042)), g.const((0.010, 0.048, 0.066)), swell)
+    colour = deep_col
+    rough = g.lerp(g.const(0.04), g.const(0.11), swell)
+
+    shore_png = f"{SRC}/shore_dist.png"
+    if os.path.exists(shore_png):
+        shore_tex = next(
+            a for a in lib.import_file(shore_png, f"{FOLDER}/Sea") if isinstance(a, unreal.Texture)
+        )
+        shore_tex.set_editor_property("srgb", False)
+        shore_tex.set_editor_property(
+            "compression_settings", unreal.TextureCompressionSettings.TC_MASKS
+        )
+        shore_tex.set_editor_property("never_stream", True)
+        assets.save_loaded_asset(shore_tex, False)
+        with open(f"{SRC}/info.json") as f:
+            info = json.load(f)
+        spacing, half = info["spacing"], (info["size"] - 1) / 2
+        texel = (half + 0.5) / 4096.0
+        shift = g.node(unreal.MaterialExpressionConstant2Vector, r=texel, g=texel)
+        size = g.const(float(spacing * 4096.0))
+        uv_shore = g.add(g.op(unreal.MaterialExpressionDivide, g.mask(wp, "rg"), size), shift)
+        sh = g.sample(shore_tex, uv_shore, "mask")
+        sh.set_editor_property(
+            "sampler_source", unreal.SamplerSourceMode.SSM_CLAMP_WORLD_GROUP_SETTINGS
+        )
+        # R = distance offshore (0..45 m -> 0..1), G = depth (0..6 m -> 0..1)
+        shore_d = g.mask(sh, "r")
+        depth = g.mask(sh, "g")
+        # Shallow turquoise near beaches/coves transitioning smoothly to deep Atlantic blue
+        shallow_col = g.const((0.032, 0.145, 0.155))
+        colour = g.lerp(shallow_col, deep_col, g.saturate(g.mul(depth, 1.4)))
+        # Animated lacy white breaking surf hugging the shoreline (0..10 m offshore)
+        foam_noise = g.world_noise(0.008, 0.0, 1.0, 3)
+        fine_noise = g.world_noise(0.035, 0.0, 1.0, 2)
+        wave_phase = g.add(g.mul(shore_d, 22.0), g.mul(time, -1.6))
+        wave_crest = g.saturate(
+            g.add(g.link(wave_phase, g.node(unreal.MaterialExpressionSine)), 0.35)
+        )
+        # Direct shoreline edge band + pulsing surf lines broken by organic foam noise
+        edge_band = g.saturate(g.mul(g.add(g.const(0.16), g.mul(shore_d, -1.0)), 9.0))
+        surf_band = g.mul(
+            g.saturate(g.mul(g.add(g.const(0.32), g.mul(shore_d, -1.0)), 4.5)),
+            wave_crest,
+        )
+        foam_raw = g.op(unreal.MaterialExpressionMax, edge_band, g.mul(surf_band, 0.85))
+        foam = g.saturate(
+            g.mul(
+                g.add(
+                    g.mul(foam_raw, g.add(g.mul(foam_noise, 0.8), 0.45)), g.mul(fine_noise, -0.32)
+                ),
+                2.2,
+            )
+        )
+        foam_col = g.const((0.76, 0.80, 0.82))
+        colour = g.lerp(colour, foam_col, foam)
+        rough = g.lerp(rough, g.const(0.72), foam)
+
+    g.output(colour, normal=normal, rough=rough, specular=0.5)
     return g.finish()
 
 
@@ -1041,31 +1096,32 @@ def steel_material():
 
 
 def fence_mesh_material():
-    """The rail's welded mesh panels: steel, see-through. Seen from a bike the wires are a haze, so
-    a dithered mask (temporal AA resolves it), not wires that would shimmer."""
-    g = lib.Graph("M_TrailMesh", f"{FOLDER}/Props")
-    g.output(g.const(TRAIL_STEEL), rough=0.5, specular=0.5, metallic=0.85, opacity_mask=0.35)
-    g.material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
-    g.material.set_editor_property("dither_opacity_mask", True)
-    g.material.set_editor_property("two_sided", True)
+    """Warm emissive glass bulb for the harbour bikeway's swan-neck street lamps."""
+    g = lib.Graph("M_TrailGlow", f"{FOLDER}/Props")
+    g.output(
+        g.const((1.0, 0.84, 0.55)),
+        rough=0.15,
+        specular=0.5,
+        emissive=g.const((6.0, 4.2, 1.8)),
+    )
     g.material.set_editor_property("used_with_instanced_static_meshes", True)
     return g.finish()
 
 
-# Its rail, cm: posts 4 cm round to 110 cm over the deck (60 cm into the ground), a 5 cm top rail
-# at 105, mesh from 10 to 100. Swan-neck lamps: a 14 cm pole to 520 cm, an arm curving over
-# the trail on a 90 cm radius, a flat head at its end.
-TRAIL_POST = (4.0, 110.0, 60.0)
+# Its rail, cm: posts 6 cm round to 108 cm over the deck (60 cm into the ground), clean triple
+# horizontal promenade rails (no grainy dithered chain-link mesh). Swan-neck lamps: a 14 cm pole
+# to 520 cm, an arm curving over the trail on a 90 cm radius, a flat head + warm glowing bulb.
+TRAIL_POST = (6.0, 108.0, 60.0)
 TRAIL_LAMP = (14.0, 520.0, 90.0)
 
 
-def trail_dressing(steel, mesh):
-    """trail.json's rail and lamps, from the engine's shapes."""
+def trail_dressing(steel, glow):
+    """trail.json's clean coastal promenade balustrade and lit swan-neck lamps."""
     with open(f"{SRC}/trail.json") as f:
         trail = json.load(f)
     cube, cylinder = unreal.load_asset(CUBE), unreal.load_asset(CYLINDER)
     sphere = unreal.load_asset(SPHERE)
-    rigid, panels = lib.Instances("Trail"), lib.Instances("Trail/Mesh")
+    rigid, bulbs = lib.Instances("Trail"), lib.Instances("Trail/Glow")
     width, top, under = TRAIL_POST
     for x, y, z, _yaw in trail["posts"]:
         tall = top + under
@@ -1077,8 +1133,10 @@ def trail_dressing(steel, mesh):
         yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
         pitch = math.degrees(math.atan2(z1 - z0, span))
         mx, my, mz = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2
-        rigid.add(cube, (mx, my, mz + top - 5), yaw, (span / 100, 0.05, 0.05), pitch=pitch)
-        panels.add(cube, (mx, my, mz + 55), yaw, (span / 100, 0.01, 0.9), pitch=pitch)
+        # Clean coastal promenade triple-bar rail (top handrail + two slender horizontal bars)
+        rigid.add(cube, (mx, my, mz + top - 4), yaw, (span / 100, 0.07, 0.06), pitch=pitch)
+        rigid.add(cube, (mx, my, mz + 70), yaw, (span / 100, 0.035, 0.035), pitch=pitch)
+        rigid.add(cube, (mx, my, mz + 38), yaw, (span / 100, 0.035, 0.035), pitch=pitch)
     thick, pole, radius = TRAIL_LAMP
     for x, y, z, yaw in trail["lamps"]:
         rigid.add(
@@ -1086,7 +1144,6 @@ def trail_dressing(steel, mesh):
         )
         ux, uy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
         cx, cy, cz = x + ux * radius, y + uy * radius, z + pole
-        # The arm: a chain of spheres round a semicircle from the pole's top, over and down.
         steps = int(math.pi * radius / 3)
         for k in range(steps + 1):
             phi = math.pi * (1 - 0.9 * k / steps)
@@ -1102,10 +1159,12 @@ def trail_dressing(steel, mesh):
             )
         phi = math.pi * 0.1
         hx, hy = cx + ux * radius * math.cos(phi), cy + uy * radius * math.cos(phi)
-        rigid.add(cylinder, (hx, hy, cz + radius * math.sin(phi) - 8), 0.0, (0.42, 0.42, 0.1))
+        hz = cz + radius * math.sin(phi)
+        rigid.add(cylinder, (hx, hy, hz - 8), 0.0, (0.42, 0.42, 0.1))
+        bulbs.add(sphere, (hx, hy, hz - 15), 0.0, (0.24, 0.24, 0.14))
     rigid.commit(materials={p.get_path_name(): {0: steel} for p in (cube, cylinder, sphere)})
-    panels.commit(materials={cube.get_path_name(): {0: mesh}}, shadows=False)
-    log(f"trail: {len(trail['posts'])} posts, {len(trail['lamps'])} lamps")
+    bulbs.commit(materials={sphere.get_path_name(): {0: glow}}, shadows=False)
+    log(f"trail: {len(trail['posts'])} posts, {len(trail['lamps'])} lit lamps")
 
 
 # The roundabouts' islands (make_world_level.roundabouts): a raised kerb round a lawn, and on the
@@ -1444,10 +1503,21 @@ def feature_materials():
     colour = g.param("colour", (0.5, 0.5, 0.5))
     g.output(colour, rough=g.param("rough", 0.6), metallic=g.param("metal", 0.0), specular=0.4)
     master = g.finish(two_sided=True)
+    gw = lib.Graph("M_FeatureWarmGlass", folder)
+    gw.output(
+        gw.const((0.95, 0.72, 0.36)),
+        rough=0.14,
+        specular=0.6,
+        emissive=gw.const((2.2, 1.35, 0.48)),
+    )
+    warm_glass = gw.finish(two_sided=True)
     out = {}
     for slot, (r, gr, b, rough, metal) in spec["paints"].items():
         if slot == "concrete":
             out[slot] = _feature_concrete(folder)
+            continue
+        if slot == "warm_glass":
+            out[slot] = warm_glass
             continue
         out[slot] = lib.instance(
             f"MI_Feature_{slot}",

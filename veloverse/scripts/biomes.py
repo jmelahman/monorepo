@@ -212,10 +212,11 @@ PRESETS["world"] = {
         "Desert mix": (0.16, 0.115, 0.07),
         "Verge": (0.2, 0.15, 0.09),
         # Heath: the alpine heath's floor, a little browner, and its grey-brown gravel.
-        "Heath": (0.24, 0.21, 0.1),
-        "Heath mix": (0.28, 0.25, 0.2),
-        "Sand": (0.28, 0.24, 0.17),
-        "Sand mix": (0.2, 0.18, 0.16),
+        "Heath": (0.20, 0.18, 0.085),
+        "Heath mix": (0.24, 0.21, 0.16),
+        # Warm natural coastal beach sand instead of dark mud; wet waterline darker.
+        "Sand": (0.40, 0.34, 0.23),
+        "Sand mix": (0.24, 0.21, 0.17),
     },
     "LOOK_GREYS": {
         "Desert": 0.4,
