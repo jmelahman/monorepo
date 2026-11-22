@@ -63,3 +63,16 @@ func TestRenderCommitScript(t *testing.T) {
 		}
 	})
 }
+
+func TestAgyHarnessRegistered(t *testing.T) {
+	if !IsKnown("agy") {
+		t.Fatal(`IsKnown("agy") = false; want true`)
+	}
+	h := Get("agy")
+	if h.ID != "agy" {
+		t.Fatalf("Get(\"agy\").ID = %q; want \"agy\"", h.ID)
+	}
+	if len(h.PTYCommand) != 1 || h.PTYCommand[0] != "agy" {
+		t.Fatalf("PTYCommand = %v; want [agy]", h.PTYCommand)
+	}
+}

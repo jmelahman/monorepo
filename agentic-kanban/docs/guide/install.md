@@ -12,7 +12,7 @@ This puts `kanban` in `~/.local/bin`. Make sure that directory is on your `PATH`
 
 ## With Docker
 
-The image runs kanban as a long-lived service. It needs your Docker socket so it can start session containers. It also needs your agent config directories (`~/.claude` for Claude Code, `~/.pi/agent` for pi, `~/.config/opencode` and `~/.local/share/opencode` for opencode) so the agent can use your existing login.
+The image runs kanban as a long-lived service. It needs your Docker socket so it can start session containers. It also needs your agent config directories (`~/.claude` for Claude Code, `~/.pi/agent` for pi, `~/.config/opencode` and `~/.local/share/opencode` for opencode, `~/.gemini` for Antigravity CLI) so the agent can use your existing login.
 
 ```sh
 SOURCE=$HOME/code
@@ -29,6 +29,7 @@ docker run -d --name kanban \
   -v $HOME/.pi/agent:$HOME/.pi/agent \
   -v $HOME/.config/opencode:$HOME/.config/opencode \
   -v $HOME/.local/share/opencode:$HOME/.local/share/opencode \
+  -v $HOME/.gemini:$HOME/.gemini \
   -v $HOME/.local/share/kanban:$HOME/.local/share/kanban \
   -v $HOME/.gitconfig:$HOME/.gitconfig:ro \
   -v $HOME/.config/git:$HOME/.config/git:ro \

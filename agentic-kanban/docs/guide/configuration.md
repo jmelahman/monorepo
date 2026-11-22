@@ -26,7 +26,7 @@ Every key is shown below with its default unless noted.
 default = "kanban"            # board for CLI commands that aren't given one (unset by default)
 
 [harness]
-id = "claude"                 # default agent: "claude", "pi" or "opencode"
+id = "claude"                 # default agent: "claude", "pi", "opencode" or "agy"
 
 [worktrees]
 root = "/path/to/worktrees"   # where new worktrees go (unset by default)

@@ -53,13 +53,15 @@ services:
     volumes:
       - ${DOCKER_SOCK_PATH:-/var/run/docker.sock}:/var/run/docker.sock
       # Agent config dirs. Claude Code reads ~/.claude; pi reads ~/.pi/agent;
-      # opencode reads ~/.config/opencode and keeps its login in ~/.local/share/opencode.
+      # opencode reads ~/.config/opencode and keeps its login in ~/.local/share/opencode;
+      # Antigravity CLI (agy) reads ~/.gemini.
       # For other harnesses (e.g. Ollama) substitute or add the relevant path.
       - ${HOME}/.claude:${HOME}/.claude
       - ${HOME}/.claude.json:${HOME}/.claude.json
       - ${HOME}/.pi/agent:${HOME}/.pi/agent
       - ${HOME}/.config/opencode:${HOME}/.config/opencode
       - ${HOME}/.local/share/opencode:${HOME}/.local/share/opencode
+      - ${HOME}/.gemini:${HOME}/.gemini
       - ${HOME}/code:${HOME}/code
       - ${HOME}/.local/share/kanban:${HOME}/.local/share/kanban
       - ${HOME}/.config/kanban:${HOME}/.config/kanban

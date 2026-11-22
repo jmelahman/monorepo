@@ -73,6 +73,13 @@ RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${B
       opencode-ai@${OPENCODE_VERSION} \
  && rm -rf /tmp/bun-cache
 
+# Install Antigravity CLI (agy) into /usr/local/bin so both root and dev get it.
+# Run with an isolated HOME so the installer's staging dir and shell-profile
+# handoff (`agy install --dir /usr/local/bin`) don't pollute /root.
+RUN HOME=/tmp/agy-install bash -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin' \
+ && chmod 755 /usr/local/bin/agy \
+ && rm -rf /tmp/agy-install
+
 COPY github_known_hosts /etc/ssh/ssh_known_hosts
 RUN chmod 644 /etc/ssh/ssh_known_hosts
 

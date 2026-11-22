@@ -49,6 +49,12 @@ var Registry = []Harness{
 		PTYCommand:        []string{"opencode"},
 		CommitMsgTemplate: ``,
 	},
+	{
+		ID:                "agy",
+		Label:             "Antigravity CLI",
+		PTYCommand:        []string{"agy"},
+		CommitMsgTemplate: ``,
+	},
 }
 
 func Default() Harness { return Registry[0] }
