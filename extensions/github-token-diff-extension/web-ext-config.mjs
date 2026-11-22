@@ -2,8 +2,6 @@ export default {
   ignoreFiles: [
     "node_modules",
     "test",
-    "tools",
-    "plans",
     "package.json",
     "bun.lock",
     "bunfig.toml",
@@ -11,7 +9,7 @@ export default {
     "README.md",
     "LICENSE",
     ".claude",
-    "*.png",
+    "/*.png",
     "web-ext-artifacts",
   ],
 };

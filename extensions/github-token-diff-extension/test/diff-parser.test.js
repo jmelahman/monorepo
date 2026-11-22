@@ -105,7 +105,7 @@ test("multi-file diff: all fixtures concatenated parse independently", () => {
   assert.equal(files.length, names.length);
   assert.deepEqual(
     files.map((f) => f.status),
-    ["modified", "renamed", "renamed", "binary", "added", "mode-change", "added", "removed"]
+    ["modified", "renamed", "renamed", "binary", "added", "mode-change", "added", "removed"],
   );
 });
 

@@ -13,10 +13,7 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": [
-    "https://github.com/*",
-    "https://patch-diff.githubusercontent.com/*"
-  ],
+  "host_permissions": ["https://github.com/*", "https://patch-diff.githubusercontent.com/*"],
   "background": {
     "scripts": ["background/background.js"],
     "type": "module"
@@ -24,11 +21,7 @@
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
-      "js": [
-        "content/pr-locator.js",
-        "content/dom-injector.js",
-        "content/content.js"
-      ],
+      "js": ["content/pr-locator.js", "content/dom-injector.js", "content/content.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
     }

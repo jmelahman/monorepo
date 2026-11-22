@@ -1,4 +1,4 @@
-import { Plugin } from "@opencode/plugin"
+import { Plugin } from "@opencode/plugin";
 
 /**
  * The server part is a no-op: usage data comes from the client's
@@ -9,4 +9,4 @@ import { Plugin } from "@opencode/plugin"
 export default Plugin.define({
   id: "usage-summaries.server",
   async setup() {},
-})
+});

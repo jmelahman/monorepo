@@ -35,7 +35,12 @@
     if (!stats && !lastError) {
       if (!pending) {
         pending = browser.runtime
-          .sendMessage({ type: "GET_TOKEN_DIFF", owner: loc.owner, repo: loc.repo, prNumber: loc.prNumber })
+          .sendMessage({
+            type: "GET_TOKEN_DIFF",
+            owner: loc.owner,
+            repo: loc.repo,
+            prNumber: loc.prNumber,
+          })
           .then((res) => {
             if (currentKey !== key) return;
             if (res && res.ok) stats = res.stats;

@@ -16,7 +16,9 @@ body {
   padding: 14px;
   background: var(--bg);
   color: var(--fg);
-  font: 13px/1.45 system-ui, sans-serif;
+  font:
+    13px/1.45 system-ui,
+    sans-serif;
 }
 
 h1 {

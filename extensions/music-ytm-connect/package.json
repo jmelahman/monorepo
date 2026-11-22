@@ -9,7 +9,8 @@
     "lint": "web-ext lint --source-dir=.",
     "start": "web-ext run --source-dir=. --start-url https://music.youtube.com/",
     "build": "web-ext build --source-dir=. --overwrite-dest",
-    "sign": "web-ext sign --source-dir=. --channel=unlisted"
+    "sign": "web-ext sign --source-dir=. --channel=unlisted",
+    "release": "bun ../scripts/release.mjs"
   },
   "devDependencies": {
     "web-ext": "^10.8.0"

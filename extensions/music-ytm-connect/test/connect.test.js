@@ -4,12 +4,36 @@ import { isYouTube, playlistFrom, serverBase, toCookiesTxt } from "../lib/connec
 
 test("toCookiesTxt writes the Netscape format", () => {
   const txt = toCookiesTxt([
-    { domain: ".youtube.com", hostOnly: false, path: "/", secure: true, httpOnly: false,
-      expirationDate: 1893456000.5, name: "SAPISID", value: "a" },
-    { domain: "music.youtube.com", hostOnly: true, path: "/", secure: true, httpOnly: true,
-      session: true, name: "HSID", value: "b" },
-    { domain: "youtube.com", hostOnly: false, path: "", secure: false, httpOnly: false,
-      expirationDate: 1893456000, name: "PREF", value: "c" },
+    {
+      domain: ".youtube.com",
+      hostOnly: false,
+      path: "/",
+      secure: true,
+      httpOnly: false,
+      expirationDate: 1893456000.5,
+      name: "SAPISID",
+      value: "a",
+    },
+    {
+      domain: "music.youtube.com",
+      hostOnly: true,
+      path: "/",
+      secure: true,
+      httpOnly: true,
+      session: true,
+      name: "HSID",
+      value: "b",
+    },
+    {
+      domain: "youtube.com",
+      hostOnly: false,
+      path: "",
+      secure: false,
+      httpOnly: false,
+      expirationDate: 1893456000,
+      name: "PREF",
+      value: "c",
+    },
   ]);
   const lines = txt.split("\n");
   assert.equal(lines[0], "# Netscape HTTP Cookie File");
@@ -39,7 +63,10 @@ test("playlistFrom reads list= from YouTube addresses", () => {
 test("serverBase keeps the path the app is served under", () => {
   assert.equal(serverBase("homelab/music"), "http://homelab/music");
   assert.equal(serverBase(" http://homelab/music/ "), "http://homelab/music");
-  assert.equal(serverBase("https://homelab.example/music/#/album/x"), "https://homelab.example/music");
+  assert.equal(
+    serverBase("https://homelab.example/music/#/album/x"),
+    "https://homelab.example/music",
+  );
   assert.equal(serverBase("http://homelab:8095/index.html"), "http://homelab:8095");
   assert.equal(serverBase("http://homelab:8095"), "http://homelab:8095");
   assert.equal(serverBase(""), "");

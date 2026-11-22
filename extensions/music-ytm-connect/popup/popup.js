@@ -32,8 +32,10 @@ async function api(method, path, body, type = "application/json") {
 }
 
 function describe(a) {
-  const cookies = { saved: "signed in (sent from a browser)", env: "signed in (from the server's environment)" }[a.cookies]
-    || "not signed in";
+  const cookies =
+    { saved: "signed in (sent from a browser)", env: "signed in (from the server's environment)" }[
+      a.cookies
+    ] || "not signed in";
   const supermix = a.supermix ? `Supermix ${a.supermix}` : "no Supermix playlist";
   return `${cookies}; ${supermix}.${a.failed ? ` Last try failed: ${a.failed}` : ""}`;
 }
@@ -41,9 +43,12 @@ function describe(a) {
 async function refresh() {
   actions.hidden = !base;
   if (!base) {
-    say(status, input.value
-      ? "Save to let this browser reach the server."
-      : "Type the music server's address, as you open it in the browser.");
+    say(
+      status,
+      input.value
+        ? "Save to let this browser reach the server."
+        : "Type the music server's address, as you open it in the browser.",
+    );
     return;
   }
   try {
@@ -114,14 +119,22 @@ sendCookies.addEventListener("click", async () => {
     }
     const cookies = await youTubeCookies();
     if (!cookies.length) {
-      throw new Error("Firefox gave no YouTube cookies for this window. Open music.youtube.com in it, then try again.");
+      throw new Error(
+        "Firefox gave no YouTube cookies for this window. Open music.youtube.com in it, then try again.",
+      );
     }
     if (!cookies.some((c) => c.name === "SAPISID" || c.name === "__Secure-3PAPISID")) {
-      throw new Error(`This window has ${cookies.length} YouTube cookies but no sign-in; sign in on music.youtube.com first.`);
+      throw new Error(
+        `This window has ${cookies.length} YouTube cookies but no sign-in; sign in on music.youtube.com first.`,
+      );
     }
     const a = await api("PUT", "/api/yt/account/cookies", toCookiesTxt(cookies), "text/plain");
     say(status, describe(a));
-    say(result, `Sent ${cookies.length} cookies.${a.supermix ? "" : " Now open your Supermix and send it too."}`, "good");
+    say(
+      result,
+      `Sent ${cookies.length} cookies.${a.supermix ? "" : " Now open your Supermix and send it too."}`,
+      "good",
+    );
   } catch (err) {
     say(result, err.message, "bad");
   } finally {
@@ -132,7 +145,11 @@ sendCookies.addEventListener("click", async () => {
 sendSupermix.addEventListener("click", async () => {
   sendSupermix.disabled = true;
   try {
-    const a = await api("PUT", "/api/yt/account/supermix", JSON.stringify({ supermix: playlistFrom(tab.url) }));
+    const a = await api(
+      "PUT",
+      "/api/yt/account/supermix",
+      JSON.stringify({ supermix: playlistFrom(tab.url) }),
+    );
     say(status, describe(a));
     say(result, "Saved this playlist as your Supermix.", "good");
   } catch (err) {
@@ -161,7 +178,9 @@ check.addEventListener("click", async () => {
 // so each browser is asked once, by Save.
 const saved = await browser.storage.sync.get("server");
 if (saved.server) {
-  const granted = await browser.permissions.contains({ origins: [`${new URL(saved.server).origin}/*`] });
+  const granted = await browser.permissions.contains({
+    origins: [`${new URL(saved.server).origin}/*`],
+  });
   base = granted ? saved.server : "";
   input.value = saved.server;
 }

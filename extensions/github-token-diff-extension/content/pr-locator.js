@@ -7,7 +7,7 @@
   // "changes" is the new React Files-changed experience; "files" the classic one.
   GHTD.parseGithubPrLocation = function parseGithubPrLocation(pathname) {
     const m = pathname.match(
-      /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/(files|changes|commits|checks))?(?:\/|$)/
+      /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/(files|changes|commits|checks))?(?:\/|$)/,
     );
     if (!m) return null;
     const sub = m[4] || "conversation";

@@ -1,0 +1,70 @@
+default_install_hook_types:
+  - pre-commit
+  - post-checkout
+  - post-merge
+  - post-rewrite
+
+exclude: ^[^/]+/test/fixtures/
+
+hide_status: [passed, skipped]
+
+repos:
+  - repo: local
+    hooks:
+      - id: bun-install
+        name: bun install
+        entry: bun install --frozen-lockfile --silent
+        language: bun
+        pass_filenames: false
+        always_run: true
+        priority: 0
+        stages: [pre-commit, post-checkout]
+      - id: bun-fmt
+        name: bun fmt
+        entry: bun fmt --check
+        language: bun
+        files: \.(ts|tsx|js|mjs|json|css)$
+        pass_filenames: false
+        priority: 1
+      - id: oxlint
+        name: oxlint
+        entry: bun --bun run lint:js
+        language: bun
+        files: \.(ts|tsx|js|mjs)$
+        pass_filenames: false
+        priority: 1
+      - id: bun-test
+        name: test
+        entry: bun run test
+        language: bun
+        files: \.(ts|tsx|js|mjs|json)$|^bun\.lock$
+        pass_filenames: false
+        priority: 1
+      - id: web-ext-lint
+        name: web-ext lint
+        entry: bun run lint:ext
+        language: bun
+        files: ^(github-token-diff-extension|music-ytm-connect)/
+        pass_filenames: false
+        priority: 1
+      - id: check-versions
+        name: check extension versions
+        entry: bun run check:versions
+        language: bun
+        files: (package|manifest)\.json$
+        pass_filenames: false
+        priority: 1
+      - id: sync-lockfiles
+        name: sync subtree lockfiles
+        entry: bun run sync-lockfiles --check
+        language: bun
+        files: (package\.json|bun\.lock)$
+        pass_filenames: false
+        priority: 1
+      - id: bun-audit
+        name: bun audit
+        entry: bun audit --audit-level=high
+        language: bun
+        files: (package\.json|bun\.lock)$
+        pass_filenames: false
+        priority: 1

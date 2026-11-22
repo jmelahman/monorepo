@@ -9,7 +9,8 @@
     "lint": "web-ext lint --source-dir=.",
     "start": "web-ext run --source-dir=.",
     "build": "web-ext build --source-dir=. --overwrite-dest",
-    "sign": "web-ext sign --source-dir=. --channel=listed"
+    "sign": "web-ext sign --source-dir=. --channel=listed",
+    "release": "bun ../scripts/release.mjs"
   },
   "devDependencies": {
     "web-ext": "^10.8.0"

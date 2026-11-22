@@ -1,0 +1,22 @@
+{
+  "name": "extensions",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "*"
+  ],
+  "scripts": {
+    "test": "bun run --filter '*' test",
+    "lint:js": "oxlint",
+    "lint:js:fix": "oxlint --fix",
+    "lint:ext": "NO_UPDATE_NOTIFIER=1 bun run --cwd github-token-diff-extension lint && NO_UPDATE_NOTIFIER=1 bun run --cwd music-ytm-connect lint",
+    "format": "bun fmt",
+    "format:check": "bun fmt --check",
+    "check:versions": "bun scripts/check-versions.mjs",
+    "sync-lockfiles": "bun scripts/sync-lockfiles.mjs"
+  },
+  "devDependencies": {
+    "oxlint": "1.93.0",
+    "web-ext": "^10.8.0"
+  }
+}

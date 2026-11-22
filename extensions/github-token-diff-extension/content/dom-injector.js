@@ -46,7 +46,8 @@
 
   function buildBadge(kind, key, total, note) {
     const badge = document.createElement("span");
-    badge.className = kind === "file" ? "ghtd-badge ghtd-file-badge" : "ghtd-badge ghtd-header-badge";
+    badge.className =
+      kind === "file" ? "ghtd-badge ghtd-file-badge" : "ghtd-badge ghtd-header-badge";
     badge.dataset.ghtdBadge = kind;
     badge.dataset.ghtdKey = key;
     if (total) {
@@ -65,13 +66,16 @@
   // is the widget holding the numbers + squares. Classic header: span#diffstat.
   function findHeaderAnchor() {
     const square = document.querySelector(
-      '[data-testid="addition diffstat"], [data-testid="deletion diffstat"], [data-testid="neutral diffstat"]'
+      '[data-testid="addition diffstat"], [data-testid="deletion diffstat"], [data-testid="neutral diffstat"]',
     );
     const widget = square?.parentElement?.parentElement;
     if (widget) return { anchor: widget, place: "prepend" };
-    const classic = document.querySelector("#diffstat") || document.querySelector(".tabnav-extra .diffstat");
+    const classic =
+      document.querySelector("#diffstat") || document.querySelector(".tabnav-extra .diffstat");
     if (classic) return { anchor: classic, place: "before" };
-    const nav = document.querySelector('nav[aria-label="Pull request navigation tabs"], .tabnav-tabs');
+    const nav = document.querySelector(
+      'nav[aria-label="Pull request navigation tabs"], .tabnav-tabs',
+    );
     if (nav) return { anchor: nav, place: "append" };
     const title = document.querySelector('.js-issue-title, h1[data-component="PH_Title"]');
     if (title) return { anchor: title, place: "after" };
@@ -113,13 +117,21 @@
       // Classic Files-changed markup (/files, logged-out).
       const headers = document.querySelectorAll(".file-header[data-path]");
       for (const header of headers) {
-        placeFileBadge(header, header.getAttribute("data-path"), key, byPath, header.querySelector(".diffstat"));
+        placeFileBadge(
+          header,
+          header.getAttribute("data-path"),
+          key,
+          byPath,
+          header.querySelector(".diffstat"),
+        );
       }
       if (headers.length) return;
       const wrappers = document.querySelectorAll("[data-tagsearch-path]");
       for (const wrapper of wrappers) {
-        const target = wrapper.querySelector(".file-header, .file-info, h3") || wrapper.firstElementChild;
-        if (target) placeFileBadge(target, wrapper.getAttribute("data-tagsearch-path"), key, byPath, null);
+        const target =
+          wrapper.querySelector(".file-header, .file-info, h3") || wrapper.firstElementChild;
+        if (target)
+          placeFileBadge(target, wrapper.getAttribute("data-tagsearch-path"), key, byPath, null);
       }
       if (wrappers.length) return;
 
@@ -129,7 +141,7 @@
         if (el.closest('[role="tree"], nav')) continue; // skip the file tree sidebar
         const path =
           el.getAttribute("data-file-path") ||
-          byPath.has(el.getAttribute("title")) && el.getAttribute("title") ||
+          (byPath.has(el.getAttribute("title")) && el.getAttribute("title")) ||
           el.textContent.trim();
         if (byPath.has(path)) placeFileBadge(el, path, key, byPath, null);
       }
@@ -145,7 +157,9 @@
     // Placement varies per view (see below), so scope the dedup check to the
     // file's whole header row rather than assuming a fixed sibling position —
     // otherwise re-renders would stack duplicate badges.
-    const row = container.closest('[class*="DiffFileHeader-module__diff-file-header"], .file-header');
+    const row = container.closest(
+      '[class*="DiffFileHeader-module__diff-file-header"], .file-header',
+    );
     const dedupScope = row || container.parentElement || container;
     const existing = dedupScope.querySelector('[data-ghtd-badge="file"]');
     if (existing) {

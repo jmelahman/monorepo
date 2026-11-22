@@ -29,7 +29,8 @@ test("deterministic", () => {
 });
 
 test("code-like text lands in a plausible tokens-per-char band", () => {
-  const code = 'if (userAccountManager.isActive()) {\n  return httpResponse.status(200).json({ ok: true });\n}\n';
+  const code =
+    "if (userAccountManager.isActive()) {\n  return httpResponse.status(200).json({ ok: true });\n}\n";
   const tokens = estimateTokens(code);
   // Real BPE tokenizers put dense code around 3-4 chars/token; the heuristic
   // should stay in a generous band around that, not be wildly off.

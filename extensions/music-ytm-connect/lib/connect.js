@@ -6,11 +6,19 @@
 // the Netscape format yt-dlp reads, which is what the music server's
 // PUT /api/yt/account/cookies checks for.
 export function toCookiesTxt(cookies) {
-  const lines = ["# Netscape HTTP Cookie File", "# Sent by Music Server Connect for YouTube Music.", ""];
+  const lines = [
+    "# Netscape HTTP Cookie File",
+    "# Sent by Music Server Connect for YouTube Music.",
+    "",
+  ];
   for (const c of cookies) {
     // A host-only cookie is written without the leading dot and with the
     // subdomain flag off; a domain cookie with both.
-    const domain = c.hostOnly ? c.domain.replace(/^\./, "") : c.domain.startsWith(".") ? c.domain : `.${c.domain}`;
+    const domain = c.hostOnly
+      ? c.domain.replace(/^\./, "")
+      : c.domain.startsWith(".")
+        ? c.domain
+        : `.${c.domain}`;
     lines.push(
       [
         (c.httpOnly ? "#HttpOnly_" : "") + domain,

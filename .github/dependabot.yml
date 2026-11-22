@@ -30,6 +30,7 @@ updates:
   - package-ecosystem: "bun"
     directories:
       - /5-wild
+      - /extensions
       - /github-actions/*
       - /agentic-kanban/docs
       - /agentic-kanban/web
