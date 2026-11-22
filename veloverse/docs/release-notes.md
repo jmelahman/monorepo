@@ -90,21 +90,26 @@ render scale, a frame-rate cap, VSync and the window.
   - Denser, more varied ground: wildflowers, woodland floor, verge turf, scree and shore debris.
 - **Roads that age.** Near the harbour the road is smooth and freshly lined. Toward the wilds it
   wears to cracks, patches and soil at the edges.
-- **The town's bike trail** (first pass). Out of the harbour and back in, the route rides a
-  concrete trail with rubber shoulders, a yellow centre line, steel railings and swan-neck lamps.
-  The town's buildings and planting aren't there yet.
+- **Harbour Town and the bike trail.** Out of the harbour and back in, the route rides a
+  concrete promenade trail with rubber shoulders, a yellow centre line, steel railings and lit
+  swan-neck lamps, framed by stone entrance arches and 35 coastal houses, with fishing boats,
+  sailboats and a launch moored at the quay.
 - **Real trees.** Beech, birch, pine, windswept pine and dead snags, planted by species: pine
   climbs above the beech, birch grows in stands, and the windswept pines and snags gather toward
   the treeline.
-- **A new bike and rider.** An aero road bike whose wheels roll, cranks turn and fork steers into
-  bends, and a rider whose effort shows: easy, steady or hard by your watts per kilo.
+- **A new bike and rider.** An aero road bike whose wheels roll, cranks turn, pedals tilt with the
+  rider's ankling and fork steers into bends, and a rider with stitched jersey pockets, bib
+  grippers and sock cuffs whose effort shows: easy, steady or hard by your watts per kilo.
 - **Your rider, your kit.** Settings has a new Kit page: pick a skin tone and hair colour, and the
   colours of the jersey, its accent, bib shorts, socks, helmet and shoes. Your picks are kept in
   your profile.
-- **Signs of people.** Fields fenced along the coast roads, with timber gates (some left open),
-  hamlets on each island, cairns on the Moor's knolls and a ruined tower on Vael.
+- **Signs of people and landmarks.** Fields fenced along the coast roads, with timber gates (some
+  left open), stone bridge pylons, alpine lookouts with timber pavilions, wooden signposts,
+  kilometre milestones, desert arches, hamlets on each island, cairns on the Moor's knolls and a
+  ruined tower on Vael.
 - **The Moor's heath:** heather, crowberry and sedge on its open ground.
-- **A moving sea.** Wind waves drift across the water.
+- **A moving sea with shore surf.** Wind waves drift across the water and break in foam bands along
+  beaches and piers.
 - **Over the bars.** A cockpit view from the rider's eyes, with the bars and hands in front of you.
   Pick it from the ride dock.
 - You ride, and the camera sits, in the right-hand lane.
@@ -142,11 +147,8 @@ render scale, a frame-rate cap, VSync and the window.
 - The `.fit` file leaves out paused time. A ride paused halfway shows as one continuous effort.
 - Segment bests are tied to the route as generated. Rerouted roads start them over, so 0.2.0's
   bests don't carry across.
-- The bike trail's lamps are unlit, and the trail runs through open country: the town around it
-  comes next.
 - The landscape is 7 m a sample, so far slopes are still a little coarse.
-- The sea has no surf or foam at the shore yet, and a precision warning about the sea plane may
-  show in the log.
+- A precision warning about the sea plane may show in the log.
 - Performance is 32–44 fps at 1080p on a Radeon 890M (integrated) at the default settings. Low is
   faster. There is no tuning yet.
 
