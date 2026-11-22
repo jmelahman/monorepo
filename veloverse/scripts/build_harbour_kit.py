@@ -671,6 +671,233 @@ def build_harbour_cargo():
     return b
 
 
+def build_harbour_market_stall():
+    """3.8 m x 2.4 m coastal market stall with timber posts, counter table, slatted goods
+    crates, striped awning roof, and a warm glowing hanging lantern."""
+    b = KitBuilder("harbour_market_stall")
+    w, d = 3.8, 2.4
+    hx, hy = w * 0.5, d * 0.5
+    post_x = hx - 0.14
+    post_y = hy - 0.14
+    front_z = 2.55
+    back_z = 2.15
+
+    # Corner timber posts with buried stone pad footings for uneven cobbles
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            px, py = sx * post_x, sy * post_y
+            top_z = front_z if sy < 0 else back_z
+            b.box("stone", (px, py, -0.14), (0.28, 0.28, 0.36), bevel=0.02)
+            b.box("boards", (px, py, top_z * 0.5), (0.14, 0.14, top_z), bevel=0.015)
+
+    # Top longitudinal beams & sloped side rafters
+    b.box("boards", (0.0, -post_y, front_z), (w - 0.06, 0.14, 0.16), bevel=0.015)
+    b.box("boards", (0.0, post_y, back_z), (w - 0.06, 0.14, 0.16), bevel=0.015)
+
+    slope_dy = post_y * 2.0
+    slope_dz = front_z - back_z
+    pitch_deg = math.degrees(math.atan2(slope_dz, slope_dy))
+    rafter_len = math.hypot(slope_dy, slope_dz) + 0.72
+    mid_z = (front_z + back_z) * 0.5 + 0.08
+    for rx in (-post_x, -0.60, 0.60, post_x):
+        b.box(
+            "boards",
+            (rx, 0.0, mid_z),
+            (0.10, rafter_len, 0.12),
+            rot=(pitch_deg, 0.0, 0.0),
+            bevel=0.01,
+        )
+
+    # Knee braces at front posts
+    for sx in (-1.0, 1.0):
+        px = sx * post_x
+        b.cyl(
+            "boards",
+            (px, -post_y, front_z - 0.52),
+            (px - sx * 0.45, -post_y, front_z - 0.06),
+            0.045,
+            0.045,
+            seg=6,
+            smooth=False,
+        )
+
+    # Waist-high timber back wall & side rails
+    b.box("siding", (0.0, post_y, 0.56), (w - 0.28, 0.06, 1.04))
+    b.box("boards", (0.0, post_y, 1.10), (w - 0.20, 0.11, 0.09), bevel=0.01)
+    for sx in (-1.0, 1.0):
+        b.box("boards", (sx * post_x, 0.0, 0.92), (0.08, d - 0.34, 0.08))
+
+    # Front timber counter table (facing -Y) + lower storage shelf
+    counter_y = -0.68
+    counter_w = w - 0.32
+    b.box("deck", (0.0, counter_y, 0.90), (counter_w, 0.82, 0.07), bevel=0.012)
+    b.box("siding", (0.0, counter_y - 0.35, 0.48), (counter_w - 0.08, 0.05, 0.78))
+    b.box("boards", (0.0, counter_y + 0.02, 0.24), (counter_w - 0.12, 0.70, 0.05))
+    for lx in (-1.62, -0.55, 0.55, 1.62):
+        b.box("boards", (lx, counter_y + 0.32, 0.45), (0.09, 0.09, 0.86))
+
+    # Slatted goods crates underneath the counter & beside rear wall
+    under_crates = [
+        (-1.12, 0.15, 0.26, 0.86, 0.64, 0.52, 5.0),
+        (-0.08, 0.22, 0.24, 0.78, 0.58, 0.48, -7.0),
+        (1.08, 0.18, 0.28, 0.90, 0.66, 0.56, 3.0),
+    ]
+    for cx, cy, cz, sx, sy, sz, yaw in under_crates:
+        b.box("siding", (cx, cy, cz), (sx, sy, sz), rot=(0.0, 0.0, yaw))
+        for bz in (cz - sz * 0.38, cz + sz * 0.38):
+            b.box(
+                "boards",
+                (cx, cy, bz),
+                (sx + 0.04, sy + 0.04, 0.06),
+                rot=(0.0, 0.0, yaw),
+            )
+
+    # Oak barrel tucked at right end
+    b.cyl("boards", (1.35, 0.62, 0.02), (1.35, 0.62, 0.82), 0.26, 0.26, seg=10)
+    b.cyl("steel", (1.35, 0.62, 0.20), (1.35, 0.62, 0.24), 0.272, 0.272, seg=10)
+    b.cyl("steel", (1.35, 0.62, 0.62), (1.35, 0.62, 0.66), 0.272, 0.272, seg=10)
+
+    # Display crates on top of counter with colourful harbour goods
+    top_crates = [
+        (-1.05, counter_y - 0.02, 1.07, 0.82, 0.52, 0.26, -4.0, "red"),
+        (0.05, counter_y + 0.02, 1.06, 0.78, 0.50, 0.24, 3.0, "ochre"),
+        (1.08, counter_y - 0.03, 1.07, 0.76, 0.48, 0.26, -6.0, "green"),
+    ]
+    for cx, cy, cz, sx, sy, sz, yaw, goods_mat in top_crates:
+        b.box("siding", (cx, cy, cz), (sx, sy, sz), rot=(0.0, 0.0, yaw))
+        b.box(
+            "boards",
+            (cx, cy, cz + sz * 0.45),
+            (sx + 0.04, sy + 0.04, 0.045),
+            rot=(0.0, 0.0, yaw),
+        )
+        # Produce / goods mound inside each display tray
+        for ox, oy, r_g in ((-0.18, -0.06, 0.14), (0.04, 0.05, 0.15), (0.21, -0.04, 0.13)):
+            b.box(
+                goods_mat,
+                (cx + ox, cy + oy, cz + sz * 0.42),
+                (r_g * 1.4, r_g * 1.3, r_g * 1.1),
+                rot=(12.0, -8.0, yaw + 25.0),
+                bevel=0.04,
+            )
+
+    # Striped sloped awning roof (clay / ochre / plaster alternating boards)
+    awning_mats = ("clay", "ochre", "plaster")
+    n_stripes = 15
+    roof_w = w + 0.52
+    stripe_w = roof_w / n_stripes
+    awning_len = rafter_len + 0.10
+    for i in range(n_stripes):
+        sx = -roof_w * 0.5 + stripe_w * (i + 0.5)
+        mat = awning_mats[i % len(awning_mats)]
+        b.box(
+            mat,
+            (sx, -0.03, mid_z + 0.10),
+            (stripe_w - 0.008, awning_len, 0.055),
+            rot=(pitch_deg, 0.0, 0.0),
+            bevel=0.008,
+        )
+        # Front scalloped awning valance strip
+        b.box(
+            mat,
+            (sx, -post_y - 0.38, front_z + 0.05),
+            (stripe_w - 0.012, 0.04, 0.22),
+            bevel=0.008,
+        )
+
+    # Small warm glowing hanging lantern under front-right beam
+    lx, ly, lz = 1.35, -post_y - 0.08, front_z - 0.08
+    b.cyl("steel", (lx, ly, lz), (lx, ly, lz - 0.26), 0.012, 0.012, seg=6)
+    b.cyl("steel", (lx, ly, lz - 0.26), (lx, ly, lz - 0.34), 0.03, 0.13, seg=6, smooth=False)
+    b.box("warm_glass", (lx, ly, lz - 0.46), (0.15, 0.15, 0.22), bevel=0.015)
+    b.box("steel", (lx, ly, lz - 0.59), (0.19, 0.19, 0.04), bevel=0.008)
+    return b
+
+
+def build_harbour_planter():
+    """1.8 m x 0.85 m x 0.75 m carved stone rectangular street planter with beveled rim,
+    dark soil bed, and multi-layered sculpted green shrub and flower tufts."""
+    b = KitBuilder("harbour_planter")
+    w, d, h = 1.80, 0.85, 0.75
+
+    # Buried base pad + stepped carved stone plinth
+    b.box("stone", (0.0, 0.0, -0.14), (w + 0.06, d + 0.06, 0.32), bevel=0.02)
+    b.box("stone", (0.0, 0.0, 0.08), (w, d, 0.16), bevel=0.025)
+
+    # Carved trough body with corner pilasters & recessed side panels
+    body_w, body_d = w - 0.10, d - 0.10
+    b.box("stone", (0.0, 0.0, 0.39), (body_w, body_d, 0.48), bevel=0.02)
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            b.box(
+                "stone",
+                (sx * (body_w * 0.5 - 0.06), sy * (body_d * 0.5 - 0.06), 0.39),
+                (0.18, 0.18, 0.50),
+                bevel=0.02,
+            )
+    for sy in (-1.0, 1.0):
+        b.box("stone", (0.0, sy * (body_d * 0.5 + 0.015), 0.39), (1.10, 0.05, 0.32), bevel=0.015)
+
+    # Overhanging beveled stone rim enclosing the recessed soil bed
+    rim_z = h - 0.055
+    rim_t = 0.13
+    for sy in (-1.0, 1.0):
+        b.box(
+            "stone",
+            (0.0, sy * (d * 0.5 - rim_t * 0.5), rim_z),
+            (w, rim_t, 0.11),
+            bevel=0.025,
+        )
+    for sx in (-1.0, 1.0):
+        b.box(
+            "stone",
+            (sx * (w * 0.5 - rim_t * 0.5), 0.0, rim_z),
+            (rim_t, d - rim_t * 1.4, 0.11),
+            bevel=0.025,
+        )
+
+    # Dark soil bed recessed inside the rim
+    b.box("wood", (0.0, 0.0, 0.61), (w - 0.24, d - 0.24, 0.10), bevel=0.02)
+
+    # Multi-layered sculpted green shrub mounds & outer leaf tufts
+    shrubs = [
+        (-0.46, 0.02, 0.78, (0.56, 0.48, 0.38), (6.0, -8.0, 18.0)),
+        (0.02, -0.02, 0.84, (0.64, 0.54, 0.44), (-5.0, 7.0, -24.0)),
+        (0.48, 0.03, 0.77, (0.54, 0.46, 0.36), (8.0, 6.0, 32.0)),
+        (-0.22, 0.06, 0.94, (0.44, 0.38, 0.34), (-9.0, -6.0, 42.0)),
+        (0.24, -0.05, 0.92, (0.42, 0.36, 0.32), (7.0, 9.0, -35.0)),
+    ]
+    for sx, sy, sz, size, rot in shrubs:
+        b.box("green", (sx, sy, sz), size, rot=rot, bevel=0.09)
+
+    leaf_tufts = [
+        (-0.66, -0.14, 0.72, 0.24, 0.16, (18.0, -14.0, 12.0)),
+        (-0.52, 0.17, 0.73, 0.22, 0.15, (-16.0, -10.0, 28.0)),
+        (-0.18, -0.18, 0.74, 0.26, 0.17, (20.0, 6.0, -15.0)),
+        (0.14, 0.19, 0.74, 0.25, 0.16, (-18.0, 8.0, 20.0)),
+        (0.58, -0.15, 0.72, 0.24, 0.16, (15.0, 14.0, -22.0)),
+        (0.65, 0.14, 0.72, 0.22, 0.15, (-14.0, 16.0, 35.0)),
+        (0.0, 0.02, 1.06, 0.28, 0.22, (8.0, -10.0, 40.0)),
+    ]
+    for lx, ly, lz, rw, rh, rot in leaf_tufts:
+        b.box("green", (lx, ly, lz), (rw, rw * 0.85, rh), rot=rot, bevel=0.045)
+
+    # Small coastal blossom clusters nestled across the foliage
+    flowers = [
+        (-0.54, -0.08, 0.92, "red"),
+        (-0.34, 0.12, 1.02, "ochre"),
+        (-0.14, -0.14, 0.98, "white"),
+        (0.05, 0.08, 1.12, "red"),
+        (0.22, -0.12, 1.04, "ochre"),
+        (0.42, 0.10, 0.96, "white"),
+        (0.56, -0.06, 0.90, "red"),
+        (-0.26, 0.0, 1.08, "ochre"),
+    ]
+    for fx, fy, fz, fmat in flowers:
+        b.box(fmat, (fx, fy, fz), (0.11, 0.11, 0.09), rot=(15.0, -12.0, 25.0), bevel=0.025)
+    return b
+
+
 # ---------------------------------------------------------------------------------------------
 # Hero Boats (curved hulls, cabins, rigging, deck gear)
 # ---------------------------------------------------------------------------------------------
@@ -1115,6 +1342,8 @@ BUILDERS = {
     "harbour_house_d": build_harbour_house_d,
     "harbour_warehouse": build_harbour_warehouse,
     "harbour_cargo": build_harbour_cargo,
+    "harbour_market_stall": build_harbour_market_stall,
+    "harbour_planter": build_harbour_planter,
     "harbour_crane": build_harbour_crane,
     "stone_arch": build_stone_arch,
     "boat_trawler": build_boat_trawler,

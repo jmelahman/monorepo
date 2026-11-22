@@ -327,8 +327,10 @@ GRASS = {
         ("mountain", "alpine_bearberry", 2.0, 3000, 4500),
         ("desert", "dry_grass", 1.0, 3000, 4500),
         ("desert", "dead_shrubs", 0.3, 4000, 6000),
-        # A few tufts through the litter, so the patches' edges aren't a hard line.
-        ("shared", "grass_clumps", 5.0, 2000, 3000, (1.0, 1.6)),
+        # A few tufts through the litter, so the patches' edges aren't a hard line (and Vael's
+        # roadside forest floor isn't bare).
+        ("climb", "blade_short", 45.0, 2500, 4000, (0.6, 1.0)),
+        ("shared", "grass_clumps", 10.0, 2000, 3000, (1.0, 1.6)),
         # Big rounded boulders, as in the style shots, and the floor's debris.
         ("mountain", "tundra_boulder", 0.05, 12000, 15000),
         ("forest", "nordic_forest_ground_patch_root", 0.2, 9000, 12000),
@@ -384,8 +386,10 @@ GRASS = {
     ),
     # No "Dirt" row: the landscape under the road mesh is painted Dirt too, so v28's low verge
     # cover grew straight through the whole tarmac.
-    # Talus under the crags.
+    # Talus under the crags, plus sparse grass/heath tufts for Vael & Moor roadside cuts.
     "Rock": (
+        ("climb", "blade_short", 45.0, 2500, 4000, (0.6, 1.0)),
+        ("climb", "heath_tuft", 38.0, 3000, 5000, (0.7, 1.2)),
         ("forest", "nordic_forest_rock_small", 0.6, 8000, 11000),
         ("forest", "nordic_forest_cluster_rock_medium", 0.15, 12000, 15000),
         ("mountain", "tundra_boulder", 0.08, 12000, 15000),

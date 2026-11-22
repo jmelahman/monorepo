@@ -297,6 +297,170 @@ def build_moor_cairn():
     return b
 
 
+def build_moor_standing_stones():
+    """Ancient weathered stone circle (~7 m diameter) of 5 tall tilted irregular monoliths
+    (2.6-4.2 m tall, tapered, slightly leaning) around a low flat central altar slab."""
+    b = KitBuilder("moor_standing_stones")
+
+    # Central low flat weathered altar slab + buried footing + rough base plinth
+    b.box("stone", (0.0, 0.0, -0.45), (1.95, 1.35, 1.0), bevel=0.05)
+    b.box("stone", (0.0, 0.0, 0.22), (1.85, 1.25, 0.36), rot=(0.0, 0.0, 12.0), bevel=0.06)
+    b.box("concrete", (0.0, 0.0, 0.50), (2.22, 1.48, 0.24), rot=(1.5, -1.0, 12.0), bevel=0.045)
+    # Small flanking offering/hearth stones beside altar
+    b.box("stone", (-1.18, -0.48, 0.14), (0.58, 0.44, 0.30), rot=(4.0, -5.0, 32.0), bevel=0.06)
+    b.box("stone", (1.12, 0.52, 0.12), (0.52, 0.40, 0.26), rot=(-5.0, 6.0, -24.0), bevel=0.05)
+
+    # 5 tall irregular tapered monoliths arranged on ~3.5 m radius (~7 m diameter)
+    monoliths = [
+        # (angle_deg, radius, height, base_w, base_d, lean_radial_deg, lean_tan_deg)
+        (14.0, 3.45, 4.20, 0.96, 0.62, -6.5, 4.0),
+        (86.0, 3.30, 3.05, 0.84, 0.56, 7.5, -5.0),
+        (158.0, 3.55, 3.85, 0.92, 0.60, -5.0, -6.5),
+        (228.0, 3.35, 2.65, 0.80, 0.52, 8.5, 4.5),
+        (300.0, 3.50, 3.45, 0.88, 0.58, -7.0, 5.5),
+    ]
+    for ang_deg, rad, height, bw, bd, lean_r, lean_t in monoliths:
+        ang = math.radians(ang_deg)
+        ux, uy = math.cos(ang), math.sin(ang)
+        cx, cy = ux * rad, uy * rad
+        yaw_deg = ang_deg + 18.0
+
+        # Deep buried footing + basal cairn boulders
+        b.cyl("stone", (cx, cy, -0.95), (cx, cy, 0.18), bw * 0.78, bw * 0.64, seg=7, smooth=False)
+        for off_a, off_r, sz, dz in (
+            (0.6, 0.52, (0.72, 0.58, 0.42), 0.12),
+            (-0.8, 0.48, (0.64, 0.52, 0.36), 0.10),
+        ):
+            bx = cx + math.cos(ang + off_a) * off_r
+            by = cy + math.sin(ang + off_a) * off_r
+            b.box("stone", (bx, by, dz), sz, rot=(4.0, -5.0, ang_deg + off_a * 30.0), bevel=0.07)
+
+        # Tapered irregular monolith shaft built from leaning core + cleft side slabs
+        tilt_rad = math.radians(lean_r)
+        tan_rad = math.radians(lean_t)
+        dx_top = height * math.sin(tilt_rad) * ux - height * math.sin(tan_rad) * uy
+        dy_top = height * math.sin(tilt_rad) * uy + height * math.sin(tan_rad) * ux
+        b.cyl(
+            "stone",
+            (cx, cy, -0.20),
+            (cx + dx_top, cy + dy_top, height),
+            bw * 0.56,
+            bw * 0.24,
+            seg=6,
+            smooth=False,
+        )
+        # Overlapping angular stone face shards for rugged cleft profile
+        rot_tuple = (lean_t, -lean_r, yaw_deg)
+        b.box(
+            "stone",
+            (cx + dx_top * 0.36, cy + dy_top * 0.36, height * 0.38),
+            (bw * 0.86, bd * 0.82, height * 0.74),
+            rot=rot_tuple,
+            bevel=0.07,
+        )
+        b.box(
+            "stone",
+            (cx + dx_top * 0.68, cy + dy_top * 0.68, height * 0.72),
+            (bw * 0.58, bd * 0.58, height * 0.48),
+            rot=(lean_t + 3.0, -lean_r - 2.5, yaw_deg + 16.0),
+            bevel=0.06,
+        )
+    return b
+
+
+def build_vael_shrine():
+    """Weathered Nordic-alpine stone wayside shrine (~2.4 m wide, 3.6 m tall) with stepped
+    stone plinth, twin stone pillars, pitched timber/slate roof gable, and warm recessed lantern."""
+    b = KitBuilder("vael_shrine")
+    w, d = 2.40, 1.56
+
+    # Buried stone foundation + 2-stepped stone plinth + altar sill
+    b.box("stone", (0.0, 0.0, -0.52), (w + 0.16, d + 0.16, 1.15), bevel=0.04)
+    b.box("stone", (0.0, 0.0, 0.14), (w, d, 0.28), bevel=0.035)
+    b.box("stone", (0.0, 0.0, 0.39), (w - 0.32, d - 0.26, 0.24), bevel=0.03)
+    b.box("concrete", (0.0, -0.04, 0.56), (w - 0.48, d - 0.38, 0.14), bevel=0.025)
+
+    # Back stone niche wall framing the glowing alcove (open toward -Y road side)
+    b.box("stone", (0.0, 0.32, 1.48), (1.76, 0.42, 1.72), bevel=0.035)
+    # Recessed dark backing slab inside alcove
+    b.box("slate", (0.0, 0.11, 1.44), (0.94, 0.08, 1.38), bevel=0.015)
+
+    # Twin carved stone pillars with stepped bases & capitals
+    pillar_y = -0.26
+    for sx in (-0.70, 0.70):
+        b.box("stone", (sx, pillar_y, 0.73), (0.38, 0.38, 0.20), bevel=0.025)
+        b.box("stone", (sx, pillar_y, 1.49), (0.28, 0.28, 1.36), bevel=0.03)
+        b.box("stone", (sx, pillar_y, 2.24), (0.38, 0.38, 0.18), bevel=0.025)
+        # Side stone wing walls tying pillars to back wall
+        b.box("stone", (sx, 0.04, 1.48), (0.24, 0.52, 1.66), bevel=0.025)
+
+    # Heavy carved stone lintel & cornice beam spanning the shrine
+    b.box("stone", (0.0, 0.02, 2.45), (2.06, 0.98, 0.26), bevel=0.035)
+
+    # Recessed warm glowing shrine lantern on stone pedestal inside alcove
+    lx, ly = 0.0, -0.02
+    b.box("stone", (lx, ly, 0.78), (0.42, 0.36, 0.32), bevel=0.025)
+    b.box("steel", (lx, ly, 0.97), (0.32, 0.32, 0.05), bevel=0.01)
+    for px in (-0.12, 0.12):
+        for py in (-0.12, 0.12):
+            b.cyl("steel", (lx + px, ly + py, 0.99), (lx + px, ly + py, 1.44), 0.015, 0.014, seg=6)
+    b.box("warm_glass", (lx, ly, 1.21), (0.21, 0.21, 0.38), bevel=0.015)
+    b.cyl("copper", (lx, ly, 1.43), (lx, ly, 1.64), 0.22, 0.03, seg=4, smooth=False)
+    b.cyl("steel", (lx, ly, 1.63), (lx, ly, 1.76), 0.02, 0.008, seg=6)
+
+    # Pitched timber & slate gable roof (ridge running front-to-back along Y, peaking ~3.60 m)
+    eave_z = 2.58
+    roof_w = 2.02
+    roof_d = 1.18
+    pitch_deg = 40.0
+    pitch = math.radians(pitch_deg)
+    rise = (roof_w * 0.5) * math.tan(pitch)
+    ridge_z = eave_z + rise
+    over_x = 0.24
+    over_y = 0.26
+    span_x = roof_w * 0.5 + over_x
+    slope_len = span_x / math.cos(pitch)
+    full_y = roof_d + 2.0 * over_y
+
+    # Timber gable infill
+    b.prism_gable("siding", 0.0, 0.02, eave_z, roof_w - 0.08, roof_d - 0.08, rise - 0.04, axis="Y")
+    b.box("boards", (0.0, 0.02, eave_z + 0.04), (roof_w + 0.10, roof_d + 0.10, 0.12), bevel=0.015)
+
+    for sx in (-1.0, 1.0):
+        mid_x = sx * (span_x * 0.5)
+        mid_z = ridge_z - (span_x * 0.5) * math.tan(pitch) + 0.08 / math.cos(pitch)
+        b.box(
+            "slate",
+            (mid_x, 0.02, mid_z),
+            (slope_len, full_y, 0.14),
+            rot=(0.0, sx * pitch_deg, 0.0),
+            bevel=0.02,
+        )
+        # Exposed timber bargeboards on front & back gable ends
+        for sy in (-1.0, 1.0):
+            by = 0.02 + sy * (full_y * 0.5 - 0.03)
+            b.box(
+                "boards",
+                (mid_x, by, mid_z - 0.04),
+                (slope_len + 0.08, 0.08, 0.18),
+                rot=(0.0, sx * pitch_deg, 0.0),
+                bevel=0.01,
+            )
+
+    # Carved timber ridge beam, copper ridge cap & summit finial
+    b.box("boards", (0.0, 0.02, ridge_z + 0.02), (0.16, full_y + 0.12, 0.18), bevel=0.015)
+    b.box("copper", (0.0, 0.02, ridge_z + 0.14), (0.20, full_y + 0.06, 0.08), bevel=0.015)
+    b.cyl(
+        "steel",
+        (0.0, -full_y * 0.42, ridge_z + 0.16),
+        (0.0, -full_y * 0.42, 3.68),
+        0.022,
+        0.01,
+        seg=6,
+    )
+    return b
+
+
 BUILDERS = {
     "bridge_pylon": build_bridge_pylon,
     "alpine_pavilion": build_alpine_pavilion,
@@ -304,6 +468,8 @@ BUILDERS = {
     "stone_milestone": build_stone_milestone,
     "desert_arch": build_desert_arch,
     "moor_cairn": build_moor_cairn,
+    "moor_standing_stones": build_moor_standing_stones,
+    "vael_shrine": build_vael_shrine,
 }
 
 

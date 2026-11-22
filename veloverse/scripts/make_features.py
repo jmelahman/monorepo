@@ -577,7 +577,7 @@ CLIFFS = {
         ],
         [
             (ms("mountain", "volcanic_scree"), 2.2, (2.0, 4.2)),
-            (ms("mountain", "limestone_rubble"), 2.9, (1.5, 3.2)),
+            (ms("mountain", "limestone_rocks"), 2.9, (1.5, 3.2)),
         ],
     ),
     "desert": (
@@ -976,6 +976,8 @@ def harbour(out, g, bio, road, rng, taken):
     )
     has_warehouse = _copy_harbour_kit(out, "harbour_warehouse", None)
     has_cargo = _copy_harbour_kit(out, "harbour_cargo", None)
+    has_stall = _copy_harbour_kit(out, "harbour_market_stall", None)
+    has_planter = _copy_harbour_kit(out, "harbour_planter", None)
     has_crane = _copy_harbour_kit(out, "harbour_crane", None)
     has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
@@ -1135,8 +1137,8 @@ def harbour(out, g, bio, road, rng, taken):
         ]
         line = road.hub if road.hub is not None else road.line
         bench = ms("urban", "park_bench_wood")
-        planter = ms("urban", "concrete_planter")
-        stone_wall = ms("coast", "modular_stone_wall")
+        planter = "harbour_planter" if has_planter else bench
+        stone_wall = ms("coast", "mossy_stone_wall")
         # Walk along the harbour road (both out from start and wrapping near end)
         indices = list(range(25, min(1150, len(line)), 18)) + list(
             range(max(len(line) - 650, 1200), len(line) - 25, 22)
@@ -1205,17 +1207,20 @@ def harbour(out, g, bio, road, rng, taken):
             wx, wy = qx - ax[j] * 4.0, qy - ay[j] * 4.0
             if road.dist(wx, wy) > 5.0 and g.z(wx, wy) > 0.8:
                 out.add("HarbourProps", stone_wall, wx, wy, float(g.z(wx, wy)) - 0.15, wyaw, 1.1)
-            # Dockside cargo crate/barrel clusters near the quay apron
+            # Dockside cargo crate/barrel clusters and market stalls near the quay apron
             if has_cargo and i % 12 == 0:
                 cx, cy = qx - ax[j] * rng.uniform(7.5, 13.0), qy - ay[j] * rng.uniform(7.5, 13.0)
                 if road.dist(cx, cy) > 5.5 and g.z(cx, cy) > 1.0:
+                    prop_name = (
+                        "harbour_market_stall" if (has_stall and i % 24 == 0) else "harbour_cargo"
+                    )
                     out.add(
                         "HarbourProps",
-                        "harbour_cargo",
+                        prop_name,
                         cx,
                         cy,
                         float(g.z(cx, cy)) - 0.05,
-                        wyaw + rng.uniform(-25, 25),
+                        wyaw + rng.uniform(-18, 18),
                     )
                     quay_cargo += 1
         # Waterfront row of warehouses and harbour houses standing 18-32 m inland behind the quay
@@ -1938,7 +1943,7 @@ def roadside_dressing(out, g, bio, road, rng, taken):
     n = len(line)
     # 1. Scenic mossy/dry stone walls running parallel to the road on Moor, Coast & Vael
     wall_moss = ms("coast", "mossy_stone_wall")
-    wall_dry = ms("coast", "modular_stone_wall")
+    wall_dry = ms("coast", "mossy_stone_wall")
     walls = 0
     k = 450
     while k < n - 120:
@@ -2087,6 +2092,8 @@ def world_landmarks(out, g, bio, road, rng, taken):
             "stone_milestone",
             "desert_arch",
             "moor_cairn",
+            "moor_standing_stones",
+            "vael_shrine",
         )
     }
     line = road.line
@@ -2309,6 +2316,84 @@ def world_landmarks(out, g, bio, road, rng, taken):
                 taken.append((qx, qy, 4.5))
                 arches_placed.append((px, py))
                 counts["desert_arch"] += 1
+
+    # 5. Ancient megalithic stone circles on The Moor's knolls
+    if has["moor_standing_stones"]:
+        circles = []
+        for k in range(300, n - 300, 360):
+            if counts["moor_standing_stones"] >= 6:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            if str(bio.best(px, py)) != "heath":
+                continue
+            if any(math.hypot(px - x0, py - y0) < 900 for x0, y0 in circles):
+                continue
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            side = rng.choice((-1.0, 1.0))
+            off = rng.uniform(14.0, 32.0)
+            qx, qy = px + nx * side * off, py + ny * side * off
+            qz = float(g.z(qx, qy))
+            if (
+                qz > 4.0
+                and float(g.at(g.slope, qx, qy)) < 0.24
+                and road.dist(qx, qy) > 10.0
+                and not any(math.hypot(qx - x0, qy - y0) < r0 + 5.5 for x0, y0, r0 in taken)
+            ):
+                out.add(
+                    "WorldLandmarks",
+                    "moor_standing_stones",
+                    qx,
+                    qy,
+                    qz - 0.15,
+                    rng.uniform(0, 360),
+                    mark=(180, 180, 210),
+                )
+                taken.append((qx, qy, 5.0))
+                out.clear.append([round(qx, 1), round(qy, 1), 6.0])
+                circles.append((px, py))
+                counts["moor_standing_stones"] += 1
+
+    # 6. Weathered Nordic stone wayside shrines along Vael's mountain climb
+    if has["vael_shrine"]:
+        shrines = []
+        for k in range(300, n - 300, 300):
+            if counts["vael_shrine"] >= 10:
+                break
+            if any(a - 35 <= k <= b + 35 for a, b in road.spans):
+                continue
+            px, py = float(line[k, 0]), float(line[k, 1])
+            if str(bio.best(px, py)) != "mountain":
+                continue
+            if any(math.hypot(px - x0, py - y0) < 750 for x0, y0 in shrines):
+                continue
+            tx, ty = tangent(k)
+            nx, ny = -ty, tx
+            yaw0 = math.degrees(math.atan2(ty, tx))
+            for side in (-1.0, 1.0):
+                qx, qy = px + nx * side * 7.8, py + ny * side * 7.8
+                qz = float(g.z(qx, qy))
+                if (
+                    qz > 5.0
+                    and float(g.at(g.slope, qx, qy)) < 0.34
+                    and road.dist(qx, qy) > 5.0
+                    and not any(math.hypot(qx - x0, qy - y0) < r0 + 3.0 for x0, y0, r0 in taken)
+                ):
+                    yaw = yaw0 + (0.0 if side < 0 else 180.0)
+                    out.add(
+                        "WorldLandmarks",
+                        "vael_shrine",
+                        qx,
+                        qy,
+                        qz - 0.10,
+                        yaw,
+                        mark=(220, 200, 150),
+                    )
+                    taken.append((qx, qy, 2.5))
+                    out.clear.append([round(qx, 1), round(qy, 1), 4.0])
+                    shrines.append((px, py))
+                    counts["vael_shrine"] += 1
+                    break
 
     print(f"world_landmarks: {counts}", flush=True)
 
