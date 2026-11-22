@@ -8,7 +8,7 @@ A containerized development environment.
 - Bun (`node` falls back to Bun)
 - Go (from the `golang` image, with `wgo` for live reload and `govulncheck`)
 - Docker CLI + Compose plugin (talks to the host daemon via mounted socket)
-- Claude Code, pi
+- Claude Code, pi, opencode, Antigravity CLI (`agy`)
 - prek and uv
 - Playwright's Chromium system libraries. Browsers are installed per project into `~/.cache/ms-playwright`, which persists across rebuilds
 - Shell tools: zsh, fzf, ripgrep, fd, neovim, less, jq
@@ -59,10 +59,11 @@ Dependabot bumps the `FROM` base image in the `Dockerfile` weekly.
 The container bind-mounts a few things from the host so it feels like a normal shell session:
 
 - `~/.claude` and `~/.claude.json` — Claude Code config and session history persist across rebuilds
+- `~/.gemini` — Antigravity CLI (`agy`) settings, skills, and session state persist across rebuilds
 - `~/.gitconfig` (read-only) — your git identity
 - `$SSH_AUTH_SOCK` — SSH agent forwarding for git-over-SSH
 - The host Docker socket — `docker` commands inside the container act on the host daemon
-- `$GH_TOKEN` is forwarded for the `gh` CLI
+- `$GH_TOKEN` is forwarded for the `gh` CLI and `$GEMINI_API_KEY` for Antigravity CLI API-key mode
 
 Named volumes cache the Go module/build directories and Bun's package cache (`~/.bun/install/cache`) so reinstalls are fast across container rebuilds.
 
@@ -100,6 +101,7 @@ The container ships with an opt-in default-deny firewall (`init-firewall.sh`). I
 - npm registry
 - GitHub (API IP ranges fetched from `api.github.com/meta`, plus `github.com`)
 - Anthropic API (prod, staging, files)
+- Google / Antigravity APIs (`accounts.google.com`, `oauth2.googleapis.com`, `cloudcode-pa.googleapis.com`, `daily-cloudcode-pa.googleapis.com`, `aicode.googleapis.com`, `aiplatform.googleapis.com`, `generativelanguage.googleapis.com`, `play.googleapis.com`, `antigravity.google`, `antigravity-unleash.goog`)
 - Sentry
 - VS Code update servers
 - Go module proxy (`proxy.golang.org`, `sum.golang.org`, `storage.googleapis.com`)

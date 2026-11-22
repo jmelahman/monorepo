@@ -9,6 +9,7 @@
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude,type=bind",
     "source=${localEnv:HOME}/.claude.json,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.claude.json,type=bind",
+    "source=${localEnv:HOME}/.gemini,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gemini,type=bind",
     "source=${localEnv:HOME}/.zshrc,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.zshrc.host,type=bind,readonly",
     "source=${localEnv:HOME}/.config/nvim,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/nvim,type=bind,readonly",
     "source=${localEnv:HOME}/.gitconfig,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gitconfig,type=bind,readonly",
@@ -20,6 +21,7 @@
   "containerEnv": {
     "COLORTERM": "truecolor",
     "DEVCONTAINER_FIREWALL": "${localEnv:DEVCONTAINER_FIREWALL}",
+    "GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock",
     "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",

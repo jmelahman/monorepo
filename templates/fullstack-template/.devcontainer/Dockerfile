@@ -79,7 +79,7 @@ RUN chsh -s /bin/zsh root && \
 # perms into a fresh empty volume). Without this dev hits EACCES on ~/.cache,
 # ~/.local, ~/.bun after a clean rebuild.
 RUN mkdir -p /home/dev/.cache /home/dev/.local /home/dev/.bun/install/cache \
-             /home/dev/.config /home/dev/.ssh /home/dev/go/pkg/mod && \
+             /home/dev/.config /home/dev/.gemini /home/dev/.ssh /home/dev/go/pkg/mod && \
   chmod 700 /home/dev/.ssh && \
   chown -R dev:dev /home/dev
 
@@ -101,6 +101,13 @@ RUN BUN_INSTALL_BIN=/usr/local/bin \
     @opencode/cli@latest \
     hunkdiff@latest \
   && rm -rf /tmp/bun-cache
+
+# Install Antigravity CLI (agy) into /usr/local/bin so both root and dev get it.
+# Run with an isolated HOME so the installer's staging dir and shell-profile
+# handoff (`agy install --dir /usr/local/bin`) don't pollute /root.
+RUN HOME=/tmp/agy-install bash -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin' \
+  && chmod 755 /usr/local/bin/agy \
+  && rm -rf /tmp/agy-install
 
 # System libraries for Playwright's Chromium. The browsers themselves are
 # installed per project (`bun run test:e2e:install`, `bunx @playwright/mcp

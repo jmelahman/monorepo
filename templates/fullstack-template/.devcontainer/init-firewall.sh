@@ -45,6 +45,16 @@ ALLOWED_DOMAINS=(
 	"static.crates.io"
 	"cdn.playwright.dev"
 	"playwright.download.prss.microsoft.com"
+	"accounts.google.com"
+	"oauth2.googleapis.com"
+	"cloudcode-pa.googleapis.com"
+	"daily-cloudcode-pa.googleapis.com"
+	"aicode.googleapis.com"
+	"aiplatform.googleapis.com"
+	"generativelanguage.googleapis.com"
+	"play.googleapis.com"
+	"antigravity.google"
+	"antigravity-unleash.goog"
 )
 
 # Images built on this one add their own, one domain per line, rather than
