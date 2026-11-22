@@ -980,6 +980,8 @@ def harbour(out, g, bio, road, rng, taken):
     has_planter = _copy_harbour_kit(out, "harbour_planter", None)
     has_lake_pav = _copy_harbour_kit(out, "lakefront_pavilion", None)
     has_boathouse = _copy_harbour_kit(out, "modern_boathouse", None)
+    has_townhouse = _copy_harbour_kit(out, "chicago_townhouse", None)
+    has_overlook = _copy_harbour_kit(out, "lakefront_overlook", None)
     has_crane = _copy_harbour_kit(out, "harbour_crane", None)
     has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
@@ -1127,26 +1129,34 @@ def harbour(out, g, bio, road, rng, taken):
                             rng.uniform(0.8, 1.2),
                         )
 
-    # Harbour Town: coastal houses, tavern, warehouses, benches & planters lining the waterfront
-    # and the opening ~1.1 km of Harbour Isle's bike trail.
+    # Chicago Lakefront Trail & Harbourfront: keep the lake side open water, beach, and modern
+    # boardwalk overlooks; line the inland/city side with modern Chicago greystone townhouses,
+    # lakefront pavilions, benches & planters beneath the 34-tower skyline.
     town_houses = []
-    if has_houses:
-        house_specs = [
-            ("harbour_house_a", 9.6, 7.2),
-            ("harbour_house_b", 12.0, 7.8),
-            ("harbour_house_c", 11.6, 9.2),
-            ("harbour_house_d", 10.6, 6.0),
-        ]
+    overlooks = []
+    if has_houses or has_townhouse:
+        house_specs = []
+        if has_townhouse:
+            house_specs.extend([("chicago_townhouse", 8.8, 12.0), ("chicago_townhouse", 8.8, 12.0)])
+        if has_boathouse:
+            house_specs.append(("modern_boathouse", 15.4, 9.0))
+        if not house_specs:
+            house_specs = [
+                ("harbour_house_a", 9.6, 7.2),
+                ("harbour_house_b", 12.0, 7.8),
+                ("harbour_house_c", 11.6, 9.2),
+                ("harbour_house_d", 10.6, 6.0),
+            ]
         line = road.hub if road.hub is not None else road.line
         bench = ms("urban", "park_bench_wood")
         planter = "harbour_planter" if has_planter else bench
         stone_wall = ms("coast", "mossy_stone_wall")
         # Walk along the harbour road (both out from start and wrapping near end)
-        indices = list(range(25, min(1150, len(line)), 18)) + list(
-            range(max(len(line) - 650, 1200), len(line) - 25, 22)
+        indices = list(range(25, min(1150, len(line)), 22)) + list(
+            range(max(len(line) - 650, 1200), len(line) - 25, 26)
         )
         for k in indices:
-            if len(town_houses) >= 34:
+            if len(town_houses) >= 22:
                 break
             px, py = float(line[k, 0]), float(line[k, 1])
             if math.hypot(px - hx, py - hy) > 1300:
@@ -1156,12 +1166,31 @@ def harbour(out, g, bio, road, rng, taken):
             norm_t = math.hypot(tx, ty) or 1.0
             nx, ny = -ty / norm_t, tx / norm_t
             yaw0 = math.degrees(math.atan2(ty, tx))
+            road_in = float(g.at(g.inland, px, py))
             for side in (-1.0, 1.0):
+                probe_x, probe_y = px + nx * side * 14.0, py + ny * side * 14.0
+                is_lake_side = float(g.at(g.inland, probe_x, probe_y)) < road_in
+                if is_lake_side:
+                    # Keep the lake side wide open! Only place spaced boardwalk overlooks & benches.
+                    if (
+                        has_overlook
+                        and len(overlooks) < 6
+                        and not any(math.hypot(px - ox, py - oy) < 180.0 for ox, oy in overlooks)
+                    ):
+                        ox, oy = px + nx * side * 9.5, py + ny * side * 9.5
+                        oz = float(g.z(ox, oy))
+                        if oz > 0.6 and float(road.dist(ox, oy)) > 5.5:
+                            oyaw = yaw0 + (0.0 if side < 0 else 180.0)
+                            out.add("HarbourTown", "lakefront_overlook", ox, oy, oz - 0.1, oyaw)
+                            overlooks.append((px, py))
+                            taken.append((ox, oy, 7.0))
+                            out.clear.append([round(ox, 1), round(oy, 1), 8.0])
+                    continue
                 hname, hw, hd = house_specs[int(rng.integers(len(house_specs)))]
-                off = rng.uniform(9.5, 19.5)
+                off = rng.uniform(14.0, 26.0)
                 cx, cy = px + nx * side * off, py + ny * side * off
                 # House front is -Y in Blender -> +Y in UE; rotate so front faces the road
-                yaw = yaw0 + (0.0 if side < 0 else 180.0) + rng.uniform(-6.0, 6.0)
+                yaw = yaw0 + (0.0 if side < 0 else 180.0) + rng.uniform(-5.0, 5.0)
                 c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
                 corners = [
                     (cx + dx * c - dy * s, cy + dx * s + dy * c)
@@ -1171,21 +1200,21 @@ def harbour(out, g, bio, road, rng, taken):
                 zs = [float(g.z(qx, qy)) for qx, qy in corners]
                 if min(zs) < 1.2 or max(zs) - min(zs) > 2.4:
                     continue
-                if min(float(road.dist(qx, qy)) for qx, qy in corners) < 5.8:
+                if min(float(road.dist(qx, qy)) for qx, qy in corners) < 7.5:
                     continue
                 reach = math.hypot(hw, hd) * 0.5
                 if any(
-                    math.hypot(cx - qx, cy - qy) < qr + reach + 1.8 for qx, qy, qr in town_houses
+                    math.hypot(cx - qx, cy - qy) < qr + reach + 3.0 for qx, qy, qr in town_houses
                 ):
                     continue
-                if any(math.hypot(cx - tx2, cy - ty2) < tr + reach + 1.5 for tx2, ty2, tr in taken):
+                if any(math.hypot(cx - tx2, cy - ty2) < tr + reach + 2.0 for tx2, ty2, tr in taken):
                     continue
                 z_base = float(np.percentile(zs, 35))
                 out.add("HarbourTown", hname, cx, cy, z_base, yaw, mark=(240, 175, 80))
                 town_houses.append((cx, cy, reach))
                 taken.append((cx, cy, reach))
                 out.clear.append([round(cx, 1), round(cy, 1), round(reach + 4.5, 1)])
-                # Promenade bench or planter between house and road
+                # Promenade bench or planter between building and trail
                 bx, by = px + nx * side * 4.8, py + ny * side * 4.8
                 if road.dist(bx, by) > 3.6 and g.z(bx, by) > 1.0:
                     prop = bench if rng.random() < 0.6 else planter

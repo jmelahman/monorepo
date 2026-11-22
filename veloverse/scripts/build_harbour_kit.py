@@ -1092,6 +1092,187 @@ def build_modern_boathouse():
     return b
 
 
+def build_chicago_townhouse():
+    """Classic 3-storey Chicago greystone / Lake Shore Drive townhouse (~8.4 m wide x 11.5 m
+    deep, ~11.2 m tall): buried concrete foundation, rusticated stone plinth with entry stoop
+    and steel handrails, plaster/clay facade with protruding 3-sided bay window, concrete
+    cornice parapet, and rooftop deck pergola."""
+    b = KitBuilder("chicago_townhouse")
+    w, d = 8.4, 11.5
+    hy = d * 0.5  # front face at y = -5.75
+
+    # Buried concrete foundation (z = -2.0 .. 0.4 m)
+    b.box("concrete", (0.0, 0.0, -0.80), (w + 0.24, d + 0.24, 2.40), bevel=0.03)
+
+    # Rusticated stone/concrete ground-floor plinth (z = 0.4 .. 3.4 m)
+    b.box("stone", (0.0, 0.0, 1.90), (w, d, 3.00), bevel=0.025)
+    for cz in (1.15, 1.90, 2.65):
+        b.box("concrete", (0.0, -hy - 0.02, cz), (w + 0.06, 0.08, 0.07))
+    # Heavy concrete belt course separating ground plinth from upper brick/greystone
+    b.box("concrete", (0.0, 0.0, 3.46), (w + 0.22, d + 0.20, 0.22), bevel=0.02)
+
+    # Upper 2 storeys: clay brick side/rear body + Chicago greystone (plaster) front facade
+    b.box("clay", (0.0, 0.25, 6.85), (w - 0.04, d - 0.50, 6.60), bevel=0.02)
+    b.box("plaster", (0.0, -hy + 0.28, 6.85), (w, 0.56, 6.60), bevel=0.02)
+    # Greystone corner pilasters on front facade
+    for sx in (-1.0, 1.0):
+        b.box("concrete", (sx * (w * 0.5 - 0.28), -hy - 0.02, 6.85), (0.58, 0.22, 6.62), bevel=0.02)
+
+    # Front stepped entry stoop on left-front (x = -2.10, facing -Y) + steel handrails
+    sx_door = -2.10
+    b.box("concrete", (sx_door, -hy - 0.55, 0.50), (2.40, 1.15, 1.10), bevel=0.025)
+    for i, (sy_step, sz_top) in enumerate(
+        ((-hy - 1.35, 0.78), (-hy - 1.72, 0.52), (-hy - 2.08, 0.26))
+    ):
+        b.box(
+            "concrete",
+            (sx_door, sy_step, sz_top * 0.5 - 0.08),
+            (2.30 - i * 0.04, 0.42, sz_top + 0.16),
+            bevel=0.02,
+        )
+    # Steel stair handrails & newel posts
+    for side_x in (sx_door - 1.06, sx_door + 1.06):
+        b.cyl("steel", (side_x, -hy - 0.18, 1.02), (side_x, -hy - 0.18, 1.92), 0.03, 0.03, seg=8)
+        b.cyl("steel", (side_x, -hy - 2.05, 0.22), (side_x, -hy - 2.05, 1.12), 0.03, 0.03, seg=8)
+        b.cyl("steel", (side_x, -hy - 0.18, 1.90), (side_x, -hy - 2.05, 1.10), 0.026, 0.026, seg=8)
+        b.cyl("steel", (side_x, -hy - 0.18, 1.48), (side_x, -hy - 2.05, 0.68), 0.016, 0.016, seg=6)
+    # Recessed entry doorway & glowing parlor transom
+    b.box("concrete", (sx_door, -hy - 0.05, 2.22), (1.72, 0.24, 2.38), bevel=0.02)
+    b.box("boards", (sx_door, -hy + 0.02, 2.02), (1.28, 0.12, 1.96))
+    b.box("warm_glass", (sx_door, -hy - 0.01, 3.12), (1.28, 0.08, 0.42))
+    b.box("steel", (sx_door, -hy - 0.03, 2.90), (1.36, 0.12, 0.06))
+
+    # Protruding 3-sided bay window on right-front (x = +1.85, all 3 storeys)
+    bx = 1.85
+    bay_y = -hy - 0.52
+    # Corbelled stone bay base + belt trim + top cap
+    b.box("concrete", (bx, bay_y + 0.10, 0.96), (2.75, 1.05, 0.34), bevel=0.03)
+    b.box("concrete", (bx, bay_y + 0.04, 10.22), (2.96, 1.24, 0.36), bevel=0.03)
+    # Center front bay face + 45-degree canted side wings
+    b.box("plaster", (bx, -hy - 0.96, 5.62), (1.88, 0.24, 8.95), bevel=0.015)
+    for side in (-1.0, 1.0):
+        b.box(
+            "plaster",
+            (bx + side * 1.15, -hy - 0.52, 5.62),
+            (0.95, 0.24, 8.95),
+            rot=(0.0, 0.0, -side * 42.0),
+            bevel=0.015,
+        )
+    # Bay windows across 3 storeys (warm_glass ground parlor, glass + steel mullions above)
+    for floor_z, gmat in ((2.12, "warm_glass"), (5.12, "glass"), (8.18, "glass")):
+        b.box("steel", (bx, -hy - 1.04, floor_z), (1.56, 0.14, 1.82))
+        b.box(gmat, (bx, -hy - 1.06, floor_z), (1.40, 0.08, 1.66))
+        b.box("steel", (bx, -hy - 1.08, floor_z), (0.06, 0.08, 1.68))
+        b.box("steel", (bx, -hy - 1.08, floor_z + 0.22), (1.44, 0.08, 0.06))
+        for side in (-1.0, 1.0):
+            b.box(
+                "steel",
+                (bx + side * 1.19, -hy - 0.56, floor_z),
+                (0.68, 0.14, 1.82),
+                rot=(0.0, 0.0, -side * 42.0),
+            )
+            b.box(
+                gmat,
+                (bx + side * 1.21, -hy - 0.58, floor_z),
+                (0.56, 0.08, 1.66),
+                rot=(0.0, 0.0, -side * 42.0),
+            )
+
+    # Left-front upper storey windows & rear trail-facing windows
+    for floor_z in (5.12, 8.18):
+        b.box("concrete", (sx_door, -hy - 0.04, floor_z - 0.96), (1.64, 0.24, 0.14), bevel=0.015)
+        b.box("concrete", (sx_door, -hy - 0.04, floor_z + 0.98), (1.72, 0.24, 0.20), bevel=0.015)
+        b.box("steel", (sx_door, -hy - 0.02, floor_z), (1.44, 0.14, 1.82))
+        b.box("glass", (sx_door, -hy - 0.04, floor_z), (1.28, 0.08, 1.66))
+        b.box("steel", (sx_door, -hy - 0.06, floor_z), (0.05, 0.08, 1.68))
+        # Rear facade windows (+Y)
+        for rx, rgmat in ((-2.0, "glass"), (1.8, "warm_glass")):
+            b.box("steel", (rx, hy + 0.02, floor_z), (1.42, 0.14, 1.76))
+            b.box(rgmat, (rx, hy + 0.04, floor_z), (1.26, 0.08, 1.60))
+
+    # Crisp concrete cornice & parapet roof (z = 10.2 .. 11.2 m)
+    b.box("concrete", (0.0, -0.08, 10.35), (w + 0.44, d + 0.42, 0.38), bevel=0.03)
+    b.box("slate", (0.0, 0.0, 10.56), (w - 0.30, d - 0.30, 0.16))
+    for sy in (-1.0, 1.0):
+        b.box("concrete", (0.0, sy * (hy - 0.16), 10.90), (w + 0.10, 0.34, 0.62), bevel=0.02)
+    for sx in (-1.0, 1.0):
+        b.box("concrete", (sx * (w * 0.5 - 0.16), 0.0, 10.90), (0.34, d - 0.32, 0.62), bevel=0.02)
+
+    # Rooftop deck & timber/steel pergola
+    b.box("deck", (0.0, -0.8, 10.68), (5.8, 6.2, 0.08), bevel=0.01)
+    for px in (-2.4, 2.4):
+        for py in (-3.4, 1.8):
+            b.box("steel", (px, py, 11.55), (0.14, 0.14, 1.75))
+    for px in (-2.4, 2.4):
+        b.box("steel", (px, -0.8, 12.42), (0.14, 5.8, 0.16))
+    for i in range(9):
+        ry = -3.4 + 5.2 * (i / 8.0)
+        b.box("boards", (0.0, ry, 12.54), (5.5, 0.09, 0.14), bevel=0.008)
+    return b
+
+
+def build_lakefront_overlook():
+    """Modern Chicago Lakefront timber-and-concrete beach boardwalk overlook deck (~12 m wide
+    x 5.5 m deep): buried concrete pier pilings, raised timber deck, low concrete & deck
+    lakeside benches, and slender dark steel bollards with warm glowing caps."""
+    b = KitBuilder("lakefront_overlook")
+    w, d = 12.0, 5.5
+    hx, hy = w * 0.5, d * 0.5
+
+    # Buried concrete pier pilings (z = -2.5 .. 0.6 m) so beach slopes never float edges
+    for px in (-5.4, -2.7, 0.0, 2.7, 5.4):
+        for py in (-2.35, 0.0, 2.35):
+            b.cyl("concrete", (px, py, -2.50), (px, py, 0.62), 0.24, 0.22, seg=10, smooth=False)
+    # Concrete perimeter foundation grade beams & trail-side approach step
+    b.box("concrete", (0.0, hy + 0.36, 0.24), (6.4, 0.85, 0.96), bevel=0.025)
+    b.box("concrete", (0.0, hy + 0.92, -0.05), (6.4, 0.55, 0.65), bevel=0.025)
+
+    # Heavy timber substructure joists & raised boardwalk deck platform (z = 0.6 .. 0.85 m)
+    for jy in (-2.2, -0.75, 0.75, 2.2):
+        b.box("boards", (0.0, jy, 0.54), (w - 0.25, 0.22, 0.22))
+    b.box("deck", (0.0, 0.0, 0.725), (w, d, 0.25), bevel=0.02)
+    # Dark steel perimeter edge fascia trim
+    for sy in (-1.0, 1.0):
+        b.box("steel", (0.0, sy * (hy - 0.03), 0.73), (w + 0.04, 0.07, 0.26), bevel=0.008)
+    for sx in (-1.0, 1.0):
+        b.box("steel", (sx * (hx - 0.03), 0.0, 0.73), (0.07, d - 0.06, 0.26), bevel=0.008)
+
+    # Low concrete & deck lakeside benches along the front corners & side wings
+    for bx in (-3.6, 3.6):
+        by = -hy + 0.68
+        for lx in (-1.35, 0.0, 1.35):
+            b.box("concrete", (bx + lx, by, 1.04), (0.16, 0.58, 0.38), bevel=0.015)
+        b.box("deck", (bx, by, 1.26), (3.40, 0.64, 0.09), bevel=0.015)
+    for sx in (-1.0, 1.0):
+        bx = sx * (hx - 0.72)
+        for ly in (-0.85, 0.35, 1.55):
+            b.box("concrete", (bx, ly, 1.04), (0.58, 0.16, 0.38), bevel=0.015)
+        b.box("deck", (bx, 0.35, 1.26), (0.64, 3.00, 0.09), bevel=0.015)
+
+    # Slender dark steel bollards with warm glowing caps along lakeside edge & trail entrance
+    bollard_pts = [
+        (-hx + 0.22, -hy + 0.22),
+        (-1.85, -hy + 0.22),
+        (1.85, -hy + 0.22),
+        (hx - 0.22, -hy + 0.22),
+        (-3.05, hy - 0.22),
+        (3.05, hy - 0.22),
+    ]
+    for lx, ly in bollard_pts:
+        b.cyl("steel", (lx, ly, 0.84), (lx, ly, 1.66), 0.075, 0.075, seg=10)
+        b.cyl("warm_glass", (lx, ly, 1.66), (lx, ly, 1.78), 0.068, 0.068, seg=10)
+        b.cyl("steel", (lx, ly, 1.78), (lx, ly, 1.84), 0.082, 0.072, seg=10)
+
+    # Sleek lakeside steel safety railing along water-facing (-Y) front edge
+    for rz in (1.28, 1.62):
+        b.cyl(
+            "steel", (-hx + 0.22, -hy + 0.22, rz), (hx - 0.22, -hy + 0.22, rz), 0.022, 0.022, seg=8
+        )
+    for rx in (-3.8, 0.0, 3.8):
+        b.cyl("steel", (rx, -hy + 0.22, 0.84), (rx, -hy + 0.22, 1.64), 0.03, 0.03, seg=8)
+    return b
+
+
 # ---------------------------------------------------------------------------------------------
 # Hero Boats (curved hulls, cabins, rigging, deck gear)
 # ---------------------------------------------------------------------------------------------
@@ -1540,6 +1721,8 @@ BUILDERS = {
     "harbour_planter": build_harbour_planter,
     "lakefront_pavilion": build_lakefront_pavilion,
     "modern_boathouse": build_modern_boathouse,
+    "chicago_townhouse": build_chicago_townhouse,
+    "lakefront_overlook": build_lakefront_overlook,
     "harbour_crane": build_harbour_crane,
     "stone_arch": build_stone_arch,
     "boat_trawler": build_boat_trawler,
