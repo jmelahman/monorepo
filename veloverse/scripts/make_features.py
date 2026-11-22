@@ -978,6 +978,8 @@ def harbour(out, g, bio, road, rng, taken):
     has_cargo = _copy_harbour_kit(out, "harbour_cargo", None)
     has_stall = _copy_harbour_kit(out, "harbour_market_stall", None)
     has_planter = _copy_harbour_kit(out, "harbour_planter", None)
+    has_lake_pav = _copy_harbour_kit(out, "lakefront_pavilion", None)
+    has_boathouse = _copy_harbour_kit(out, "modern_boathouse", None)
     has_crane = _copy_harbour_kit(out, "harbour_crane", None)
     has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
@@ -1223,11 +1225,17 @@ def harbour(out, g, bio, road, rng, taken):
                         wyaw + rng.uniform(-18, 18),
                     )
                     quay_cargo += 1
-        # Waterfront row of warehouses and harbour houses standing 18-32 m inland behind the quay
+        # Waterfront row of modern marina boathouses, lakefront pavilions, and warehouses standing
+        # 18-34 m inland behind the quay (Chicago Lakefront marina vibe).
         quay_specs = []
+        if has_boathouse:
+            quay_specs.extend([("modern_boathouse", 15.4, 9.0), ("modern_boathouse", 15.4, 9.0)])
+        if has_lake_pav:
+            quay_specs.append(("lakefront_pavilion", 8.0, 4.8))
         if has_warehouse:
-            quay_specs.extend([("harbour_warehouse", 14.4, 9.0), ("harbour_warehouse", 14.4, 9.0)])
-        quay_specs.extend(house_specs)
+            quay_specs.append(("harbour_warehouse", 14.4, 9.0))
+        if not quay_specs:
+            quay_specs.extend(house_specs)
         for i in range(0, len(quay), 10):
             if quay_buildings >= 16:
                 break
@@ -1286,11 +1294,41 @@ def harbour(out, g, bio, road, rng, taken):
                 ]
             )
 
-    # Landmark stone gateway arches spanning the road at the Harbour Town exit & Vael approach
+    # Modern Chicago Lakefront park shelters spaced along the coastal bike trail
+    if has_lake_pav:
+        line = road.hub if road.hub is not None else road.line
+        lake_pavs = 0
+        for k in range(180, min(1400, len(line) - 20), 260):
+            if lake_pavs >= 5:
+                break
+            px, py = float(line[k, 0]), float(line[k, 1])
+            tx = float(line[min(k + 4, len(line) - 1), 0] - line[max(k - 4, 0), 0])
+            ty = float(line[min(k + 4, len(line) - 1), 1] - line[max(k - 4, 0), 1])
+            norm_t = math.hypot(tx, ty) or 1.0
+            nx, ny = -ty / norm_t, tx / norm_t
+            yaw0 = math.degrees(math.atan2(ty, tx))
+            for side in (-1.0, 1.0):
+                cx, cy = px + nx * side * 10.5, py + ny * side * 10.5
+                cz = float(g.z(cx, cy))
+                if (
+                    cz > 1.2
+                    and float(g.at(g.slope, cx, cy)) < 0.22
+                    and road.dist(cx, cy) > 6.5
+                    and not any(math.hypot(cx - tx2, cy - ty2) < tr + 5.5 for tx2, ty2, tr in taken)
+                ):
+                    yaw = yaw0 + (0.0 if side < 0 else 180.0)
+                    out.add("HarbourTown", "lakefront_pavilion", cx, cy, cz - 0.05, yaw)
+                    taken.append((cx, cy, 4.5))
+                    out.clear.append([round(cx, 1), round(cy, 1), 6.0])
+                    lake_pavs += 1
+                    break
+
+    # Landmark stone gateway arches: keep medieval stone arch on Vael's mountain approach (leave
+    # Harbour Isle's modern Chicago Lakefront trail open with unobstructed water sightlines).
     arches = 0
     if has_arch:
         line = road.line
-        arch_spots = [260]  # 260 m out from Harbour start, right along the waterfront trail
+        arch_spots = []
         for first, _last in _stretch_range("Vael", road)[:1]:
             arch_spots.append(first + 180)
         for k in arch_spots:

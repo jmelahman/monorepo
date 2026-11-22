@@ -898,6 +898,200 @@ def build_harbour_planter():
     return b
 
 
+def build_lakefront_pavilion():
+    """Sleek modern Chicago Lakefront Trail park pavilion (~7.5 m x 4.2 m, ~3.4 m tall):
+    concrete pad, slender steel I-beam columns, cantilevered flat roof with timber slatted
+    soffit, rear concrete & glass windscreen wall, and two modern timber-and-steel benches."""
+    b = KitBuilder("lakefront_pavilion")
+    w, d = 7.5, 4.2
+
+    # Buried concrete pad slab so trailside slopes never expose air under edges
+    b.box("concrete", (0.0, 0.0, -0.22), (w + 0.16, d + 0.16, 0.68), bevel=0.03)
+    b.box("concrete", (0.0, 0.0, 0.12), (w, d, 0.08), bevel=0.02)
+
+    # 4 slender dark steel I-beam columns inset for clean roof cantilevers
+    col_x, col_y = 2.55, 1.25
+    col_h = 3.04
+    col_z0 = 0.16
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            cx, cy = sx * col_x, sy * col_y
+            b.box("steel", (cx, cy, col_z0 + 0.02), (0.30, 0.30, 0.04), bevel=0.008)
+            # Steel I-beam profile (central web + twin flanges)
+            b.box("steel", (cx, cy, col_z0 + col_h * 0.5), (0.04, 0.16, col_h))
+            for fx in (-0.08, 0.08):
+                b.box("steel", (cx + fx, cy, col_z0 + col_h * 0.5), (0.03, 0.18, col_h))
+
+    # Steel primary roof girders spanning columns
+    beam_z = col_z0 + col_h - 0.06
+    for sy in (-1.0, 1.0):
+        b.box("steel", (0.0, sy * col_y, beam_z), (w - 0.55, 0.14, 0.18), bevel=0.01)
+    for sx in (-1.0, 1.0):
+        b.box("steel", (sx * col_x, 0.0, beam_z), (0.14, d - 0.35, 0.18), bevel=0.01)
+
+    # Cantilevered flat roof: steel perimeter fascia, recessed slate deck, slatted wood soffit
+    roof_w, roof_d = 7.75, 4.45
+    roof_z = 3.28
+    b.box("slate", (0.0, 0.0, roof_z + 0.04), (roof_w - 0.12, roof_d - 0.12, 0.16), bevel=0.01)
+    for sy in (-1.0, 1.0):
+        b.box("steel", (0.0, sy * (roof_d * 0.5 - 0.06), roof_z), (roof_w, 0.12, 0.24), bevel=0.012)
+    for sx in (-1.0, 1.0):
+        b.box(
+            "steel",
+            (sx * (roof_w * 0.5 - 0.06), 0.0, roof_z),
+            (0.12, roof_d - 0.16, 0.24),
+            bevel=0.012,
+        )
+    # Warm timber slatted ceiling soffit + recessed linear warm light strips
+    for i in range(19):
+        sx = -3.42 + (6.84 * i / 18.0)
+        b.box("siding", (sx, 0.0, roof_z - 0.12), (0.18, roof_d - 0.42, 0.05), bevel=0.006)
+    for ly in (-0.75, 0.75):
+        b.box("warm_glass", (0.0, ly, roof_z - 0.13), (4.6, 0.07, 0.03))
+
+    # Rear architectural concrete & glass windscreen wall (at y = +1.35)
+    wy = 1.38
+    b.box("concrete", (-1.15, wy, 1.44), (3.45, 0.22, 2.56), bevel=0.025)
+    # Glass & warm glowing accent windscreen bay on right rear
+    b.box("steel", (1.68, wy, 1.44), (2.10, 0.10, 2.52))
+    b.box("glass", (1.68, wy, 1.44), (1.96, 0.04, 2.38))
+    b.box("warm_glass", (1.68, wy, 1.44), (0.42, 0.06, 2.34))
+    for mx in (0.95, 2.40):
+        b.box("steel", (mx, wy, 1.44), (0.07, 0.14, 2.52))
+
+    # Two modern timber-and-steel park benches underneath
+    for bx in (-1.55, 1.55):
+        by = 0.22
+        bw = 2.15
+        for lx in (-0.82, 0.0, 0.82):
+            b.box("steel", (bx + lx, by, 0.34), (0.06, 0.50, 0.36), bevel=0.008)
+            b.box(
+                "steel",
+                (bx + lx, by + 0.23, 0.68),
+                (0.055, 0.06, 0.42),
+                rot=(-10.0, 0.0, 0.0),
+            )
+        for sy_off in (-0.17, -0.06, 0.05, 0.16):
+            b.box("deck", (bx, by + sy_off, 0.54), (bw, 0.085, 0.045), bevel=0.008)
+        for bz_off, by_off in ((0.70, 0.24), (0.83, 0.26)):
+            b.box(
+                "deck",
+                (bx, by + by_off, bz_off),
+                (bw, 0.045, 0.095),
+                rot=(-10.0, 0.0, 0.0),
+                bevel=0.008,
+            )
+    return b
+
+
+def build_modern_boathouse():
+    """Modern Chicago lakefront marina boathouse & clubhouse (~15 m x 8.5 m, 2 storeys):
+    board-formed concrete plinth, double marina boat bays, cantilevered timber-and-plaster
+    upper clubhouse with panoramic warm_glass windows, flat cantilevered roof, and balcony."""
+    b = KitBuilder("modern_boathouse")
+    w, d = 15.0, 8.5
+
+    # Buried concrete foundation + ground-floor board-formed concrete mass (z = 0.0 .. 3.55)
+    b.box("concrete", (0.0, 0.0, -0.45), (w + 0.50, d + 0.50, 1.30), bevel=0.04)
+    b.box("concrete", (0.0, 0.0, 1.88), (w, d, 3.36), bevel=0.03)
+    # Architectural concrete pilasters along front (-Y) and sides
+    for px in (-7.25, -1.75, 3.45, 7.25):
+        b.box("concrete", (px, -d * 0.5 - 0.06, 1.88), (0.48, 0.22, 3.38), bevel=0.02)
+
+    # Wide double marina boat-bay doors on waterfront (-Y) face
+    for bx in (-4.50, 0.85):
+        b.box("steel", (bx, -d * 0.5 - 0.04, 1.62), (4.45, 0.18, 2.86), bevel=0.015)
+        b.box("boards", (bx, -d * 0.5 - 0.06, 1.60), (4.20, 0.14, 2.66))
+        for rx in (-1.4, 0.0, 1.4):
+            b.box("steel", (bx + rx, -d * 0.5 - 0.12, 1.60), (0.07, 0.06, 2.66))
+        for rz in (0.95, 2.25):
+            b.box("steel", (bx, -d * 0.5 - 0.12, rz), (4.22, 0.06, 0.07))
+
+    # Glazed marina lobby entrance on ground right (+X side, waterfront -Y)
+    b.box("steel", (5.35, -d * 0.5 - 0.04, 1.72), (3.10, 0.16, 3.04), bevel=0.015)
+    b.box("warm_glass", (5.35, -d * 0.5 - 0.06, 1.72), (2.88, 0.08, 2.84))
+    for mx in (4.35, 5.35, 6.35):
+        b.box("steel", (mx, -d * 0.5 - 0.10, 1.72), (0.07, 0.10, 2.88))
+
+    # Rear (+Y trailside) glazed lobby window bays
+    for wx in (-4.2, 0.0, 4.2):
+        b.box("steel", (wx, d * 0.5 + 0.03, 1.85), (2.90, 0.14, 1.80))
+        b.box("warm_glass", (wx, d * 0.5 + 0.05, 1.85), (2.72, 0.08, 1.64))
+        b.box("steel", (wx, d * 0.5 + 0.08, 1.85), (0.06, 0.08, 1.68))
+
+    # Cantilevered upper floor deck slab projecting 1.25 m toward the water (-Y)
+    uw, ud = 14.8, 8.2
+    uy = -0.85
+    b.box("concrete", (0.0, uy, 3.68), (uw + 0.35, ud + 0.35, 0.28), bevel=0.025)
+    for sx in (-6.2, -2.1, 2.1, 6.2):
+        b.box("steel", (sx, uy - ud * 0.32, 3.45), (0.20, 3.2, 0.22), bevel=0.01)
+
+    # Upper storey clubhouse volume (z = 3.82 .. 6.86) in plaster + warm timber cladding
+    b.box("plaster", (-1.40, uy + 0.35, 5.34), (11.8, ud - 0.70, 3.04), bevel=0.02)
+    # Warm timber accent cladding bands on upper rear & side walls
+    b.box("siding", (-7.32, uy + 0.35, 5.34), (0.14, ud - 0.80, 2.90), bevel=0.015)
+    b.box("siding", (-1.40, uy + (ud - 0.70) * 0.5 + 0.06, 5.34), (11.6, 0.14, 2.86), bevel=0.015)
+    # Upper rear trail-facing panoramic ribbon window
+    b.box("steel", (-1.40, uy + (ud - 0.70) * 0.5 + 0.12, 5.42), (8.6, 0.12, 1.75))
+    b.box("warm_glass", (-1.40, uy + (ud - 0.70) * 0.5 + 0.14, 5.42), (8.36, 0.08, 1.56))
+    for mx in (-4.2, -1.4, 1.4):
+        b.box("steel", (mx, uy + (ud - 0.70) * 0.5 + 0.17, 5.42), (0.08, 0.08, 1.60))
+
+    # Panoramic waterfront curtain wall on upper cantilevered front (-Y) & east (+X)
+    front_y = uy - (ud - 0.70) * 0.5 + 0.35
+    b.box("steel", (-1.40, front_y, 5.34), (11.5, 0.16, 2.88))
+    b.box("warm_glass", (-1.40, front_y - 0.02, 5.34), (11.2, 0.10, 2.66))
+    for mx in (-6.8, -4.6, -2.4, -0.2, 2.0, 4.15):
+        b.box("steel", (mx, front_y - 0.06, 5.34), (0.09, 0.14, 2.74))
+    b.box("steel", (-1.40, front_y - 0.06, 5.88), (11.4, 0.12, 0.08))
+    # East clubhouse glass end wall overlooking balcony
+    b.box("steel", (4.50, uy + 0.35, 5.34), (0.16, ud - 0.90, 2.84))
+    b.box("warm_glass", (4.52, uy + 0.35, 5.34), (0.10, ud - 1.15, 2.64))
+
+    # Upper lake-view cantilevered balcony terrace (+X end, x = 4.55 .. 7.45) with steel railing
+    bal_x, bal_y = 6.00, uy
+    bal_w, bal_d = 2.95, ud + 0.10
+    b.box("deck", (bal_x, bal_y, 3.84), (bal_w, bal_d, 0.08), bevel=0.012)
+    # Steel perimeter guardrail + glass infill around balcony edges
+    rail_z = 4.38
+    b.box("steel", (7.42, bal_y, rail_z + 0.50), (0.07, bal_d, 0.06))
+    b.box("glass", (7.42, bal_y, rail_z), (0.03, bal_d - 0.12, 0.92))
+    for sy in (-1.0, 1.0):
+        ry = bal_y + sy * (bal_d * 0.5 - 0.04)
+        b.box("steel", (bal_x, ry, rail_z + 0.50), (bal_w, 0.07, 0.06))
+        b.box("glass", (bal_x, ry, rail_z), (bal_w - 0.12, 0.03, 0.92))
+    for py in (-4.0, -2.0, 0.0, 2.0, 4.0):
+        b.box("steel", (7.42, bal_y + py * 0.95, rail_z), (0.06, 0.06, 1.04))
+    for px in (4.70, 6.05):
+        for sy in (-1.0, 1.0):
+            b.box("steel", (px, bal_y + sy * (bal_d * 0.5 - 0.04), rail_z), (0.06, 0.06, 1.04))
+
+    # Sleek flat cantilevered slate/steel roof over entire upper storey & balcony
+    roof_w, roof_d = uw + 1.80, ud + 1.90
+    roof_z = 7.06
+    b.box("slate", (0.0, uy, roof_z + 0.06), (roof_w - 0.16, roof_d - 0.16, 0.24), bevel=0.015)
+    for sy in (-1.0, 1.0):
+        b.box(
+            "steel",
+            (0.0, uy + sy * (roof_d * 0.5 - 0.08), roof_z),
+            (roof_w, 0.16, 0.36),
+            bevel=0.015,
+        )
+    for sx in (-1.0, 1.0):
+        b.box(
+            "steel",
+            (sx * (roof_w * 0.5 - 0.08), uy, roof_z),
+            (0.16, roof_d - 0.24, 0.36),
+            bevel=0.015,
+        )
+    # Warm timber soffit under overhanging eaves
+    b.box("siding", (0.0, uy, roof_z - 0.14), (roof_w - 0.36, roof_d - 0.36, 0.06))
+    # Sleek rooftop clerestory skylight monitor
+    b.box("steel", (-1.40, uy + 0.2, roof_z + 0.32), (5.80, 1.90, 0.34), bevel=0.015)
+    b.box("warm_glass", (-1.40, uy + 0.2, roof_z + 0.34), (5.55, 1.94, 0.22))
+    return b
+
+
 # ---------------------------------------------------------------------------------------------
 # Hero Boats (curved hulls, cabins, rigging, deck gear)
 # ---------------------------------------------------------------------------------------------
@@ -1344,6 +1538,8 @@ BUILDERS = {
     "harbour_cargo": build_harbour_cargo,
     "harbour_market_stall": build_harbour_market_stall,
     "harbour_planter": build_harbour_planter,
+    "lakefront_pavilion": build_lakefront_pavilion,
+    "modern_boathouse": build_modern_boathouse,
     "harbour_crane": build_harbour_crane,
     "stone_arch": build_stone_arch,
     "boat_trawler": build_boat_trawler,
