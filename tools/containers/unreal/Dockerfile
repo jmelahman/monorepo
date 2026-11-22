@@ -64,7 +64,7 @@ RUN BUN_INSTALL_BIN=/usr/local/bin \
 
 # The repository's git hooks run through prek, which provisions Python hooks with uv;
 # some local hooks `go run` the repo's tools. Keep PREK_VERSION at uv.lock's.
-ARG GO_VERSION=1.27.3
+ARG GO_VERSION=1.27.4
 RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" | tar -C /usr/local -xz
 ENV PATH="/usr/local/go/bin:${PATH}"
 COPY --from=ghcr.io/astral-sh/uv@sha256:440fd6477af86a2f1b38080c539f1672cd22acb1b1a47e321dba5158ab08864d /uv /uvx /usr/local/bin/

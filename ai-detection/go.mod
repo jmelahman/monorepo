@@ -1,6 +1,6 @@
 module github.com/jmelahman/local-ai-detection
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/hashicorp/go-getter v1.8.10

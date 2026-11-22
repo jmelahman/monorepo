@@ -7,7 +7,7 @@
 // and no sum file.
 module github.com/jmelahman/check-symlinks/so
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/jmelahman/check-symlinks v0.0.0
