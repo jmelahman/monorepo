@@ -1735,6 +1735,8 @@ def _track(asset, centre, ride, info, others=()):
 DRESSING = (
     "Road",
     "Rail",
+    "Trail",
+    "Roundabout",
     "Trees",
     "Props",
     "Sea",
