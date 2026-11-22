@@ -2442,7 +2442,7 @@ def _copy_skyline_prop(out, name):
     if not os.path.exists(kit_file):
         return False
     shutil.copy2(kit_file, f"{SRC}/feat_{name}.gltf")
-    out.meshes[name] = f"gltf:feat_{name}.gltf"
+    out.meshes[name] = f"gltf:{name}"
     return True
 
 
