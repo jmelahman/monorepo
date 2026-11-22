@@ -974,6 +974,8 @@ def harbour(out, g, bio, road, rng, taken):
     has_houses = all(
         _copy_harbour_kit(out, f"harbour_house_{k}", None) for k in ("a", "b", "c", "d")
     )
+    has_warehouse = _copy_harbour_kit(out, "harbour_warehouse", None)
+    has_cargo = _copy_harbour_kit(out, "harbour_cargo", None)
     has_crane = _copy_harbour_kit(out, "harbour_crane", None)
     has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
@@ -1192,7 +1194,10 @@ def harbour(out, g, bio, road, rng, taken):
                         yaw0 + (0.0 if side < 0 else 180.0),
                         rng.uniform(0.95, 1.1),
                     )
-        # Also place stone seawall/harbour walls along the inland quay edge behind the piers
+        # Also place stone seawall/harbour walls, waterfront warehouses, coastal houses & cargo
+        # stacks along the inland quay edge behind the piers so the harbourfront reads as a port.
+        quay_buildings = 0
+        quay_cargo = 0
         for i in range(0, len(quay), 6):
             qx, qy = quay[i]
             j = np.argmin(np.hypot(xs - qx, ys - qy))
@@ -1200,6 +1205,69 @@ def harbour(out, g, bio, road, rng, taken):
             wx, wy = qx - ax[j] * 4.0, qy - ay[j] * 4.0
             if road.dist(wx, wy) > 5.0 and g.z(wx, wy) > 0.8:
                 out.add("HarbourProps", stone_wall, wx, wy, float(g.z(wx, wy)) - 0.15, wyaw, 1.1)
+            # Dockside cargo crate/barrel clusters near the quay apron
+            if has_cargo and i % 12 == 0:
+                cx, cy = qx - ax[j] * rng.uniform(7.5, 13.0), qy - ay[j] * rng.uniform(7.5, 13.0)
+                if road.dist(cx, cy) > 5.5 and g.z(cx, cy) > 1.0:
+                    out.add(
+                        "HarbourProps",
+                        "harbour_cargo",
+                        cx,
+                        cy,
+                        float(g.z(cx, cy)) - 0.05,
+                        wyaw + rng.uniform(-25, 25),
+                    )
+                    quay_cargo += 1
+        # Waterfront row of warehouses and harbour houses standing 18-32 m inland behind the quay
+        quay_specs = []
+        if has_warehouse:
+            quay_specs.extend([("harbour_warehouse", 14.4, 9.0), ("harbour_warehouse", 14.4, 9.0)])
+        quay_specs.extend(house_specs)
+        for i in range(0, len(quay), 10):
+            if quay_buildings >= 16:
+                break
+            qx, qy = quay[i]
+            j = np.argmin(np.hypot(xs - qx, ys - qy))
+            # Face the bay (+ax, +ay): front is -Y in Blender (+Y in UE), so yaw = sea_angle - 90
+            sea_yaw = math.degrees(math.atan2(ay[j], ax[j])) - 90.0 + rng.uniform(-5.0, 5.0)
+            hname, hw, hd = quay_specs[int(rng.integers(len(quay_specs)))]
+            inland_off = rng.uniform(19.0, 34.0)
+            cx, cy = qx - ax[j] * inland_off, qy - ay[j] * inland_off
+            c, s = math.cos(math.radians(sea_yaw)), math.sin(math.radians(sea_yaw))
+            corners = [
+                (cx + dx * c - dy * s, cy + dx * s + dy * c)
+                for dx in (-hw * 0.5, hw * 0.5)
+                for dy in (-hd * 0.5, hd * 0.5)
+            ]
+            zs = [float(g.z(px2, py2)) for px2, py2 in corners]
+            if min(zs) < 0.8 or max(zs) - min(zs) > 2.6:
+                continue
+            if min(float(road.dist(px2, py2)) for px2, py2 in corners) < 7.0:
+                continue
+            reach = math.hypot(hw, hd) * 0.5
+            if any(math.hypot(cx - tx2, cy - ty2) < tr + reach + 2.5 for tx2, ty2, tr in taken):
+                continue
+            z_base = float(np.percentile(zs, 35))
+            out.add("HarbourTown", hname, cx, cy, z_base, sea_yaw, mark=(240, 175, 80))
+            taken.append((cx, cy, reach))
+            out.clear.append([round(cx, 1), round(cy, 1), round(reach + 4.5, 1)])
+            quay_buildings += 1
+            if has_cargo:
+                gx, gy = cx + ax[j] * (hd * 0.5 + 3.2), cy + ay[j] * (hd * 0.5 + 3.2)
+                if road.dist(gx, gy) > 5.0 and g.z(gx, gy) > 0.8:
+                    out.add(
+                        "HarbourProps",
+                        "harbour_cargo",
+                        gx,
+                        gy,
+                        float(g.z(gx, gy)) - 0.05,
+                        sea_yaw + rng.uniform(-18, 18),
+                    )
+                    quay_cargo += 1
+        print(
+            f"harbour quayfront: {quay_buildings} waterfront buildings, {quay_cargo} cargo stacks",
+            flush=True,
+        )
 
         if town_houses:
             # Eye-level view riding through Harbour Town
@@ -1868,16 +1936,17 @@ def roadside_dressing(out, g, bio, road, rng, taken):
     out.group("Roadside", cull=32000)
     line = road.line
     n = len(line)
-    # 1. Scenic mossy/dry stone walls running parallel to the road in 35-85 m runs on Moor & Coast
+    # 1. Scenic mossy/dry stone walls running parallel to the road on Moor, Coast & Vael
     wall_moss = ms("coast", "mossy_stone_wall")
     wall_dry = ms("coast", "modular_stone_wall")
     walls = 0
     k = 450
     while k < n - 120:
         b = str(bio.best(float(line[k, 0]), float(line[k, 1])))
-        if b in ("heath", "meadow") and rng.random() < 0.28:
+        wall_chance = {"heath": 0.48, "meadow": 0.34, "mountain": 0.36}.get(b, 0.0)
+        if wall_chance > 0.0 and rng.random() < wall_chance:
             side = rng.choice((-1.0, 1.0))
-            run_len = int(rng.integers(32, 76))
+            run_len = int(rng.integers(32, 80))
             wall_mesh = wall_moss if b == "meadow" else wall_dry
             step_m = 4.2
             s_idx = k
@@ -1891,7 +1960,7 @@ def roadside_dressing(out, g, bio, road, rng, taken):
                 wz = float(g.z(wx, wy))
                 if (
                     wz > 2.0
-                    and float(g.at(g.slope, wx, wy)) < 0.35
+                    and float(g.at(g.slope, wx, wy)) < 0.38
                     and road.dist(wx, wy) > 4.2
                     and not any(math.hypot(wx - tx2, wy - ty2) < tr + 2.5 for tx2, ty2, tr in taken)
                 ):
@@ -1899,11 +1968,11 @@ def roadside_dressing(out, g, bio, road, rng, taken):
                     out.add("Roadside", wall_mesh, wx, wy, wz - 0.18, wyaw, rng.uniform(0.95, 1.15))
                     walls += 1
                 s_idx += round(step_m)
-            k += run_len + int(rng.integers(140, 320))
+            k += run_len + int(rng.integers(85, 210))
         else:
-            k += 65
+            k += 55
 
-    # 2. Close-range biome boulders, mossy fallen logs & stumps right along road banks (5-20 m)
+    # 2. Close-range biome boulders, mossy fallen logs & stumps right along road banks (5-26 m)
     props_by_biome = {
         "forest": [
             (ms("forest", "mossy_rocks"), (0.7, 1.6), 0.12),
@@ -1912,36 +1981,45 @@ def roadside_dressing(out, g, bio, road, rng, taken):
             (ms("forest", "nordic_forest_cluster_rock_medium"), (0.7, 1.4), 0.12),
         ],
         "mountain": [
-            (ms("mountain", "tundra_boulder"), (0.6, 1.5), 0.15),
-            (ms("mountain", "limestone_rocks"), (0.8, 1.8), 0.15),
-            (ms("mountain", "volcanic_scree"), (1.2, 2.4), 0.12),
+            (ms("mountain", "tundra_boulder"), (0.7, 1.8), 0.18),
+            (ms("mountain", "limestone_rocks"), (0.9, 2.1), 0.18),
+            (ms("mountain", "volcanic_scree"), (1.2, 2.6), 0.14),
+            (ms("forest", "fallen_log"), (0.7, 1.2), 0.10),
         ],
         "heath": [
-            (ms("mountain", "tundra_boulder"), (0.5, 1.3), 0.15),
-            (ms("mountain", "icelandic_rock_plates"), (0.5, 1.0), 0.15),
+            (ms("mountain", "tundra_boulder"), (0.6, 1.6), 0.16),
+            (ms("mountain", "icelandic_rock_plates"), (0.6, 1.3), 0.16),
+            (ms("forest", "mossy_rocks"), (0.6, 1.4), 0.14),
         ],
         "desert": [
-            (ms("desert", "sandstone_rock_formation"), (0.9, 2.1), 0.15),
-            (ms("desert", "canyon_sandstone_boulder"), (1.2, 2.8), 0.15),
-            (ms("desert", "desert_western_cluster_rock_medium_05"), (0.8, 1.7), 0.15),
+            (ms("desert", "sandstone_rock_formation"), (1.0, 2.4), 0.18),
+            (ms("desert", "canyon_sandstone_boulder"), (1.3, 3.0), 0.18),
+            (ms("desert", "desert_western_cluster_rock_medium_05"), (0.9, 2.0), 0.16),
         ],
         "meadow": [
             (ms("forest", "mossy_rocks"), (0.6, 1.3), 0.15),
         ],
     }
     placed = 0
-    for k in range(30, n - 30, 14):
+    for k in range(30, n - 30, 9):
         px, py = float(line[k, 0]), float(line[k, 1])
         b = str(bio.best(px, py))
         specs = props_by_biome.get(b)
-        if not specs or rng.random() > 0.55:
+        prob = {
+            "mountain": 0.72,
+            "heath": 0.68,
+            "desert": 0.72,
+            "forest": 0.55,
+            "meadow": 0.45,
+        }.get(b, 0.5)
+        if not specs or rng.random() > prob:
             continue
         tx = float(line[min(k + 3, n - 1), 0] - line[max(k - 3, 0), 0])
         ty = float(line[min(k + 3, n - 1), 1] - line[max(k - 3, 0), 1])
         norm_t = math.hypot(tx, ty) or 1.0
         nx, ny = -ty / norm_t, tx / norm_t
         side = rng.choice((-1.0, 1.0))
-        off = rng.uniform(5.2, 18.0)
+        off = rng.uniform(5.0, 24.0 if b in ("mountain", "desert", "heath") else 18.0)
         x, y = px + nx * side * off, py + ny * side * off
         z = float(g.z(x, y))
         if z < 1.5 or road.dist(x, y) < 4.4:
@@ -2107,6 +2185,8 @@ def world_landmarks(out, g, bio, road, rng, taken):
         for k in range(800, n - 400, 340):
             if counts["alpine_pavilion"] >= 14:
                 break
+            if any(a - 45 <= k <= b + 45 for a, b in road.spans):
+                continue
             px, py = float(line[k, 0]), float(line[k, 1])
             b = str(bio.best(px, py))
             if b not in ("forest", "mountain", "heath", "meadow"):

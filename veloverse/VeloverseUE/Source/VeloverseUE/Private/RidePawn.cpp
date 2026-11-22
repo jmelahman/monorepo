@@ -1548,7 +1548,10 @@ void ARidePawn::MakeKitPreview()
 	Light(Spot(TEXT("StudioPool"), 18.f, 46.f), FVector(0.f, 0.f, 430.f), 40.f, FLinearColor(1.f, 0.97f, 0.93f), true);
 	UPointLightComponent* Fill = NewObject<UPointLightComponent>(this, TEXT("StudioFill"));
 	Fill->SetSourceRadius(60.f);
-	Light(Fill, FVector(300.f, -360.f, 110.f), 8.f, FLinearColor(0.92f, 0.95f, 1.f), false);
+	Light(Fill, FVector(300.f, -360.f, 110.f), 26.f, FLinearColor(0.95f, 0.96f, 1.f), false);
+	UPointLightComponent* FrontFill = NewObject<UPointLightComponent>(this, TEXT("StudioFrontFill"));
+	FrontFill->SetSourceRadius(50.f);
+	Light(FrontFill, FVector(280.f, 220.f, 160.f), 22.f, FLinearColor(1.f, 0.96f, 0.92f), false);
 
 	StudioTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("StudioTarget"));
 	StudioTarget->RenderTargetFormat = RTF_RGBA8; // sRGB, for the capture's tone-mapped colour

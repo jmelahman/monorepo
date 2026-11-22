@@ -608,6 +608,69 @@ def build_harbour_house_d():
     return b
 
 
+def build_harbour_warehouse():
+    """Two-storey stone-and-timber waterfront warehouse with wide cargo doors, loft hoist beam,
+    and pitched slate roof."""
+    b = KitBuilder("harbour_warehouse")
+    w, d = 14.0, 8.6
+    # Deep stone foundation plinth + ground-floor stone walls
+    b.box("stone", (0, 0, -0.8), (w + 0.45, d + 0.45, 2.4))
+    b.box("stone", (0, 0, 1.95), (w, d, 3.10))
+    # Upper timber-boarded storage loft
+    b.box("siding", (0, 0, 4.75), (w + 0.15, d + 0.15, 2.55))
+    # Timber corner posts & mid pilasters
+    for sx in (-w * 0.5, -w * 0.17, w * 0.17, w * 0.5):
+        for sy in (-d * 0.5, d * 0.5):
+            b.box("boards", (sx, sy, 3.2), (0.28, 0.28, 5.8))
+    b.prism_gable(
+        "siding", 0, 0, 6.02, w + 0.15, d + 0.15, (d * 0.5) * math.tan(math.radians(36.0))
+    )
+    ridge_z = b.roof_pitched(
+        "slate", "boards", 0, 0, 6.02, w + 0.15, d + 0.15, 36.0, over_x=0.65, over_y=0.65
+    )
+    b.chimney(w * 0.36, 0.4, 5.2, ridge_z + 1.0)
+    # Wide double cargo doors on waterfront (-Y) face + canopy hood
+    b.box("boards", (0.0, -d * 0.5 - 0.08, 1.65), (3.1, 0.18, 2.50))
+    b.box("iron", (0.0, -d * 0.5 - 0.15, 1.65), (0.08, 0.08, 2.50))
+    b.box("slate", (0.0, -d * 0.5 - 0.75, 3.15), (3.8, 1.5, 0.14), rot=(14.0, 0.0, 0.0))
+    # Loft hoist beam projecting out from front eaves with pulley housing
+    b.box("boards", (0.0, -d * 0.5 - 1.15, 6.15), (0.26, 2.4, 0.26))
+    b.box("iron", (0.0, -d * 0.5 - 2.05, 5.75), (0.24, 0.24, 0.55))
+    b.box("boards", (0.0, -d * 0.5 - 0.10, 4.75), (1.9, 0.18, 1.85))
+    # Warm lit quay-side and rear windows
+    for wx in (-4.4, 4.4):
+        b.window(wx, -d * 0.5, 1.95, -1.0, w=1.20, h=1.25, lit=True)
+        b.window(wx, -d * 0.5, 4.75, -1.0, w=1.05, h=1.05, lit=(wx > 0))
+    for wx, lit in ((-4.2, True), (0.0, False), (4.2, True)):
+        b.window(wx, d * 0.5, 1.95, 1.0, w=1.15, h=1.20, lit=lit)
+        b.window(wx, d * 0.5, 4.75, 1.0, w=1.00, h=1.00, lit=False)
+    return b
+
+
+def build_harbour_cargo():
+    """Dockside cluster of slatted timber crates, banded oak barrels, and coiled rope pallet."""
+    b = KitBuilder("harbour_cargo")
+    # Timber skid pallet
+    b.box("boards", (0.0, 0.0, 0.08), (2.9, 2.1, 0.16))
+    # Large and medium cargo crates with frame battens
+    for cx, cy, cz, sx, sy, sz, yaw in (
+        (-0.65, -0.25, 0.70, 1.25, 1.05, 1.08, 6.0),
+        (0.55, -0.35, 0.58, 0.95, 0.90, 0.84, -8.0),
+        (-0.45, -0.20, 1.56, 0.85, 0.80, 0.68, 14.0),
+    ):
+        b.box("siding", (cx, cy, cz), (sx, sy, sz), rot=(0.0, 0.0, yaw))
+        b.box("boards", (cx, cy, cz + sz * 0.48), (sx + 0.06, sy + 0.06, 0.09), rot=(0.0, 0.0, yaw))
+        b.box("boards", (cx, cy, cz - sz * 0.44), (sx + 0.06, sy + 0.06, 0.09), rot=(0.0, 0.0, yaw))
+    # Three banded oak barrels beside the crates
+    for bx, by, bh in ((0.65, 0.55, 0.96), (-0.10, 0.62, 0.96), (1.15, 0.15, 0.88)):
+        b.cyl("boards", (bx, by, 0.16), (bx, by, 0.16 + bh), 0.32, 0.32, seg=10)
+        b.cyl("iron", (bx, by, 0.16 + bh * 0.22), (bx, by, 0.16 + bh * 0.28), 0.335, 0.335, seg=10)
+        b.cyl("iron", (bx, by, 0.16 + bh * 0.72), (bx, by, 0.16 + bh * 0.78), 0.335, 0.335, seg=10)
+    # Coiled hemp rope stack
+    b.cyl("rope", (-1.05, 0.55, 0.16), (-1.05, 0.55, 0.44), 0.34, 0.30, seg=12)
+    return b
+
+
 # ---------------------------------------------------------------------------------------------
 # Hero Boats (curved hulls, cabins, rigging, deck gear)
 # ---------------------------------------------------------------------------------------------
@@ -1050,6 +1113,8 @@ BUILDERS = {
     "harbour_house_b": build_harbour_house_b,
     "harbour_house_c": build_harbour_house_c,
     "harbour_house_d": build_harbour_house_d,
+    "harbour_warehouse": build_harbour_warehouse,
+    "harbour_cargo": build_harbour_cargo,
     "harbour_crane": build_harbour_crane,
     "stone_arch": build_stone_arch,
     "boat_trawler": build_boat_trawler,
