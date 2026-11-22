@@ -12,7 +12,9 @@
 # The pod is $POD_HOST:$POD_PORT, or out/lane/pod.env's POD_HOST= and POD_PORT= lines.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd -P)
+# shellcheck source=/dev/null
 [ -n "${POD_HOST:-}" ] || . /workspace/ue/out/lane/pod.env
+: "${POD_HOST:?}" "${POD_PORT:?}"
 ssh_cmd=(ssh -p "$POD_PORT" -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o BatchMode=yes)
 on_pod() { "${ssh_cmd[@]}" "root@$POD_HOST" "$@"; }
 Q=/workspace/ue/out/oc/queue
