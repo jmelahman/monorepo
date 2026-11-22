@@ -3,6 +3,8 @@ installed:
 - Refines the overly bulky/angular calf silhouette on the Rider mesh using strictly radial
   (axis-perpendicular) slimming and Taubin smoothing so knees, ankles, sock hems, skinning,
   and baked actions stay 100% crisp and intact.
+- Smooths the pelvis/thigh skinning transition and outer-lower glute mesh ridge symmetrically
+  so both glutes deform smoothly across all pedal phases without vertical creases or pinches.
 - Paints antialiased, tailored three rear jersey pockets, waist hem elastic, center-back seam,
   bib-short leg gripper cuffs, and ribbed cycling sock cuffs into T_Body_BaseColor,
   T_Body_Shade, and T_Body_Normal so every custom Kit colour inherits crisp garment detail.
@@ -13,6 +15,7 @@ Run headless with Blender 5.x:
 """
 
 import argparse
+import contextlib
 import os
 import shutil
 import sys
@@ -99,10 +102,8 @@ def _save_rgba(path, arr, colorspace="sRGB"):
     bpy.data.images.remove(img)
 
 
-def _smooth_calves(mesh_ob, rig):
-    """Refines the overly sharp/bulky calf silhouette on both legs strictly perpendicular to the
-    calf bone axis so vertices never slide vertically along the leg (keeping the sock cuff line
-    razor-straight and knees/ankles untouched)."""
+def _body_mesh_graph(mesh_ob):
+    """Returns rest-pose coordinates, body-material vertex mask, and 1-ring neighbor lists."""
     me = mesh_ob.data
     n_v = len(me.vertices)
     co = np.empty(n_v * 3, np.float32)
@@ -121,6 +122,16 @@ def _smooth_calves(mesh_ob, rig):
     bm.verts.ensure_lookup_table()
     neighbors = [[e.other_vert(v).index for e in v.link_edges] for v in bm.verts]
     bm.free()
+    return co, is_body, neighbors
+
+
+def _smooth_calves(mesh_ob, rig):
+    """Refines the overly sharp/bulky calf silhouette on both legs strictly perpendicular to the
+    calf bone axis so vertices never slide vertically along the leg (keeping the sock cuff line
+    razor-straight and knees/ankles untouched)."""
+    me = mesh_ob.data
+    n_v = len(me.vertices)
+    co, is_body, neighbors = _body_mesh_graph(mesh_ob)
 
     new_co = co.copy()
     affected = 0
@@ -186,6 +197,94 @@ def _smooth_calves(mesh_ob, rig):
     me.vertices.foreach_set("co", new_co.ravel())
     me.update()
     return affected
+
+
+def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
+    """Smooths the pelvis/thigh skinning transition and subtle outer-lower glute ridge
+    symmetrically so both glutes deform cleanly without vertical creases across pedal flexion.
+
+    Preserves spine, knee/calf, and midline weights exactly, keeping total weights normalized.
+    """
+    me = mesh_ob.data
+    n_v = len(me.vertices)
+    co, is_body, neighbors = _body_mesh_graph(mesh_ob)
+    x, y, z = co[:, 0], co[:, 1], co[:, 2]
+    ay = np.abs(y)
+
+    # 1) Smooth the (pelvis, thigh_l, thigh_r) ratio within each vertex's hip weight budget
+    hip_groups = ("pelvis", "thigh_l", "thigh_r")
+    g_ids = [mesh_ob.vertex_groups[n].index for n in hip_groups]
+    w = np.zeros((n_v, 3), np.float32)
+    for v in me.vertices:
+        for grp in v.groups:
+            if grp.group in g_ids:
+                w[v.index, g_ids.index(grp.group)] = grp.weight
+
+    w_hip = w.sum(axis=1)
+    bell_w = _smoothstep(0.72, 0.80, z) * (1.0 - _smoothstep(0.98, 1.05, z))
+    idx_w = np.where(is_body & (w_hip > 0.15) & (bell_w > 0.01))[0]
+
+    ratio = np.zeros_like(w)
+    pos = w_hip > 1e-6
+    ratio[pos] = w[pos] / w_hip[pos, None]
+
+    for _ in range(weight_iters):
+        prev = ratio.copy()
+        for vi in idx_w:
+            nbrs = [ni for ni in neighbors[vi] if w_hip[ni] > 0.15]
+            if not nbrs:
+                continue
+            avg = prev[nbrs].mean(axis=0)
+            s = 0.5 * float(bell_w[vi])
+            nr = (1.0 - s) * prev[vi] + s * avg
+            # Keep thighs strictly on their own side so midline stays pure pelvis
+            if y[vi] < 0.005:
+                nr[1] = 0.0
+            if y[vi] > -0.005:
+                nr[2] = 0.0
+            ns = float(nr.sum())
+            if ns > 1e-6:
+                ratio[vi] = nr / ns
+
+    new_w = ratio * w_hip[:, None]
+    for vi in idx_w:
+        for k, gi in enumerate(g_ids):
+            val = float(new_w[vi, k])
+            vg = mesh_ob.vertex_groups[gi]
+            if val > 1e-4:
+                vg.add([int(vi)], val, "REPLACE")
+            else:
+                with contextlib.suppress(RuntimeError):
+                    vg.remove([int(vi)])
+        mv = me.vertices[vi]
+        tot = sum(grp.weight for grp in mv.groups)
+        if tot > 1e-6 and abs(tot - 1.0) > 1e-6:
+            for grp in mv.groups:
+                grp.weight /= tot
+
+    # 2) Subtle volume-preserving Taubin smoothing on the rest-pose outer-lower glute ridge
+    strength_g = (
+        _smoothstep(0.055, 0.095, ay)
+        * (1.0 - _smoothstep(0.175, 0.205, ay))
+        * _smoothstep(0.835, 0.870, z)
+        * (1.0 - _smoothstep(0.975, 1.015, z))
+        * (1.0 - _smoothstep(0.005, 0.045, x))
+    )
+    idx_g = np.where(is_body & (strength_g > 0.01))[0]
+    new_co = co.copy()
+    for _ in range(taubin_iters):
+        for lam in (0.45, -0.40):
+            prev = new_co.copy()
+            for vi in idx_g:
+                nbrs = neighbors[vi]
+                if not nbrs:
+                    continue
+                delta = prev[nbrs].mean(axis=0) - prev[vi]
+                new_co[vi] = prev[vi] + (lam * float(strength_g[vi])) * delta
+
+    me.vertices.foreach_set("co", new_co.ravel())
+    me.update()
+    return len(idx_w), len(idx_g)
 
 
 def _rasterize_body_xyz(mesh_ob, size):
@@ -316,7 +415,6 @@ def _render_previews(rig, dst, preview_dir):
     sc.render.resolution_x = 1280
     sc.render.resolution_y = 720
     sc.render.resolution_percentage = 100
-    sc.frame_set(0)
     cam = sc.camera
     if cam is None:
         cd = bpy.data.cameras.new("_prev_cam")
@@ -324,10 +422,12 @@ def _render_previews(rig, dst, preview_dir):
         sc.collection.objects.link(cam)
         sc.camera = cam
     views = {
-        "preview_chase.png": ((-2.3, -0.25, 1.32), (0.25, 0.0, 0.85), 42),
-        "preview_side.png": ((0.10, -3.8, 0.95), (0.10, 0.0, 0.82), 50),
+        "preview_chase.png": (45, (-2.3, -0.25, 1.32), (0.25, 0.0, 0.85), 42),
+        "preview_chase_flex.png": (15, (-2.3, -0.25, 1.32), (0.25, 0.0, 0.85), 42),
+        "preview_side.png": (45, (0.10, -3.8, 0.95), (0.10, 0.0, 0.82), 50),
     }
-    for name, (loc, tgt, lens) in views.items():
+    for name, (frame, loc, tgt, lens) in views.items():
+        sc.frame_set(frame)
         cam.location = loc
         cam.rotation_euler = (Vector(tgt) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
         cam.data.lens = lens
@@ -354,8 +454,9 @@ def main():
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     mesh_ob = next(o for o in bpy.data.objects if o.type == "MESH" and o.find_armature() == rig)
 
-    # 1) Smooth overly angular calves on the Rider mesh
+    # 1) Smooth overly angular calves and outer-lower glute/hip crease on the Rider mesh
     calf_v = _smooth_calves(mesh_ob, rig)
+    glute_w_v, glute_g_v = _smooth_glutes(mesh_ob)
 
     # 2) Rasterize body-only xyz at 512x512 and bilinearly upsample to texture resolution
     base = _load_rgba(os.path.join(src, "T_Body_BaseColor.png"))
@@ -494,7 +595,8 @@ def main():
     _export_fbx(rig, mesh_ob, os.path.join(dst, "rider.fbx"))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(dst, "rider.blend"))
     print(
-        f"Polished rider in {dst}: calf_verts={calf_v}, pocket_px={int((in_pocket > 0.5).sum())}, "
+        f"Polished rider in {dst}: calf_verts={calf_v}, glute_w_verts={glute_w_v}, "
+        f"glute_geom_verts={glute_g_v}, pocket_px={int((in_pocket > 0.5).sum())}, "
         f"gripper_px={int((bib_gripper > 0.5).sum())}, sock_cuff_px={int((sock_cuff > 0.5).sum())}",
         flush=True,
     )
