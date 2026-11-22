@@ -117,8 +117,8 @@ def build_skyline_supertall_stepped():
                 b.box("steel", (cx, cy, z), (tw + 0.24, tw + 0.24, 1.8))
             elif band_idx % 3 != 1:
                 # Warm lit office band
-                b.box("warm_glass", (cx, cy, z), (tw + 0.20, tw - 0.70, 1.9))
-                b.box("warm_glass", (cx, cy, z), (tw - 0.70, tw + 0.20, 1.9))
+                b.box("glass", (cx, cy, z), (tw + 0.20, tw - 0.70, 1.9))
+                b.box("glass", (cx, cy, z), (tw - 0.70, tw + 0.20, 1.9))
             z += 4.2
             band_idx += 1
 
@@ -201,9 +201,9 @@ def build_skyline_tapered_braced():
             break
         hx, hy = _half_extents(zw)
         if i % 2 == 0:
-            b.box("warm_glass", (0.0, 0.0, zw), (hx * 1.78, hy * 2.0 + 0.18, 1.6))
+            b.box("glass", (0.0, 0.0, zw), (hx * 1.78, hy * 2.0 + 0.18, 1.6))
         if i % 3 != 1:
-            b.box("warm_glass", (0.0, 0.0, zw), (hx * 2.0 + 0.18, hy * 1.72, 1.6))
+            b.box("glass", (0.0, 0.0, zw), (hx * 2.0 + 0.18, hy * 1.72, 1.6))
 
     # Observation deck glowing crown band (z = 112 .. 115.5 m)
     hx_obs, hy_obs = _half_extents(113.5)
@@ -266,8 +266,8 @@ def build_skyline_glass_tower():
             if idx % 3 == 0:
                 b.box("steel", (0.0, 0.0, z), (tw + 0.32, td + 0.32, 0.72))
             else:
-                b.box("warm_glass", (0.0, 0.0, z), (tw + 0.16, td - 0.8, 1.85))
-                b.box("warm_glass", (0.0, 0.0, z), (tw - 0.8, td + 0.16, 1.85))
+                b.box("glass", (0.0, 0.0, z), (tw + 0.16, td - 0.8, 1.85))
+                b.box("glass", (0.0, 0.0, z), (tw - 0.8, td + 0.16, 1.85))
             z += 4.2
             idx += 1
 
@@ -314,8 +314,8 @@ def build_skyline_artdeco():
         idx = 0
         while z < z1 - 2.4:
             if idx % 2 == 0:
-                b.box("warm_glass", (0.0, 0.0, z), (tw - 0.45, td - 2.2, 2.0))
-                b.box("warm_glass", (0.0, 0.0, z), (tw - 2.2, td - 0.45, 2.0))
+                b.box("glass", (0.0, 0.0, z), (tw - 0.45, td - 2.2, 2.0))
+                b.box("glass", (0.0, 0.0, z), (tw - 2.2, td - 0.45, 2.0))
             z += 4.3
             idx += 1
 
@@ -394,9 +394,9 @@ def build_skyline_midrise():
         b.box("steel", (0.0, 0.0, zf + 0.95), (w + 0.48, d + 0.68, 0.10))
         # Alternating warm glowing apartment window bands
         if fl % 2 == 0:
-            b.box("warm_glass", (0.0, 0.0, zf + 1.65), (core_w + 0.14, core_d - 2.4, 2.2))
+            b.box("glass", (0.0, 0.0, zf + 1.65), (core_w + 0.14, core_d - 2.4, 2.2))
         else:
-            b.box("warm_glass", (0.0, 0.0, zf + 1.65), (core_w - 3.6, core_d + 0.14, 2.2))
+            b.box("glass", (0.0, 0.0, zf + 1.65), (core_w - 3.6, core_d + 0.14, 2.2))
 
     # Rooftop concrete slab, parapet & sleek mechanical penthouse (40.7 .. 44.8 m)
     roof_z = z0 + total_h

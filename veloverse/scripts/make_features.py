@@ -2462,8 +2462,9 @@ def city_skyline(out, g, bio, road, rng, taken):
     if not any(has.values()):
         return
     hx, hy = bio.world["landmarks"]["harbour"]
-    # Downtown core sits inland north of Harbour Bay, spread ~900 m along the coast x ~420 m deep.
-    cx0, cy0 = hx - 80.0, hy - 1180.0
+    # Downtown core sits cleanly inland (north) of the Lakefront Trail so the lake side stays
+    # 100% open water/park while the entire Chicago skyline rises on the city side.
+    cx0, cy0 = hx - 60.0, hy - 1460.0
     radii = {
         "skyline_supertall_stepped": 22.0,
         "skyline_tapered_braced": 20.0,
@@ -2476,8 +2477,10 @@ def city_skyline(out, g, bio, road, rng, taken):
     def try_place(kind, x, y, sc_xy, sc_z, yaw):
         if not has.get(kind):
             return False
+        if y > hy - 1180.0:
+            return False
         z = float(g.z(x, y))
-        if z < 2.0 or float(g.at(g.inland, x, y)) < 85.0:
+        if z < 2.0 or float(g.at(g.inland, x, y)) < 140.0:
             return False
         r = radii[kind] * sc_xy
         if float(road.dist(x, y)) < r + 32.0:

@@ -102,7 +102,7 @@ TOWN_REACH = 2200.0
 PEAK = 1150.0  # m: Vael's summit, seen from the other islands (13 Nov, the AAA review)
 BRIDGE_CLEAR = 9.0  # m: a bridge's deck over the sea, at least
 LANDFALL = 260.0  # m inland of a petal's shore where its bridge's road meets the island's
-COAST_IN = 200.0  # m: the hub's coast road in from the shore
+COAST_IN = 55.0  # m: the hub's coast road in from the shore (brought closer to water)
 # The hub's cliffed shore (13 Nov, the AAA review: "the coast has no coast"): about half its
 # seaward edge, away from the harbour and facing open sea (not a strait), rises in SEA_CLIFF m to
 # a 15-40 m top that then climbs CLIFF_TILT inland, so the edge is the lowest of the top and the
@@ -475,7 +475,7 @@ def island_leg(i, enter, leave, rng, inland):
     if biome == "town":
         # Down through the harbour town, on the bay's inland side.
         (bx, by), (_, bry) = HARBOUR_BAY
-        quay = np.array([bx, by - bry - 450])
+        quay = np.array([bx, by - bry - 240])
         k = int(np.argmin([np.linalg.norm(p - quay) for p in points[1:]])) + 1
         points[k] = quay
     points.append(leave)
@@ -506,13 +506,13 @@ def coast_road(inland, which, cliff):
     every STEP m."""
     rng = np.random.default_rng(SEED + 5)
     (bx, by), (_, bry) = HARBOUR_BAY
-    quay = np.array([bx, by - bry - 450.0])
+    quay = np.array([bx, by - bry - 240.0])
     a0 = math.atan2(quay[1], quay[0])
     points = [quay]
     count = 30
     for k in range(1, count):
         out = ellipse_point(HUB, a0 + 2 * math.pi * k / count, 1.1)
-        p = onshore(out, HUB, inland, COAST_IN + rng.uniform(-40, 140), which)
+        p = onshore(out, HUB, inland, COAST_IN + rng.uniform(-15, 35), which)
         last = k == count - 1 and np.linalg.norm(p - quay) <= 450
         if np.linalg.norm(p - points[-1]) > 450 and not last:
             points.append(p)
@@ -520,18 +520,19 @@ def coast_road(inland, which, cliff):
 
 
 def hug(ring, inland, cliff, rounds=40):
-    """The closed coast road pulled, where the shore is cliffed, to CLIFF_IN m from the edge:
-    each round every point moves down the distance-to-shore field's slope by a share of its
-    miss, the moves smoothed along the road (the cliff's share easing them in and out), and
-    bends under 60 m eased out."""
+    """The closed coast road pulled to CLIFF_IN m from cliff edges and COAST_IN m from
+    non-cliffed beaches/bays: each round every point moves down the distance-to-shore field's
+    slope by a share of its miss, smoothed along the road, with bends under 60 m eased out."""
     gy, gx = np.gradient(inland, SPACING)
-    want = (CLIFF_IN[0] + CLIFF_IN[1]) / 2
+    cliff_want = (CLIFF_IN[0] + CLIFF_IN[1]) / 2
     for _ in range(rounds):
         on = ndimage.gaussian_filter1d(sample(cliff, ring), 300 / STEP, mode="wrap")
+        on_w = np.clip(on * 2 - 0.5, 0, 1)
+        want = cliff_want * on_w + COAST_IN * (1.0 - on_w)
         miss = sample(inland, ring) - want
         g = np.stack([sample(gx, ring), sample(gy, ring)], 1)
         g /= np.linalg.norm(g, axis=1, keepdims=True) + 1e-9
-        step = np.clip(miss, -30, 30) * 0.5 * np.clip(on * 2 - 0.5, 0, 1)
+        step = np.clip(miss, -30, 30) * 0.5
         step = ndimage.gaussian_filter1d(step, 60 / STEP, mode="wrap")
         ring = ring - g * step[:, None]
         ring = even(relax_closed(ring), True)
