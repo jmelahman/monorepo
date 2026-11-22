@@ -999,6 +999,8 @@ function ownedList(items, opts = {}) {
 // rowOf is one track's row. It can't be a button, as it holds the menu
 // and buy buttons, so it takes a button's keys.
 function rowOf(item, play, lead, body, end, extra) {
+  // The row playing pauses and resumes rather than starting over.
+  const go = (row) => (row.classList.contains('current') ? togglePlay() : play());
   return el(
     'li',
     {},
@@ -1009,11 +1011,11 @@ function rowOf(item, play, lead, body, end, extra) {
         role: 'button',
         tabIndex: 0,
         dataset: { key: item.key },
-        onclick: play,
+        onclick: (e) => go(e.currentTarget),
         onkeydown: (e) => {
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
-            play();
+            go(e.currentTarget);
           }
         },
       },

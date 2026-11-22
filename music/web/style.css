@@ -903,6 +903,13 @@ main > .view-title {
   opacity: 1;
 }
 
+/* The row playing offers to pause it instead. */
+body:not(.paused) .track.current > .art::after {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 5h3.5v14H7zm6.5 0H17v14h-3.5z' fill='%23fff'/%3E%3C/svg%3E") center / 55% no-repeat,
+    radial-gradient(circle, rgb(0 0 0 / 0.35) 20%, rgb(0 0 0 / 0.7) 100%);
+}
+
 /* What is playing: its row lit, its number a meter. */
 .track.current .name {
   color: var(--accent);
