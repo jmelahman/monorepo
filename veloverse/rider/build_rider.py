@@ -69,10 +69,10 @@ BODY_TARGETS = [
     ("legs/r-lowerleg-fat-decr.target.gz", 0.50),
     ("legs/l-upperleg-muscle-incr.target.gz", 0.70),
     ("legs/r-upperleg-muscle-incr.target.gz", 0.70),
-    ("legs/l-lowerleg-muscle-incr.target.gz", 0.80),
-    ("legs/r-lowerleg-muscle-incr.target.gz", 0.80),
+    ("legs/l-lowerleg-muscle-incr.target.gz", 0.55),
+    ("legs/r-lowerleg-muscle-incr.target.gz", 0.55),
     ("legs/measure-thigh-circ-incr.target.gz", 0.25),
-    ("legs/measure-calf-circ-incr.target.gz", 0.35),
+    ("legs/measure-calf-circ-incr.target.gz", 0.22),
     ("stomach/stomach-tone-incr.target.gz", 0.5),
     # flatter lats, so the back tapers to the waist under the jersey instead of flaring
     ("torso/torso-muscle-dorsi-decr.target.gz", 0.80),
@@ -2589,6 +2589,60 @@ def paint_body(rider, out, size, tan_t):
     from_end = (bmap.sleeve_end - t_up) * bmap.upperarm_len  # m above the sleeve's end
     hem = (arm_img > 0.5) & (from_end > 0) & (from_end < HEM) & np.isin(lab_img, KIT_LABELS)
     base[hem] *= 0.85
+
+    # Road-cycling kit tailoring (captured in both T_Body_Shade and T_Body_Normal so custom
+    # kit colours on the Kit page inherit crisp seams, rear pockets, grippers and sock ribs).
+    leg_img = np.zeros((size, size), np.float32)
+    leg_img[cov] = img[cov][:, 4]
+    is_jersey_px = np.isin(lab_img, (JERSEY_L, ORANGE_L))
+    is_shorts_px = lab_img == SHORTS_L
+    is_sock_px = lab_img == SOCK_L
+    z_img = pimg[..., 2]
+    x_img = pimg[..., 0]
+    y_img = pimg[..., 1]
+    hem_z = bmap.hip_z + HEM_ABOVE_HIP
+    # Three rear jersey pockets across the lower back (signature chase-cam detail)
+    back_x = np.polyval(bmap.panel_line, z_img)
+    is_back = is_jersey_px & (arm_img < 0.5) & (x_img < back_x - 0.025)
+    pk_bot, pk_top, pk_w = hem_z + 0.015, hem_z + 0.165, 0.128
+    in_pocket = is_back & (z_img > pk_bot) & (z_img < pk_top) & (np.abs(y_img) < pk_w)
+    # Pocket top elastic lip + dark recessed opening line right above the lip
+    pk_lip = is_back & (np.abs(z_img - pk_top) < 0.008) & (np.abs(y_img) < pk_w + 0.004)
+    pk_shadow = (
+        is_back & (z_img >= pk_top + 0.004) & (z_img < pk_top + 0.014) & (np.abs(y_img) < pk_w)
+    )
+    # Vertical stitched dividers splitting the 3 pockets + outer edges
+    pk_seams = in_pocket & (
+        (np.abs(np.abs(y_img) - 0.043) < 0.003)
+        | (np.abs(np.abs(y_img) - (pk_w - 0.003)) < 0.003)
+        | (np.abs(z_img - (pk_bot + 0.004)) < 0.004)
+    )
+    # Subtle jersey waist hem elastic + shoulder/raglan seam
+    waist_hem = is_jersey_px & (arm_img < 0.5) & (z_img > hem_z) & (z_img < hem_z + 0.014)
+    # Bib-short thigh gripper band (last 3.5 cm of shorts)
+    t_th = np.zeros((size, size), np.float32)
+    t_th[cov] = bmap.t_along(pimg[cov], "thigh")
+    thigh_len = float(np.linalg.norm(np.subtract(*bmap.bones["thigh_l"])))
+    shorts_from_end = (SHORTS_END - t_th) * thigh_len
+    bib_gripper = (
+        is_shorts_px & (leg_img > 0.5) & (shorts_from_end > 0.0) & (shorts_from_end < 0.036)
+    )
+    bib_seam = is_shorts_px & (leg_img > 0.5) & (np.abs(shorts_from_end - 0.036) < 0.003)
+    # Cycling sock top cuff rib (top 3.5 cm of sock)
+    t_ca = np.zeros((size, size), np.float32)
+    t_ca[cov] = bmap.t_along(pimg[cov], "calf")
+    calf_len = float(np.linalg.norm(np.subtract(*bmap.bones["calf_l"])))
+    sock_from_top = (t_ca - SOCK_TOP) * calf_len
+    sock_cuff = is_sock_px & (leg_img > 0.5) & (sock_from_top > 0.0) & (sock_from_top < 0.038)
+
+    base[pk_shadow] *= 0.72
+    base[pk_seams] *= 0.84
+    base[pk_lip] *= 0.92
+    base[waist_hem] *= 0.86
+    base[bib_gripper] *= 0.88
+    base[bib_seam] *= 0.82
+    base[sock_cuff] *= 0.95
+
     hair = lab_img == HAIR_L
     base[hair] = (
         base[hair] * 0.8 + 0.2 * np.array(SKIN) * (0.5 + 0.5 * np.clip(fine[hair], 0, 1))[:, None]
@@ -2615,8 +2669,18 @@ def paint_body(rider, out, size, tan_t):
     pores = blur(fine, 1)
     streak = blur(np.roll(fine, 1, 0) + fine + np.roll(fine, -1, 0), 1)
     h = np.where(kit, 0.15 * knit, np.where(hair, 0.4 * streak, 0.05 * pores))
-    # the hem's fold, and the forearms' and hands' tendons, veins and knuckles
+    # the hem's fold, rear pockets, bib grippers, sock cuff rib, and arm tendons/veins
     h = h + 0.8 * ((arm_img > 0.5) & (np.abs(from_end - 0.5 * HEM) < 0.5 * HEM))
+    h = h + 1.1 * blur(in_pocket.astype(np.float32), 2.5)
+    h = h + 0.7 * pk_lip.astype(np.float32) - 0.9 * pk_seams.astype(np.float32)
+    h = (
+        h
+        + 0.7 * waist_hem.astype(np.float32)
+        + 0.45 * bib_gripper.astype(np.float32)
+        - 0.5 * bib_seam.astype(np.float32)
+    )
+    sock_rib = 0.5 * np.sin(y_img * 420.0 + x_img * 420.0)
+    h = h + np.where(sock_cuff, 0.45 + 0.25 * sock_rib, 0.0)
     relief, gloss = np.zeros((size, size), np.float32), np.zeros((size, size), np.float32)
     relief[cov], gloss[cov] = arm_relief(p, rider.rig)
     relief *= skin
