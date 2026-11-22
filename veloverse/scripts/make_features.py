@@ -2436,6 +2436,123 @@ def world_landmarks(out, g, bio, road, rng, taken):
     print(f"world_landmarks: {counts}", flush=True)
 
 
+def _copy_skyline_prop(out, name):
+    """Copies a handcrafted Blender skyscraper glTF from SRC/skyline_kit/ into SRC."""
+    kit_file = f"{SRC}/skyline_kit/feat_{name}.gltf"
+    if not os.path.exists(kit_file):
+        return False
+    shutil.copy2(kit_file, f"{SRC}/feat_{name}.gltf")
+    out.meshes[name] = f"gltf:feat_{name}.gltf"
+    return True
+
+
+def city_skyline(out, g, bio, road, rng, taken):
+    """Places a Chicago-inspired lakeside downtown skyline inland behind Harbour Isle's bike trail
+    and bay, stepping from supertall hero towers in the core down to Lake Shore Drive mid-rises
+    along the parkway edge (cull=0 so it reads across the bay and bridges)."""
+    out.group("Skyline", cull=0)
+    names = (
+        "skyline_supertall_stepped",
+        "skyline_tapered_braced",
+        "skyline_glass_tower",
+        "skyline_artdeco",
+        "skyline_midrise",
+    )
+    has = {name: _copy_skyline_prop(out, name) for name in names}
+    if not any(has.values()):
+        return
+    hx, hy = bio.world["landmarks"]["harbour"]
+    # Downtown core sits inland north of Harbour Bay, spread ~900 m along the coast x ~420 m deep.
+    cx0, cy0 = hx - 80.0, hy - 1180.0
+    radii = {
+        "skyline_supertall_stepped": 22.0,
+        "skyline_tapered_braced": 20.0,
+        "skyline_glass_tower": 18.0,
+        "skyline_artdeco": 17.0,
+        "skyline_midrise": 16.0,
+    }
+    placed = []
+
+    def try_place(kind, x, y, sc_xy, sc_z, yaw):
+        if not has.get(kind):
+            return False
+        z = float(g.z(x, y))
+        if z < 2.0 or float(g.at(g.inland, x, y)) < 85.0:
+            return False
+        r = radii[kind] * sc_xy
+        if float(road.dist(x, y)) < r + 32.0:
+            return False
+        if any(math.hypot(x - px, y - py) < pr + r + 8.0 for px, py, pr in placed):
+            return False
+        if any(math.hypot(x - tx, y - ty) < tr + r + 6.0 for tx, ty, tr in taken):
+            return False
+        # Ground using lowest corner of footprint so buried -10 m plinth sits cleanly
+        zs = [
+            float(g.z(x + dx, y + dy))
+            for dx in (-r * 0.65, r * 0.65)
+            for dy in (-r * 0.65, r * 0.65)
+        ]
+        z_base = min(zs)
+        out.add(
+            "Skyline",
+            kind,
+            x,
+            y,
+            z_base,
+            yaw,
+            (sc_xy, sc_xy, sc_z),
+            mark=(110, 175, 255),
+        )
+        placed.append((x, y, r))
+        taken.append((x, y, r + 4.0))
+        out.clear.append([round(x, 1), round(y, 1), round(r + 12.0, 1)])
+        return True
+
+    # 1. Hero supertalls in the downtown core (Willis-style + Hancock-style anchors)
+    hero_spots = [
+        ("skyline_supertall_stepped", cx0 - 30.0, cy0 - 20.0, 1.05, 1.08),
+        ("skyline_tapered_braced", cx0 + 135.0, cy0 + 25.0, 1.02, 1.05),
+        ("skyline_supertall_stepped", cx0 - 180.0, cy0 + 40.0, 0.92, 0.88),
+        ("skyline_tapered_braced", cx0 + 265.0, cy0 - 30.0, 0.90, 0.86),
+    ]
+    for kind, hx2, hy2, sxy, sz in hero_spots:
+        for _ in range(18):
+            jx, jy = hx2 + rng.normal(0, 28.0), hy2 + rng.normal(0, 28.0)
+            if try_place(kind, jx, jy, sxy, sz, float(rng.choice([0, 90, 180, 270]))):
+                break
+
+    # 2. Inner high-rise cluster (glass towers + Art Deco towers)
+    inner_pool = ["skyline_glass_tower", "skyline_glass_tower", "skyline_artdeco"]
+    for _ in range(160):
+        if len(placed) >= 18:
+            break
+        x = cx0 + rng.normal(0, 210.0)
+        y = cy0 + rng.normal(0, 110.0)
+        kind = inner_pool[int(rng.integers(len(inner_pool)))]
+        sxy = float(rng.uniform(0.88, 1.15))
+        sz = float(rng.uniform(0.82, 1.22))
+        try_place(kind, x, y, sxy, sz, float(rng.choice([0, 90, 180, 270])) + rng.uniform(-8, 8))
+
+    # 3. Outer Lake Shore Drive mid-rises & shoulder towers framing the skyline edge
+    outer_pool = ["skyline_midrise", "skyline_midrise", "skyline_artdeco", "skyline_glass_tower"]
+    for _ in range(240):
+        if len(placed) >= 34:
+            break
+        x = cx0 + rng.uniform(-460.0, 460.0)
+        y = cy0 + rng.uniform(-180.0, 220.0)
+        kind = outer_pool[int(rng.integers(len(outer_pool)))]
+        sxy = float(rng.uniform(0.85, 1.18))
+        sz = float(rng.uniform(0.75, 1.15))
+        try_place(kind, x, y, sxy, sz, float(rng.choice([0, 90, 180, 270])) + rng.uniform(-10, 10))
+
+    if placed:
+        # Scenic skyline view looking from the harbourfront bay across the trail toward downtown
+        ex, ey = hx + 260.0, hy - 220.0
+        ez = max(float(g.z(ex, ey)), 0.0) + 18.0
+        out.views.append(["feat_skyline", [ex, ey, ez], [cx0, cy0, 68.0]])
+    print(f"city_skyline: {len(placed)} towers placed around ({cx0:.0f}, {cy0:.0f})", flush=True)
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -2447,6 +2564,7 @@ def main():
     bridges(out, g, road)
     taken = []  # (x, y, radius m) of what stands, so nothing is placed through it
     harbour(out, g, bio, road, rng, taken)
+    city_skyline(out, g, bio, road, np.random.default_rng(SEED + 17), taken)
     farm = turbines(out, g, bio, road, rng, taken)
     # No pylons or power lines since 13 Nov (the AAA review: "out of register with a fantasy
     # world"); power_line() stays for a later setting that wants them.
