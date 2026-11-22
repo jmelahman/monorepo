@@ -255,16 +255,28 @@ private:
 	bool bSway = false;
 	float Crank = 0.f;
 	float Sway = 0.f;
-	float Lean = 0.f;
-	float Steer = 0.f; // degrees the fork turns into a bend, right positive
+	float RockAmp = 0.f; // torque- and grade-driven pedal rock amplitude, degrees, eased
+	float Lean = 0.f; // physical bike cornering lean, degrees, eased
+	float SteerCurve = 0.f; // eased fork steering angle into a bend, degrees
+	float Steer = 0.f; // degrees the fork turns into a bend plus crank-frequency weave, right positive
 	// The rider's line: cm toward the inside of the bend, eased, on top of the drift across the
 	// lane (RideLine), and the speed's change, eased, which tips the head back on a surge.
 	float Apex = 0.f;
 	float Surge = 0.f;
 	float LastSpeed = -1.f;
+	// Head transfer & camera dynamics: neck-damped suspension, Cockpit gaze lead & aero posture,
+	// speed-responsive FOV boost, and spring-lagged Chase yaw.
+	float HeadLiftZ = 0.f;
+	float HeadJudder = 0.f;
+	float GazeLead = 0.f;
+	float PostureZ = 0.f;
+	float BaseFov = 0.f;
+	float FovBoost = 0.f;
+	float ChaseYaw = 0.f;
 	float RainTilt = 0.f; // degrees the rain slants from ahead, eased
 	float Motion = 0.f; // 0 steady to 1 moving, eased, so changing view doesn't jump the line
 	bool Moves() const;
+	void ResetMotion();
 	// Cm right of the centreline the rider rides at S: KeepLeft, wandering with the distance.
 	float RideLine(const class URideTrack& On, float S) const;
 	// The mouse's look round, degrees on top of the road's view, and how long it has rested.

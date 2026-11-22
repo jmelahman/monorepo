@@ -190,7 +190,8 @@ ARidePawn::ARidePawn()
 	PrimaryActorTick.bCanEverTick = true;
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	RootComponent = Camera;
-	Camera->SetFieldOfView(FMath::RadiansToDegrees(2.f * FMath::Atan(SensorWidth / (2.f * FocalLength))));
+	BaseFov = FMath::RadiansToDegrees(2.f * FMath::Atan(SensorWidth / (2.f * FocalLength)));
+	Camera->SetFieldOfView(BaseFov);
 	Camera->bConstrainAspectRatio = false;
 	FPostProcessSettings& Look = Camera->PostProcessSettings;
 	Look.bOverride_AutoExposureMethod = true;
@@ -353,7 +354,7 @@ void ARidePawn::UseStart(int32 Index)
 	ChosenStart = StartMetres;
 	Distance = StartMetres * 100.0;
 	Segments.Reset(bStarted);
-	bHeadSet = false;
+	ResetMotion();
 	ApplyWeather();
 	Place();
 	PlaceRain(0.f);
@@ -407,7 +408,7 @@ void ARidePawn::UseRoute(int32 Index)
 	{
 		Rain->SetStaticMesh(Track->RainShell);
 	}
-	bHeadSet = false;
+	ResetMotion();
 	ApplyWeather();
 	Place();
 	PlaceRain(0.f);
@@ -601,13 +602,16 @@ void ARidePawn::UseSettings()
 	{
 		return;
 	}
+	BaseFov = Profile.Fov;
 	if (RiderFov > 0.f)
 	{
-		RiderFov = Profile.Fov; // on the start screen's view: the rider's lens comes back with the ride
+		RiderFov = BaseFov; // on the start screen's view: the rider's lens comes back with the ride
 	}
 	else
 	{
-		Camera->SetFieldOfView(Profile.Fov);
+		const ERideView CurrentView = bStarted && !bOnBackdrop ? View() : ERideView::Eyes;
+		const float AppliedFov = CurrentView == ERideView::Steady ? BaseFov : FMath::Clamp(BaseFov + FovBoost, 30.f, 120.f);
+		Camera->SetFieldOfView(AppliedFov);
 	}
 	UseGrassReach();
 }
@@ -998,6 +1002,25 @@ void ARidePawn::Ride(float Dt)
 	}
 }
 
+void ARidePawn::ResetMotion()
+{
+	bHeadSet = false;
+	Apex = 0.f;
+	Motion = 0.f;
+	Sway = 0.f;
+	RockAmp = 0.f;
+	Lean = 0.f;
+	SteerCurve = 0.f;
+	Steer = 0.f;
+	Surge = 0.f;
+	LastSpeed = -1.f;
+	HeadLiftZ = 0.f;
+	HeadJudder = 0.f;
+	GazeLead = 0.f;
+	PostureZ = 0.f;
+	FovBoost = 0.f;
+}
+
 void ARidePawn::Place()
 {
 	if (!Track || Track->Length() <= 0.f)
@@ -1013,7 +1036,7 @@ void ARidePawn::Place()
 	if (bBackdrop != bOnBackdrop)
 	{
 		bOnBackdrop = bBackdrop;
-		bHeadSet = false;
+		ResetMotion();
 		// The start screen's view keeps the game's exposure; -RideBackdropEv= stops it up or down.
 		float Ev = 0.f;
 		FParse::Value(FCommandLine::Get(), TEXT("RideBackdropEv="), Ev);
@@ -1023,23 +1046,30 @@ void ARidePawn::Place()
 		// The board's stills were taken with the editor's 90-degree lens; riding, the rider's own.
 		if (bBackdrop && bBoardView)
 		{
-			RiderFov = Camera->FieldOfView;
+			RiderFov = BaseFov > 0.f ? BaseFov : Camera->FieldOfView;
 			Camera->SetFieldOfView(90.f);
 		}
 		else if (RiderFov > 0.f)
 		{
-			Camera->SetFieldOfView(RiderFov);
+			BaseFov = RiderFov;
+			Camera->SetFieldOfView(BaseFov);
 			RiderFov = 0.f;
 		}
 	}
 	const float S = On->Wrap(static_cast<float>(At));
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
-	// The road's bend here (radians a metre, right positive), from 3 m either side.
-	FVector Unused2;
-	float Before, After;
-	On->At(On->Wrap(S - 300.f), Unused2, Before);
-	On->At(On->Wrap(S + 300.f), Unused2, After);
-	const float Curve = FMath::DegreesToRadians(FMath::UnwindDegrees(After - Before)) / 6.f;
+	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
+	// The road's bend here (radians a metre, right positive), from 3 m either side, and ~18 m ahead.
+	const auto CurvatureAt = [On](float Where)
+	{
+		FVector UnusedPos;
+		float BeforeYaw = 0.f, AfterYaw = 0.f;
+		On->At(On->Wrap(Where - 300.f), UnusedPos, BeforeYaw);
+		On->At(On->Wrap(Where + 300.f), UnusedPos, AfterYaw);
+		return FMath::DegreesToRadians(FMath::UnwindDegrees(AfterYaw - BeforeYaw)) / 6.f;
+	};
+	const float Curve = CurvatureAt(S);
+	const float AheadCurve = CurvatureAt(On->Wrap(S + 1800.f));
 	const bool bMoves = Moves() && !bBackdrop;
 	if (Dt > 0.f)
 	{
@@ -1049,12 +1079,13 @@ void ARidePawn::Place()
 		Apex = FMath::Lerp(Apex, Want, 1.f - FMath::Exp(-Dt / 1.5f));
 		Motion = FMath::Lerp(Motion, bMoves ? 1.f : 0.f, 1.f - FMath::Exp(-Dt / 0.6f));
 	}
-	const FVector Eye = On->Point(S, RideLine(*On, S), EyeHeight);
+	const FVector RoadPos = On->Point(S, RideLine(*On, S), 0.f);
+	const FVector Eye = RoadPos + FVector(0.f, 0.f, EyeHeight);
 	// Along the rider's own line, not at the centreline: aiming there turned the view inward by
 	// atan(KeepLeft / LookAhead), 4° at 45 cm, so the road never looked straight ahead. The line
 	// ahead wanders too, so the view turns gently as it does.
 	const FVector Ahead = On->Point(On->Wrap(S + LookAhead), RideLine(*On, On->Wrap(S + LookAhead)), EyeHeight);
-	float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
+	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Y - Eye.Y, Ahead.X - Eye.X));
 	const float Rise = On->Height(On->Wrap(S + GradeSpan)) - On->Height(S);
 	float Pitch = FMath::RadiansToDegrees(FMath::Atan2(Rise, GradeSpan)) * 0.6f - 3.f;
 	if (bBackdrop && bBoardView)
@@ -1065,11 +1096,15 @@ void ARidePawn::Place()
 		const double Run = FVector::Dist2D(Ahead, Eye);
 		Pitch = FMath::RadiansToDegrees(FMath::Atan2(Ahead.Z - Eye.Z - 40.0 * Run / 3000.0, Run));
 	}
-	FVector Lift = FVector::ZeroVector;
-	float Judder = 0.f; // degrees of nod
-	float Roll = 0.f;
-	float Turn = 0.f;
-	float Rock = 0.f; // the pedalling's roll before the head's setting: the bike's, by its own
+	const float BikeScale = FMath::Clamp(Profile.BikeSway / 100.f, 0.f, 2.f);
+	const float HeadScale = FMath::Clamp(Profile.HeadSway / 100.f, 0.f, 2.f);
+	float RawPedalBob = 0.f;
+	float RawRoadBob = 0.f;
+	float RawRoadJudder = 0.f;
+	float RawPedalRock = 0.f;
+	float RawRoadRoll = 0.f;
+	float RawTurn = 0.f;
+	float SteerWeave = 0.f;
 	if (Dt > 0.f)
 	{
 		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
@@ -1082,7 +1117,7 @@ void ARidePawn::Place()
 		}
 		const float Effort = bMoving ? FMath::Clamp(static_cast<float>(Reading.Watts) / 250.f, 0.4f, 1.4f) : 0.f;
 		// The pedalling and the road's judder at a base of 60% of what they were before 14 Nov, at the
-		// user's request; the rider's settings (Rider: Head sway, Bike sway) scale them below.
+		// user's request; the rider's settings (Rider: Head sway, Bike sway) scale them separately below.
 		const float Strength = 0.6f;
 		Sway = FMath::Lerp(Sway, Effort * Strength, 1.f - FMath::Exp(-Dt / 0.8f));
 		// The rider's effort by W/kg, rider/README.md's blend: Easy to 1.5, Pedal at 3, Hard from 5;
@@ -1092,43 +1127,81 @@ void ARidePawn::Place()
 		                   : Wkg < 3.f        ? FMath::GetMappedRangeValueClamped(FVector2f(1.5f, 3.f), FVector2f(0.f, 1.f), Wkg)
 		                                      : FMath::GetMappedRangeValueClamped(FVector2f(3.f, 5.f), FVector2f(1.f, 2.f), Wkg);
 		RiderEffort = PinnedEffort >= 0.f ? EffortWant : FMath::Lerp(RiderEffort, EffortWant, 1.f - FMath::Exp(-Dt / 1.5f));
-		Lift.Z = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
-		// The rock with each stroke is small and its depth wanders, so it doesn't read as a metronome;
-		// the head's turn is a slow drift, not a sine (both too strong and regular, the user, 14 Nov).
-		const float Vary = 0.7f + 0.5f * FMath::PerlinNoise1D(S / 900.f + 5.f);
-		Roll = Sway * (0.2f * Vary * FMath::Sin(Crank) + 0.12f * FMath::PerlinNoise1D(S / 300.f + 2.f));
-		Turn = Sway * 0.12f * FMath::PerlinNoise1D(S / 600.f + 9.f);
+		RawPedalBob = Sway * (0.9f * FMath::Sin(2.f * Crank) + 0.3f * FMath::Sin(0.37f * Crank + 1.f));
+		// Torque- & grade-driven pedal rock (sin(Crank)) reaching +-1.5-2.8 deg on steep hard climbs,
+		// plus subtle counter-phase handlebar weave (+-0.4-1.0 deg) at crank frequency.
+		const float TorqueRatio = bMoving ? FMath::Max(static_cast<float>(Reading.Watts), 0.f) / FMath::Max(Rpm, 40.f) : 0.f;
+		const float BaseRock = FMath::GetMappedRangeValueClamped(FVector2f(0.f, 6.f), FVector2f(0.f, 1.75f), TorqueRatio);
+		const float GradeRock = (Grade > 0.03f && TorqueRatio > 0.f)
+		    ? FMath::GetMappedRangeValueClamped(FVector2f(0.03f, 0.12f), FVector2f(0.f, 0.95f), Grade) *
+		      FMath::Clamp(TorqueRatio / 2.5f, 0.f, 1.f)
+		    : 0.f;
+		const float RockWant = bMoving ? FMath::Clamp(BaseRock + GradeRock, 0.f, 2.8f) : 0.f;
+		RockAmp = FMath::Lerp(RockAmp, RockWant, 1.f - FMath::Exp(-Dt / 0.6f));
+		const float Vary = 0.85f + 0.2f * FMath::PerlinNoise1D(S / 900.f + 5.f);
+		const float CrankSin = FMath::Sin(Crank);
+		RawPedalRock = RockAmp * Vary * CrankSin + Sway * 0.12f * FMath::PerlinNoise1D(S / 300.f + 2.f);
+		const float WeaveAmp = FMath::GetMappedRangeValueClamped(FVector2f(0.f, 2.7f), FVector2f(0.f, 0.95f), RockAmp);
+		SteerWeave = -BikeScale * WeaveAmp * CrankSin;
+		RawTurn = Sway * 0.12f * FMath::PerlinNoise1D(S / 600.f + 9.f);
 		// The road through the bike: a judder tied to the distance, so it quickens with the speed and
 		// stops with the bike. Noise over 0.6 m and 2.3 m (13 and 3.5 Hz at 30 km/h), about half a
 		// centimetre up and down and a sixth of a degree of nod at that speed, more going faster.
 		const float Rough = Motion * FMath::Clamp(Speed / 8.f, 0.f, 1.4f) * Strength;
 		const float Fine = FMath::PerlinNoise1D(S / 60.f), Coarse = FMath::PerlinNoise1D(S / 230.f + 17.f);
-		Lift.Z += Rough * (0.35f * Fine + 0.45f * Coarse);
-		Judder = Rough * (0.12f * FMath::PerlinNoise1D(S / 60.f + 41.f) + 0.06f * Coarse);
-		Roll += Rough * 0.1f * FMath::PerlinNoise1D(S / 90.f + 83.f);
-		Rock = Roll;
-		const float HeadScale = Profile.HeadSway / 100.f;
-		Lift.Z *= HeadScale;
-		Judder *= HeadScale;
-		Roll *= HeadScale;
-		Turn *= HeadScale;
-		// Into a bend: the bike leans to atan(v^2 k / g), the head about a third of that.
-		const float Want = bMoves ? FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)) * 0.35f : 0.f;
-		Lean = FMath::Lerp(Lean, FMath::Clamp(Want, -4.f, 4.f), 1.f - FMath::Exp(-Dt / 0.35f));
-		// The fork turns to the bend's own angle, atan(wheelbase k), at most 3 degrees: the hands
-		// stay on the hoods, which move a centimetre at that.
-		const float Turning = bMoves ? FMath::RadiansToDegrees(FMath::Atan(0.988f * Curve)) : 0.f;
-		Steer = FMath::Lerp(Steer, FMath::Clamp(Turning, -3.f, 3.f), 1.f - FMath::Exp(-Dt / 0.35f));
+		RawRoadBob = Rough * (0.35f * Fine + 0.45f * Coarse);
+		RawRoadJudder = Rough * (0.12f * FMath::PerlinNoise1D(S / 60.f + 41.f) + 0.06f * Coarse);
+		RawRoadRoll = Rough * 0.1f * FMath::PerlinNoise1D(S / 90.f + 83.f);
+		// Into a bend: full physical bike corner lean atan(v^2 k / g), up to +-13.5 deg.
+		const float LeanWant = bMoves ? FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan(Speed * Speed * Curve / 9.81f)), -13.5f, 13.5f) : 0.f;
+		Lean = FMath::Lerp(Lean, LeanWant, 1.f - FMath::Exp(-Dt / 0.35f));
+		// The fork turns to the bend's own angle, atan(wheelbase k), at most 3 degrees, plus
+		// counter-phase crank weave so the bars stay alive on climbs and sprints.
+		const float Turning = bMoves ? FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan(0.988f * Curve)), -3.f, 3.f) : 0.f;
+		SteerCurve = FMath::Lerp(SteerCurve, Turning, 1.f - FMath::Exp(-Dt / 0.35f));
+		Steer = FMath::Clamp(SteerCurve + SteerWeave, -4.5f, 4.5f);
 		// A surge tips the head back a little and easing off lets it drop, about half a degree
 		// for each m/s gained a second, up to a degree and a half.
-		const float Gain = LastSpeed >= 0.f && !bPaused ? (Speed - LastSpeed) / Dt : 0.f;
+		const float Gain = (LastSpeed >= 0.f && !bPaused && Dt > 1e-4f) ? (Speed - LastSpeed) / Dt : 0.f;
 		LastSpeed = Speed;
 		Surge = FMath::Lerp(Surge, bMoves ? FMath::Clamp(Gain * 0.5f, -1.5f, 1.5f) : 0.f, 1.f - FMath::Exp(-Dt / 0.5f));
+		// Low-pass neck suspension (tau = 0.12s) on head vertical lift and road pitch judder.
+		const float NeckEase = 1.f - FMath::Exp(-Dt / 0.12f);
+		HeadLiftZ = FMath::Lerp(HeadLiftZ, HeadScale * (RawPedalBob + RawRoadBob), NeckEase);
+		HeadJudder = FMath::Lerp(HeadJudder, HeadScale * RawRoadJudder, NeckEase);
+		// Cockpit anticipatory gaze into upcoming apex (~18 m ahead, +-5.5 deg at 100%, tau = 0.4s)
+		// and smooth aero tuck / climb posture (-4 cm tucked, +2 cm on steep climbs, tau = 1.2s).
+		const bool bCockpitActive = bMoves && Seen == ERideView::Cockpit;
+		const float GazeSpeedScale = FMath::GetMappedRangeValueClamped(FVector2f(1.5f, 5.f), FVector2f(0.f, 1.f), Speed);
+		const float GazeWant = bCockpitActive
+		    ? FMath::Clamp(HeadScale * FMath::Clamp(AheadCurve * 200.f, -5.5f, 5.5f) * GazeSpeedScale, -8.f, 8.f)
+		    : 0.f;
+		GazeLead = FMath::Lerp(GazeLead, GazeWant, 1.f - FMath::Exp(-Dt / 0.4f));
+		const float AeroSpeed = FMath::GetMappedRangeValueClamped(FVector2f(11.f, 16.f), FVector2f(0.f, 1.f), Speed);
+		const float AeroEffort = (Grade < 0.03f && Speed > 6.f)
+		    ? FMath::GetMappedRangeValueClamped(FVector2f(1.2f, 2.f), FVector2f(0.f, 0.85f), RiderEffort)
+		    : 0.f;
+		const float Tuck = FMath::Max(AeroSpeed, AeroEffort);
+		const float ClimbUp = Grade > 0.06f
+		    ? FMath::GetMappedRangeValueClamped(FVector2f(0.06f, 0.12f), FVector2f(0.f, 1.f), Grade)
+		    : 0.f;
+		const float PostureWant = bCockpitActive ? (-4.f * Tuck * (1.f - ClimbUp) + 2.f * ClimbUp) : 0.f;
+		PostureZ = FMath::Lerp(PostureZ, PostureWant, 1.f - FMath::Exp(-Dt / 1.2f));
+		// Speed-responsive FOV widening (+0 at <=7 m/s to +6.5 deg at >=18 m/s, tau = 0.8s) in Cockpit & Chase.
+		const float FovWant = (bMoves && (Seen == ERideView::Cockpit || Seen == ERideView::Chase))
+		    ? FMath::GetMappedRangeValueClamped(FVector2f(7.f, 18.f), FVector2f(0.f, 6.5f), Speed)
+		    : 0.f;
+		FovBoost = Seen == ERideView::Steady ? 0.f : FMath::Lerp(FovBoost, FovWant, 1.f - FMath::Exp(-Dt / 0.8f));
+	}
+	else
+	{
+		LastSpeed = Speed;
 	}
 	const FRotator Road(Pitch, Yaw, 0.f);
 	if (!bHeadSet || Dt <= 0.f)
 	{
 		Head = Road;
+		ChaseYaw = Road.Yaw;
 		bHeadSet = true;
 	}
 	else
@@ -1138,10 +1211,24 @@ void ARidePawn::Place()
 		const float Ease = 1.f - FMath::Exp(-Dt / 0.1f);
 		Head = FMath::Lerp(Head, Head + (Road - Head).GetNormalized(), Ease);
 		Head.Normalize();
+		if (bMoves)
+		{
+			const float ChaseEase = 1.f - FMath::Exp(-Dt / 0.25f);
+			ChaseYaw = FMath::UnwindDegrees(ChaseYaw + FMath::UnwindDegrees(Head.Yaw - ChaseYaw) * ChaseEase);
+		}
+		else
+		{
+			ChaseYaw = Head.Yaw;
+		}
 	}
-	// The mouse turns the head on top of all that, the road's frame first and the look in it.
-	const FQuat Body = (Head + FRotator(Surge + Judder, Turn, Roll + Lean)).Quaternion();
-	const ERideView Seen = bStarted && !bBackdrop ? View() : ERideView::Eyes;
+	if (!bBackdrop)
+	{
+		const float AppliedFov = Seen == ERideView::Steady ? BaseFov : FMath::Clamp(BaseFov + FovBoost, 30.f, 120.f);
+		if (!FMath::IsNearlyEqual(Camera->FieldOfView, AppliedFov, 1e-4f))
+		{
+			Camera->SetFieldOfView(AppliedFov);
+		}
+	}
 	// Over the bars rides the Blender bike when it's imported, else make_bike.py's front end.
 	const bool bParts = BikeParts.Num() > 0;
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit && !bParts);
@@ -1156,45 +1243,76 @@ void ARidePawn::Place()
 	{
 		RiderArms->SetVisibility(Seen == ERideView::Cockpit && bParts && ArmsTilt >= 0.f);
 	}
-	if (Seen == ERideView::Cockpit && bParts)
+	if (Seen == ERideView::Steady)
 	{
-		// The bike's origin is the road under the eyes, and it moves with the body as the old front
-		// end did, so the bars hold still in the frame while the look turns.
-		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
-		Bike->SetWorldLocationAndRotation(Eye + Lift - Body.RotateVector(FVector(0.f, 0.f, EyeHeight)), Body);
-		PoseBike();
-		const FVector CameraAt = PartsOrigin + CockpitCamera - FVector(0.f, 0.f, EyeHeight);
-		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CameraAt), (Body * Look).Rotator());
+		// Dolly/Trolley stays rock-steady along the smooth road spline with level horizon (Roll = 0)
+		// and zero BikeSway, pedal rock, cornering roll, road judder, pedal bob, or surge.
+		const FRotator SteadyRot(FMath::Clamp(Head.Pitch + LookPitch, -89.f, 89.f), Head.Yaw + LookYaw, 0.f);
+		SetActorLocationAndRotation(Eye, SteadyRot);
 		return;
 	}
-	if (Seen == ERideView::Cockpit)
-	{
-		// The camera back and down from the eyes, moving with the body; the front end stays put on
-		// the body while the look turns, so it is placed relative to the camera by the look's inverse.
-		const FQuat Look = FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
-		SetActorLocationAndRotation(Eye + Lift + Body.RotateVector(CockpitEye), (Body * Look).Rotator());
-		Cockpit->SetRelativeLocationAndRotation(Look.Inverse().RotateVector(-CockpitEye), Look.Inverse());
-		return;
-	}
+	// Bike chassis physics (scaled by Profile.BikeSway / 100.f), decoupled from head stabilization.
+	const float BikeLiftZ = BikeScale * (0.25f * RawPedalBob + RawRoadBob);
+	const float BikeJudder = BikeScale * RawRoadJudder;
+	const float BikeLean = BikeScale * Lean;
+	const float BikeRock = BikeScale * (RawPedalRock + RawRoadRoll);
+	const float BikeRoll = FMath::Clamp(BikeLean + BikeRock, -22.f, 22.f);
+	// Head transfer function (scaled by Profile.HeadSway / 100.f): vestibular horizon stabilization
+	// (~27% of bike roll, capped at +-3.5 deg) + neck-filtered vertical lift/judder + surge.
+	const float HeadSurgePitch = HeadScale * Surge;
+	const float HeadTurn = HeadScale * RawTurn;
+	const float SurgeNorm = FMath::Clamp(Surge / 1.5f, -1.f, 1.f);
+	const float HeadSurgeOffset = -HeadScale * 2.5f * SurgeNorm;
+	const float ChaseSurgeOffset = -18.f * SurgeNorm;
+	const float RawHeadRollSrc = Seen == ERideView::Eyes ? (Lean + RawPedalRock + RawRoadRoll) : BikeRoll;
+	const float HeadRoll = FMath::Clamp(HeadScale * 0.27f * RawHeadRollSrc, -3.5f, 3.5f);
+	const FVector ForwardRoad = FRotator(0.f, Head.Yaw, 0.f).Vector();
+	const FVector RightRoad = FVector(-ForwardRoad.Y, ForwardRoad.X, 0.f);
 	if (Seen != ERideView::Chase)
 	{
-		// The eyes look down the road as over the bars do, CockpitTilt below level, with no bike in
-		// the frame; Dolly (ERideView::Steady) stays level (the user, 15 Nov).
-		const float Tilt = Seen == ERideView::Eyes ? CockpitTilt : 0.f;
-		SetActorLocationAndRotation(Eye + Lift, (Body * FRotator(LookPitch + Tilt, LookYaw, 0.f).Quaternion()).Rotator());
+		const FQuat BikeQuat = FRotator(Head.Pitch + BikeJudder, Head.Yaw, BikeRoll).Quaternion();
+		const float ViewGaze = Seen == ERideView::Cockpit ? GazeLead : 0.f;
+		const FQuat HeadQuat = FRotator(Head.Pitch + HeadSurgePitch + HeadJudder, Head.Yaw + ViewGaze + HeadTurn, HeadRoll).Quaternion();
+		const FQuat CamQuat = HeadQuat * FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
+		if (Seen == ERideView::Cockpit && bParts)
+		{
+			// Bike leans, rocks, bounces, and judders on the road under BikeSway; camera stays
+			// horizon-stabilized, neck-damped (tau = 0.12s), and looks ahead into corners.
+			Bike->SetWorldLocationAndRotation(RoadPos + FVector(0.f, 0.f, BikeLiftZ), BikeQuat);
+			PoseBike();
+			const FVector CameraInBike = PartsOrigin + CockpitCamera + FVector(0.f, 0.f, PostureZ);
+			const FVector CamPos = RoadPos + BikeQuat.RotateVector(CameraInBike) +
+			                       FVector(0.f, 0.f, HeadLiftZ) + ForwardRoad * HeadSurgeOffset;
+			SetActorLocationAndRotation(CamPos, CamQuat.Rotator());
+			return;
+		}
+		if (Seen == ERideView::Cockpit)
+		{
+			// Legacy SM_Cockpit fallback: mesh origin is at the rider's eyes, placed in the bike's
+			// leaning/rocking frame while the camera applies horizon stabilization and neck suspension.
+			const FVector BikeOriginWorld = Eye + FVector(0.f, 0.f, BikeLiftZ);
+			const FVector CamPos = Eye + FVector(0.f, 0.f, HeadLiftZ + PostureZ) +
+			                       BikeQuat.RotateVector(CockpitEye) + ForwardRoad * HeadSurgeOffset;
+			SetActorLocationAndRotation(CamPos, CamQuat.Rotator());
+			Cockpit->SetRelativeLocationAndRotation(CamQuat.Inverse().RotateVector(BikeOriginWorld - CamPos),
+			                                        CamQuat.Inverse() * BikeQuat);
+			return;
+		}
+		// First-person eyes without bike geometry, looking CockpitTilt below road grade.
+		const FVector CamPos = Eye + FVector(0.f, 0.f, HeadLiftZ) + ForwardRoad * HeadSurgeOffset;
+		SetActorLocationAndRotation(CamPos, CamQuat.Rotator());
 		return;
 	}
 	// Behind: the bike on the road under the rider, leaning into the bend and tipped with the grade,
-	// and the camera back along the look, level, so the sway is the bike's and not the picture's.
-	// Its roll, the lean and the rock together, is 80% of what it was before 15 Nov, at the user's request,
-	// scaled by the rider's own setting (Rider: Bike sway) and apart from the head's.
+	// while the chase camera uses spring-damped yaw lag (tau = 0.25s), smooth Aim without vertical
+	// road judder, subtle lateral Lean offset, and longitudinal surge lag.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
-	Bike->SetWorldLocationAndRotation(On->Point(S, RideLine(*On, S), 0.f), FRotator(Tip, Head.Yaw, 0.8f * Profile.BikeSway / 100.f * (Lean * 3.f + Rock)));
+	Bike->SetWorldLocationAndRotation(RoadPos, FRotator(Tip + BikeJudder, Head.Yaw, BikeRoll));
 	PoseBike();
-	const FRotator Look(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, Head.Yaw + LookYaw, 0.f);
-	const FVector Aim = Eye + Lift * 0.3f - FVector(0.f, 0.f, EyeHeight - ChaseAim);
-	const FVector Back = Aim - Look.Vector() * ChaseBack;
-	SetActorLocationAndRotation(Back, Look);
+	const FRotator ChaseLook(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, ChaseYaw + LookYaw, 0.f);
+	const FVector Aim = RoadPos + FVector(0.f, 0.f, ChaseAim) + RightRoad * FMath::Clamp(BikeLean * 1.5f, -25.f, 25.f);
+	const FVector Back = Aim - ChaseLook.Vector() * ChaseBack + ForwardRoad * ChaseSurgeOffset;
+	SetActorLocationAndRotation(Back, ChaseLook);
 }
 
 namespace
@@ -1709,7 +1827,8 @@ void ARidePawn::PlaceRain(float Dt)
 bool ARidePawn::Moves() const
 {
 	// Tests and stills ride steady, so they compare frame to frame, unless they ask for the motion.
-	return Automated() ? bSway : View() != ERideView::Steady;
+	// Steady (Dolly/Trolley) always stays minimal-motion.
+	return View() != ERideView::Steady && (!Automated() || bSway);
 }
 
 float ARidePawn::RideLine(const URideTrack& On, float S) const
