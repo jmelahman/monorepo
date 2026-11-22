@@ -233,6 +233,10 @@ func TestContainerReclaimAndPurge(t *testing.T) {
 	f := newFixture(t)
 	cli := dockerOrSkip(t, t.TempDir())
 	ctx := context.Background()
+	port, err := probeFreePort()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// A leftover labeled container from an "unclean exit".
 	id, err := cli.CreateContainer(ctx, dockerapi.ContainerSpec{
@@ -242,7 +246,7 @@ func TestContainerReclaimAndPurge(t *testing.T) {
 			dockerapi.ManagedLabel: "1",
 			"local-preview.repo":   "demo",
 		},
-		Port: 18080,
+		Port: port,
 	})
 	if err != nil {
 		t.Fatal(err)
