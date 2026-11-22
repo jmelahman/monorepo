@@ -22,6 +22,7 @@ mounts = [
   "type=bind,source=${localEnv:HOME}/.githooks,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.githooks,readonly",
   "type=bind,source=${localEnv:HOME}/.pi/agent/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.pi/agent/",
   "type=bind,source=${localEnv:HOME}/.config/opencode/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.config/opencode/",
+  "type=bind,source=${localEnv:HOME}/.gemini/,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.gemini/",
   "type=volume,source=devcontainer-go-mod,target=/home/dev/go/pkg/mod",
   "type=volume,source=devcontainer-cache,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.cache",
   "type=volume,source=devcontainer-local,target=${localEnv:DEVCONTAINER_REMOTE_HOME:/home/dev}/.local",
