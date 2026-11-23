@@ -26,6 +26,10 @@ const maxRemoteBody = 4 << 20
 // watcher notice a dead one.
 var remotePing = 20 * time.Second
 
+// remoteGrace is how long a player stays listed with no stream open: a
+// reload drops it for a moment, and the phone driving it shouldn't let go.
+var remoteGrace = 15 * time.Second
+
 // remotePlayer is one page playing somewhere: what it calls itself, its
 // last state as it put it, and its open streams.
 type remotePlayer struct {
@@ -56,13 +60,11 @@ func newRemoteHub() *remoteHub {
 	return &remoteHub{players: map[string]*remotePlayer{}, subs: map[*remoteSub]struct{}{}}
 }
 
-// list is the players with a stream open, by name; mu held.
+// list is the players, by name; mu held.
 func (h *remoteHub) list() []*remotePlayer {
-	out := []*remotePlayer{}
+	out := make([]*remotePlayer, 0, len(h.players))
 	for _, p := range h.players {
-		if p.conns > 0 {
-			out = append(out, p)
-		}
+		out = append(out, p)
 	}
 	slices.SortFunc(out, func(a, b *remotePlayer) int { return strings.Compare(a.Name+a.ID, b.Name+b.ID) })
 	return out
@@ -118,17 +120,26 @@ func (h *remoteHub) unsubscribe(s *remoteSub) {
 	if s.player == "" {
 		return
 	}
-	if p := h.players[s.player]; p != nil {
-		p.conns--
-		if p.conns <= 0 {
-			delete(h.players, s.player)
-		}
-		h.announce()
+	p := h.players[s.player]
+	if p == nil {
+		return
 	}
+	p.conns--
+	if p.conns > 0 {
+		return
+	}
+	time.AfterFunc(remoteGrace, func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		if h.players[s.player] == p && p.conns <= 0 {
+			delete(h.players, s.player)
+			h.announce()
+		}
+	})
 }
 
 // setState keeps a player's state and passes it on. It reports false
-// for a player with no stream open.
+// for a player the server doesn't know.
 func (h *remoteHub) setState(id string, state json.RawMessage) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()

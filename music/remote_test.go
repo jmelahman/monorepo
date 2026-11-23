@@ -72,6 +72,8 @@ func send(t *testing.T, method, url, body string) int {
 }
 
 func TestRemote(t *testing.T) {
+	defer func(g time.Duration) { remoteGrace = g }(remoteGrace)
+	remoteGrace = 300 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	mux := http.NewServeMux()
 	routeRemote(ctx, mux, newRemoteHub())
@@ -113,12 +115,37 @@ func TestRemote(t *testing.T) {
 		t.Fatalf("player got %s", got)
 	}
 
-	// The page closing takes it off the list.
+	// A reload drops the page's stream for a moment: it stays listed,
+	// with its state, and is the same player when it comes back.
 	closePlayer()
+	// The server learns of the close a moment after the page does.
+	for deadline := time.Now().Add(2 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+		if send(t, "POST", srv.URL+"/api/remote/players/p1/command", `{"do":"stale"}`) == 404 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("a player between streams still took commands")
+		}
+	}
+	pctx, closePlayer = context.WithCancel(ctx)
+	player = stream(t, pctx, srv.URL+"/api/remote/events?id=p1&name=Desk")
+	if got := next(t, watcher, "players"); !strings.Contains(got, `"state":{"title":"Song"}`) {
+		t.Fatalf("watcher saw %s after the reload", got)
+	}
+	if code := send(t, "POST", srv.URL+"/api/remote/players/p1/command", `{"do":"prev"}`); code != 204 {
+		t.Fatalf("command after reload: %d", code)
+	}
+	if got := next(t, player, "command"); got != `{"do":"prev"}` {
+		t.Fatalf("player got %s", got)
+	}
+
+	// Closed for good, it leaves the list once the grace is up.
+	closePlayer()
+	start := time.Now()
 	if got := next(t, watcher, "players"); got != "[]" {
 		t.Fatalf("players after close: %s", got)
 	}
-	if code := send(t, "POST", srv.URL+"/api/remote/players/p1/command", `{"do":"next"}`); code != 404 {
-		t.Fatalf("command to closed player: %d", code)
+	if time.Since(start) < remoteGrace/2 {
+		t.Fatal("the player left before its grace was up")
 	}
 }
