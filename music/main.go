@@ -101,6 +101,11 @@ func main() {
 	routeApp(mux, *apk)
 	routeYouTube(mux)
 	routeRemote(ctx, mux, newRemoteHub())
+	token, err := mcpToken(os.Getenv("MUSIC_MCP_TOKEN"), *state)
+	if err != nil {
+		fail(err)
+	}
+	routeMCP(mux, *music, shelf, token)
 	routeBuys(ctx, mux, os.Getenv("MUSIC_STORE"), os.Getenv("MUSIC_STORE_PROXY"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +140,6 @@ func writeJSON(w http.ResponseWriter, v any) {
 // routeLibrary serves the owned library: its listing, its audio and its
 // albums' art.
 func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
-	var lengths lengths
 	mux.HandleFunc("GET /api/library", func(w http.ResponseWriter, _ *http.Request) {
 		artists, err := walkLibrary(music)
 		if err != nil {
@@ -143,7 +147,7 @@ func routeLibrary(mux *http.ServeMux, music string, shelf *shelf) {
 			return
 		}
 		shelf.decorate(artists)
-		lengths.fill(music, artists)
+		shelf.files.fill(music, artists)
 		writeJSON(w, artists)
 	})
 	mux.HandleFunc("GET /api/audio", func(w http.ResponseWriter, r *http.Request) {

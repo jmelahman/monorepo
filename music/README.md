@@ -96,9 +96,26 @@ what is playing.
 ## Playlists
 
 Playlists are plain (a list of owned tracks) or smart (rules on artist,
-album, title, plays, when added and when last played, with an order and
-a size). They live in `playlists.json` under `--state`; play counts and
-exclusions in `library.json` beside it.
+album, title, genre, mood, energy, year, plays, when added and when last
+played, with an order and a size). They live in `playlists.json` under
+`--state`; play counts and exclusions in `library.json` beside it.
+
+Labels say what an artist or an album sounds like: genres, moods (from a
+fixed set) and an energy. An album's own win over its artist's; a track
+with no genre labelled goes by its file's ID3 genre tag, and its year
+comes from the tag too. Labels live in `labels.json`; the files are
+never rewritten for them.
+
+## MCP
+
+`/mcp` serves the library to an agent over MCP's streamable HTTP: it
+lists artists, albums and tracks, labels them, and makes playlists. It
+wants `Authorization: Bearer <token>`, the token being
+`MUSIC_MCP_TOKEN`, or else one made on first start and kept in
+`mcp-token` under `--state`. For Claude Code:
+
+    claude mcp add --transport http music http://HOST:8095/mcp \
+      --header "Authorization: Bearer $(cat STATE/mcp-token)"
 
 ## Image
 

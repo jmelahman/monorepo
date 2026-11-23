@@ -10,10 +10,11 @@ import (
 	"sync"
 )
 
-// lengths reads how long each track plays, for the library's totals. An
-// mp3 says so in its first frame (a Xing, Info or VBRI header) or, at a
-// constant bitrate, by its size; either way only the head of the file is
-// read. What was read is kept while the file's size and time stay put.
+// lengths reads how long each track plays, for the library's totals, and
+// what its tag says of its genre and year. An mp3 says how long in its
+// first frame (a Xing, Info or VBRI header) or, at a constant bitrate,
+// by its size; either way only the head of the file is read. What was
+// read is kept while the file's size and time stay put.
 type lengths struct {
 	mu   sync.Mutex
 	seen map[string]length
@@ -22,6 +23,8 @@ type lengths struct {
 type length struct {
 	size, added int64
 	secs        float64
+	genre       string // as the tag has it
+	year        int
 }
 
 // fill sets each track's Duration, reading the files it hasn't yet.
@@ -35,15 +38,31 @@ func (l *lengths) fill(root string, artists []artist) {
 		for j := range artists[i].Albums {
 			for k := range artists[i].Albums[j].Tracks {
 				t := &artists[i].Albums[j].Tracks[k]
-				got, ok := l.seen[t.Path]
-				if !ok || got.size != t.Size || got.added != t.Added {
-					got = length{t.Size, t.Added, mp3Duration(filepath.Join(root, filepath.FromSlash(t.Path)))}
-					l.seen[t.Path] = got
-				}
-				t.Duration = got.secs
+				t.Duration = l.ofLocked(root, *t).secs
 			}
 		}
 	}
+}
+
+// of is what was read of one track's file.
+func (l *lengths) of(root string, t track) length {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.ofLocked(root, t)
+}
+
+func (l *lengths) ofLocked(root string, t track) length {
+	if l.seen == nil {
+		l.seen = map[string]length{}
+	}
+	got, ok := l.seen[t.Path]
+	if !ok || got.size != t.Size || got.added != t.Added {
+		name := filepath.Join(root, filepath.FromSlash(t.Path))
+		got = length{size: t.Size, added: t.Added, secs: mp3Duration(name)}
+		got.genre, got.year = fileTags(name)
+		l.seen[t.Path] = got
+	}
+	return got
 }
 
 // mp3Duration is how many seconds an mp3 plays, or 0 when it can't tell.

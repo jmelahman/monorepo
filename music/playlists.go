@@ -25,6 +25,14 @@ type libTrack struct {
 	track
 	Artist string `json:"artist"`
 	Album  string `json:"album"`
+	// The year its file gives, and its labels as they fall to it
+	// (labels.go); set where the labels matter, by enrich.
+	Year   int      `json:"year,omitempty"`
+	Genres []string `json:"genres,omitempty"`
+	Moods  []string `json:"moods,omitempty"`
+	Energy string   `json:"energy,omitempty"`
+
+	fileGenre string // its file's own, normalized
 }
 
 // flatten lists every track of the library with where it is filed.
@@ -47,8 +55,9 @@ type plays struct {
 }
 
 // rule is one condition of a smart playlist. Text fields (artist, album,
-// title) take contains, is, not and starts; plays takes >, < and =; added
-// and played take within and before, in days.
+// title) take contains, is, not and starts; plays and year take >, < and
+// =; added and played take within and before, in days. The labels'
+// fields (genre, mood, energy) take is and not, and genre contains.
 type rule struct {
 	Field string `json:"field"`
 	Op    string `json:"op"`
@@ -93,12 +102,24 @@ type shelf struct {
 	playlists []*playlist
 	plays     map[string]plays
 	excluded  map[string]bool
+	labels    labelBook
+
+	files lengths // what each file says of itself
 }
 
 func newShelf(state string) (*shelf, error) {
 	s := &shelf{dir: state, plays: map[string]plays{}, excluded: map[string]bool{}}
 	if err := loadJSON(filepath.Join(state, "playlists.json"), &s.playlists); err != nil {
 		return nil, err
+	}
+	if err := loadJSON(filepath.Join(state, "labels.json"), &s.labels); err != nil {
+		return nil, err
+	}
+	if s.labels.Artists == nil {
+		s.labels.Artists = map[string]labels{}
+	}
+	if s.labels.Albums == nil {
+		s.labels.Albums = map[string]labels{}
 	}
 	var meta struct {
 		Plays    map[string]plays `json:"plays"`
@@ -266,6 +287,43 @@ func (s *shelf) meets(r rule, t libTrack, now time.Time) bool {
 		case "=":
 			return have == n
 		}
+	case "year":
+		n, _ := strconv.Atoi(r.Value)
+		if t.Year == 0 {
+			return false // no year says nothing either way
+		}
+		switch r.Op {
+		case ">":
+			return t.Year > n
+		case "<":
+			return t.Year < n
+		case "=":
+			return t.Year == n
+		}
+	case "genre", "mood", "energy":
+		var have []string
+		switch r.Field {
+		case "genre":
+			have = t.Genres
+		case "mood":
+			have = t.Moods
+		default:
+			if t.Energy != "" {
+				have = []string{t.Energy}
+			}
+		}
+		want := strings.ToLower(strings.TrimSpace(r.Value))
+		if r.Field == "genre" {
+			want = cmp.Or(normalizeGenre(want), want)
+		}
+		switch r.Op {
+		case "is":
+			return slices.Contains(have, want)
+		case "not":
+			return !slices.Contains(have, want)
+		case "contains":
+			return slices.ContainsFunc(have, func(h string) bool { return strings.Contains(h, want) })
+		}
 	case "added", "played":
 		days, _ := strconv.Atoi(r.Value)
 		cutoff := now.AddDate(0, 0, -days)
@@ -338,8 +396,12 @@ func (p *playlist) check() error {
 		"album":  {"contains", "is", "not", "starts"},
 		"title":  {"contains", "is", "not", "starts"},
 		"plays":  {">", "<", "="},
+		"year":   {">", "<", "="},
 		"added":  {"within", "before"},
 		"played": {"within", "before"},
+		"genre":  {"is", "not", "contains"},
+		"mood":   {"is", "not"},
+		"energy": {"is", "not"},
 	}
 	for _, r := range sm.Rules {
 		allowed, ok := ops[r.Field]
@@ -349,10 +411,15 @@ func (p *playlist) check() error {
 		if !slices.Contains(allowed, r.Op) {
 			return fmt.Errorf("%s can't be compared with %q", r.Field, r.Op)
 		}
-		if r.Field == "plays" || r.Field == "added" || r.Field == "played" {
+		if r.Field == "plays" || r.Field == "year" || r.Field == "added" || r.Field == "played" {
 			if _, err := strconv.Atoi(r.Value); err != nil {
 				return fmt.Errorf("%s wants a number, not %q", r.Field, r.Value)
 			}
+		}
+		if v := strings.ToLower(strings.TrimSpace(r.Value)); r.Field == "mood" && !slices.Contains(moods, v) {
+			return fmt.Errorf("%q isn't a mood; the moods are %s", r.Value, strings.Join(moods, ", "))
+		} else if r.Field == "energy" && !slices.Contains(energies, v) {
+			return fmt.Errorf("%q isn't an energy; it is low, medium or high", r.Value)
 		}
 	}
 	return nil
@@ -374,7 +441,9 @@ func routeShelf(mux *http.ServeMux, s *shelf, music string) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return nil, false
 		}
-		return flatten(artists), true
+		all := flatten(artists)
+		s.enrich(music, all)
+		return all, true
 	}
 	view := func(p *playlist, all []libTrack, withTracks bool) playlistView {
 		ts := s.resolve(p, all, time.Now())

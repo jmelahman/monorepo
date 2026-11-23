@@ -434,8 +434,9 @@ func (e *editor) mkdirs(rel string) error {
 	return nil
 }
 
-// moved carries plays, exclusions and playlist entries from each track's
-// old path to its new one; a duplicate's plays add to the copy kept.
+// moved carries plays, exclusions, playlist entries and labels from each
+// track's old path to its new one; a duplicate's plays add to the copy
+// kept.
 func (s *shelf) moved(paths map[string]string) error {
 	if len(paths) == 0 {
 		return nil
@@ -475,6 +476,11 @@ func (s *shelf) moved(paths map[string]string) error {
 	}
 	if err := s.saveMetaLocked(); err != nil {
 		return err
+	}
+	if s.movedLabelsLocked(paths) {
+		if err := s.saveLabelsLocked(); err != nil {
+			return err
+		}
 	}
 	if changed {
 		return s.savePlaylistsLocked()
