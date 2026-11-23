@@ -672,6 +672,18 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		}
 	}
 
+	// ---- Bottom left: Tab · Dock hint in Free Look even when HUD is hidden, fading out after idle --
+	if (!Pawn->Profile.bHud && Pawn->FreeLookHint.Shown > 0.f)
+	{
+		const float A = Pawn->FreeLookHint.Shown;
+		const FString Hint = TEXT("Tab · Dock    Esc · Pause");
+		const FSlateFontInfo Font = P.Font("Bold", 11.f);
+		const float Wide = P.Width(Hint, Font) + 28.f, Tall = 32.f, X = 20.f, Y = Dock.Floor - 20.f - Tall;
+		P.Round(X, Y, Wide, Tall, 16.f, Hex(0x0E1110, 0.78f * A));
+		P.Border(X, Y, Wide, Tall, 16.f, Hex(0xF4F1EA, 0.12f * A));
+		P.Text(X + Wide * 0.5f, Y + 20.f, Hint, Font, WithAlpha(Ink, A), EAlign::Centre);
+	}
+
 	// ---- Bottom right: the frame rate, if the rider asked for it (Graphics), with or without the HUD --
 	if (Pawn->Profile.bFps && FrameSeconds > 0.f)
 	{

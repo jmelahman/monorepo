@@ -137,6 +137,7 @@ public:
 	// turns the head while a button is held. In free look (Tab, or the dock's button) the mouse
 	// turns the head on its own, with no cursor or dock, until Tab brings them back.
 	Veloverse::FDockReveal Dock;
+	Veloverse::FDockReveal FreeLookHint;
 	int32 DockHover = -1; // the button under the pointer, or -1
 	void NextTimeOfDay();
 	void NextWeather();

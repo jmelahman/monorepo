@@ -1036,6 +1036,10 @@ void ARidePawn::MouseLook(APlayerController& Player)
 		LookYawTarget = FMath::Clamp(LookYawTarget + Dx * Turn, -110.f, 110.f);
 		LookPitchTarget = FMath::Clamp(LookPitchTarget + Dy * Turn, -45.f, 35.f);
 		LookRest = 0.f;
+		if (bFreeLook)
+		{
+			FreeLookHint.Moved();
+		}
 	}
 	else
 	{
@@ -2175,10 +2179,12 @@ void ARidePawn::SetFreeLook(bool bOn)
 	if (bOn)
 	{
 		Dock.Hide();
+		FreeLookHint.Moved();
 	}
 	else
 	{
 		Dock.Moved();
+		FreeLookHint.Hide();
 	}
 	if (ARidePlayerController* Rides = GetController<ARidePlayerController>())
 	{
@@ -2260,6 +2266,7 @@ void ARidePawn::Docking(APlayerController& Player)
 		}
 	}
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+	FreeLookHint.Tick(Dt, false);
 	if (bFreeLook)
 	{
 		DockHover = -1;
