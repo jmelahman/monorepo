@@ -381,6 +381,11 @@ void ARidePawn::UseStart(int32 Index)
 	if (bStarted)
 	{
 		RiddenBefore = Ridden(); // the ride goes on from there
+		if (!Automated())
+		{
+			RouteLoadTimer = RouteLoadDuration;
+			RouteLoadTitle = Track ? Track->Title : FString(TEXT("Loading route"));
+		}
 	}
 	StartMetres = All[Index].Metres;
 	ChosenStart = StartMetres;

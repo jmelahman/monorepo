@@ -254,6 +254,11 @@ void ARidePlayerController::Ride()
 {
 	if (ARidePawn* Pawn = Rider())
 	{
+		if (!Pawn->bStarted && !ARidePawn::Automated())
+		{
+			Pawn->RouteLoadTimer = ARidePawn::RouteLoadDuration;
+			Pawn->RouteLoadTitle = Pawn->Track ? Pawn->Track->Title : FString(TEXT("Loading route"));
+		}
 		Pawn->bStarted = true;
 	}
 	Close();
