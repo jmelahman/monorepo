@@ -13,7 +13,7 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@opencode/plugin": "2.3.2"
+    "@opencode/plugin": "2.3.0"
   },
   "peerDependencies": {
     "@opencode/theme": "2.3.2",
