@@ -2,7 +2,7 @@
   "deps": {
     "toastui-editor": {
       "package": "@toast-ui/editor",
-      "version": "3.2.2",
+      "version": "3.2.3",
       "files": [
         "LICENSE",
         "toastui-editor-all.min.js",
@@ -12,7 +12,7 @@
       "includes": [
         {
           "name": "@toast-ui/editor",
-          "version": "3.2.2"
+          "version": "3.2.3"
         },
         {
           "name": "dompurify",
@@ -32,7 +32,7 @@
         },
         {
           "name": "prosemirror-inputrules",
-          "version": "1.5.1"
+          "version": "1.6.0"
         },
         {
           "name": "prosemirror-keymap",
