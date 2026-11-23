@@ -1,7 +1,9 @@
 #include "Modules/ModuleManager.h"
 
 #include "Containers/Ticker.h"
+#include "HAL/IConsoleManager.h"
 #include "MoviePlayer.h"
+#include "Scalability.h"
 #include "Misc/Paths.h"
 #include "Styling/CoreStyle.h"
 #include "UObject/UObjectGlobals.h"
@@ -21,6 +23,17 @@ FSlateFontInfo MenuFont(const TCHAR* File, float Px)
 	// Px is the CSS size; Slate's are points at 96 DPI. The engine's Roboto if the file isn't there.
 	const FString Path = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir() / TEXT("Menu") / File);
 	return FPaths::FileExists(Path) ? FSlateFontInfo(Path, Px * 0.75f) : FCoreStyle::GetDefaultFontStyle("Bold", Px * 0.75f);
+}
+
+// Nanite's detail follows the view distance preset: two pixels an edge below Epic, the engine's one
+// at Epic. Scalability.ini can't set it (it isn't a scalability cvar: the engine ignores it there
+// with an ensure, which fails the cook), so it's set here whenever the presets change.
+void UseNaniteDetail(const Scalability::FQualityLevels& Levels)
+{
+	if (IConsoleVariable* Edge = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Nanite.MaxPixelsPerEdge")))
+	{
+		Edge->Set(Levels.ViewDistanceQuality >= 3 ? 1.f : 2.f, ECVF_SetByCode);
+	}
 }
 
 void PrepareLoadingScreen()
@@ -78,6 +91,8 @@ public:
 		{
 			return;
 		}
+		UseNaniteDetail(Scalability::GetQualityLevels());
+		Scalability::OnScalabilitySettingsChanged.AddStatic(&UseNaniteDetail);
 		PrepareLoadingScreen();
 		// The movie player shows a setup once, so set up again for the next load (a restart): a
 		// tick after the load, once the player has finished with this one.
