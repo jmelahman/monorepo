@@ -45,6 +45,14 @@ FString Clock(float Seconds)
 	return FString::Printf(TEXT("%d:%02d:%02d"), S / 3600, S / 60 % 60, S % 60);
 }
 
+// A countdown: whole seconds rounded up, as m:ss, or h:mm:ss from an hour.
+FString Short(double Seconds)
+{
+	const int32 S = FMath::Max(0, FMath::CeilToInt32(Seconds - 1e-3));
+	return S >= 3600 ? FString::Printf(TEXT("%d:%02d:%02d"), S / 3600, S / 60 % 60, S % 60)
+	                 : FString::Printf(TEXT("%d:%02d"), S / 60, S % 60);
+}
+
 // Far off in kilometres (or miles), close in metres (or feet) rounded to 50.
 FString Km(float Metres)
 {
@@ -90,6 +98,22 @@ void URideOverlay::NativeTick(const FGeometry& Geometry, float DeltaTime)
 		TakeClimbs(Pawn->Segments);
 	}
 	Watts += (Pawn->Reading.Watts - Watts) * (1.f - FMath::Exp(-DeltaTime / 0.8f));
+	SinceSample = FMath::Min(SinceSample + DeltaTime, 3.f);
+	while (SinceSample >= 0.1f)
+	{
+		SinceSample -= 0.1f;
+		PowerSamples.Add(static_cast<float>(Pawn->Reading.Watts));
+		if (PowerSamples.Num() > 30)
+		{
+			PowerSamples.RemoveAt(0);
+		}
+	}
+	float Sum = 0.f;
+	for (const float R : PowerSamples)
+	{
+		Sum += R;
+	}
+	Watts3 = PowerSamples.Num() ? Sum / PowerSamples.Num() : static_cast<float>(Pawn->Reading.Watts);
 	FrameSeconds = FrameSeconds > 0.f ? FrameSeconds + (DeltaTime - FrameSeconds) * (1.f - FMath::Exp(-DeltaTime / 0.5f))
 	                                  : DeltaTime;
 }
@@ -240,7 +264,11 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	// The panels, unless the rider has put them away (H).
 	if (Pawn->Profile.bHud)
 	{
+		// A workout takes the power panel's corner and the road ahead's (see "The workout" below).
+		const bool bWorkout = Pawn->Workout.Active();
+
 		// ---- Top left: power ------------------------------------------------------------------------
+		if (!bWorkout)
 		{
 			const int32 Zone = Pawn->Zone(Watts);
 			const FLinearColor ZoneColour = Hex(ZoneHex[Zone]);
@@ -265,6 +293,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		// ---- Top right: the road ahead or this climb, and the loop ---------------------------------
 		// The power panel's size, mirrored: its label and badge row, the profile where the watts are,
 		// and the stretch bar level with the zone bar.
+		if (!bWorkout)
 		{
 			const float Wide = 220.f, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
 			const float X0 = X + 16.f, Inner = Wide - 32.f, Right = X0 + Inner;
@@ -428,80 +457,182 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			P.Text(X + Wide * 0.5f, Y + 20.f, Hint, Font, Ink, EAlign::Centre);
 		}
 
-		// ---- Bottom middle: the workout ---------------------------------------------------------------
-		// The steps as blocks as tall as their target and coloured by zone, a cursor at now; over them
-		// the step with its target and time left, and what's next.
-		if (Pawn->Workout.Active())
+		// ---- The workout ------------------------------------------------------------------------------
+		// The block you're in down the left, where the power panel sits, and the whole plan top right,
+		// where the road ahead sits (the user's layout, 23 Nov).
+		if (bWorkout)
 		{
 			const Veloverse::FWorkoutPlayer& Player = Pawn->Workout;
 			const Veloverse::FWorkout& Plan = Player.Workout();
-			const float Wide = FMath::Min(620.f, W - 40.f), Tall = 112.f, X = (W - Wide) * 0.5f, Y = Dock.Clear() - 20.f - Tall;
-			const float X0 = X + 16.f, Inner = Wide - 32.f;
-			P.Panel(X, Y, Wide, Tall, 14.f);
-			const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
-			const FSlateFontInfo Big = P.Font("Bold", 20.f);
-			const FSlateFontInfo Soft = P.Font("Medium", 12.f);
 			const Veloverse::FWorkoutStep* Step = Player.Step();
 			const TOptional<double> Target = Pawn->WorkoutTarget();
-			FString Head = UTF8_TO_TCHAR(Plan.Name.c_str());
-			Head = Head.ToUpper();
-			P.Text(X0, Y + 22.f, Head, Label, Dim);
-			FString Mode = Pawn->bErg ? TEXT("ERG") : TEXT("ERG OFF");
-			if (!FMath::IsNearlyZero(Pawn->WorkoutBias))
-			{
-				Mode = FString::Printf(TEXT("%+.0f%%  "), Pawn->WorkoutBias * 100.f) + Mode;
-			}
-			const float ModeW = P.Text(X0 + Inner, Y + 22.f, Mode, Label, Pawn->bErg ? Accent : Dim, EAlign::Right);
-			if (Player.Done() || !Step)
-			{
-				P.Text(X0, Y + 50.f, TEXT("Workout done"), Big, Ink);
-			}
-			else
-			{
-				const FString What = Step->Label.empty() ? FString(TEXT("Ride")) : FString(UTF8_TO_TCHAR(Step->Label.c_str()));
-				const FString Aim = Target ? FString::Printf(TEXT("%.0f W"), *Target) : FString(TEXT("Free ride"));
-				float Tx = X0 + P.Text(X0, Y + 50.f, Aim, Big, Target ? Hex(ZoneHex[Pawn->Zone(*Target)]) : Ink);
-				Tx += 10.f + P.Text(Tx + 10.f, Y + 50.f, What, Soft, Ink);
-				if (Step->Cadence > 0.0)
-				{
-					P.Text(Tx + 10.f, Y + 50.f, FString::Printf(TEXT("%.0f rpm"), Step->Cadence), Soft, Dim);
-				}
-				P.Text(X0 + Inner, Y + 50.f, Clock(static_cast<float>(Player.StepLeft())), Big, Ink, EAlign::Right);
-				if (const Veloverse::FWorkoutStep* Next = Player.NextStep())
-				{
-					const FString Then = Next->bFree ? FString(TEXT("free"))
-					                                 : FString::Printf(TEXT("%.0f W"), Next->Start * (1.0 + Pawn->WorkoutBias) * Pawn->Ftp);
-					const FString Line = FString::Printf(TEXT("then %s for %s"), *Then, *Clock(static_cast<float>(Next->Seconds)));
-					P.Text(X0 + Inner - ModeW - 18.f, Y + 22.f, Line, Soft, Dim, EAlign::Right);
-				}
-			}
-			// The blocks, one column every 2 units, against the hardest share in the plan.
+			const double Scale = 1.0 + Pawn->WorkoutBias;
 			const double Total = FMath::Max(Plan.Seconds(), 1.0);
-			double Peak = 1.2;
-			for (const Veloverse::FWorkoutStep& S : Plan.Steps)
+			const bool bDone = Player.Done() || !Step;
+			const FSlateFontInfo Label = P.Font("Bold", 11.f, 0.08f);
+			const FSlateFontInfo Soft = P.Font("Medium", 12.f);
+			const FSlateFontInfo Strong = P.Font("Bold", 12.f);
+			const FLinearColor Faint = Hex(0xF4F1EA, 0.12f);
+			auto Name = [](const Veloverse::FWorkoutStep& S)
+			{ return S.Label.empty() ? FString(TEXT("Ride")) : FString(UTF8_TO_TCHAR(S.Label.c_str())); };
+			auto Aim = [&](const Veloverse::FWorkoutStep& S)
 			{
-				Peak = FMath::Max(Peak, FMath::Max(S.Start, S.End));
-			}
-			const float Foot = Y + Tall - 12.f, Room = 36.f, Col = 2.f;
-			size_t Index = 0;
-			double StepStart = 0.0;
-			for (float Cx = 0.f; Cx < Inner; Cx += Col)
+				const double A = S.Start * Scale * Pawn->Ftp, B = S.End * Scale * Pawn->Ftp;
+				return S.bFree ? FString(TEXT("free")) : FMath::Abs(A - B) < 1.0 ? FString::Printf(TEXT("%.0f W"), A)
+				                                                               : FString::Printf(TEXT("%.0f to %.0f W"), A, B);
+			};
+
+			// Left: the block.
 			{
-				const double T = (Cx + Col * 0.5f) / Inner * Total;
-				while (Index + 1 < Plan.Steps.size() && T >= StepStart + Plan.Steps[Index].Seconds)
+				const float X = 20.f, Y = 20.f, Wide = 300.f, X0 = X + 18.f, Right = X + Wide - 18.f, Inner = Right - X0;
+				P.Panel(X, Y, Wide, bDone ? 96.f : 268.f, 14.f);
+				if (bDone)
 				{
-					StepStart += Plan.Steps[Index].Seconds;
-					++Index;
+					P.Text(X0, Y + 28.f, TEXT("DONE"), Label, Accent);
+					P.Text(X0, Y + 60.f, TEXT("Workout done"), P.Font("Bold", 24.f), Ink);
+					P.Text(X0, Y + 80.f, TEXT("Ride on, or end it from the menu"), Soft, Dim);
 				}
-				const Veloverse::FWorkoutStep& S = Plan.Steps[Index];
-				const double Share = S.bFree ? 0.5 : S.At(T - StepStart);
-				const float Tall2 = FMath::Max(3.f, static_cast<float>(Share / Peak) * Room);
-				const bool bPast = T < Player.Elapsed();
-				const FLinearColor Colour = S.bFree ? Hex(0xF4F1EA, 0.3f) : Hex(ZoneHex[Pawn->Zone(static_cast<float>(Share * Pawn->Ftp))], bPast ? 0.45f : 0.95f);
-				P.Rect(X0 + Cx, Foot - Tall2, Col, Tall2, Colour);
+				else
+				{
+					const FLinearColor ZoneColour = Target ? Hex(ZoneHex[Pawn->Zone(static_cast<float>(*Target))]) : Ink;
+					P.Text(X0, Y + 32.f, Name(*Step).ToUpper(), P.Font("Black", 12.f, 0.16f), ZoneColour);
+					P.Text(Right, Y + 36.f, Short(Total - Player.Elapsed()), P.Font("Bold", 26.f), Ink, EAlign::Right);
+					FString Share = Step->bFree ? FString(TEXT("Ride the road"))
+					                : FMath::IsNearlyEqual(Step->Start, Step->End)
+					                    ? FString::Printf(TEXT("%.0f%% FTP"), Step->Start * Scale * 100.0)
+					                    : FString::Printf(TEXT("%.0f to %.0f%% FTP"), Step->Start * Scale * 100.0, Step->End * Scale * 100.0);
+					P.Text(X0, Y + 54.f, Share, Soft, Dim);
+
+					P.Text(X0, Y + 84.f, TEXT("TARGET"), Label, Dim);
+					if (Target)
+					{
+						const float Num = P.Text(X0, Y + 140.f, FString::Printf(TEXT("%.0f"), *Target), P.Font("Black", 64.f, -0.02f), Ink);
+						P.Text(X0 + Num + 6.f, Y + 140.f, TEXT("W"), P.Font("Bold", 24.f), Dim);
+					}
+					else
+					{
+						P.Text(X0, Y + 132.f, TEXT("Free ride"), P.Font("Bold", 36.f), Ink);
+					}
+
+					// You, against it: the last 3 s, green inside 4% either side.
+					const double Off = Target && *Target > 1.0 ? Watts3 / *Target - 1.0 : 0.0;
+					const bool bOnIt = FMath::Abs(Off) <= 0.04;
+					const FLinearColor Yours = !Target ? Ink : bOnIt ? Hex(0x7FD69A) : Off < 0.0 ? Hex(0xF7D046) : Hex(0xFF9A3C);
+					const float Mid = X0 + Inner * 0.5f;
+					P.Text(X0, Y + 168.f, TEXT("YOU · 3 S"), Label, Dim);
+					P.Text(X0, Y + 200.f, FString::Printf(TEXT("%.0f"), Watts3), P.Font("Bold", 32.f), Yours);
+					P.Text(Mid, Y + 168.f, TEXT("CADENCE"), Label, Dim);
+					const float Rpm = P.Text(Mid, Y + 200.f, FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), P.Font("Bold", 32.f), Ink);
+					if (Step->Cadence > 0.0)
+					{
+						P.Text(Mid + Rpm + 6.f, Y + 200.f, FString::Printf(TEXT("/ %.0f"), Step->Cadence), Soft, Dim);
+					}
+					if (Target)
+					{
+						// The bar spans 10% either side; the band is the middle 40% of it.
+						const float BarY = Y + 214.f;
+						P.Round(X0, BarY, Inner, 8.f, 4.f, Faint);
+						P.Round(X0 + Inner * 0.3f, BarY, Inner * 0.4f, 8.f, 4.f, Hex(0x7FD69A, 0.35f));
+						P.Rect(X0 + Inner * 0.5f - 1.f, BarY - 3.f, 2.f, 14.f, Hex(0xF4F1EA, 0.7f));
+						const float At = X0 + Inner * FMath::Clamp(0.5f + static_cast<float>(Off) / 0.2f, 0.f, 1.f);
+						P.Round(At - 6.f, BarY - 2.f, 12.f, 12.f, 6.f, Yours, Hex(0x080A09, 0.8f), 2.f);
+					}
+
+					// The keys.
+					const FSlateFontInfo KeyFont = P.Font("Bold", 11.f);
+					float Kx = X0;
+					auto Key = [&](const TCHAR* Cap)
+					{
+						const float Kw = FMath::Max(18.f, P.Width(Cap, KeyFont) + 10.f);
+						P.Round(Kx, Y + 236.f, Kw, 18.f, 4.f, Hex(0xF4F1EA, 0.14f));
+						P.Text(Kx + Kw * 0.5f, Y + 249.f, Cap, KeyFont, Ink, EAlign::Centre);
+						Kx += Kw + 4.f;
+					};
+					auto Says = [&](const TCHAR* What)
+					{
+						Kx += 2.f + P.Text(Kx + 2.f, Y + 249.f, What, Soft, Dim) + 14.f;
+					};
+					Key(TEXT("["));
+					Key(TEXT("]"));
+					Says(TEXT("Intensity"));
+					Key(TEXT("N"));
+					Says(TEXT("Skip"));
+					Key(TEXT("E"));
+					Says(Pawn->bErg ? TEXT("ERG off") : TEXT("ERG on"));
+				}
 			}
-			const float Now = Inner * FMath::Clamp(static_cast<float>(Player.Elapsed() / Total), 0.f, 1.f);
-			P.Rect(X0 + Now - 1.f, Foot - Room - 4.f, 2.f, Room + 4.f, FLinearColor::White);
+
+			// Top right: the plan, as blocks as tall as their target and coloured by zone, a cursor at
+			// now, and the next block with the time left in this one.
+			{
+				// 370 leaves the HUD's 28-unit gap to the stats panel at 1280 wide.
+				const float Wide = FMath::Min(370.f, W * 0.29f), Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
+				const float X0 = X + 16.f, Inner = Wide - 32.f, Right = X0 + Inner;
+				P.Panel(X, Top, Wide, Tall, 14.f);
+				float Cx = Right;
+				auto Chip = [&](const FString& Text, const FLinearColor& Fill, const FLinearColor& Colour)
+				{
+					const float Cw = P.Width(Text, Label) + 14.f;
+					Cx -= Cw;
+					P.Round(Cx, Top + 12.f, Cw, 18.f, 5.f, Fill);
+					P.Text(Cx + 7.f, Top + 25.f, Text, Label, Colour);
+					Cx -= 6.f;
+				};
+				Chip(FString::Printf(TEXT("%.0f%%"), Scale * 100.0), Faint, Ink);
+				Chip(Pawn->bErg ? TEXT("ERG") : TEXT("ERG OFF"), Pawn->bErg ? FLinearColor(Accent.R, Accent.G, Accent.B, 0.2f) : Faint,
+				     Pawn->bErg ? Accent : Dim);
+				P.Text(X0, Top + 26.f, UTF8_TO_TCHAR(Plan.Name.c_str()), P.Font("Bold", 14.f), Ink);
+
+				double Peak = 1.1;
+				for (const Veloverse::FWorkoutStep& S : Plan.Steps)
+				{
+					Peak = FMath::Max(Peak, FMath::Max(S.Start, S.End));
+				}
+				const float Foot = Top + 96.f, Room = 54.f, Col = 2.f;
+				size_t Index = 0;
+				double StepStart = 0.0;
+				for (float Bx = 0.f; Bx < Inner; Bx += Col)
+				{
+					const double T = (Bx + Col * 0.5f) / Inner * Total;
+					while (Index + 1 < Plan.Steps.size() && T >= StepStart + Plan.Steps[Index].Seconds)
+					{
+						StepStart += Plan.Steps[Index].Seconds;
+						++Index;
+					}
+					const Veloverse::FWorkoutStep& S = Plan.Steps[Index];
+					const double Share = S.bFree ? 0.5 : S.At(T - StepStart);
+					const float Bar = FMath::Max(3.f, static_cast<float>(Share / Peak) * Room);
+					const bool bPast = T < Player.Elapsed();
+					const FLinearColor Colour = S.bFree ? Hex(0xF4F1EA, 0.3f)
+					                                    : Hex(ZoneHex[Pawn->Zone(static_cast<float>(Share * Pawn->Ftp))], bPast ? 0.4f : 0.95f);
+					P.Rect(X0 + Bx, Foot - Bar, Col, Bar, Colour);
+				}
+				const float Now = Inner * FMath::Clamp(static_cast<float>(Player.Elapsed() / Total), 0.f, 1.f);
+				P.Rect(X0 + Now - 1.f, Foot - Room - 4.f, 2.f, Room + 6.f, FLinearColor::White);
+
+				const float Line = Top + 118.f;
+				if (!bDone)
+				{
+					float Nx = X0 + P.Text(X0, Line, TEXT("NEXT"), Label, Dim) + 8.f;
+					if (const Veloverse::FWorkoutStep* Next = Player.NextStep())
+					{
+						P.Disc(Nx + 4.f, Line - 4.f, 4.f,
+						       Next->bFree ? Ink : Hex(ZoneHex[Pawn->Zone(static_cast<float>(Next->Start * Scale * Pawn->Ftp))]));
+						Nx += 14.f;
+						Nx += P.Text(Nx, Line, Name(*Next), Strong, Ink) + 6.f;
+						P.Text(Nx, Line, Aim(*Next) + TEXT(" · ") + Short(Next->Seconds), Soft, Dim);
+					}
+					else
+					{
+						P.Text(Nx, Line, TEXT("The finish"), Strong, Ink);
+					}
+					P.Text(Right, Line + 1.f, Short(Player.StepLeft()), P.Font("Bold", 16.f), Ink, EAlign::Right);
+				}
+				else
+				{
+					P.Text(X0, Line, TEXT("DONE"), Label, Accent);
+				}
+			}
 		}
 
 		// ---- Top middle: the ride so far -------------------------------------------------------------
@@ -514,8 +645,12 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			};
 			TArray<FItem> Items = {
 				{TEXT("SPEED"), Veloverse::Units::Number(Veloverse::Units::Speed(Pawn->Speed), 1), Veloverse::Units::SpeedUnit(), TEXT("00.0")},
-				{TEXT("CADENCE"), FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), TEXT("rpm"), TEXT("000")},
 			};
+			// A workout shows cadence by its target, in the block panel.
+			if (!bWorkout)
+			{
+				Items.Add({TEXT("CADENCE"), FString::Printf(TEXT("%.0f"), Pawn->Reading.CadenceRpm), TEXT("rpm"), TEXT("000")});
+			}
 			if (Pawn->Reading.HeartRateBpm > 0.0)
 			{
 				Items.Add({TEXT("HEART"), FString::Printf(TEXT("%.0f"), Pawn->Reading.HeartRateBpm), TEXT("bpm"), TEXT("000")});

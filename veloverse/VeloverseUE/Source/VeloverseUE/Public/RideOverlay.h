@@ -51,6 +51,10 @@ private:
 
 	// Power as shown, eased over about a second so the number and the zone don't flicker.
 	float Watts = 0.f;
+	// And as a workout judges it: the mean of the last 3 s, sampled every 0.1 s.
+	TArray<float> PowerSamples;
+	float SinceSample = 0.f;
+	float Watts3 = 0.f;
 	float FrameSeconds = 0.f; // the frame time, smoothed over about half a second, for the counter
 
 	const ARidePawn* Rider() const;
