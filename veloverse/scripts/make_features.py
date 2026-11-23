@@ -2861,15 +2861,16 @@ def road_markings(out, g, bio, road):
         nx, ny = -uy, ux
         dist_h = math.hypot(px - hx, py - hy)
         if has_bike and dist_h < 1500.0 and k % 160 == 60:
-            # Right bike lane (+1.35 m) and oncoming lane (-1.35 m)
+            # Centered in the right-hand pavement lane (+0.78 m, 0.76x scale so it stays clear of
+            # both the yellow centreline and the dark shoulder)
             out.add(
                 "RoadMarkings",
                 "road_mark_bike",
-                px + nx * 1.35,
-                py + ny * 1.35,
+                px + nx * 0.78,
+                py + ny * 0.78,
                 pz + 0.006,
                 yaw,
-                1.0,
+                0.76,
                 pitch,
                 0.0,
             )
