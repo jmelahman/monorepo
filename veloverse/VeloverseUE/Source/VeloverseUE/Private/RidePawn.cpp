@@ -1468,12 +1468,14 @@ void ARidePawn::Place()
 		{
 			// Bike leans, rocks, bounces, and judders on the road under BikeSway; camera stays
 			// horizon-stabilized, neck-damped (tau = 0.12s), and looks ahead into corners.
-			Bike->SetWorldLocationAndRotation(RoadPos + FVector(0.f, 0.f, BikeLiftZ), BikeQuat);
-			PoseBike();
+			// Move the Camera (RootComponent) BEFORE Bike so UpdateChildTransforms never re-dirties
+			// Bike/BikeParts after PoseBike() on the same frame.
 			const FVector CameraInBike = PartsOrigin + CockpitCamera + FVector(0.f, 0.f, PostureZ);
 			const FVector CamPos = RoadPos + BikeQuat.RotateVector(CameraInBike) +
-			                       FVector(0.f, 0.f, HeadLiftZ) + ForwardRoad * HeadSurgeOffset;
+			                       FVector(0.f, 0.f, HeadLiftZ) + ForwardRoad * (FreeScale * HeadSurgeOffset);
 			SetActorLocationAndRotation(CamPos, CamQuat.Rotator());
+			Bike->SetWorldLocationAndRotation(RoadPos + FVector(0.f, 0.f, BikeLiftZ), BikeQuat);
+			PoseBike();
 			return;
 		}
 		if (Seen == ERideView::Cockpit)
@@ -1497,14 +1499,14 @@ void ARidePawn::Place()
 	// while the chase camera uses spring-damped yaw lag (tau = 0.25s), smooth Aim without vertical
 	// road judder, subtle lateral Lean offset, and longitudinal surge lag.
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
-	Bike->SetWorldLocationAndRotation(RoadPos, FRotator(Tip + BikeJudder, Head.Yaw, BikeRoll));
-	PoseBike();
 	const float ChaseBaseYaw = bFreeLook ? Head.Yaw : ChaseYaw;
 	const FRotator ChaseLook(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, ChaseBaseYaw + LookYaw, 0.f);
 	const FVector Aim = RoadPos + FVector(0.f, 0.f, ChaseAim) +
 	                    RightRoad * (bFreeLook ? 0.f : FMath::Clamp(BikeLean * 1.5f, -25.f, 25.f));
-	const FVector Back = Aim - ChaseLook.Vector() * ChaseBack + ForwardRoad * ChaseSurgeOffset;
+	const FVector Back = Aim - ChaseLook.Vector() * ChaseBack + ForwardRoad * (bFreeLook ? 0.f : ChaseSurgeOffset);
 	SetActorLocationAndRotation(Back, ChaseLook);
+	Bike->SetWorldLocationAndRotation(RoadPos, FRotator(Tip + BikeJudder, Head.Yaw, BikeRoll));
+	PoseBike();
 }
 
 namespace
@@ -1911,9 +1913,15 @@ void ARidePawn::MakeKitPreview()
 		Floor->SetupAttachment(Studio);
 		Floor->SetRelativeScale3D(FVector(14.f, 14.f, 1.f));
 		Floor->RegisterComponent();
+		if (UMaterialInterface* FloorMat = Cast<UMaterialInterface>(
+			    FSoftObjectPath(TEXT("/Game/Rider/Body/MI_Rider_Hair.MI_Rider_Hair")).TryLoad()))
+		{
+			Floor->SetMaterial(0, FloorMat);
+		}
 		if (UMaterialInstanceDynamic* Mid = Floor->CreateAndSetMaterialInstanceDynamic(0))
 		{
-			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.004f, 0.004f, 0.005f));
+			Mid->SetVectorParameterValue(TEXT("Colour"), FLinearColor(0.006f, 0.006f, 0.008f));
+			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.006f, 0.006f, 0.008f));
 		}
 		StudioCapture->ShowOnlyComponent(Floor);
 	}
