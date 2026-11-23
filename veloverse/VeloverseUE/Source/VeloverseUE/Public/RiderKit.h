@@ -90,14 +90,14 @@ inline const FPart& Part(int32 I)
 {
 	static const FPart All[Parts] = {
 		{TEXT("skin"), TEXT("Skin tone"), TEXT("Face, arms and legs"), SkinTones, 2},
-		{TEXT("hair"), TEXT("Hair"), TEXT("Brows and the hair under the helmet"), Hairs, 1},
-		{TEXT("jersey"), TEXT("Jersey"), TEXT("The body and sleeves"), Jerseys, 0},
-		{TEXT("accent"), TEXT("Accent"), TEXT("The jersey's side panels and cuffs"), Accents, 0},
-		{TEXT("shorts"), TEXT("Bib shorts"), TEXT("To just above the knee"), ShortsSwatches, 0},
+		{TEXT("hair"), TEXT("Hair"), TEXT("Brows and hair"), Hairs, 1},
+		{TEXT("jersey"), TEXT("Jersey"), TEXT("Body and sleeves"), Jerseys, 0},
+		{TEXT("accent"), TEXT("Accent"), TEXT("Side panels and cuffs"), Accents, 0},
+		{TEXT("shorts"), TEXT("Bib shorts"), TEXT("To above the knee"), ShortsSwatches, 0},
 		{TEXT("socks"), TEXT("Socks"), TEXT("Mid-calf"), SockSwatches, 0},
-		{TEXT("helmet"), TEXT("Helmet"), TEXT("The shell; the rim and vents stay black"), Helmets, 0},
-		{TEXT("shoes"), TEXT("Shoes"), TEXT("The uppers; the soles stay black"), ShoeSwatches, 0},
-		{TEXT("gloves"), TEXT("Gloves"), TEXT("Fingerless road mitts (Bare to remove)"), GloveSwatches, 1},
+		{TEXT("helmet"), TEXT("Helmet"), TEXT("Shell; rim stays black"), Helmets, 0},
+		{TEXT("shoes"), TEXT("Shoes"), TEXT("Uppers; soles stay black"), ShoeSwatches, 0},
+		{TEXT("gloves"), TEXT("Gloves"), TEXT("Fingerless road mitts"), GloveSwatches, 1},
 	};
 	return All[FMath::Clamp(I, 0, Parts - 1)];
 }
