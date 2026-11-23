@@ -100,6 +100,7 @@ func main() {
 	})
 	routeApp(mux, *apk)
 	routeYouTube(mux)
+	routeRemote(ctx, mux, newRemoteHub())
 	routeBuys(ctx, mux, os.Getenv("MUSIC_STORE"), os.Getenv("MUSIC_STORE_PROXY"), *music, *state)
 	files := http.FileServerFS(web)
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
