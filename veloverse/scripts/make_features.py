@@ -2880,23 +2880,27 @@ def road_markings(out, g, bio, road):
             if mz > 0.8 and float(road.dist(mx, my)) > 3.6:
                 out.add("Waymarkers", "road_mark_mile", mx, my, mz - 0.05, yaw)
                 miles += 1
-        # 2. 'SLOW' pavement stencil ahead of sharp coastal curves
-        if has_slow and k >= 30 and k < n - 30:
+        # 2. 'SLOW' pavement stencil strictly before tight turns, in the right-hand lane only
+        if has_slow and k >= 45 and k < n - 30:
             _, _, yaw_prev, _ = tangent_pitch(k - 18)
             _, _, yaw_next, _ = tangent_pitch(k + 18)
             d_yaw = abs((yaw_next - yaw_prev + 180.0) % 360.0 - 180.0)
-            if d_yaw > 26.0 and not any(
+            if d_yaw > 52.0 and not any(
                 math.hypot(px - sx, py - sy) < 420.0 for sx, sy in slow_spots
             ):
+                kl = k - 25
+                lx, ly, lz = float(line[kl, 0]), float(line[kl, 1]), float(line[kl, 2])
+                lux, luy, lyaw, lpitch = tangent_pitch(kl)
+                lnx, lny = -luy, lux
                 out.add(
                     "RoadMarkings",
                     "road_mark_slow",
-                    px,
-                    py,
-                    pz + 0.006,
-                    yaw,
-                    1.0,
-                    pitch,
+                    lx + lnx * 1.45,
+                    ly + lny * 1.45,
+                    lz + 0.006,
+                    lyaw,
+                    0.72,
+                    lpitch,
                     0.0,
                 )
                 slow_spots.append((px, py))
