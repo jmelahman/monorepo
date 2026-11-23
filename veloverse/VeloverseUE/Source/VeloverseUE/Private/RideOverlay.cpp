@@ -418,10 +418,10 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			P.Rect(X0 + Done - 1.f, Foot - 12.f, 2.f, 12.f, FLinearColor::White);
 		}
 
-		// ---- Bottom left: how to pause, while the dock's away ----------------------------------------
-		if (!Pawn->Dock.Visible())
+		// ---- Bottom left: Tab · Dock hint in Free Look while HUD is on --------------------------------
+		if (!Pawn->Dock.Visible() && Pawn->bFreeLook)
 		{
-			const FString Hint = Pawn->bFreeLook ? TEXT("Tab · Dock    Esc · Pause") : TEXT("Esc · Pause");
+			const FString Hint = TEXT("Tab · Dock");
 			const FSlateFontInfo Font = P.Font("Bold", 11.f);
 			const float Wide = P.Width(Hint, Font) + 28.f, Tall = 32.f, X = 20.f, Y = Dock.Floor - 20.f - Tall;
 			P.Panel(X, Y, Wide, Tall, 16.f);
@@ -676,7 +676,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	if (!Pawn->Profile.bHud && Pawn->FreeLookHint.Shown > 0.f)
 	{
 		const float A = Pawn->FreeLookHint.Shown;
-		const FString Hint = TEXT("Tab · Dock    Esc · Pause");
+		const FString Hint = TEXT("Tab · Dock");
 		const FSlateFontInfo Font = P.Font("Bold", 11.f);
 		const float Wide = P.Width(Hint, Font) + 28.f, Tall = 32.f, X = 20.f, Y = Dock.Floor - 20.f - Tall;
 		P.Round(X, Y, Wide, Tall, 16.f, Hex(0x0E1110, 0.78f * A));
