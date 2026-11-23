@@ -243,6 +243,7 @@ ARidePawn::ARidePawn()
 	BikeScreen->SetWidgetSpace(EWidgetSpace::World);
 	BikeScreen->SetDrawSize(FVector2D(200.f, 280.f));
 	BikeScreen->SetBlendMode(EWidgetBlendMode::Opaque);
+	BikeScreen->SetTintColorAndOpacity(FLinearColor(2.4f, 2.4f, 2.4f, 1.f));
 	BikeScreen->SetTwoSided(true);
 	BikeScreen->SetTickMode(ETickMode::Enabled);
 	BikeScreen->SetManuallyRedraw(false);
@@ -468,6 +469,22 @@ void ARidePawn::Tick(float Dt)
 		++GrassWarmupFrames;
 		if (GrassWarmupFrames == 2)
 		{
+			// Apply saved graphics quality & upscaling AFTER frame 1 has registered the camera in
+			// LastFrameCameras so DefaultScalability.ini cannot restore grass.CullDistanceScale=1
+			// on frame 0 and spawn 251M whole-world grass instances during LoadMap.
+			if (!Automated())
+			{
+				if (UGameUserSettings* V = UGameUserSettings::GetGameUserSettings())
+				{
+					if (Profile.GraphicsQuality >= 0)
+					{
+						V->SetOverallScalabilityLevel(FMath::Clamp(Profile.GraphicsQuality, 0, 3));
+					}
+					static constexpr float Scales[4] = {100.f, 75.f, 67.f, 50.f};
+					V->SetResolutionScaleValueEx(Scales[FMath::Clamp(Profile.Upscaling, 0, 3)]);
+					V->ApplySettings(false);
+				}
+			}
 			UseGrassReach();
 		}
 	}
@@ -755,19 +772,6 @@ void ARidePawn::ReadCommandLine()
 	Profile = FRideProfile::Load();
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
-	if (!Automated())
-	{
-		if (UGameUserSettings* V = UGameUserSettings::GetGameUserSettings())
-		{
-			if (Profile.GraphicsQuality >= 0)
-			{
-				V->SetOverallScalabilityLevel(FMath::Clamp(Profile.GraphicsQuality, 0, 3));
-			}
-			static constexpr float Scales[4] = {100.f, 75.f, 67.f, 50.f};
-			V->SetResolutionScaleValueEx(Scales[FMath::Clamp(Profile.Upscaling, 0, 3)]);
-			V->ApplySettings(false);
-		}
-	}
 	UseSettings();
 	ApplyKit(); // the rider was dressed before the profile was read, in the export's own colours
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);
