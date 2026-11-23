@@ -1985,20 +1985,24 @@ void ARidePawn::StudioLook(int32 Variant)
 	Show.SetAtmosphere(false);
 	Show.SetCloud(false);
 	Show.SetMotionBlur(false);
-	// The engine's own exposure, lifted: the ride's grade (CameraLook) blew the card out to white
-	// at every exposure tried, and the plain look came out a stop or three dark (v65's dumps,
-	// 15 Nov). Variants 1..3 are the darker and brighter lifts -RideKitDump compares; +2.5 read
-	// best in v66's. The eye adapts at once: the card opens with the page, and at the engine's
-	// pace it spent its first seconds pale and blue while the exposure settled (v66's Kit tour).
-	static const float Lifts[] = {2.4f, 1.4f, 1.9f, 2.9f};
+	Show.SetBloom(false);
+	// Fixed manual studio exposure (immune to the world's PostProcessVolume and pure-black
+	// backdrop histogram drift) with bloom disabled so the rider never glows.
+	static const float Lifts[] = {0.8f, 0.0f, 0.4f, 1.2f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
 	Look.VignetteIntensity = 0.f;
+	Look.bOverride_BloomIntensity = true;
+	Look.BloomIntensity = 0.f;
+	Look.bOverride_AutoExposureMethod = true;
+	Look.AutoExposureMethod = AEM_Histogram;
+	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+	Look.AutoExposureApplyPhysicalCameraExposure = false;
 	Look.bOverride_AutoExposureMinBrightness = true;
 	Look.bOverride_AutoExposureMaxBrightness = true;
-	Look.AutoExposureMinBrightness = 1.0f;
-	Look.AutoExposureMaxBrightness = 1.0f;
+	Look.AutoExposureMinBrightness = 0.0f;
+	Look.AutoExposureMaxBrightness = 0.0f;
 	Look.bOverride_AutoExposureBias = true;
 	Look.AutoExposureBias = Lifts[FMath::Clamp(Variant, 0, 3)];
 	Look.bOverride_AutoExposureSpeedUp = true;
