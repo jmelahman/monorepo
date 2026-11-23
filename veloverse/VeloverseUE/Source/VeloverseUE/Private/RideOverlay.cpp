@@ -763,10 +763,8 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		P.Rect(0.f, 0.f, W, H, Hex(0x0B0E0D, 0.96f * Alpha));
 		const FString Title = Pawn->RouteLoadTitle.IsEmpty() ? FString(TEXT("Loading route")) : Pawn->RouteLoadTitle;
 		P.Text(W * 0.5f, H * 0.45f, Title, P.Serif(38.f), WithAlpha(Ink, Alpha), EAlign::Centre);
-		P.Text(W * 0.5f, H * 0.45f + 34.f, TEXT("Streaming terrain & foliage..."), P.Font("Medium", 15.f),
-		       WithAlpha(Dim, Alpha), EAlign::Centre);
 		const float BarW = 280.f, BarH = 5.f;
-		const float BarX = (W - BarW) * 0.5f, BarY = H * 0.45f + 58.f;
+		const float BarX = (W - BarW) * 0.5f, BarY = H * 0.45f + 28.f;
 		P.Round(BarX, BarY, BarW, BarH, 3.f, Hex(0xF4F1EA, 0.14f * Alpha));
 		P.Round(BarX, BarY, BarW * FMath::Clamp(Progress, 0.06f, 1.f), BarH, 3.f, WithAlpha(Accent, Alpha));
 	}

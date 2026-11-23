@@ -1541,8 +1541,8 @@ public:
 		using VeloversePaint::Hex;
 		const FPainter P(Geo, Out, Layer, 1.f);
 		constexpr float W = 200.f, H = 280.f;
-		const FLinearColor Bg(0.012f, 0.015f, 0.022f, 1.f);
-		const FLinearColor Card(0.032f, 0.038f, 0.052f, 1.f);
+		const FLinearColor Bg(0.0015f, 0.002f, 0.003f, 1.f);
+		const FLinearColor Card(0.006f, 0.008f, 0.012f, 1.f);
 		const FLinearColor Ink(0.95f, 0.96f, 0.98f, 1.f);
 		const FLinearColor Muted(0.55f, 0.60f, 0.68f, 1.f);
 		const int32 ZoneIdx = FMath::Clamp(R->Zone(static_cast<float>(R->Reading.Watts)), 0, 6);
@@ -2497,9 +2497,9 @@ void ARidePawn::ApplyWeather()
 	}
 	if (BikeScreen)
 	{
-		// Scale unlit GPS screen radiance with physical scene lux so it stays bright and legible
-		// in 72k lux sunlight as well as overcast and rain.
-		const float Gain = FMath::Max(120.f, (W.Lux + 8000.f * W.Sky) * 0.22f);
+		// Scale unlit GPS screen radiance conservatively with physical scene lux so the dark
+		// background stays jet-black in shadows while numbers & zone bar stay crisp in sunlight.
+		const float Gain = FMath::Max(25.f, (W.Lux + 8000.f * W.Sky) * 0.055f);
 		BikeScreen->SetTintColorAndOpacity(FLinearColor(Gain, Gain, Gain, 1.f));
 	}
 }
