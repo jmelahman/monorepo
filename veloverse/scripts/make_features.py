@@ -506,7 +506,7 @@ class Road:
 def rocks(out, g, bio, road, rng):
     """Scatter each biome's rocks near the road: tried in proportion to its share of the road,
     kept where the ground suits them and nothing else stands."""
-    out.group("Rocks", cull=0)
+    out.group("Rocks", cull=180000)
     line = road.line[::25]
     kinds = bio.best(line[:, 0], line[:, 1])
     shore = g.at(g.inland, line[:, 0], line[:, 1])
@@ -974,7 +974,7 @@ def harbour(out, g, bio, road, rng, taken):
     out.group("Harbour", cull=0)
     out.group("Quay", cull=0)
     out.group("HarbourTown", cull=0)
-    out.group("HarbourProps", cull=35000)
+    out.group("HarbourProps", cull=22000, shadows=False)
     hx, hy = bio.world["landmarks"]["harbour"]
     for name, spec in BOATS.items():
         _copy_harbour_kit(out, f"boat_{name}", lambda s=spec: boat(*s))
@@ -1656,7 +1656,7 @@ def cairn(out, rng, x, y, z):
 
 def cairns(out, g, bio, road, rng, taken):
     """Cairns on the Moor's knolls near its roads, spaced along them."""
-    out.group("Cairns", cull=0)
+    out.group("Cairns", cull=60000)
     pts = road.tree.data
     moor = pts[bio.best(pts[:, 0], pts[:, 1]) == "heath"]
     placed = []
@@ -2063,7 +2063,7 @@ def roadside_dressing(out, g, bio, road, rng, taken):
     """Close-range biome roadside details (4-20 m from tarmac): mossy dry-stone walls on The Moor
     & Harbour coast, mossy logs/stumps/boulders in Greenwood, alpine boulders/scree on Vael, and
     layered sandstone outcrops along Red Sands."""
-    out.group("Roadside", cull=32000)
+    out.group("Roadside", cull=22000)
     line = road.line
     n = len(line)
     # 1. Scenic mossy/dry stone walls running parallel to the road on Moor, Coast & Vael
@@ -2648,7 +2648,7 @@ def pch_coast(out, g, bio, road, rng, taken):
     California State Route 1 / Big Sur: seamless photoscanned 4K Megascans W-beam guardrails
     along seaward bluffs, dark volcanic/granite rock-cut cliffs & coastal boulders along the
     inland bluff face, stone turnout overlook walls at high headlands, and Highway 1 signs."""
-    out.group("PCHCoast", cull=45000)
+    out.group("PCHCoast", cull=32000)
     ms_rails = (
         f"{MS}/coast/modular_metal_guardrail_kit/xb1icckdw_LOD0_TIER1_000",
         f"{MS}/coast/modular_metal_guardrail_kit/xb1icckdw_LOD0_TIER1_002",

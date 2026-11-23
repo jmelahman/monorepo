@@ -1320,7 +1320,12 @@ def _grass_type(layer):
             # and read as almost nothing, whatever the density (v21: 3x density, no change).
             # Rocks, roots and logs still lie along the ground.
             v.set_editor_property("align_to_surface", slug not in plants and biome != "climb")
-            v.set_editor_property("cast_dynamic_shadow", True)
+            # Short/mid grass blades already have darkened roots + AO; skipping VSM shadow-casting
+            # on tiny animated WPO blades avoids per-frame shadow page invalidation while keeping
+            # dynamic shadows on shrubs, hydrangeas, boxwoods, rocks, and logs.
+            v.set_editor_property(
+                "cast_dynamic_shadow", not _is_blade(biome, slug) and slug != "clovers"
+            )
             varieties.append(v)
     gt.set_editor_property("grass_varieties", varieties)
     assets.save_loaded_asset(gt, False)
