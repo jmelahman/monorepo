@@ -31,6 +31,7 @@ class USceneComponent;
 class USceneCaptureComponent2D;
 class UTextureRenderTarget2D;
 class ULocalLightComponent;
+class URideAudio;
 
 // Where the camera rides. Eyes: the rider's, with the body's motion (a line that wanders across the
 // lane and takes the inside of bends, the lean into them, the pedalling and the pull of a surge).
@@ -93,6 +94,7 @@ public:
 	float RiderEffort = 1.f; // 0 Easy, 1 Pedal, 2 Hard, eased; -RideEffort= pins it for stills
 	float PinnedEffort = -1.f; // chosen from stills at 40, 57 and 75: past 50 the fingers stand up off the hoods
 	UPROPERTY(Transient) TObjectPtr<UAnimSequence> RiderPedal;
+	UPROPERTY(Transient) TObjectPtr<URideAudio> Audio;
 	UPROPERTY(EditAnywhere) TSoftObjectPtr<URideTrack> TrackAsset;
 	UPROPERTY(Transient) TObjectPtr<URideTrack> Track;
 	// The level's routes, its default track first; Track is one of them.

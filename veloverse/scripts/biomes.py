@@ -250,6 +250,27 @@ PRESETS["world"] = {
     "SIDE_FAR": True,
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
+        # Trimmed park/meadow turf: dense green carpet without overgrown tall wheat stalks
+        # towering over the Chicago Lakefront Trail & metropolitan parkway (v80).
+        "Grass": (
+            ("climb", "blade_short", 130.0, 2600, 4200, (0.55, 0.90)),
+            ("climb", "blade_mid", 110.0, 3200, 5200, (0.55, 0.95)),
+            ("climb", "blade_tall", 24.0, 3200, 5200, (0.50, 0.80)),
+            ("shared", "wheat_grass", 1.2, 2800, 4200),
+            ("shared", "tall_grass", 0.6, 3000, 4600),
+            ("shared", "ribbon_grass", 0.6, 2600, 4000),
+            ("shared", "clovers", 12.0, 1800, 2800),
+            ("shared", "clover_varieties", 6.0, 1800, 2800),
+            ("shared", "leafy_dandelions", 3.5, 1800, 2800),
+            ("shared", "yellow_flower", 0.45, 2200, 3500),
+            ("shared", "bermuda_buttercup", 0.35, 2200, 3500),
+            ("shared", "white_everlasting", 0.25, 2200, 3500),
+            ("shared", "white_windflower", 0.35, 2200, 3500),
+            ("shared", "thyme", 0.7, 1800, 2800),
+            ("shared", "ribwort_plantain", 0.5, 2200, 3500),
+            ("shared", "field_poppy", 0.12, 2500, 3800),
+            ("shared", "common_hemp_nettle", 0.12, 2500, 3800),
+        ),
         # The verge (12 Nov): short turf to the tarmac's edge, now that the road fold works. Bare,
         # it read as a lime strip in the sun beside the darker blades.
         "Dirt": (

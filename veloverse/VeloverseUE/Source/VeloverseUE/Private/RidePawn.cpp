@@ -1,4 +1,5 @@
 #include "RidePawn.h"
+#include "RideAudio.h"
 
 #include "BleTrainer.h"
 #include "BlueZLink.h"
@@ -475,6 +476,11 @@ void ARidePawn::ReleaseTrainer()
 
 void ARidePawn::EndPlay(const EEndPlayReason::Type Reason)
 {
+	if (Audio)
+	{
+		Audio->Stop();
+		Audio = nullptr;
+	}
 	if (bStarted && !bRideSaved)
 	{
 		EndRide();
@@ -1118,6 +1124,42 @@ void ARidePawn::Place()
 		// little. Stopped (paused, or at the start) it settles to nothing.
 		const bool bMoving = bMoves && !bPaused && !bFinished && Speed > 0.3f;
 		const float Rpm = Reading.CadenceRpm > 20.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f;
+		if (!Audio)
+		{
+			Audio = NewObject<URideAudio>(this);
+			Audio->Start(this);
+		}
+		if (Audio)
+		{
+			FString StretchName;
+			if (Track && !Track->Stretches.IsEmpty())
+			{
+				const double WrapM = FMath::Fmod(FMath::Max(Distance, 0.0), FMath::Max(Track->Length(), 100.0)) / 100.0;
+				StretchName = Track->Stretches[0].Name;
+				for (const FRideStretch& Stretch : Track->Stretches)
+				{
+					if (Stretch.Metres <= WrapM)
+					{
+						StretchName = Stretch.Name;
+					}
+				}
+			}
+			FRideAudioState AState;
+			AState.Speed = Speed;
+			AState.Watts = static_cast<float>(Reading.Watts);
+			// Coasting when watts drop near 0 or trainer cadence reports < 10 RPM
+			AState.Cadence = (Reading.Watts < 10.0) ? 0.f
+			                 : (Reading.CadenceRpm > 1.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f);
+			AState.AltitudeM = GetActorLocation().Z / 100.f;
+			AState.bOffRoad = StretchName.Contains(TEXT("Vael")) || StretchName.Contains(TEXT("Moor")) ||
+			                  StretchName.Contains(TEXT("Sands"));
+			AState.bCoastal = StretchName.Contains(TEXT("Coast")) || StretchName.Contains(TEXT("Harbour")) ||
+			                  AState.AltitudeM < 32.f;
+			AState.bParkOrForest = StretchName.Contains(TEXT("Greenwood")) || StretchName.Contains(TEXT("Harbour")) ||
+			                       StretchName.Contains(TEXT("Coast"));
+			AState.bActive = bStarted && !bPaused && !bFinished;
+			Audio->Update(Dt, AState);
+		}
 		if (bMoving)
 		{
 			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
