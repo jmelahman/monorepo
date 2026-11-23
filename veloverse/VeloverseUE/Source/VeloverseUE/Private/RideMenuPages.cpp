@@ -1228,6 +1228,18 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 				X += 52.f;
 			}
 		}
+		// Optional out-front GPS bike computer toggle right under the Kit swatches
+		{
+			const float Cy = RowY + 46.f;
+			const FSlateFontInfo HintFont = P.Font("Medium", 15.f);
+			P.Text(RowLeft, Cy - 4.f, TEXT("Bike computer"), P.Font("Bold", 20.f), Ink);
+			P.Text(RowLeft, Cy + 22.f, TEXT("Out-front GPS head unit with live ride telemetry"), HintFont, Muted);
+			const TArray<FString> Opts = {TEXT("Off"), TEXT("On")};
+			const float CompSw = C.SegmentedWidth(Opts, 16.f, 92.f);
+			C.Segmented(TEXT("kitcomputer"), Right - CompSw, RowY + 24.f, Opts, Pawn->Profile.bBikeComputer ? 1 : 0,
+			            [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.bBikeComputer = I == 1; }); }, 44.f, 16.f,
+			            92.f);
+		}
 	}
 }
 

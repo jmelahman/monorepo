@@ -18,6 +18,9 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "ImageUtils.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/WidgetComponent.h"
+#include "SlatePainter.h"
+#include "Units.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -636,6 +639,10 @@ void ARidePawn::ApplyKit()
 				}
 			}
 		}
+	}
+	if (StudioParts.Num() > 2 && StudioParts[2])
+	{
+		StudioParts[2]->SetVisibility(Profile.bBikeComputer);
 	}
 	UE_LOG(LogTemp, Display, TEXT("RIDE kit: %d colours set"), Set);
 }
@@ -1373,8 +1380,18 @@ void ARidePawn::Place()
 	}
 	// Over the bars rides the Blender bike when it's imported, else make_bike.py's front end.
 	const bool bParts = BikeParts.Num() > 0;
+	const bool bShowBike = Seen == ERideView::Chase || (Seen == ERideView::Cockpit && bParts);
 	Cockpit->SetVisibility(Seen == ERideView::Cockpit && !bParts);
-	Bike->SetVisibility(Seen == ERideView::Chase || (Seen == ERideView::Cockpit && bParts), true);
+	Bike->SetVisibility(bShowBike, true);
+	const bool bShowComputer = bShowBike && Profile.bBikeComputer;
+	if (BikeParts.Num() > 2 && BikeParts[2])
+	{
+		BikeParts[2]->SetVisibility(bShowComputer);
+	}
+	if (BikeScreen)
+	{
+		BikeScreen->SetVisibility(bShowComputer && Seen == ERideView::Cockpit);
+	}
 	if (RiderBody)
 	{
 		// Over the bars the camera is in the rider's back: the body only throws its shadow there.
@@ -1469,10 +1486,87 @@ namespace
 {
 // The Blender bike's parts, as bike/README.md names them, and the pivots its moving ones turn
 // about, in cm in the bike's frame: the ground under the bottom bracket, +X ahead, the drive side +Y.
-enum EBikePart { BikeFrame, BikeFork, BikeWheelFront, BikeWheelRear, BikeCranks, BikePedalL, BikePedalR, BikeChain, PartCount };
+enum EBikePart { BikeFrame, BikeFork, BikeComputer, BikeWheelFront, BikeWheelRear, BikeCranks, BikePedalL, BikePedalR, BikeChain, PartCount };
 const TCHAR* const BikePartNames[PartCount] = {
-	TEXT("Frame"), TEXT("Fork"), TEXT("WheelFront"), TEXT("WheelRear"),
+	TEXT("Frame"), TEXT("Fork"), TEXT("Computer"), TEXT("WheelFront"), TEXT("WheelRear"),
 	TEXT("Cranks"), TEXT("PedalL"), TEXT("PedalR"), TEXT("Chain")};
+
+// World-space live GPS cycling computer display rendered onto BikeScreen (200x280 Slate widget).
+class SBikeComputerWidget : public SCompoundWidget
+{
+public:
+	SLATE_BEGIN_ARGS(SBikeComputerWidget) {}
+		SLATE_ARGUMENT(TWeakObjectPtr<ARidePawn>, Pawn)
+	SLATE_END_ARGS()
+
+	void Construct(const FArguments& Args) { PawnPtr = Args._Pawn; }
+
+	virtual int32 OnPaint(const FPaintArgs&, const FGeometry& Geo, const FSlateRect&, FSlateWindowElementList& Out,
+	                      int32 Layer, const FWidgetStyle&, bool) const override
+	{
+		const ARidePawn* R = PawnPtr.Get();
+		if (!R)
+		{
+			return Layer;
+		}
+		namespace U = Veloverse::Units;
+		using VeloversePaint::EAlign;
+		using VeloversePaint::FPainter;
+		using VeloversePaint::Hex;
+		const FPainter P(Geo, Out, Layer, 1.f);
+		constexpr float W = 200.f, H = 280.f;
+		const FLinearColor Bg(0.012f, 0.015f, 0.022f, 1.f);
+		const FLinearColor Card(0.032f, 0.038f, 0.052f, 1.f);
+		const FLinearColor Ink(0.95f, 0.96f, 0.98f, 1.f);
+		const FLinearColor Muted(0.55f, 0.60f, 0.68f, 1.f);
+		const int32 ZoneIdx = FMath::Clamp(R->Zone(static_cast<float>(R->Reading.Watts)), 0, 6);
+		static constexpr uint32 ZoneHex[7] = {0x94A3B8, 0x38BDF8, 0x34D399, 0xFBBF24, 0xFB923C, 0xF87171, 0xC084FC};
+		const FLinearColor ZoneCol = Hex(ZoneHex[ZoneIdx]);
+
+		P.Rect(0.f, 0.f, W, H, Bg);
+		// Top accent bar & elapsed ride clock
+		P.Rect(0.f, 0.f, W, 6.f, ZoneCol);
+		const int32 Sec = FMath::Max(0, FMath::FloorToInt(R->Elapsed));
+		const FString TimeStr = FString::Printf(TEXT("%d:%02d:%02d"), Sec / 3600, (Sec / 60) % 60, Sec % 60);
+		P.Text(12.f, 26.f, TEXT("VELOVERSE"), P.Font("Bold", 11.f, 0.14f), Muted);
+		P.Text(W - 12.f, 26.f, TimeStr, P.Font("Bold", 12.f), Ink, EAlign::Right);
+		P.Rect(10.f, 34.f, W - 20.f, 1.f, FLinearColor(1.f, 1.f, 1.f, 0.10f));
+
+		// Primary Power block + 7-segment zone bar
+		P.Text(12.f, 52.f, TEXT("POWER"), P.Font("Bold", 11.f, 0.14f), Muted);
+		P.Text(W - 12.f, 52.f, FString::Printf(TEXT("Z%d"), ZoneIdx + 1), P.Font("Bold", 12.f), ZoneCol,
+		       EAlign::Right);
+		P.Text(W * 0.5f, 108.f, FString::Printf(TEXT("%d W"), FMath::RoundToInt(R->Reading.Watts)), P.Font("Bold", 44.f), Ink,
+		       EAlign::Centre);
+		const float BarW = (W - 24.f - 6.f * 4.f) / 7.f;
+		for (int32 I = 0; I < 7; ++I)
+		{
+			const FLinearColor C = I == ZoneIdx ? ZoneCol : FLinearColor(0.18f, 0.21f, 0.26f, 1.f);
+			P.Round(12.f + I * (BarW + 4.f), 120.f, BarW, 7.f, 3.f, C);
+		}
+
+		// 2x2 telemetry grid: Speed, Cadence, Grade, Distance
+		auto Cell = [&](float X, float Y, const TCHAR* Label, const FString& Val, const FLinearColor& ValCol)
+		{
+			P.Round(X, Y, 86.f, 64.f, 8.f, Card);
+			P.Text(X + 8.f, Y + 18.f, Label, P.Font("Bold", 10.f, 0.12f), Muted);
+			P.Text(X + 8.f, Y + 50.f, Val, P.Font("Bold", 21.f), ValCol);
+		};
+		const float Spd = static_cast<float>(U::Speed(R->Speed));
+		const float Dist = static_cast<float>(U::Long(R->Ridden() / 100.0));
+		const float Pct = R->Grade * 100.f;
+		const FLinearColor GradeCol = Pct >= 5.f ? FLinearColor(0.95f, 0.45f, 0.18f, 1.f)
+		                                         : (Pct <= -2.f ? FLinearColor(0.32f, 0.78f, 0.96f, 1.f) : Ink);
+		Cell(10.f, 138.f, U::bImperial ? TEXT("MPH") : TEXT("KM/H"), FString::Printf(TEXT("%.1f"), Spd), Ink);
+		Cell(104.f, 138.f, TEXT("RPM"), FString::Printf(TEXT("%d"), FMath::RoundToInt(R->Reading.CadenceRpm)), Ink);
+		Cell(10.f, 208.f, TEXT("GRADE"), FString::Printf(TEXT("%+.1f%%"), Pct), GradeCol);
+		Cell(104.f, 208.f, U::bImperial ? TEXT("MI") : TEXT("KM"), FString::Printf(TEXT("%.1f"), Dist), Ink);
+		return Layer + 10;
+	}
+
+private:
+	TWeakObjectPtr<ARidePawn> PawnPtr;
+};
 const FVector FrontHub(58.63f, 0.f, 33.9f);
 const FVector RearHub(-40.195f, 0.f, 33.9f);
 const FVector BottomBracket(0.f, 0.f, 26.9f);
@@ -1559,6 +1653,24 @@ void ARidePawn::MakeBikeParts()
 		BikeParts.Add(C);
 	}
 	Bike->SetStaticMesh(nullptr);
+	// World-space live GPS telemetry screen mounted flush on SM_Bike_Computer (GPS_SCREEN in bike-frame cm).
+	if (BikeParts.IsValidIndex(BikeComputer) && BikeParts[BikeComputer])
+	{
+		BikeScreen = NewObject<UWidgetComponent>(this, TEXT("BikeScreen"));
+		BikeScreen->SetupAttachment(BikeParts[BikeComputer]);
+		BikeScreen->SetWidgetSpace(EWidgetSpace::World);
+		BikeScreen->SetDrawSize(FVector2D(200.f, 280.f));
+		BikeScreen->SetRelativeLocation(FVector(55.965f, 0.f, 89.933f));
+		BikeScreen->SetRelativeRotation(
+			FRotationMatrix::MakeFromXZ(FVector(-0.32557f, 0.f, 0.94552f), FVector(0.94552f, 0.f, 0.32557f)).Rotator());
+		BikeScreen->SetRelativeScale3D(FVector(0.0195f));
+		BikeScreen->SetBlendMode(EWidgetBlendMode::Opaque);
+		BikeScreen->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		BikeScreen->SetCastShadow(false);
+		BikeScreen->SetVisibility(false);
+		BikeScreen->SetSlateWidget(SNew(SBikeComputerWidget).Pawn(this));
+		BikeScreen->RegisterComponent();
+	}
 	UE_LOG(LogTemp, Display, TEXT("RIDE bike: %d parts"), BikeParts.Num());
 }
 
@@ -1585,7 +1697,9 @@ void ARidePawn::PoseBike()
 	const float Spin = float(FMath::Fmod(Distance, Round) / WheelRadius);
 	// Steered: the wheel spins about its hub, then turns with the fork about the head tube.
 	const FQuat Steered(SteerAxis.GetSafeNormal(), FMath::DegreesToRadians(Steer));
-	BikeParts[BikeFork]->SetRelativeLocationAndRotation(PartsOrigin + HeadTube - Steered.RotateVector(HeadTube), Steered);
+	const FVector ForkLoc = PartsOrigin + HeadTube - Steered.RotateVector(HeadTube);
+	BikeParts[BikeFork]->SetRelativeLocationAndRotation(ForkLoc, Steered);
+	BikeParts[BikeComputer]->SetRelativeLocationAndRotation(ForkLoc, Steered);
 	const FQuat Rolled(FVector::YAxisVector, Spin);
 	BikeParts[BikeWheelFront]->SetRelativeLocationAndRotation(
 		PartsOrigin + HeadTube + Steered.RotateVector(FrontHub - Rolled.RotateVector(FrontHub) - HeadTube), Steered * Rolled);
@@ -2346,7 +2460,7 @@ void ARidePawn::ApplyWeather()
 			Atmosphere->SetMieScatteringScale(M);
 			Atmosphere->SetOtherAbsorptionScale(A);
 		}
-		const FLinearColor ClearLum = bSunset ? FLinearColor(0.76f, 0.72f, 0.86f, 1.f)
+		const FLinearColor ClearLum = bSunset ? FLinearColor(0.76f, 0.78f, 0.90f, 1.f)
 		                                      : FLinearColor(0.72f, 0.72f, 0.75f, 1.f);
 		const FLinearColor SkyLum = FMath::Lerp(ClearLum, FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
 		if (!Atmosphere->SkyLuminanceFactor.Equals(SkyLum, 1e-4f))

@@ -48,6 +48,7 @@ struct FRideProfile
 	}
 	int32 View = 0;            // ERideView: the eyes, over the bars, behind, or steady
 	bool bHud = true;          // the ride's panels shown (the dock's H)
+	bool bBikeComputer = true; // optional out-front GPS cycling computer on the stem
 	bool bGraphs = false;      // power and heart rate across the foot of the screen (G)
 	bool bFps = false;         // the frame rate in the ride's bottom-right corner (Graphics)
 	float MasterVolume = 85.f;   // 0..100% overall audio volume

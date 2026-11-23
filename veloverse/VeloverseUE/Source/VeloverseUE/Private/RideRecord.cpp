@@ -213,6 +213,7 @@ FRideProfile FRideProfile::Load()
 			Profile.View = FMath::Clamp(static_cast<int32>(Value), 0, 3);
 		}
 		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
+		O->TryGetBoolField(TEXT("bike_computer"), Profile.bBikeComputer);
 		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);
 		O->TryGetBoolField(TEXT("fps"), Profile.bFps);
 		if (O->TryGetNumberField(TEXT("master_vol"), Value))
@@ -272,6 +273,7 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("bike_sway"), BikeSway);
 	O->SetNumberField(TEXT("view"), View);
 	O->SetBoolField(TEXT("hud"), bHud);
+	O->SetBoolField(TEXT("bike_computer"), bBikeComputer);
 	O->SetBoolField(TEXT("graphs"), bGraphs);
 	O->SetBoolField(TEXT("fps"), bFps);
 	O->SetNumberField(TEXT("master_vol"), MasterVolume);

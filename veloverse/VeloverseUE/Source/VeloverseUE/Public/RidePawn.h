@@ -78,6 +78,7 @@ public:
 	// its one mesh when all are there: the wheels turn with the distance, the cranks with Crank
 	// and the pedals stay level. In EBikePart's order.
 	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
+	UPROPERTY(Transient) TObjectPtr<class UWidgetComponent> BikeScreen;
 	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind: its
 	// pedal loops (a crank revolution each) played at Crank, so the feet stay on the pedals, and
 	// blended by W/kg (URiderAnim): Easy at 1.5, Pedal at 3, Hard at 5. Over

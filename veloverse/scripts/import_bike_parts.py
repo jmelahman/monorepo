@@ -27,7 +27,17 @@ spec.loader.exec_module(lib)
 SRC = os.environ.get("OC_BIKE_FBX", "/workspace/ue/fab_prep/bike")
 FOLDER = "/Game/Rider/Bike"
 STAGE = os.environ.get("OC_STAGE", "import")
-PARTS = ("Frame", "Fork", "WheelFront", "WheelRear", "Cranks", "PedalL", "PedalR", "Chain")
+PARTS = (
+    "Frame",
+    "Fork",
+    "Computer",
+    "WheelFront",
+    "WheelRear",
+    "Cranks",
+    "PedalL",
+    "PedalR",
+    "Chain",
+)
 
 # Slot: (linear colour, roughness, metallic, specular), from build_bike.py's make_materials.
 FLAT = {

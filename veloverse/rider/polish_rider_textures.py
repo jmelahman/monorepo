@@ -542,21 +542,14 @@ def _sculpt_forearms_and_hands(mesh_ob, rig):
     touched = 0
     for s in ("l", "r"):
         la = bones.get(f"lowerarm_{s}")
-        ha = bones.get(f"hand_{s}")
-        kn = bones.get(f"middle_01_{s}")
-        if la is None or ha is None or kn is None:
+        if la is None:
             continue
         e_pt = np.array(la.head_local, dtype=np.float32)
         w_pt = np.array(la.tail_local, dtype=np.float32)
-        k_pt = np.array(kn.head_local, dtype=np.float32)
 
         arm_vec = w_pt - e_pt
         arm_len = float(np.linalg.norm(arm_vec))
         arm_dir = arm_vec / max(arm_len, 1e-6)
-
-        hand_vec = k_pt - w_pt
-        hand_len = float(np.linalg.norm(hand_vec))
-        hand_dir = hand_vec / max(hand_len, 1e-6)
 
         # Gather vertex weights for forearm, hand, and fingers on this side
         arm_vgs = {vg.index for vg in mesh_ob.vertex_groups if vg.name == f"lowerarm_{s}"}
@@ -581,42 +574,25 @@ def _sculpt_forearms_and_hands(mesh_ob, rig):
                 continue
             p = coords[v.index]
 
-            # 1) Forearm & wrist radial volume boost (+26% belly -> +20% wrist)
+            # 1) Forearm radial volume boost (+24% belly -> +16% wrist, zero hand/thumb drift)
             rel_a = p - e_pt
             t_a = float(np.dot(rel_a, arm_dir)) / max(arm_len, 1e-6)
-            if -0.05 <= t_a <= 1.08 and w_arm > 0.05:
+            if -0.05 <= t_a <= 1.00 and w_arm > 0.05:
                 proj_a = e_pt + (t_a * arm_len) * arm_dir
                 rad_a = p - proj_a
                 if float(np.linalg.norm(rad_a)) < 0.075:
-                    # Smooth envelope: 0 at elbow, +26% in upper/mid muscle belly, +20% at wrist
+                    # Smooth envelope: 0 at elbow, +24% belly, tapering cleanly to 0 at wrist
                     belly = float(np.exp(-(((t_a - 0.34) / 0.30) ** 2)))
                     wrist_fill = float(_smoothstep(0.05, 0.25, t_a)) * (
-                        1.0 - float(_smoothstep(0.98, 1.08, t_a))
+                        1.0 - float(_smoothstep(0.84, 1.00, t_a))
                     )
-                    scale = 1.0 + w_arm * wrist_fill * (0.19 + 0.07 * belly)
+                    scale = 1.0 + w_arm * wrist_fill * (0.16 + 0.08 * belly)
                     coords[v.index] = proj_a + rad_a * scale
                     touched += 1
 
-            # 2) Hand & finger fullness (+8% radial + 1.4mm fingerless glove cuff/back thickness)
-            p = coords[v.index]
-            rel_h = p - w_pt
-            t_h = float(np.dot(rel_h, hand_dir)) / max(hand_len, 1e-6)
-            if w_hand > 0.15 and -0.20 <= t_h <= 2.40:
-                proj_h = w_pt + (t_h * hand_len) * hand_dir
-                rad_h = p - proj_h
-                r_len = float(np.linalg.norm(rad_h))
-                if 0.004 < r_len < 0.068:
-                    # Fingerless glove thickness from -0.25*hand_len (cuff) to 1.08 (knuckles)
-                    glove_env = float(_smoothstep(-0.32, -0.18, t_h)) * (
-                        1.0 - float(_smoothstep(1.02, 1.16, t_h))
-                    )
-                    extra = 0.0014 * glove_env
-                    coords[v.index] = (
-                        proj_h + rad_h * (1.0 + 0.07 * w_hand) + (rad_h / r_len) * extra
-                    )
-                    touched += 1
-
-            if float(np.linalg.norm(p - w_pt)) < 0.028 and (w_arm > 0.05 or w_hand > 0.05):
+            # Keep hand, thumb, and finger vertices at their exact solved bar-grip anatomy;
+            # only smooth the wrist skinning seam strictly on the forearm side.
+            if 0.85 <= t_a <= 1.02 and float(np.linalg.norm(p - w_pt)) < 0.022 and w_arm > 0.15:
                 wrist_smooth_idx.append(v.index)
 
         # 3) 6-pass Taubin smoothing across the wrist seam to eliminate pinching
