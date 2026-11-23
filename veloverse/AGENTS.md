@@ -6,7 +6,8 @@ detail in `docs/engine-notes.md`.
 
 ## The goal
 
-**A lifelike fantasy world to cycle through.** That's it.
+**An immersive, lifelike world to cycle through.** That's it. Real places, not fantasy: the user
+(23 Nov) "I just meant an immersive world. Life-like."
 
 - **Skyrim is the bare minimum.** The bar is a AAA environment: dense, lived-in, lit and
   composed like the best open-world games. Aim there, not at "good enough for a cycling app".
@@ -18,14 +19,20 @@ detail in `docs/engine-notes.md`.
 - **This machine is yours alone** (moved here on 12 Nov to avoid the old laptop's crashes).
   Don't let the old crash limits hold you back: try the bigger build, and fall back only if it
   actually fails here.
-- **It's original.** Take mood, colour and quality bar from references; never copy a game's
-  places, characters or art.
+- **Real places inspire it; games don't.** Real rides set the character (the Coast below). Take
+  mood, colour and quality bar from game references, but never copy a game's places, characters
+  or art.
 
 ## What we're building: the hub world
 
 One level, `/Game/World/L_World`. Harbour Isle, the coast and harbour town, sits in the middle,
 and four islands hang off it on bridges: **Greenwood** (forest), **Vael** (mountain), **The
-Moor** (heath) and **Red Sands** (desert). `ROUTES` in `make_chain.py` lists the rides. Any set of
+Moor** (heath) and **Red Sands** (desert).
+
+**The Coast** (23 Nov, the user): Harbour Isle should feel like Chicago's urban trails, the 606
+(Bloomingdale Trail) or the Lakefront Trail, then turn into Big Sur coastal riding (Highway 1's
+cliffs, guardrails and turnouts). The metropolitan realism still needs much work, and the Big Sur
+stretches can grow: they're the major landmarks. `ROUTES` in `make_chain.py` lists the rides. Any set of
 islands makes a loop with no road ridden twice. The plan of record is `docs/world-plan.md`: read
 it first.
 
@@ -52,7 +59,7 @@ history, not instructions; don't work from them.
 
 ## The user's direction
 
-- **The look:** lifelike fantasy, "vibrant yet realistic": rich green grass with small flowers,
+- **The look:** lifelike, "vibrant yet realistic": rich green grass with small flowers,
   warm brown dirt, big rounded boulders, red-brown pine trunks, deep shadows and moody skies
   with snowy peaks. The references are in `/workspace/ue/ref/climb/`: the modded Skyrim shots
   (`style_*.jpg`) as the minimum bar, `alpine_meadow_trail.jpg` for a real treeline, and
