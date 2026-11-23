@@ -1224,6 +1224,7 @@ async function applyMoves() {
     }
   }
   if (moves.length) {
+    saveSession();
     keep('music-recent', recent.filter((x, i) => recent.findIndex((y) => y.artist === x.artist && y.album === x.album) === i));
     if (excluded.size) {
       const keys = await fetch('api/excluded').then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -1982,8 +1983,9 @@ async function toggleSave(album, btn) {
 // ----------------------------------------------------------------- play
 
 // playQueue starts the queue at an index; the queue holds owned tracks
-// and streams alike, each with the key its row is marked by.
-function playQueue(items, index) {
+// and streams alike, each with the key its row is marked by. A restored
+// session loads the track paused, at where it was.
+function playQueue(items, index, { restore = false, at = 0 } = {}) {
   if (!items.length) return;
   if (items !== queue) {
     queue = items;
@@ -1992,9 +1994,18 @@ function playQueue(items, index) {
   playingIndex = index;
   counted = false;
   const t = items[index];
+  // The page preloads nothing, but a restored track wants its length and
+  // its place in it before anyone presses play.
+  player.preload = restore ? 'metadata' : 'none';
   player.src = t.url;
-  player.play().catch(() => {});
-  if (t.album) rememberAlbum(t.album);
+  if (restore) {
+    // Only if it is still this track by the time it loads.
+    const src = player.src;
+    if (at > 0) player.addEventListener('loadedmetadata', () => player.src === src && (player.currentTime = at), { once: true });
+  } else {
+    playNow();
+    if (t.album) rememberAlbum(t.album);
+  }
 
   bar.hidden = false;
   document.body.classList.add('playing-bar');
@@ -2015,6 +2026,10 @@ function playQueue(items, index) {
       artwork: t.art ? [{ src: new URL(t.art, location.href).href }] : [],
     });
   }
+  // A restored session is already saved, and where in the track it was
+  // isn't known to the player until it loads.
+  if (!restore) saveSession();
+  publish();
 }
 
 if ('mediaSession' in navigator) {
@@ -2043,7 +2058,7 @@ function step(delta) {
 player.addEventListener('ended', () => {
   if (repeat === 'one') {
     player.currentTime = 0;
-    player.play().catch(() => {});
+    playNow();
   } else step(1);
 });
 
@@ -2075,20 +2090,27 @@ function syncModes() {
   setIcon(re, repeat === 'one' ? 'repeat-one' : 'repeat');
 }
 
-$('shuffle').addEventListener('click', () => {
-  shuffle = !shuffle;
+function setShuffle(on) {
+  shuffle = on;
   keep('music-shuffle', shuffle);
   arrange(playingIndex);
   syncModes();
   renderUpNext();
-});
+  saveSession();
+  publish();
+}
 
-$('repeat').addEventListener('click', () => {
-  repeat = { off: 'all', all: 'one', one: 'off' }[repeat];
+function setRepeat(mode) {
+  if (!['off', 'all', 'one'].includes(mode)) return;
+  repeat = mode;
   keep('music-repeat', repeat);
   syncModes();
   renderUpNext();
-});
+  publish();
+}
+
+$('shuffle').addEventListener('click', () => setShuffle(!shuffle));
+$('repeat').addEventListener('click', () => setRepeat({ off: 'all', all: 'one', one: 'off' }[repeat]));
 
 syncModes();
 
@@ -2266,8 +2288,20 @@ $('next').addEventListener('click', () => step(1));
 
 function togglePlay() {
   if (!player.src) return;
-  if (player.paused) player.play().catch(() => {});
+  if (player.paused) playNow();
   else player.pause();
+}
+
+// playNow plays, and owns up when the browser won't let it: a page no one
+// has clicked yet may not start sound, which a remote or a reload meets.
+let blocked = false;
+function playNow() {
+  player.play().catch((err) => {
+    if (err.name !== 'NotAllowedError') return;
+    blocked = true;
+    notice('The browser wants a click here before it plays');
+    publish();
+  });
 }
 
 playpause.addEventListener('click', togglePlay);
@@ -2280,8 +2314,18 @@ function syncPlaying() {
   syncTiles();
 }
 
-player.addEventListener('play', syncPlaying);
-player.addEventListener('pause', syncPlaying);
+player.addEventListener('play', () => {
+  blocked = false;
+  syncPlaying();
+  publish();
+});
+player.addEventListener('pause', () => {
+  syncPlaying();
+  saveSession();
+  publish();
+});
+player.addEventListener('seeked', publish);
+player.addEventListener('durationchange', publish);
 
 // Space plays and pauses, unless something focused wants it.
 document.addEventListener('keydown', (e) => {
@@ -2977,5 +3021,156 @@ async function buysRequest(method, url, body, failure) {
   return true;
 }
 
+// ---------------------------------------------------- session, remote
+
+// The session is the queue and where in it the player is, kept so a
+// reload picks up where it left off, paused. Where in the track is kept
+// apart, as it changes all the time and the queue can be long.
+const SESSION = 'music-session';
+const SESSION_AT = 'music-session-at';
+
+function saveSession() {
+  if (playingIndex < 0) return;
+  keep(SESSION, { queue, order, index: playingIndex });
+  saveAt();
+}
+
+const saveAt = () => keep(SESSION_AT, player.currentTime || 0);
+
+function restoreSession() {
+  const s = remember(SESSION, null);
+  if (!s || !Array.isArray(s.queue) || !s.queue[s.index]) return;
+  queue = s.queue;
+  order =
+    Array.isArray(s.order) && s.order.length === queue.length ? s.order : queue.map((_, i) => i);
+  playQueue(queue, s.index, { restore: true, at: Number(remember(SESSION_AT, 0)) || 0 });
+}
+
+// Where it is in a track, every few seconds and on the way out.
+let savedAt = 0;
+player.addEventListener('timeupdate', () => {
+  if (playingIndex < 0 || Date.now() - savedAt < 5000) return;
+  savedAt = Date.now();
+  saveAt();
+});
+window.addEventListener('pagehide', () => playingIndex >= 0 && player.readyState > 0 && saveAt());
+
+// The page is a player the phone can drive, through the server: it keeps
+// an event stream open for commands and puts its state at every change.
+// The id is the tab's, so it lasts a reload but not a second tab.
+const playerId = (() => {
+  try {
+    let id = sessionStorage.getItem('music-player-id');
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem('music-player-id', id);
+    }
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+})();
+
+function playerName() {
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'A browser';
+  const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
+  return os ? `${browser} on ${os}` : browser;
+}
+
+const absolute = (u) => (u ? new URL(u, location.href).href : '');
+
+// remoteState is what the phone shows: the track, the transport, and
+// what plays next, in the order it will.
+function remoteState() {
+  const t = queue[playingIndex];
+  if (!t) return null;
+  const at = order.indexOf(playingIndex);
+  let next = order.slice(at + 1);
+  if (repeat === 'all') next = next.concat(order.slice(0, at));
+  const d = player.duration;
+  return {
+    key: t.key,
+    title: t.name,
+    sub: t.sub,
+    art: absolute(t.art),
+    playing: !player.paused,
+    position: player.currentTime || 0,
+    duration: Number.isFinite(d) ? d : 0,
+    shuffle,
+    repeat,
+    hasNext: next.length > 0,
+    blocked,
+    upNext: next.slice(0, upNextShown).map((i) => ({ i, name: queue[i].name, sub: queue[i].sub, art: absolute(queue[i].art) })),
+  };
+}
+
+let publishTimer = null;
+function publish() {
+  clearTimeout(publishTimer);
+  publishTimer = setTimeout(() => {
+    fetch(`api/remote/players/${encodeURIComponent(playerId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(remoteState()),
+    }).catch(() => {});
+  }, 150);
+}
+
+// obey runs a command from the phone.
+function obey(c) {
+  switch (c.do) {
+    case 'toggle':
+      togglePlay();
+      break;
+    case 'play':
+      if (player.src) playNow();
+      break;
+    case 'pause':
+      player.pause();
+      break;
+    case 'next':
+      step(1);
+      break;
+    case 'prev':
+      step(-1);
+      break;
+    case 'seek':
+      if (Number.isFinite(c.at)) player.currentTime = c.at;
+      break;
+    case 'jump':
+      if (queue[c.i]) playQueue(queue, c.i);
+      break;
+    case 'shuffle':
+      setShuffle(!!c.on);
+      break;
+    case 'repeat':
+      setRepeat(c.mode);
+      break;
+    case 'owned':
+      if (Array.isArray(c.tracks) && c.tracks[c.index]) playQueue(libItems(c.tracks), c.index);
+      break;
+    case 'streams':
+      if (Array.isArray(c.tracks) && c.tracks[c.index]) playQueue(streamItems(c.tracks), c.index);
+      break;
+  }
+}
+
+if ('EventSource' in window) {
+  const events = new EventSource(
+    `api/remote/events?id=${encodeURIComponent(playerId)}&name=${encodeURIComponent(playerName())}`
+  );
+  // Each (re)connect lists the page afresh, so it says where it is.
+  events.addEventListener('open', publish);
+  events.addEventListener('command', (e) => {
+    try {
+      obey(JSON.parse(e.data));
+    } catch {
+      // A command this page doesn't know.
+    }
+  });
+}
+
+restoreSession();
 render();
 refreshBuys();
