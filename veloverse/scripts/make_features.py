@@ -2896,11 +2896,11 @@ def road_markings(out, g, bio, road):
                 out.add(
                     "RoadMarkings",
                     "road_mark_slow",
-                    lx + lnx * 1.45,
-                    ly + lny * 1.45,
+                    lx + lnx * 0.78,
+                    ly + lny * 0.78,
                     lz + 0.006,
                     lyaw,
-                    0.72,
+                    0.52,
                     lpitch,
                     0.0,
                 )
