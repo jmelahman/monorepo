@@ -305,6 +305,15 @@ private:
 	void MouseLook(APlayerController& Player);
 	float QuitAt = -1.f;
 	float ProfileAt = -1.f;
+	// Free look stutter tests: -RideFreeLook=SECONDS turns free look on and sweeps the view +-80
+	// degrees once per SECONDS; -RideFrameLog logs each frame's view beside the bike and rider.
+	float SweepPeriod = 0.f;
+	bool bFrameLog = false;
+	float RawDx = 0.f, RawDy = 0.f; // this frame's mouse delta before the spike clamp, for the log
+	// -RideFrameShots=SECONDS: a screenshot on each of 40 frames in a row from then.
+	float BurstAt = -1.f;
+	int32 BurstLeft = 40;
+	void LogFrame(float Dt);
 	void ReadCommandLine();
 	void Automate(float Dt);
 

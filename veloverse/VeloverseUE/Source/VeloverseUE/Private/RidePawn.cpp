@@ -36,6 +36,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "EngineUtils.h"
+#include "Camera/PlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -495,7 +496,15 @@ void ARidePawn::Tick(float Dt)
 	}
 	TurnKitPreview(Dt);
 	LightBikeScreen(Dt);
+	if (bFrameLog)
+	{
+		LogFrame(Dt); // what the last frame drew, before this one moves anything
+	}
 	ReadKeys();
+	if (SweepPeriod > 0.f && bStarted)
+	{
+		LookYawTarget = 80.f * FMath::Sin(2.f * PI * float(Elapsed) / SweepPeriod);
+	}
 	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
 	if (!Automated() && ViewScale && GrassViewScale != FMath::Max(ViewScale->GetFloat(), 0.1f))
 	{
@@ -761,6 +770,12 @@ void ARidePawn::ReadCommandLine()
 		PinnedEffort = FMath::Clamp(PinnedEffort, 0.f, 2.f);
 		RiderEffort = PinnedEffort;
 	}
+	if (FParse::Value(Line, TEXT("RideFreeLook="), SweepPeriod))
+	{
+		SetFreeLook(true);
+	}
+	bFrameLog = FParse::Param(Line, TEXT("RideFrameLog"));
+	FParse::Value(Line, TEXT("RideFrameShots="), BurstAt);
 	if (FParse::Value(Line, TEXT("RideArmsTilt="), ArmsTilt))
 	{
 		bArmsTiltGiven = true;
@@ -919,6 +934,30 @@ void ARidePawn::UseTrainer(const FString& Source)
 	Trainer = MakeUnique<FLegs>(&Legs);
 }
 
+void ARidePawn::LogFrame(float Dt)
+{
+	// One line a frame: the view the camera manager used last frame, the camera component, and the
+	// bike and rider, all as they stood when that frame was drawn. The bike in the view's frame
+	// should move smoothly; a jump that the view doesn't make is the stutter.
+	const APlayerController* Player = GetController<APlayerController>();
+	if (!Player || !Player->PlayerCameraManager || !Bike)
+	{
+		return;
+	}
+	const FMinimalViewInfo View = Player->PlayerCameraManager->GetCameraCacheView();
+	const FTransform ViewXf(View.Rotation, View.Location);
+	const FVector BikeIn = ViewXf.InverseTransformPosition(Bike->GetComponentLocation());
+	const FVector CamIn = ViewXf.InverseTransformPosition(Camera->GetComponentLocation());
+	FVector RiderIn = FVector::ZeroVector;
+	if (RiderBody && RiderBody->GetNumBones() > 0)
+	{
+		RiderIn = ViewXf.InverseTransformPosition(RiderBody->GetBoneLocation(TEXT("pelvis")));
+	}
+	UE_LOG(LogTemp, Display, TEXT("RIDE frame dt=%.4f t=%.4f mouse=%.2f,%.2f aim=%.3f look=%.3f view=%.2f,%.2f,%.2f/%.3f,%.3f cam=%.3f,%.3f,%.3f bike=%.3f,%.3f,%.3f rider=%.3f,%.3f,%.3f"),
+	       Dt, Elapsed, RawDx, RawDy, LookYawTarget, LookYaw, View.Location.X, View.Location.Y, View.Location.Z, View.Rotation.Yaw, View.Rotation.Pitch,
+	       CamIn.X, CamIn.Y, CamIn.Z, BikeIn.X, BikeIn.Y, BikeIn.Z, RiderIn.X, RiderIn.Y, RiderIn.Z);
+}
+
 void ARidePawn::Automate(float Dt)
 {
 	LogClock += Dt;
@@ -946,6 +985,16 @@ void ARidePawn::Automate(float Dt)
 		if (APlayerController* Player = GetController<APlayerController>())
 		{
 			Player->ConsoleCommand(TEXT("ProfileGPU"));
+		}
+	}
+	if (BurstAt >= 0.f && Elapsed >= BurstAt && BurstLeft > 0)
+	{
+		const int32 Index = 40 - BurstLeft--;
+		FScreenshotRequest::RequestScreenshot(ShotDir / FString::Printf(TEXT("burst_%02d.png"), Index), false, false);
+		UE_LOG(LogTemp, Display, TEXT("RIDE burst %02d at t=%.4f"), Index, Elapsed);
+		if (BurstLeft == 0 && ShotTimes.IsEmpty())
+		{
+			QuitAt = Elapsed + 1.f;
 		}
 	}
 	if (NextShot < ShotTimes.Num() && Elapsed >= ShotTimes[NextShot])
@@ -1027,11 +1076,14 @@ void ARidePawn::MouseLook(APlayerController& Player)
 	// and with the dock about only while a button is held (and wasn't pressed on the dock).
 	const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	float Dx = 0.f, Dy = 0.f;
+	RawDx = RawDy = 0.f;
 	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
 	const bool bLooks = bFreeLook || Automated() || !bStarted || (bHeld && !bPressOnDock);
 	if (!bPaused && bLooks)
 	{
 		Player.GetInputMouseDelta(Dx, Dy);
+		RawDx = Dx;
+		RawDy = Dy;
 		// Clamp synthetic SDL2/Wayland cursor-warp spikes so Free Look never jerks or snaps.
 		Dx = FMath::Clamp(Dx, -40.f, 40.f);
 		Dy = FMath::Clamp(Dy, -40.f, 40.f);
