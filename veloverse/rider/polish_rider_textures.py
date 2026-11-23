@@ -505,6 +505,136 @@ def _render_previews(rig, dst, preview_dir):
         sc.render.filepath = os.path.join(preview_dir, name)
         bpy.ops.render.render(write_still=True)
 
+    # Cockpit over-the-bars close-up using A_Rider_Cockpit (if present)
+    cockpit_act = next((a for a in bpy.data.actions if "Cockpit" in a.name), None)
+    if cockpit_act is not None and rig.animation_data is not None:
+        orig_act = rig.animation_data.action
+        rig.animation_data.action = cockpit_act
+        sc.frame_set(15)
+        cam.location = (0.12, 0.0, 1.04)
+        cam.rotation_euler = (
+            (Vector((0.68, 0.0, 0.82)) - Vector((0.12, 0.0, 1.04)))
+            .to_track_quat("-Z", "Y")
+            .to_euler()
+        )
+        cam.data.lens = 30
+        sc.render.filepath = os.path.join(preview_dir, "preview_cockpit.png")
+        bpy.ops.render.render(write_still=True)
+        rig.animation_data.action = orig_act
+
+
+def _sculpt_forearms_and_hands(mesh_ob, rig):
+    """Beef up forearms & wrists, smooth the wrist crease, and add glove/finger volume."""
+    me = mesh_ob.data
+    n = len(me.vertices)
+    coords = np.empty(n * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", coords)
+    coords = coords.reshape(n, 3)
+
+    # Build vertex adjacency for Taubin wrist smoothing
+    adj = [[] for _ in range(n)]
+    for e in me.edges:
+        a, b = e.vertices[0], e.vertices[1]
+        adj[a].append(b)
+        adj[b].append(a)
+
+    bones = rig.data.bones
+    touched = 0
+    for s in ("l", "r"):
+        la = bones.get(f"lowerarm_{s}")
+        ha = bones.get(f"hand_{s}")
+        kn = bones.get(f"middle_01_{s}")
+        if la is None or ha is None or kn is None:
+            continue
+        e_pt = np.array(la.head_local, dtype=np.float32)
+        w_pt = np.array(la.tail_local, dtype=np.float32)
+        k_pt = np.array(kn.head_local, dtype=np.float32)
+
+        arm_vec = w_pt - e_pt
+        arm_len = float(np.linalg.norm(arm_vec))
+        arm_dir = arm_vec / max(arm_len, 1e-6)
+
+        hand_vec = k_pt - w_pt
+        hand_len = float(np.linalg.norm(hand_vec))
+        hand_dir = hand_vec / max(hand_len, 1e-6)
+
+        # Gather vertex weights for forearm, hand, and fingers on this side
+        arm_vgs = {vg.index for vg in mesh_ob.vertex_groups if vg.name == f"lowerarm_{s}"}
+        hand_vgs = {
+            vg.index
+            for vg in mesh_ob.vertex_groups
+            if vg.name.endswith(f"_{s}")
+            and (
+                vg.name.startswith("hand_")
+                or vg.name.startswith("thumb_")
+                or vg.name.startswith("index_")
+                or vg.name.startswith("middle_")
+                or vg.name.startswith("ring_")
+                or vg.name.startswith("pinky_")
+            )
+        }
+        wrist_smooth_idx = []
+        for v in me.vertices:
+            w_arm = sum(g.weight for g in v.groups if g.group in arm_vgs)
+            w_hand = sum(g.weight for g in v.groups if g.group in hand_vgs)
+            if w_arm + w_hand < 0.05:
+                continue
+            p = coords[v.index]
+
+            # 1) Forearm & wrist radial volume boost (+26% belly -> +20% wrist)
+            rel_a = p - e_pt
+            t_a = float(np.dot(rel_a, arm_dir)) / max(arm_len, 1e-6)
+            if -0.05 <= t_a <= 1.08 and w_arm > 0.05:
+                proj_a = e_pt + (t_a * arm_len) * arm_dir
+                rad_a = p - proj_a
+                if float(np.linalg.norm(rad_a)) < 0.075:
+                    # Smooth envelope: 0 at elbow, +26% in upper/mid muscle belly, +20% at wrist
+                    belly = float(np.exp(-(((t_a - 0.34) / 0.30) ** 2)))
+                    wrist_fill = float(_smoothstep(0.05, 0.25, t_a)) * (
+                        1.0 - float(_smoothstep(0.98, 1.08, t_a))
+                    )
+                    scale = 1.0 + w_arm * wrist_fill * (0.19 + 0.07 * belly)
+                    coords[v.index] = proj_a + rad_a * scale
+                    touched += 1
+
+            # 2) Hand & finger fullness (+8% radial + 1.4mm fingerless glove cuff/back thickness)
+            p = coords[v.index]
+            rel_h = p - w_pt
+            t_h = float(np.dot(rel_h, hand_dir)) / max(hand_len, 1e-6)
+            if w_hand > 0.15 and -0.20 <= t_h <= 2.40:
+                proj_h = w_pt + (t_h * hand_len) * hand_dir
+                rad_h = p - proj_h
+                r_len = float(np.linalg.norm(rad_h))
+                if 0.004 < r_len < 0.068:
+                    # Fingerless glove thickness from -0.25*hand_len (cuff) to 1.08 (knuckles)
+                    glove_env = float(_smoothstep(-0.32, -0.18, t_h)) * (
+                        1.0 - float(_smoothstep(1.02, 1.16, t_h))
+                    )
+                    extra = 0.0014 * glove_env
+                    coords[v.index] = (
+                        proj_h + rad_h * (1.0 + 0.07 * w_hand) + (rad_h / r_len) * extra
+                    )
+                    touched += 1
+
+            if float(np.linalg.norm(p - w_pt)) < 0.028 and (w_arm > 0.05 or w_hand > 0.05):
+                wrist_smooth_idx.append(v.index)
+
+        # 3) 6-pass Taubin smoothing across the wrist seam to eliminate pinching
+        for _ in range(6):
+            for lam in (0.42, -0.44):
+                nxt = coords.copy()
+                for vi in wrist_smooth_idx:
+                    nb = adj[vi]
+                    if not nb:
+                        continue
+                    avg = coords[nb].mean(axis=0)
+                    nxt[vi] = coords[vi] + lam * (avg - coords[vi])
+                coords = nxt
+
+    me.vertices.foreach_set("co", coords.ravel())
+    me.update()
+    return touched
+
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
@@ -525,9 +655,11 @@ def main():
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     mesh_ob = next(o for o in bpy.data.objects if o.type == "MESH" and o.find_armature() == rig)
 
-    # 1) Smooth overly angular calves, outer-lower glute crease, and saddle-contact cleft
+    # 1) Smooth overly angular calves, outer-lower glute crease, and saddle-contact cleft,
+    #    and sculpt athletic forearms/wrists + fingerless glove volume.
     calf_v = _smooth_calves(mesh_ob, rig)
     glute_w_v, glute_g_v, saddle_v = _smooth_glutes(mesh_ob)
+    arm_v = _sculpt_forearms_and_hands(mesh_ob, rig)
 
     # 2) Rasterize body-only xyz at 512x512 and bilinearly upsample to texture resolution
     base = _load_rgba(os.path.join(src, "T_Body_BaseColor.png"))
@@ -621,6 +753,58 @@ def main():
         * _smoothstep(sock_z_max - 0.042, sock_z_max - 0.036, z)
     )
 
+    # Fingerless road cycling gloves (wrist cuff to first finger joints on both hands)
+    is_skin = (mask2[..., 2] > 0.5) & cov
+    glove_body = np.zeros((size, size), np.float32)
+    glove_cuff_accent = np.zeros((size, size), np.float32)
+    glove_seams = np.zeros((size, size), np.float32)
+    bones = rig.data.bones
+    for s in ("l", "r"):
+        la = bones.get(f"lowerarm_{s}")
+        kn = bones.get(f"middle_01_{s}")
+        if la is None or kn is None:
+            continue
+        w_pt = np.array(la.tail_local, dtype=np.float32)
+        k_pt = np.array(kn.head_local, dtype=np.float32)
+        h_vec = k_pt - w_pt
+        h_len = float(np.linalg.norm(h_vec))
+        h_dir = h_vec / max(h_len, 1e-6)
+
+        dx = x - w_pt[0]
+        dy = y - w_pt[1]
+        dz = z - w_pt[2]
+        t_h = dx * h_dir[0] + dy * h_dir[1] + dz * h_dir[2]
+        rad2 = np.maximum(dx * dx + dy * dy + dz * dz - t_h * t_h, 0.0)
+        near_hand = is_skin.astype(np.float32) * (1.0 - _smoothstep(0.062**2, 0.072**2, rad2))
+
+        # Glove spans from -0.018 m (clean wrist cuff) to +h_len + 0.004 m (right at knuckles)
+        g_start = -0.018
+        g_end = h_len + 0.004
+        in_g = (
+            near_hand
+            * _smoothstep(g_start - 0.0012, g_start + 0.0012, t_h)
+            * (1.0 - _smoothstep(g_end - 0.0012, g_end + 0.0012, t_h))
+        )
+        cuff_band = (
+            near_hand
+            * _smoothstep(g_start - 0.0012, g_start + 0.0012, t_h)
+            * (1.0 - _smoothstep(g_start + 0.0055, g_start + 0.0075, t_h))
+        )
+        cuff_seam = near_hand * np.exp(-(((t_h - (g_start + 0.007)) / 0.0014) ** 2))
+        end_seam = near_hand * np.exp(-(((t_h - (g_end - 0.0015)) / 0.0014) ** 2))
+        glove_body = np.maximum(glove_body, in_g)
+        glove_cuff_accent = np.maximum(glove_cuff_accent, cuff_band)
+        glove_seams = np.maximum(glove_seams, np.clip(cuff_seam + end_seam, 0.0, 1.0))
+
+    # Paint fingerless gloves into tint masks: dark shorts channel + accent cuff stripe
+    g_mask = glove_body > 0.5
+    c_mask = glove_cuff_accent > 0.5
+    mask2[..., 2] = np.where(g_mask, 0.0, mask2[..., 2])  # clear skin under glove
+    mask1[..., 2] = np.where(g_mask & ~c_mask, 1.0, mask1[..., 2])  # charcoal glove body
+    mask1[..., 1] = np.where(c_mask, 1.0, mask1[..., 1])  # kit accent wrist trim
+
+    # Rich dark charcoal fabric base/shade on the glove + subtle technical weave
+    mesh_pat = 0.5 + 0.5 * np.sin((x + y) * 1200.0) * np.sin((y - z) * 1200.0)
     mul = np.ones((size, size), np.float32)
     mul *= 1.0 - 0.34 * pk_shadow
     mul *= 1.0 - 0.24 * pk_seams
@@ -630,9 +814,18 @@ def main():
     mul *= 1.0 - 0.16 * bib_gripper
     mul *= 1.0 - 0.24 * bib_seam
     mul *= 1.0 - 0.06 * sock_cuff
+    mul *= 1.0 - 0.14 * glove_seams
+    mul *= 1.0 - 0.05 * glove_body * mesh_pat
 
     base[..., :3] *= mul[..., None]
     shade[..., :3] *= mul[..., None]
+    # Dark charcoal Lycra on glove body + kit orange accent stripe on cuff (for Blender & UE5)
+    g_w = glove_body[..., None]
+    c_w = glove_cuff_accent[..., None]
+    charcoal = np.array([0.055, 0.058, 0.064], dtype=np.float32)
+    accent_col = np.array([0.85, 0.34, 0.08], dtype=np.float32)
+    base[..., :3] = base[..., :3] * (1.0 - g_w) + charcoal * g_w * mul[..., None]
+    base[..., :3] = base[..., :3] * (1.0 - c_w) + accent_col * c_w * mul[..., None]
     # Subtle reflective satin piping along the top pocket lip
     base[..., :3] = (
         base[..., :3] * (1.0 - 0.28 * pk_piping[..., None]) + 0.22 * pk_piping[..., None]
@@ -647,6 +840,7 @@ def main():
     h += 0.65 * bib_gripper - 0.70 * bib_seam
     sock_rib = 0.5 * np.sin(y * 420.0 + x * 420.0)
     h += sock_cuff * (0.50 + 0.30 * sock_rib)
+    h += glove_body * (0.22 + 0.10 * mesh_pat) - 0.32 * glove_seams
 
     dh_dx = (np.roll(h, -1, 1) - np.roll(h, 1, 1)) * 0.28
     dh_dy = (np.roll(h, -1, 0) - np.roll(h, 1, 0)) * 0.28
@@ -661,14 +855,16 @@ def main():
     _save_rgba(os.path.join(dst, "T_Body_BaseColor.png"), base, "sRGB")
     _save_rgba(os.path.join(dst, "T_Body_Shade.png"), shade, "Non-Color")
     _save_rgba(os.path.join(dst, "T_Body_Normal.png"), norm, "Non-Color")
+    _save_rgba(os.path.join(dst, "T_Body_Mask.png"), mask1, "Non-Color")
+    _save_rgba(os.path.join(dst, "T_Body_Mask2.png"), mask2, "Non-Color")
 
     # 3) Export polished rider.fbx and save rider.blend
     _export_fbx(rig, mesh_ob, os.path.join(dst, "rider.fbx"))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(dst, "rider.blend"))
     print(
         f"Polished rider in {dst}: calf_verts={calf_v}, glute_w_verts={glute_w_v}, "
-        f"glute_geom_verts={glute_g_v}, saddle_verts={saddle_v}, "
-        f"pocket_px={int((in_pocket > 0.5).sum())}, "
+        f"glute_geom_verts={glute_g_v}, saddle_verts={saddle_v}, arm_verts={arm_v}, "
+        f"glove_px={int(g_mask.sum())}, pocket_px={int((in_pocket > 0.5).sum())}, "
         f"gripper_px={int((bib_gripper > 0.5).sum())}, sock_cuff_px={int((sock_cuff > 0.5).sum())}",
         flush=True,
     )

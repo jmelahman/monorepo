@@ -1369,13 +1369,13 @@ def build_cockpit(part):
             T=np.broadcast_to(G.up, C.shape),
         )
     )
-    # steerer cap: carries the head tube's section up round the steerer, then the stem beam
+    # steerer cap: sleek flush aero teardrop cap (no tall blocky chimney) flowing into the stem
     cap_a = G.stem_base - 19.5 * G.up
-    cap_b = G.stem_base + 18.0 * G.up
-    C = spline([cap_a, cap_b], 16)
+    cap_b = G.stem_base + 11.5 * G.up
+    C = spline([cap_a, cap_b], 18)
     sc_ = np.linspace(0, 1, len(C))
     prof = [
-        kamm(60, 46, lead=0.40, trunc=0.80) * (1.0 - 0.18 * smoothstep(0.7, 1.0, si) ** 2)
+        kamm(56, 42, lead=0.42, trunc=0.82) * (1.0 - 0.22 * smoothstep(0.55, 1.0, si) ** 1.8)
         for si in sc_
     ]
     pcs.append(
@@ -1388,15 +1388,15 @@ def build_cockpit(part):
         )
     )
     st_a = G.stem_base
-    st_b = G.BC + 2 * G.stem_dir
+    st_b = G.BC + 3 * G.stem_dir
     pcs.append(
         tube(
             [st_a, st_b],
             lambda si, i: superellipse(
-                lerp(36, 30, si) - 13 * smoothstep(0.7, 1.0, si), lerp(34, 40, si), 2.8
+                lerp(33, 27, si) - 10 * smoothstep(0.65, 1.0, si), lerp(36, 46, si), 2.6
             ),
             CARBON,
-            30,
+            32,
             hint=lead_perp(G.stem_dir, G.up),
         )
     )
@@ -1422,11 +1422,58 @@ def build_cockpit(part):
         VOXEL_COCKPIT,
         CARBON,
         [G.BC, G.stem_base + 12 * G.fwd],
-        fillet_radius=40,
-        fillet_iters=10,
+        fillet_radius=46,
+        fillet_iters=14,
         ratio=0.35,
     )
     part.add(body)
+    # Recessed anodized top-cap disc + M5 hex bolt on the steerer cap
+    top_c = cap_b + 0.5 * G.up
+    part.add(cylinder(top_c - 1.5 * G.up, top_c + 1.2 * G.up, 14.5, PLASTIC, n=40))
+    part.add(cylinder(top_c + 0.8 * G.up, top_c + 1.8 * G.up, 4.8, ALLOY, n=18))
+    # Two rear stem steerer pinch bolts
+    for dz in (-7.0, 5.0):
+        bp = G.stem_base + dz * G.up - 22.0 * G.fwd
+        part.add(cylinder(bp - 2.0 * G.fwd, bp + 2.0 * G.fwd, 2.8, ALLOY, n=16))
+    # Out-front aero GPS cycling computer mount + slim matte-black head unit (Garmin/Wahoo style)
+    m_fwd = G.stem_dir
+    m_up = lead_perp(m_fwd, G.up)
+    m_base = G.BC - 8.0 * m_up + 12.0 * m_fwd
+    m_tip = G.BC + 4.0 * m_up + 68.0 * m_fwd
+    # Twin sleek out-front mount arms
+    for side in (-1, 1):
+        arm_pts = [
+            m_base + xz(0, 0, side * 14.0),
+            m_base + 28.0 * m_fwd + 4.0 * m_up + xz(0, 0, side * 12.0),
+            m_tip - 8.0 * m_fwd - 4.0 * m_up + xz(0, 0, side * 7.0),
+        ]
+        part.add(tube(arm_pts, lambda si, i: superellipse(4.5, 5.5, 2.4), PLASTIC, 14, hint=m_up))
+    # Quarter-turn mount puck
+    part.add(cylinder(m_tip - 7.0 * m_up, m_tip - 1.5 * m_up, 15.0, PLASTIC, n=32))
+    # Beveled GPS computer body tilted ~14 deg toward the rider for clean over-the-bars sightline
+    tilt = math.radians(14.0)
+    c_up = np.cos(tilt) * m_up - np.sin(tilt) * m_fwd
+    c_fwd = np.sin(tilt) * m_up + np.cos(tilt) * m_fwd
+    c_ctr = m_tip + 3.5 * m_up + 6.0 * m_fwd
+    c_pts = [c_ctr - 37.0 * c_fwd, c_ctr - 30.0 * c_fwd, c_ctr + 30.0 * c_fwd, c_ctr + 37.0 * c_fwd]
+    part.add(
+        tube(
+            c_pts,
+            lambda si, i: superellipse(
+                10.5 * (0.72 + 0.28 * np.sin(np.pi * si) ** 0.35),
+                50.0 * (0.80 + 0.20 * np.sin(np.pi * si) ** 0.35),
+                4.0,
+            ),
+            PLASTIC,
+            24,
+            hint=c_up,
+        )
+    )
+    # Recessed dark glass screen + subtle orange accent top bezel bar on the GPS unit
+    scr_pts = [c_ctr - 28.0 * c_fwd + 4.6 * c_up, c_ctr + 28.0 * c_fwd + 4.6 * c_up]
+    part.add(tube(scr_pts, lambda si, i: superellipse(2.2, 40.0, 6.0), CARBON, 8, hint=c_up))
+    bez_pts = [c_ctr + 25.0 * c_fwd + 5.2 * c_up, c_ctr + 29.0 * c_fwd + 5.2 * c_up]
+    part.add(tube(bez_pts, lambda si, i: superellipse(1.6, 36.0, 4.0), DECAL, 6, hint=c_up))
     # bar tape: helically wrapped, with the overlap step modelled
     for side in (-1, 1):
         sel = np.nonzero(side * C[:, 1] > 146)[0]
@@ -1461,9 +1508,9 @@ def build_cockpit(part):
         base_pt = G.BC + xz(BAR_REACH - 22, 0, side * hw)
         xs = np.linspace(-14, 73, 56)
         kx = [-14, 0, 20, 40, 55, 63, 69, 73]
-        ztop = np.interp(xs, kx, [8, 11, 15, 21, 30, 38, 40, 33])
-        zbot = np.interp(xs, kx, [-9, -12, -16, -21, -22, -16, 2, 22])
-        wid = np.interp(xs, kx, [24, 26, 27, 25, 22, 18, 12, 4])
+        ztop = np.interp(xs, kx, [5, 11, 15, 21, 30, 38, 40, 33])
+        zbot = np.interp(xs, kx, [-6, -12, -16, -21, -22, -16, 2, 22])
+        wid = np.interp(xs, kx, [21, 26, 27, 25, 22, 18, 12, 4])
         profs = []
         for i in range(len(xs)):
             h = ztop[i] - zbot[i]
