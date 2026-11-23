@@ -1990,7 +1990,7 @@ void ARidePawn::StudioLook(int32 Variant)
 	// 15 Nov). Variants 1..3 are the darker and brighter lifts -RideKitDump compares; +2.5 read
 	// best in v66's. The eye adapts at once: the card opens with the page, and at the engine's
 	// pace it spent its first seconds pale and blue while the exposure settled (v66's Kit tour).
-	static const float Lifts[] = {1.2f, 0.4f, 0.8f, 1.8f};
+	static const float Lifts[] = {2.4f, 1.4f, 1.9f, 2.9f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
