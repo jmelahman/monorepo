@@ -250,11 +250,11 @@ PRESETS["world"] = {
     "SIDE_FAR": True,
     "KEEP_GRASS": ("Grass", "Forest", "Forest floor", "Rock"),
     "GRASS": {
-        # Trimmed park/meadow turf: dense green carpet without overgrown tall wheat stalks
-        # towering over the Chicago Lakefront Trail & metropolitan parkway (v80).
+        # Trimmed park/meadow turf: lush, plush dense short carpet without overgrown tall wheat
+        # stalks towering over the Chicago Lakefront Trail & metropolitan parkway (v81).
         "Grass": (
-            ("climb", "blade_short", 130.0, 2600, 4200, (0.55, 0.90)),
-            ("climb", "blade_mid", 110.0, 3200, 5200, (0.55, 0.95)),
+            ("climb", "blade_short", 240.0, 2600, 4200, (0.55, 0.90)),
+            ("climb", "blade_mid", 170.0, 3200, 5200, (0.55, 0.92)),
             ("climb", "blade_tall", 24.0, 3200, 5200, (0.50, 0.80)),
             ("shared", "wheat_grass", 1.2, 2800, 4200),
             ("shared", "tall_grass", 0.6, 3000, 4600),
