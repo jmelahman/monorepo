@@ -124,6 +124,7 @@ fun MusicApp(model: Model) {
                     Screen.Search -> SearchScreen(model, padding)
                     is Screen.PlaylistPage -> PlaylistScreen(model, s.id, padding)
                     Screen.LibraryMix -> LibraryMixScreen(model, padding)
+                    is Screen.MadeMixPage -> MadeMixScreen(model, s.title, padding)
                 }
             }
             AnimatedVisibility(
@@ -221,6 +222,7 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
                 Screen.Search -> "Search"
                 is Screen.PlaylistPage -> model.opened[s.id]?.name ?: model.playlists?.find { it.id == s.id }?.name.orEmpty()
                 Screen.LibraryMix -> "Library mix"
+                is Screen.MadeMixPage -> s.title
                 else -> ""
             }
             Text(

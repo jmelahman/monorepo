@@ -35,6 +35,16 @@ private val TRACK_NUMBER = Regex("""^\d+[\s._-]*""")
 // the library mix list them.
 data class Owned(val track: Track, val artist: String, val album: String)
 
+// A mix made for you from the library's labels: a genre's, a mood's, or
+// a mood's within a genre. Covers are artist and album pairs.
+data class MadeMix(
+    val id: String,
+    val title: String,
+    val tracks: Int,
+    val covers: List<Pair<String, String>>,
+    val blurb: String,
+)
+
 // A smart playlist's rules: tracks that meet all, or any, of them, in an
 // order, up to a limit (0 for none).
 data class Rule(val field: String, val op: String, val value: String)
@@ -272,6 +282,25 @@ object Api {
     // A remix other than 0 is another of the day's mixes.
     fun libraryMix(size: Int, remix: Int = 0): List<Owned> =
         list(JSONArray(request("/api/mix/library?size=$size${if (remix != 0) "&remix=$remix" else ""}")), ::parseOwned)
+
+    // madeMixes are the day's mixes made for you.
+    fun madeMixes(): List<MadeMix> = list(JSONArray(request("/api/mixes"))) { o ->
+        val covers = o.optJSONArray("covers")
+        MadeMix(
+            id = o.getString("id"),
+            title = o.getString("title"),
+            tracks = o.optInt("tracks"),
+            covers = (0 until (covers?.length() ?: 0)).map { i ->
+                val c = covers!!.getJSONArray(i)
+                c.getString(0) to c.getString(1)
+            },
+            blurb = o.optString("blurb"),
+        )
+    }
+
+    // madeMix is a made mix's tracks for the day.
+    fun madeMix(id: String, size: Int): List<Owned> =
+        list(JSONObject(request("/api/mixes/${enc(id).replace("+", "%20")}?size=$size")).getJSONArray("tracks"), ::parseOwned)
 
     // played counts a play of an owned track toward its smart playlists
     // and the library mix.

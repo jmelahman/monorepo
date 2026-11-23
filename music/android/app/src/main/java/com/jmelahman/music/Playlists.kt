@@ -302,6 +302,37 @@ fun LibraryMixScreen(model: Model, padding: PaddingValues) {
     }
 }
 
+// MadeMixScreen is a mix made for you: the day's draw of a genre's or a
+// mood's tracks.
+@Composable
+fun MadeMixScreen(model: Model, title: String, padding: PaddingValues) {
+    val mix = model.madeTracks
+    LazyColumn(contentPadding = padding) {
+        item {
+            Header(
+                "Mixed for you",
+                title,
+                mix?.let { "${it.size} tracks · a new one each day" },
+                art = { MixArt(mix.orEmpty().map { it.album to Api.coverUrl(it.artist, it.album) }, 200.dp) { Disc(160) } },
+            ) {
+                ChromeButton("Play", Glyph.Play, { model.play(mix.orEmpty(), 0) }, enabled = !mix.isNullOrEmpty())
+                PillButton("Shuffle", Glyph.Shuffle, { model.play(mix.orEmpty(), 0, shuffle = true) }, enabled = !mix.isNullOrEmpty())
+            }
+        }
+        item {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                SizePicker(model.mixSize) { model.sizeLibraryMix(it) }
+            }
+        }
+        when {
+            mix == null -> item { Empty("Mixing…") }
+            mix.isEmpty() -> item { Empty("The mix could not be read.") }
+        }
+        ownedRows(model, mix.orEmpty(), null)
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
 // KeepButton keeps something on the phone, in step with the server.
 @Composable
 fun KeepButton(model: Model, key: String, name: String, round: Boolean = false) {

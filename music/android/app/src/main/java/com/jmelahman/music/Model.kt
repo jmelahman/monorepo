@@ -42,6 +42,7 @@ sealed class Screen {
     data object Search : Screen()
     data class PlaylistPage(val id: String) : Screen()
     data object LibraryMix : Screen()
+    data class MadeMixPage(val id: String, val title: String) : Screen()
 }
 
 // The library's three views.
@@ -104,6 +105,12 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     // The day's mix of owned tracks.
     var libraryMix by mutableStateOf<List<Owned>?>(null)
+        private set
+
+    // The day's mixes made for you, and the tracks of the one open.
+    var made by mutableStateOf<List<MadeMix>?>(null)
+        private set
+    var madeTracks by mutableStateOf<List<Owned>?>(null)
         private set
 
     // Which of the day's other library mixes is showing; 0 is its own,
@@ -512,6 +519,7 @@ class Model(app: Application) : AndroidViewModel(app) {
         is Screen.ArtistPage ->
             library?.find { it.name == s.artist }?.albums?.firstOrNull()?.let { Api.coverUrl(s.artist, it.name) }
         Screen.LibraryMix -> libraryMix?.firstOrNull()?.let { Api.coverUrl(it.artist, it.album) }
+        is Screen.MadeMixPage -> madeTracks?.firstOrNull()?.let { Api.coverUrl(it.artist, it.album) }
         is Screen.PlaylistPage -> opened[s.id]?.tracks?.firstOrNull()?.let { Api.coverUrl(it.artist, it.album) }
         else -> null
     } ?: playing?.art
@@ -675,8 +683,25 @@ class Model(app: Application) : AndroidViewModel(app) {
             runCatching { supermixReady = withContext(Dispatchers.IO) { Api.supermixReady() } }
             if (supermixReady && mix == null) loadMix()
         }
+        viewModelScope.launch {
+            runCatching { made = withContext(Dispatchers.IO) { Api.madeMixes() } }
+        }
         return viewModelScope.launch {
             runCatching { libraryMix = withContext(Dispatchers.IO) { Api.libraryMix(mixSize, libRemix) } }
+        }
+    }
+
+    // openMade opens a mix made for you, reading its tracks.
+    fun openMade(m: MadeMix) {
+        madeTracks = null
+        go(Screen.MadeMixPage(m.id, m.title))
+        loadMade(m.id)
+    }
+
+    private fun loadMade(id: String) {
+        viewModelScope.launch {
+            val got = runCatching { withContext(Dispatchers.IO) { Api.madeMix(id, mixSize) } }.getOrNull()
+            if ((screen as? Screen.MadeMixPage)?.id == id) madeTracks = got ?: emptyList()
         }
     }
 
@@ -699,6 +724,10 @@ class Model(app: Application) : AndroidViewModel(app) {
         settings.mixSize = n
         libraryMix = null
         loadLibraryMix()
+        (screen as? Screen.MadeMixPage)?.let {
+            madeTracks = null
+            loadMade(it.id)
+        }
         if (Settings.LIBRARY_MIX in kept) Sync.now(context)
     }
 

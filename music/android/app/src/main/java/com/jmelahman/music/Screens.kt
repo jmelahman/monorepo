@@ -300,6 +300,11 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
             item { MixHero(model) }
         }
         item { LibraryMixHero(model) }
+        val made = model.made
+        if (!made.isNullOrEmpty()) {
+            item { SectionTitle("Mixed for you") }
+            item { MadeRow(model, made) }
+        }
         if (library == null) {
             item { LibraryPending(model) }
         }
@@ -324,6 +329,32 @@ fun HomeScreen(model: Model, padding: PaddingValues) {
 private fun AlbumRow(model: Model, albums: List<Pair<Artist, Album>>) {
     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         items(albums, key = { (a, al) -> "${a.name}/${al.name}" }) { (a, al) -> AlbumTile(model, a, al, 148.dp) }
+    }
+}
+
+// MadeRow is the day's mixes made for you, as tiles of their covers.
+@Composable
+private fun MadeRow(model: Model, made: List<MadeMix>) {
+    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        items(made, key = { it.id }) { m ->
+            Column(
+                Modifier
+                    .width(148.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { model.openMade(m) }
+                    .padding(4.dp),
+            ) {
+                MixArt(m.covers.map { (artist, album) -> album to Api.coverUrl(artist, album) }, 140.dp) { Disc(140) }
+                Text(
+                    m.title,
+                    Modifier.padding(top = 8.dp),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(m.blurb, color = Palette.Dim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
     }
 }
 
