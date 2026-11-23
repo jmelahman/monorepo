@@ -548,17 +548,49 @@ main > .view-title {
   gap: 0.625rem;
 }
 
-/* How many tracks a mix holds, beside its buttons. */
+/* How many tracks a mix holds, beside its buttons: a ghost button whose
+   select fills it, the icons drawn over it and letting clicks through. */
 .mix-size {
-  min-height: 2.25rem;
-  padding: 0 0.625rem;
-  border: 1px solid var(--edge);
-  border-radius: 999px;
-  background: var(--card);
+  position: relative;
+  padding: 0;
+}
+
+.mix-size select {
+  appearance: none;
+  height: 100%;
+  padding: 0 2.375rem 0 2.75rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 0.8125rem;
   cursor: pointer;
+}
+
+.mix-size select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mix-size option {
+  background: var(--card-hi);
+  color: var(--chalk);
+}
+
+.mix-size svg {
+  position: absolute;
+  top: 50%;
+  left: 1.125rem;
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+.mix-size svg:last-child {
+  left: auto;
+  right: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  opacity: 0.7;
 }
 
 .icon-btn {

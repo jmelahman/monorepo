@@ -642,10 +642,18 @@ function mixSizePicker() {
 // sizePicker chooses how many tracks a mix holds, from what the server
 // makes.
 function sizePicker(current, onchange) {
+  // A ghost button like its neighbours, with the select stretched across
+  // it so the browser's own picker opens wherever it is pressed.
   return el(
-    'select',
-    { className: 'mix-size', 'aria-label': 'Tracks in the mix', onchange: (e) => onchange(Number(e.target.value)) },
-    [50, 100, 200, 500].map((n) => el('option', { value: n, selected: n === current, textContent: `${n} tracks` }))
+    'span',
+    { className: 'btn ghost mix-size' },
+    icon('list'),
+    el(
+      'select',
+      { 'aria-label': 'Tracks in the mix', onchange: (e) => onchange(Number(e.target.value)) },
+      [50, 100, 200, 500].map((n) => el('option', { value: n, selected: n === current, textContent: `${n} tracks` }))
+    ),
+    icon('chevron')
   );
 }
 
