@@ -19,6 +19,11 @@
 #include "ImageUtils.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "SceneManagement.h"
+#include "SceneView.h"
+#include "SceneViewExtension.h"
+
+#include <atomic>
 #include "SlatePainter.h"
 #include "Units.h"
 #include "Engine/DirectionalLight.h"
@@ -489,6 +494,7 @@ void ARidePawn::Tick(float Dt)
 		}
 	}
 	TurnKitPreview(Dt);
+	LightBikeScreen(Dt);
 	ReadKeys();
 	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
 	if (!Automated() && ViewScale && GrassViewScale != FMath::Max(ViewScale->GetFloat(), 0.1f))
@@ -1522,6 +1528,34 @@ const TCHAR* const BikePartNames[PartCount] = {
 	TEXT("Frame"), TEXT("Fork"), TEXT("Computer"), TEXT("WheelFront"), TEXT("WheelRear"),
 	TEXT("Cranks"), TEXT("PedalL"), TEXT("PedalR"), TEXT("Chain")};
 
+} // namespace
+
+// The player's view's last auto-exposure (scene luminance to display), read on the game thread as
+// each frame's views are set up. Scene captures (the Kit studio) are skipped.
+class FExposureWatch : public FSceneViewExtensionBase
+{
+public:
+	explicit FExposureWatch(const FAutoRegister& Register) : FSceneViewExtensionBase(Register) {}
+	virtual void SetupView(FSceneViewFamily&, FSceneView& View) override
+	{
+		if (!View.bIsSceneCapture && View.State)
+		{
+			const float E = View.State->GetLastEyeAdaptationExposure();
+			if (E > 0.f)
+			{
+				Exposure.store(E, std::memory_order_relaxed);
+			}
+		}
+	}
+	float Get() const { return Exposure.load(std::memory_order_relaxed); }
+
+private:
+	std::atomic<float> Exposure{0.f};
+};
+
+namespace
+{
+
 // World-space live GPS cycling computer display rendered onto BikeScreen (200x280 Slate widget).
 class SBikeComputerWidget : public SCompoundWidget
 {
@@ -1547,11 +1581,12 @@ public:
 		using VeloversePaint::Hex;
 		const FPainter P(Geo, Out, Layer, 1.f);
 		constexpr float W = 200.f, H = 280.f;
+		Sample(*R);
 		const FLinearColor Bg(0.0015f, 0.002f, 0.003f, 1.f);
 		const FLinearColor Card(0.006f, 0.008f, 0.012f, 1.f);
 		const FLinearColor Ink(0.95f, 0.96f, 0.98f, 1.f);
 		const FLinearColor Muted(0.55f, 0.60f, 0.68f, 1.f);
-		const int32 ZoneIdx = FMath::Clamp(R->Zone(static_cast<float>(R->Reading.Watts)), 0, 6);
+		const int32 ZoneIdx = Shown.Zone;
 		static constexpr uint32 ZoneHex[7] = {0x94A3B8, 0x38BDF8, 0x34D399, 0xFBBF24, 0xFB923C, 0xF87171, 0xC084FC};
 		const FLinearColor ZoneCol = Hex(ZoneHex[ZoneIdx]);
 
@@ -1568,7 +1603,7 @@ public:
 		P.Text(12.f, 50.f, TEXT("POWER"), P.Font("Bold", 12.f, 0.14f), Muted);
 		P.Text(W - 12.f, 50.f, FString::Printf(TEXT("Z%d"), ZoneIdx + 1), P.Font("Bold", 13.f), ZoneCol,
 		       EAlign::Right);
-		P.Text(W * 0.5f, 108.f, FString::Printf(TEXT("%d W"), FMath::RoundToInt(R->Reading.Watts)), P.Font("Bold", 48.f), Ink,
+		P.Text(W * 0.5f, 108.f, FString::Printf(TEXT("%d W"), Shown.Watts), P.Font("Bold", 48.f), Ink,
 		       EAlign::Centre);
 		const float BarW = (W - 24.f - 6.f * 4.f) / 7.f;
 		for (int32 I = 0; I < 7; ++I)
@@ -1584,20 +1619,61 @@ public:
 			P.Text(X + 8.f, Y + 18.f, Label, P.Font("Bold", 11.f, 0.12f), Muted);
 			P.Text(X + 8.f, Y + 52.f, Val, P.Font("Bold", 24.f), ValCol);
 		};
-		const float Spd = static_cast<float>(U::Speed(R->Speed));
-		const float Dist = static_cast<float>(U::Long(R->Ridden() / 100.0));
-		const float Pct = R->Grade * 100.f;
+		const float Spd = Shown.Speed;
+		const float Dist = Shown.Distance;
+		const float Pct = Shown.Grade;
 		const FLinearColor GradeCol = Pct >= 5.f ? FLinearColor(0.95f, 0.45f, 0.18f, 1.f)
 		                                         : (Pct <= -2.f ? FLinearColor(0.32f, 0.78f, 0.96f, 1.f) : Ink);
 		Cell(10.f, 138.f, U::bImperial ? TEXT("MPH") : TEXT("KM/H"), FString::Printf(TEXT("%.1f"), Spd), Ink);
-		Cell(104.f, 138.f, TEXT("RPM"), FString::Printf(TEXT("%d"), FMath::RoundToInt(R->Reading.CadenceRpm)), Ink);
+		Cell(104.f, 138.f, TEXT("RPM"), FString::Printf(TEXT("%d"), Shown.Rpm), Ink);
 		Cell(10.f, 208.f, TEXT("GRADE"), FString::Printf(TEXT("%+.1f%%"), Pct), GradeCol);
 		Cell(104.f, 208.f, U::bImperial ? TEXT("MI") : TEXT("KM"), FString::Printf(TEXT("%.1f"), Dist), Ink);
 		return Layer + 10;
 	}
 
 private:
+	// What the screen shows, held for a second as a head unit's are: numbers that change at every
+	// redraw smear under the temporal AA on so small a screen. Power is the last 3 s's mean (the
+	// usual head unit field), and its zone follows it, so the bar doesn't flicker on each stroke.
+	struct FShown
+	{
+		int32 Watts = 0, Rpm = 0, Zone = 0;
+		float Speed = 0.f, Grade = 0.f, Distance = 0.f;
+	};
+	void Sample(const ARidePawn& R) const
+	{
+		namespace U = Veloverse::Units;
+		const double Now = FPlatformTime::Seconds();
+		if (Now - LastSample >= 0.1)
+		{
+			LastSample = Now;
+			Power.Add({Now, static_cast<float>(R.Reading.Watts)});
+			Power.RemoveAll([Now](const TPair<double, float>& S) { return Now - S.Key > 3.0; });
+		}
+		if (Now - ShownAt < 1.0)
+		{
+			return;
+		}
+		ShownAt = Now;
+		float Sum = 0.f;
+		for (const TPair<double, float>& S : Power)
+		{
+			Sum += S.Value;
+		}
+		const float Mean = Power.Num() > 0 ? Sum / Power.Num() : static_cast<float>(R.Reading.Watts);
+		Shown.Watts = FMath::RoundToInt(Mean);
+		Shown.Zone = FMath::Clamp(R.Zone(Mean), 0, 6);
+		Shown.Rpm = FMath::RoundToInt(R.Reading.CadenceRpm);
+		Shown.Speed = static_cast<float>(U::Speed(R.Speed));
+		Shown.Grade = R.Grade * 100.f;
+		Shown.Distance = static_cast<float>(U::Long(R.Ridden() / 100.0));
+	}
+
 	TWeakObjectPtr<ARidePawn> PawnPtr;
+	mutable FShown Shown;
+	mutable TArray<TPair<double, float>> Power;
+	mutable double LastSample = -1.0;
+	mutable double ShownAt = -10.0;
 };
 const FVector FrontHub(58.63f, 0.f, 33.9f);
 const FVector RearHub(-40.195f, 0.f, 33.9f);
@@ -2485,11 +2561,30 @@ void ARidePawn::ApplyWeather()
 		Post->Settings.AutoExposureMinBrightness = Ev - 3.8f;
 		Post->Settings.AutoExposureMaxBrightness = Ev + 0.5f;
 	}
-	if (BikeScreen)
+	// The bike computer's fallback brightness, by the light, until the view's exposure is known
+	// (LightBikeScreen).
+	BikeScreenGain = FMath::Max(25.f, (W.Lux + 8000.f * W.Sky) * 0.055f);
+}
+
+// The bike computer is unlit, so the view's auto-exposure scaled it: by the weather's light alone,
+// the screen glared when the exposure opened up in a wood's shade (up to 3.8 stops) and dimmed in
+// open sun. Its gain now undoes the exposure, so its white sits at one brightness on the display,
+// as a backlit screen looks to an eye that has adapted to the scene.
+void ARidePawn::LightBikeScreen(float Dt)
+{
+	if (!BikeScreen || !BikeScreen->IsVisible())
 	{
-		// Scale unlit GPS screen radiance conservatively with physical scene lux so the dark
-		// background stays jet-black in shadows while numbers & zone bar stay crisp in sunlight.
-		const float Gain = FMath::Max(25.f, (W.Lux + 8000.f * W.Sky) * 0.055f);
-		BikeScreen->SetTintColorAndOpacity(FLinearColor(Gain, Gain, Gain, 1.f));
+		return;
 	}
+	if (!ExposureWatch.IsValid())
+	{
+		ExposureWatch = FSceneViewExtensions::NewExtension<FExposureWatch>();
+	}
+	// The white the screen's Ink lands on before tone mapping: a clear, not glaring, panel.
+	constexpr float ScreenWhite = 0.7f;
+	const float Exposure = ExposureWatch->Get();
+	const float Want = Exposure > 0.f ? FMath::Clamp(ScreenWhite / Exposure, 0.01f, 1.0e6f) : BikeScreenGain;
+	const float Gain = Exposure > 0.f ? FMath::FInterpTo(ShownScreenGain, Want, Dt, 8.f) : Want;
+	ShownScreenGain = Gain;
+	BikeScreen->SetTintColorAndOpacity(FLinearColor(Gain, Gain, Gain, 1.f));
 }

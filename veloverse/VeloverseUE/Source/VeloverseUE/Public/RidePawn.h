@@ -32,6 +32,7 @@ class USceneCaptureComponent2D;
 class UTextureRenderTarget2D;
 class ULocalLightComponent;
 class URideAudio;
+class FExposureWatch;
 
 // Where the camera rides. Eyes: the rider's, with the body's motion (a line that wanders across the
 // lane and takes the inside of bends, the lean into them, the pedalling and the pull of a surge).
@@ -79,6 +80,12 @@ public:
 	// and the pedals stay level. In EBikePart's order.
 	UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BikeParts;
 	UPROPERTY(Transient) TObjectPtr<class UWidgetComponent> BikeScreen;
+	// The view's auto-exposure, read as each frame is set up, to hold the screen at one brightness on
+	// the display whatever the light (LightBikeScreen).
+	TSharedPtr<FExposureWatch, ESPMode::ThreadSafe> ExposureWatch;
+	float BikeScreenGain = 25.f;  // by the weather's light, until the exposure is known
+	float ShownScreenGain = 25.f;
+	void LightBikeScreen(float Dt);
 	// The Blender rider (/Game/Rider/Body, import_rider.py) on the parts, seen from behind: its
 	// pedal loops (a crank revolution each) played at Crank, so the feet stay on the pedals, and
 	// blended by W/kg (URiderAnim): Easy at 1.5, Pedal at 3, Hard at 5. Over
