@@ -2726,15 +2726,22 @@ def pch_coast(out, g, bio, road, rng, taken):
                     )
                     pch_view_added = True
                 continue
-        # Seamless 4K Megascans W-beam guardrail every 3 m (3.45 m panels overlap cleanly)
+        # Seamless 4K Megascans W-beam guardrail every 3 m (3.45 m panels overlap cleanly),
+        # pitched to match the exact road grade so inclines flow smoothly without stair-stepping.
         if not any(math.hypot(px - ox, py - oy) < 12.0 for ox, oy in turnout_spots):
+            dz = float(line[min(k + 3, n - 1), 2] - line[max(k - 3, 0), 2])
+            road_pitch = math.degrees(math.atan2(dz, norm_t))
+            rail_pitch = road_pitch if sea_side > 0 else -road_pitch
             out.add(
                 "PCHCoast",
                 ms_rails[rails % len(ms_rails)],
                 gx,
                 gy,
-                gz - 0.04,
+                gz - 0.06,
                 yaw + (0.0 if sea_side > 0 else 180.0),
+                1.0,
+                rail_pitch,
+                0.0,
                 mark=(200, 210, 220),
             )
             rails += 1
