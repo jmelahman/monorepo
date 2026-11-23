@@ -230,6 +230,17 @@ void URideMenu::PaintStart(FPaintContext& C) const
 		{TEXT("routes"), Icons::Route, TEXT("Choose a route"),
 		 Route ? FString::Printf(TEXT("Now: %s"), *Route->Title) : FString::Printf(TEXT("%d routes across the islands"), Surveys.Num()),
 		 [M] { M->Show(ERideMenuPage::Routes); }},
+		{TEXT("rides"), Icons::Pulse, TEXT("Ride history"),
+		 History.Num() == 0 ? TEXT("No saved rides yet")
+		                    : FString::Printf(TEXT("%d saved %s"), History.Num(),
+		                                      History.Num() == 1 ? TEXT("ride") : TEXT("rides")),
+		 [M]
+		 {
+			 M->bFromStats = false;
+			 M->ReadHistory();
+			 M->ReviewRide(0);
+			 M->Show(ERideMenuPage::Summary);
+		 }},
 		{TEXT("stats"), Icons::Stats, TEXT("Stats"), U::Distance(Totals[0].Km * 1000.0, 0) + TEXT(" this week"),
 		 [M] { M->Show(ERideMenuPage::Stats); }},
 		{TEXT("settings"), Icons::Gear, TEXT("Settings"), TEXT("Rider, graphics, units"),
@@ -506,15 +517,19 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			P.Text(MapX + L.Value.X * K, MapY + L.Value.Y * K, L.Key.ToUpper(), P.Font("Bold", 13.8f, 0.18f), InkA(0.72f),
 			       EAlign::Centre);
 		}
-		// Where it starts.
-		const float Length = Pawn->Track ? Pawn->Track->Length() : 0.f;
+		// Where it starts (follows the staged PendingStart on the previewed route).
+		const URideTrack* MapTrack = Pawn->Routes.IsValidIndex(Chosen) ? Pawn->Routes[Chosen].Get() : Pawn->Track.Get();
+		const TArray<ARidePawn::FStart> Places = Pawn->StartsFor(MapTrack);
+		const int32 MapStartIdx = Places.Num() > 0 ? FMath::Clamp(PendingStart, 0, Places.Num() - 1) : 0;
+		const float Length = MapTrack ? MapTrack->Length() : 0.f;
 		if (Road.Num() > 0 && Length > 0.f)
 		{
-			const float Share = FMath::Clamp(Pawn->StartMetres * 100.f / Length, 0.f, 1.f);
+			const float StartM = Places.IsValidIndex(MapStartIdx) ? Places[MapStartIdx].Metres : 0.f;
+			const float Share = FMath::Clamp(StartM * 100.f / Length, 0.f, 1.f);
 			const int32 From = FMath::RoundToInt32(Share * (Road.Num() - 1));
 			const FVector2f At = Road[From];
 			// The way round: an arrowhead a little along the road from the start.
-			const int32 To = FMath::Min(From + FMath::Max(Road.Num() / 30, 2), Road.Num() - 1);
+			const int32 To = (From + FMath::Max(Road.Num() / 30, 2)) % Road.Num();
 			const FVector2f Along = (Road[To] - At).GetSafeNormal();
 			if (!Along.IsNearlyZero())
 			{
@@ -526,9 +541,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			}
 			P.Disc(At.X, At.Y, 10.f, Ink);
 			P.Disc(At.X, At.Y, 6.5f, C.Accent);
-			const TArray<ARidePawn::FStart> Places = Pawn->Starts();
-			const FString Where = Places.IsValidIndex(Pawn->StartIndex()) ? Places[Pawn->StartIndex()].Name
-			                                                               : FString(TEXT("Harbour"));
+			const FString Where = Places.IsValidIndex(MapStartIdx) ? Places[MapStartIdx].Name : FString(TEXT("Harbour"));
 			const FString Text = (Where + TEXT(" · start")).ToUpper();
 			const FSlateFontInfo F = P.Font("Bold", 13.f, 0.14f);
 			const float Tw = P.Width(Text, F);
@@ -1246,18 +1259,6 @@ void URideMenu::PaintStats(FPaintContext& C) const
 	const float Sw = C.SegmentedWidth(Periods, 16.f, 88.f);
 	C.Segmented(TEXT("period"), RightEdge - Sw, 48.f, Periods, Period, [M](int32 I) { M->Period = I; }, 44.f, 16.f,
 	            88.f);
-	if (History.Num() > 0)
-	{
-		const float Bw = C.ButtonWidth(TEXT("Your rides"), 16.f, false, 20.f);
-		C.Button(TEXT("rides"), RightEdge - Sw - 16.f - Bw, 50.f, Bw, 52.f, TEXT("Your rides"), EButton::Outline,
-		         [M]
-		         {
-			         M->bFromStats = true;
-			         M->ReviewRide(0);
-			         M->Show(ERideMenuPage::Summary);
-		         },
-		         nullptr, 16.f);
-	}
 
 	// The period's totals, in a card of six.
 	{
@@ -1606,19 +1607,26 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	const float RightEdge = C.W - 48.f;
 	const bool bAfterRide = Pawn && Pawn->bStarted;
 
+	if (!bAfterRide)
+	{
+		PaintHeader(C, TEXT("Ride history"));
+	}
+
 	// The rides, newest first.
-	C.Panel(48.f, 48.f, 300.f, 984.f);
-	P.Text(72.f, 90.f, TEXT("Rides"), P.Font("Bold", 18.f), Ink);
+	const float ListTop = bAfterRide ? 48.f : 128.f;
+	const float ListH = bAfterRide ? 984.f : 904.f;
+	C.Panel(48.f, ListTop, 300.f, ListH);
+	P.Text(72.f, ListTop + 42.f, TEXT("Past rides"), P.Font("Bold", 18.f), Ink);
 	if (History.Num() == 0)
 	{
-		P.Wrap(72.f, 130.f, 252.f, 22.f, TEXT("No rides kept yet: rides over 30 seconds are saved."),
+		P.Wrap(72.f, ListTop + 82.f, 252.f, 22.f, TEXT("No rides kept yet: rides over 30 seconds are saved."),
 		       P.Font("Medium", 15.f), Muted);
 	}
-	constexpr int32 Shown = 12;
+	const int32 Shown = bAfterRide ? 12 : 11;
 	for (int32 I = RidesFirst; I < FMath::Min(History.Num(), RidesFirst + Shown); ++I)
 	{
 		const FRideEntry& E = History[I];
-		const float Ry = 108.f + (I - RidesFirst) * 72.f;
+		const float Ry = ListTop + 60.f + (I - RidesFirst) * 72.f;
 		const FString Key = FString::Printf(TEXT("ride%d"), I);
 		const bool bOn = Review.Entry == I;
 		const float L = C.Lift(Key);
@@ -1645,7 +1653,7 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	}
 
 	// The heading and the ways out.
-	const float X0 = 380.f;
+	const float X0 = 396.f;
 	float Bx = RightEdge;
 	auto RightButton = [&](const TCHAR* Key, const FString& Text, EButton Style, TFunction<void()> Click,
 	                       const TCHAR* Icon)
@@ -1666,11 +1674,6 @@ void URideMenu::PaintReview(FPaintContext& C) const
 			            M->Controller()->Restart();
 		            },
 		            Icons::Route);
-	}
-	else
-	{
-		RightButton(TEXT("home"), bFromStats ? TEXT("Back to stats") : TEXT("Back"), EButton::Primary,
-		            [M] { M->GoBack(); }, Icons::Back);
 	}
 	RightButton(TEXT("folder"), TEXT("Open rides folder"), EButton::Quiet,
 	            [] { FPlatformProcess::ExploreFolder(*FRideRecorder::RidesFolder()); }, Icons::Download);
