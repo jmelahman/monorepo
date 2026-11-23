@@ -97,18 +97,19 @@ UStaticMesh* MeshAt(const TCHAR* Path)
 // clear sun, the overcast before its shower, and the shower itself.
 void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 {
-	if (TimeOfDay > 0)
+	if (TimeOfDay >= 1 && TimeOfDay <= 3)
 	{
-		static constexpr float Heights[3] = {15.f, 48.f, 8.f};
+		// Morning Mist, Midday, Golden Hour.
+		static constexpr float Heights[3] = {12.f, 40.f, 14.f};
 		static constexpr float Turns[3] = {-70.f, 0.f, 70.f}; // degrees round from the route's own sun
 		W.Elevation = Heights[TimeOfDay - 1];
 		Azimuth += Turns[TimeOfDay - 1];
 	}
 	if (Weather == 1)
 	{
-		W.Lux = W.Elevation < 12.f ? 70000.f : 90000.f;
-		W.Sky = 1.f;
-		W.Fog = 0.012f; // a light haze that layers the far hills; 0.006 left them flat and sharp
+		W.Lux = W.Elevation <= 16.f ? 72000.f : 90000.f;
+		W.Sky = W.Elevation <= 16.f ? 0.95f : 1.f;
+		W.Fog = W.Elevation <= 16.f ? 0.008f : 0.012f; // a light haze that layers the far hills; 0.006 left them flat and sharp
 		W.Rain = W.Wet = 0.f;
 	}
 	else if (Weather == 2)
@@ -149,10 +150,16 @@ static const FVector BoardEye(-6022.73 * 100.0, -6151.28 * 100.0, 445.19 * 100.0
 void ARidePawn::CameraLook(FPostProcessSettings& Look)
 {
 	Look.bOverride_AutoExposureBias = true;
-	// 0.55 until 0.3.0 washed pale surfaces out to white (13 Nov); the level's volume has 0.3.
-	Look.AutoExposureBias = -0.1f;
+	// -0.35 EV keeps highlights rich and forest shadows deep rather than pale grey.
+	Look.AutoExposureBias = -0.35f;
 	Look.bOverride_BloomIntensity = true;
-	Look.BloomIntensity = 0.4f;
+	Look.BloomIntensity = 0.28f;
+	Look.bOverride_BloomThreshold = true;
+	Look.BloomThreshold = 1.2f;
+	Look.bOverride_WhiteTemp = true;
+	Look.WhiteTemp = 5750.f;
+	Look.bOverride_ColorContrast = true;
+	Look.ColorContrast = FVector4(1.14f, 1.14f, 1.14f, 1.f);
 	Look.bOverride_FilmSlope = true;
 	Look.FilmSlope = 0.84f;
 	Look.bOverride_FilmToe = true;
@@ -2091,14 +2098,25 @@ void ARidePawn::ApplyWeather()
 	// names a time of day: then they ride the rider's sky, so QA can see the evening a rider picks.
 	const bool bQaSky = Automated() && Profile.TimeOfDay == 0;
 	const bool bOwn = bQaSky || (Profile.Weather == 0 && Profile.TimeOfDay == 0);
-	// A route with no weather rows rides its default row, a clear day, as the pill says: the level's
-	// own light is flat and pale in the ride (out/qa/own1 against clear4).
 	if (!Track || (Track->Weather.Num() == 0 && bQaSky))
 	{
 		return;
 	}
-	FRideWeather W = Track->WeatherAt(Track->Wrap(static_cast<float>(Distance)) / 100.f);
+	FRideWeather W;
 	float Azimuth = Track->SunAzimuth;
+	if (Track->Weather.Num() > 0)
+	{
+		W = Track->WeatherAt(Track->Wrap(static_cast<float>(Distance)) / 100.f);
+	}
+	else
+	{
+		// Live gameplay with no weather rows: default to cinematic Golden Hour instead of flat 34° / 90k lux.
+		W.Elevation = 14.f;
+		W.Lux = 72000.f;
+		W.Fog = 0.008f;
+		W.Sky = 0.95f;
+		Azimuth = 110.f;
+	}
 	if (!bOwn)
 	{
 		Overrule(W, Azimuth, Profile.Weather, Profile.TimeOfDay);
@@ -2113,9 +2131,14 @@ void ARidePawn::ApplyWeather()
 	}
 	// The shells cost a translucent pass over the whole screen: draw them only while it rains.
 	Rain->SetVisibility(W.Rain > 0.001f);
+	const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
+	const float Thick = FMath::Pow(Cloud, 1.5f);
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
+		Sun->SetVolumetricScatteringIntensity(W.Elevation < 18.f ? 2.0f : 1.2f);
+		Sun->SetUseTemperature(true);
+		Sun->SetTemperature(W.Elevation <= 16.f ? 5100.f : 6200.f);
 		// Cloud hides the sun's disc and spreads its light: widen the source as the light falls
 		// below a clear day's, so a rain sky's shadows go soft and faint instead of sharp.
 		if (SunAngle < 0.f)
@@ -2124,8 +2147,7 @@ void ARidePawn::ApplyWeather()
 			UE_LOG(LogTemp, Display, TEXT("WEATHER first apply: sun %s lux %.0f angle %.2f sky %.2f fog %.3f rain %.1f"),
 				*Sun->GetName(), W.Lux, SunAngle, W.Sky, W.Fog, W.Rain);
 		}
-		const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);
-		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, FMath::Pow(Cloud, 1.5f)));
+		Sun->SetLightSourceAngle(FMath::Lerp(SunAngle, 12.f, Thick));
 		// Turned only on a real change: a sun that turns at all is a moving light to the virtual
 		// shadow maps, which then redraw their pages each frame at the moving light's coarser
 		// resolution. The route's rows ease the sun's height along it; steps of a quarter degree
@@ -2137,38 +2159,45 @@ void ARidePawn::ApplyWeather()
 			SunAim = Aim;
 			UE_LOG(LogTemp, Display, TEXT("RIDE sun turned to %.1f high, %.0f round"), W.Elevation, Azimuth);
 		}
-		// An overcast sky is grey-white to the zenith, not blue: the ride frames only the sky near
-		// the horizon, where the cloud layer never showed (out/qa/cloudy5, package 0454), so thin
-		// the atmosphere's blue scattering and thicken its haze instead.
-		if (Atmosphere.IsValid())
+	}
+	// An overcast sky is grey-white to the zenith, not blue: thin Rayleigh scattering and thicken haze
+	// under cloud, while deepening clear/golden-hour sky luminance so it never washes pale white.
+	if (Atmosphere.IsValid())
+	{
+		// Only on a change: this runs five times a second and each set re-sends the atmosphere.
+		const float R = Rayleigh * FMath::Lerp(1.f, 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
+		if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f))
 		{
-			const float Thick = FMath::Pow(Cloud, 1.5f);
-			// The ozone's absorption stays with the blue, or the thinned sky goes lilac (out/qa/cloudy6).
-			// Only on a change: this runs five times a second and each set re-sends the atmosphere.
-			const float R = Rayleigh * FMath::Lerp(1.f, 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
-			if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f))
-			{
-				Atmosphere->SetRayleighScatteringScale(R);
-				Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
-				Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.05f, Thick));
-			}
+			Atmosphere->SetRayleighScatteringScale(R);
+			Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
+			Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.05f, Thick));
+		}
+		const FLinearColor SkyLum = FMath::Lerp(FLinearColor(0.72f, 0.72f, 0.75f, 1.f), FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
+		if (!Atmosphere->SkyLuminanceFactor.Equals(SkyLum, 1e-4f))
+		{
+			Atmosphere->SetSkyLuminanceFactor(SkyLum);
 		}
 	}
 	if (SkyLight.IsValid())
 	{
 		SkyLight->SetIntensity(W.Sky);
+		SkyLight->SetLightColor(W.Elevation <= 16.f ? FLinearColor(1.0f, 0.95f, 0.90f) : FLinearColor(0.94f, 0.97f, 1.0f));
 	}
 	if (Fog.IsValid())
 	{
 		Fog->SetFogDensity(W.Fog);
+		Fog->SetVolumetricFog(true);
+		Fog->SetStartDistance(0.f);
+		Fog->SetFogHeightFalloff(0.02f);
 	}
 	if (Post.IsValid())
 	{
-		// Exposure stays within a few stops of what the light calls for, as in the stills.
+		// Exposure stays within a few stops of what the light calls for, with tighter min brightness
+		// so shaded forests keep deep contrast instead of lifting to flat grey.
 		const float Ev = FMath::Log2((W.Lux + 8000.f * W.Sky) / 2.5f);
 		Post->Settings.bOverride_AutoExposureMinBrightness = true;
 		Post->Settings.bOverride_AutoExposureMaxBrightness = true;
-		Post->Settings.AutoExposureMinBrightness = Ev - 6.5f;
+		Post->Settings.AutoExposureMinBrightness = Ev - 3.8f;
 		Post->Settings.AutoExposureMaxBrightness = Ev + 0.5f;
 	}
 }
