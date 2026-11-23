@@ -87,7 +87,13 @@ def texture(stem, kind):
         raise RuntimeError(f"could not import {task.filename}")
     normal = kind == "N"
     tex.set_editor_property("srgb", kind == "D")
-    if kind in LINEAR:
+    if kind == "M2":
+        # M2 packs 4 linear mask channels (R=socks, G=hair, B=skin, A=gloves C7); TC_MASKS uses
+        # DXT1 (no alpha, reading A=1 everywhere), so keep TC_DEFAULT with sRGB=False (DXT5 RGBA).
+        tex.set_editor_property(
+            "compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT
+        )
+    elif kind in LINEAR:
         tex.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_MASKS)
     if normal:
         tex.set_editor_property("flip_green_channel", True)  # Blender's are OpenGL (Y+)

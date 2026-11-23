@@ -91,10 +91,12 @@ def _load_rgba(path):
     return arr.reshape(h, w, 4)
 
 
-def _save_rgba(path, arr, colorspace="sRGB"):
+def _save_rgba(path, arr, colorspace="sRGB", alpha=False):
     h, w, _ = arr.shape
-    img = bpy.data.images.new("_tmp_out", width=w, height=h, alpha=False)
+    img = bpy.data.images.new("_tmp_out", width=w, height=h, alpha=alpha)
     img.colorspace_settings.name = colorspace
+    if alpha:
+        img.alpha_mode = "STRAIGHT"
     img.pixels.foreach_set(np.clip(arr, 0.0, 1.0).ravel())
     img.filepath_raw = path
     img.file_format = "PNG"
@@ -831,7 +833,7 @@ def main():
     _save_rgba(os.path.join(dst, "T_Body_Shade.png"), shade, "Non-Color")
     _save_rgba(os.path.join(dst, "T_Body_Normal.png"), norm, "Non-Color")
     _save_rgba(os.path.join(dst, "T_Body_Mask.png"), mask1, "Non-Color")
-    _save_rgba(os.path.join(dst, "T_Body_Mask2.png"), mask2, "Non-Color")
+    _save_rgba(os.path.join(dst, "T_Body_Mask2.png"), mask2, "Non-Color", alpha=True)
 
     # 3) Export polished rider.fbx and save rider.blend
     _export_fbx(rig, mesh_ob, os.path.join(dst, "rider.fbx"))

@@ -1990,11 +1990,15 @@ void ARidePawn::StudioLook(int32 Variant)
 	// 15 Nov). Variants 1..3 are the darker and brighter lifts -RideKitDump compares; +2.5 read
 	// best in v66's. The eye adapts at once: the card opens with the page, and at the engine's
 	// pace it spent its first seconds pale and blue while the exposure settled (v66's Kit tour).
-	static const float Lifts[] = {2.5f, 0.5f, 1.5f, 3.5f};
+	static const float Lifts[] = {1.2f, 0.4f, 0.8f, 1.8f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
 	Look.VignetteIntensity = 0.f;
+	Look.bOverride_AutoExposureMinBrightness = true;
+	Look.bOverride_AutoExposureMaxBrightness = true;
+	Look.AutoExposureMinBrightness = 1.0f;
+	Look.AutoExposureMaxBrightness = 1.0f;
 	Look.bOverride_AutoExposureBias = true;
 	Look.AutoExposureBias = Lifts[FMath::Clamp(Variant, 0, 3)];
 	Look.bOverride_AutoExposureSpeedUp = true;
