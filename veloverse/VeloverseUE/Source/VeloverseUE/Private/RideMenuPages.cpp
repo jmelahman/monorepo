@@ -1688,16 +1688,15 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	{
 		Kicker += TEXT(" · ") + Review.Islands;
 	}
-	P.Text(X0, 80.f, P.Fit(Kicker.ToUpper(), P.Font("Bold", 14.f, 0.2f), Bx - X0 - 24.f), P.Font("Bold", 14.f, 0.2f),
-	       C.Accent);
 	// A ride over several routes ("A, then B") steps the title down before it cuts the last route.
-	const float TitleRoom = Bx - X0 - 260.f;
+	const float TitleY = bAfterRide ? 140.f : 152.f;
+	const float TitleRoom = (bAfterRide ? Bx : RightEdge) - X0 - 340.f;
 	float TitleSize = 56.f;
 	while (TitleSize > 36.f && P.Width(Review.Route, P.Serif(TitleSize)) > TitleRoom)
 	{
 		TitleSize -= 4.f;
 	}
-	const float Tw = P.Text(X0, 140.f, P.Fit(Review.Route, P.Serif(TitleSize), TitleRoom), P.Serif(TitleSize), Ink);
+	const float Tw = P.Text(X0, TitleY, P.Fit(Review.Route, P.Serif(TitleSize), TitleRoom), P.Serif(TitleSize), Ink);
 	FString Saved;
 	if (Review.bJustRidden)
 	{
@@ -1709,7 +1708,21 @@ void URideMenu::PaintReview(FPaintContext& C) const
 	{
 		Saved += FString::Printf(TEXT("%s+%d XP"), Saved.IsEmpty() ? TEXT("") : TEXT(" · "), Review.Xp);
 	}
-	P.Text(X0 + Tw + 20.f, 136.f, Saved, P.Font("Medium", 16.f), Muted);
+	if (bAfterRide)
+	{
+		P.Text(X0, 80.f, P.Fit(Kicker.ToUpper(), P.Font("Bold", 14.f, 0.2f), Bx - X0 - 24.f), P.Font("Bold", 14.f, 0.2f),
+		       C.Accent);
+		P.Text(X0 + Tw + 20.f, TitleY - 4.f, Saved, P.Font("Medium", 16.f), Muted);
+	}
+	else
+	{
+		// Place the ride timestamp & islands cleanly beside the route name, well below "Ride history".
+		const float MetaX = X0 + Tw + 24.f;
+		const float MetaRoom = FMath::Max(RightEdge - MetaX, 120.f);
+		const FString Meta = Saved.IsEmpty() ? Kicker.ToUpper() : Kicker.ToUpper() + TEXT(" · ") + Saved;
+		P.Text(MetaX, TitleY - 4.f, P.Fit(Meta, P.Font("Bold", 14.f, 0.16f), MetaRoom), P.Font("Bold", 14.f, 0.16f),
+		       C.Accent);
+	}
 
 	// The totals.
 	struct FTotal
