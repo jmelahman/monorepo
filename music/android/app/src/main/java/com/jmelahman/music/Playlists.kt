@@ -108,12 +108,30 @@ private val TEXT_OPS = linkedMapOf(
     "starts" to "starts with",
 )
 
-private class Field(val label: String, val ops: Map<String, String>, val number: Boolean = false)
+// A field's value is text, a number, or one of a few choices.
+private class Field(
+    val label: String,
+    val ops: Map<String, String>,
+    val number: Boolean = false,
+    val choices: List<String>? = null,
+)
+
+private val LABEL_OPS = linkedMapOf("is" to "is", "not" to "is not")
+
+// The moods a label may give, as the server's labels.go has them.
+private val MOODS = listOf(
+    "aggressive", "chill", "dark", "dreamy", "epic", "euphoric",
+    "melancholy", "playful", "romantic", "upbeat", "uplifting", "warm",
+)
 
 private val FIELDS = linkedMapOf(
     "artist" to Field("Artist", TEXT_OPS),
     "album" to Field("Album", TEXT_OPS),
     "title" to Field("Title", TEXT_OPS),
+    "genre" to Field("Genre", LABEL_OPS + ("contains" to "contains")),
+    "mood" to Field("Mood", LABEL_OPS, choices = MOODS),
+    "energy" to Field("Energy", LABEL_OPS, choices = listOf("low", "medium", "high")),
+    "year" to Field("Year", linkedMapOf(">" to "after", "<" to "before", "=" to "is"), true),
     "plays" to Field("Plays", linkedMapOf(">" to "more than", "<" to "fewer than", "=" to "exactly"), true),
     "added" to Field("Added", linkedMapOf("within" to "in the last … days", "before" to "more than … days ago"), true),
     "played" to Field(
@@ -543,14 +561,22 @@ private fun RuleRow(r: Rule, change: (Rule) -> Unit, remove: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Picker(FIELDS.mapValues { it.value.label }, r.field) { f ->
-                val ops = FIELDS.getValue(f).ops
-                change(Rule(f, if (r.op in ops) r.op else ops.keys.first(), if (FIELDS.getValue(f).number == field.number) r.value else ""))
+                val to = FIELDS.getValue(f)
+                val value = when {
+                    to.choices != null -> if (r.value in to.choices) r.value else to.choices.first()
+                    to.number == field.number && field.choices == null -> r.value
+                    else -> ""
+                }
+                change(Rule(f, if (r.op in to.ops) r.op else to.ops.keys.first(), value))
             }
             Picker(field.ops, r.op) { change(r.copy(op = it)) }
+            if (field.choices != null) {
+                Picker(field.choices.associateWith { it }, r.value) { change(r.copy(value = it)) }
+            }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = remove) { Icon(Glyph.Close, "Remove the rule", Modifier.size(18.dp)) }
         }
-        OutlinedTextField(
+        if (field.choices == null) OutlinedTextField(
             r.value,
             { v -> change(r.copy(value = if (field.number) v.filter { it.isDigit() } else v)) },
             placeholder = { Text(if (field.number) "Number" else "Text") },

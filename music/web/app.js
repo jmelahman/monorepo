@@ -1652,12 +1652,32 @@ async function deletePlaylist(p) {
 }
 
 // The smart rules, by field: the comparisons each takes and what its
-// value is.
+// value is: text, a number, or one of a few choices.
 const TEXT_OPS = { contains: 'contains', is: 'is', not: 'does not contain', starts: 'starts with' };
+const LABEL_OPS = { is: 'is', not: 'is not' };
+// The moods a label may give, as labels.go has them.
+const MOODS = [
+  'aggressive',
+  'chill',
+  'dark',
+  'dreamy',
+  'epic',
+  'euphoric',
+  'melancholy',
+  'playful',
+  'romantic',
+  'upbeat',
+  'uplifting',
+  'warm',
+];
 const RULE_FIELDS = {
   artist: { label: 'Artist', ops: TEXT_OPS },
   album: { label: 'Album', ops: TEXT_OPS },
   title: { label: 'Title', ops: TEXT_OPS },
+  genre: { label: 'Genre', ops: { ...LABEL_OPS, contains: 'contains' } },
+  mood: { label: 'Mood', ops: LABEL_OPS, choices: MOODS },
+  energy: { label: 'Energy', ops: LABEL_OPS, choices: ['low', 'medium', 'high'] },
+  year: { label: 'Year', ops: { '>': 'after', '<': 'before', '=': 'is' }, number: true },
   plays: { label: 'Plays', ops: { '>': 'more than', '<': 'fewer than', '=': 'exactly' }, number: true },
   added: { label: 'Added', ops: { within: 'in the last … days', before: 'more than … days ago' }, number: true },
   played: {
@@ -1702,12 +1722,17 @@ function editPlaylist(p, isSmart) {
     const field = select(labels, r.field, 'Field');
     const op = el('select', { 'aria-label': 'Comparison' });
     const value = el('input', { type: 'text', value: r.value ?? '', 'aria-label': 'Value' });
+    const choice = el('select', { 'aria-label': 'Value' });
     const fill = (keep) => {
       const f = RULE_FIELDS[field.value];
       op.replaceChildren(...Object.entries(f.ops).map(([k, label]) => el('option', { value: k, textContent: label })));
       if (keep && f.ops[keep]) op.value = keep;
       value.type = f.number ? 'number' : 'text';
       value.min = f.number ? '0' : '';
+      choice.replaceChildren(...(f.choices || []).map((c) => el('option', { value: c, textContent: c })));
+      if (f.choices?.includes(value.value)) choice.value = value.value;
+      value.hidden = !!f.choices;
+      choice.hidden = !f.choices;
     };
     fill(r.op);
     field.onchange = () => fill(null);
@@ -1717,13 +1742,18 @@ function editPlaylist(p, isSmart) {
       field,
       op,
       value,
+      choice,
       el(
         'button',
         { className: 'icon-btn', type: 'button', 'aria-label': 'Remove the rule', onclick: () => row.remove() },
         icon('close')
       )
     );
-    row.read = () => ({ field: field.value, op: op.value, value: value.value.trim() });
+    row.read = () => ({
+      field: field.value,
+      op: op.value,
+      value: RULE_FIELDS[field.value].choices ? choice.value : value.value.trim(),
+    });
     rules.append(row);
   };
   if (isSmart) for (const r of sm.rules || []) addRule(r);

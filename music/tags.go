@@ -201,7 +201,7 @@ var genreAliases = map[string]string{
 }
 
 // genresDropped say nothing of how a track sounds.
-var genresDropped = map[string]bool{"": true, "other": true, "unknown": true, "genre": true, "misc": true, "none": true}
+var genresDropped = map[string]bool{"": true, "other": true, "unknown": true, "genre": true, "misc": true, "none": true, "mp3": true}
 
 // normalizeGenre puts a genre the way the labels keep them: lower case,
 // one spelling for each, "" for one that says nothing.
