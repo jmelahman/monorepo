@@ -143,6 +143,12 @@ object Glyph {
         "more",
         "M12 5.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm0 5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z",
     )
+    // A speaker, for where the music plays.
+    val Speaker = icon(
+        "speaker",
+        "M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM12 7v.01M12 11a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
+        stroke = 1.8f,
+    )
     val Bag = icon("bag", "M5.5 8h13l-1 12h-11zM9 10V7a3 3 0 0 1 6 0v3", stroke = 1.8f)
     val Plus = icon("plus", "M12 5v14M5 12h14", stroke = 1.8f)
     val List = icon("list", "M4 6h12M4 11h12M4 16h7M18 9v8.5", stroke = 1.8f)

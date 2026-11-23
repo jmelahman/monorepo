@@ -21,4 +21,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { MusicApp(model) }
     }
+
+    // The web players are watched only while the app is in front.
+    override fun onStart() {
+        super.onStart()
+        model.watchRemote(true)
+    }
+
+    override fun onStop() {
+        model.watchRemote(false)
+        super.onStop()
+    }
 }

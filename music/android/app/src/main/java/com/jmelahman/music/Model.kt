@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,8 +23,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import kotlin.random.Random
 
@@ -162,24 +166,122 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     var controller by mutableStateOf<MediaController?>(null)
         private set
-    var playing by mutableStateOf<NowPlaying?>(null)
-        private set
-    var isPlaying by mutableStateOf(false)
-        private set
-    var duration by mutableStateOf(0L)
-        private set
-    var hasNext by mutableStateOf(false)
-        private set
-    var shuffle by mutableStateOf(false)
-        private set
-    var repeat by mutableStateOf(Player.REPEAT_MODE_OFF)
-        private set
+
+    // The phone's own player, as it last reported. What the screens read
+    // (playing, isPlaying and the rest) is this, or the web player's when
+    // the phone drives one.
+    private var phonePlaying by mutableStateOf<NowPlaying?>(null)
+    private var phoneIsPlaying by mutableStateOf(false)
+    private var phoneDuration by mutableStateOf(0L)
+    private var phoneHasNext by mutableStateOf(false)
+    private var phoneShuffle by mutableStateOf(false)
+    private var phoneRepeat by mutableStateOf(Player.REPEAT_MODE_OFF)
+
+    val playing: NowPlaying?
+        get() = if (remoteId == null) phonePlaying else remoteState?.let { NowPlaying(it.key, it.title, it.subtitle, it.art) }
+    val isPlaying: Boolean get() = if (remoteId == null) phoneIsPlaying else remoteState?.playing == true
+    val duration: Long get() = if (remoteId == null) phoneDuration else ((remoteState?.duration ?: 0.0) * 1000).toLong()
+    val hasNext: Boolean get() = if (remoteId == null) phoneHasNext else remoteState?.hasNext == true
+    val shuffle: Boolean get() = if (remoteId == null) phoneShuffle else remoteState?.shuffle == true
+    val repeat: Int
+        get() = if (remoteId == null) {
+            phoneRepeat
+        } else {
+            when (remoteState?.repeat) {
+                "all" -> Player.REPEAT_MODE_ALL
+                "one" -> Player.REPEAT_MODE_ONE
+                else -> Player.REPEAT_MODE_OFF
+            }
+        }
     var expanded by mutableStateOf(false)
 
     // The streams in the queue, by media id, so the player can offer to
     // buy the one it is on.
     private var streams: Map<String, YTTrack> = emptyMap()
-    val playingStream: YTTrack? get() = playing?.let { streams[it.id] }
+    val playingStream: YTTrack? get() = if (remoteId == null) playing?.let { streams[it.id] } else null
+
+    // ------------------------------------------------------------ remote
+
+    // The web players open on the server, while the app is in front.
+    var remotePlayers by mutableStateOf<List<RemotePlayer>>(emptyList())
+        private set
+
+    // The web player the phone drives, or null for the phone's own.
+    var remoteId by mutableStateOf<String?>(null)
+        private set
+    val remote: RemotePlayer? get() = remoteId?.let { id -> remotePlayers.find { it.id == id } }
+    private val remoteState: RemoteState? get() = remote?.state
+
+    // When the web player's state came, so its position can run on
+    // between reports.
+    private var remoteAt = 0L
+    private var remoteWatch: Job? = null
+
+    // watchRemote keeps the server's event stream open while on, coming
+    // back after a drop.
+    fun watchRemote(on: Boolean) {
+        remoteWatch?.cancel()
+        remoteWatch = null
+        if (!on) return
+        remoteWatch = viewModelScope.launch(Dispatchers.IO) {
+            var wait = 1_000L
+            while (isActive) {
+                if (Api.baseUrl.isNotEmpty()) {
+                    val conn = Api.remoteEvents()
+                    // A blocked read only ends when its connection does.
+                    val hang = coroutineContext[Job]!!.invokeOnCompletion { conn.disconnect() }
+                    try {
+                        Api.readRemote(conn) { players ->
+                            wait = 1_000L
+                            viewModelScope.launch(Dispatchers.Main) { heard(players) }
+                        }
+                    } catch (_: Exception) {
+                        // Dropped, or the server is away; try again.
+                    } finally {
+                        hang.dispose()
+                        conn.disconnect()
+                    }
+                }
+                delay(wait)
+                wait = (wait * 2).coerceAtMost(30_000L)
+            }
+        }
+    }
+
+    private fun heard(players: List<RemotePlayer>) {
+        val was = remoteState
+        remotePlayers = players
+        remoteAt = SystemClock.elapsedRealtime()
+        seeks++
+        val id = remoteId ?: return
+        val now = players.find { it.id == id }
+        if (now == null) {
+            remoteId = null
+            notice("The web player closed; back to this phone")
+        } else if (now.state?.blocked == true && was?.blocked != true) {
+            notice("The browser wants a click on its page before it plays")
+        }
+    }
+
+    // useRemote has the phone drive a web player, or itself with null;
+    // the phone's own player stops while it drives another.
+    fun useRemote(id: String?) {
+        if (id != null) controller?.pause()
+        remoteId = id
+        seeks++
+    }
+
+    private fun command(what: String, build: JSONObject.() -> Unit = {}) {
+        val id = remoteId ?: return
+        val cmd = JSONObject().put("do", what).apply(build)
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { Api.remote(id, cmd) }
+            } catch (e: Exception) {
+                notice("The web player didn't answer: ${e.message}")
+            }
+        }
+    }
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = sync(player)
@@ -199,7 +301,7 @@ class Model(app: Application) : AndroidViewModel(app) {
 
     private fun sync(p: Player) {
         val item = p.currentMediaItem
-        playing = item?.let {
+        phonePlaying = item?.let {
             val m = it.mediaMetadata
             NowPlaying(
                 id = it.mediaId,
@@ -208,41 +310,61 @@ class Model(app: Application) : AndroidViewModel(app) {
                 art = m.artworkUri?.toString(),
             )
         }
-        isPlaying = p.isPlaying
-        duration = p.duration.coerceAtLeast(0)
-        hasNext = p.hasNextMediaItem()
-        shuffle = p.shuffleModeEnabled
-        repeat = p.repeatMode
-        if (item == null) expanded = false
+        phoneIsPlaying = p.isPlaying
+        phoneDuration = p.duration.coerceAtLeast(0)
+        phoneHasNext = p.hasNextMediaItem()
+        phoneShuffle = p.shuffleModeEnabled
+        phoneRepeat = p.repeatMode
+        if (item == null && remoteId == null) expanded = false
     }
 
-    fun position(): Long = controller?.currentPosition ?: 0
+    fun position(): Long {
+        if (remoteId == null) return controller?.currentPosition ?: 0
+        val s = remoteState ?: return 0
+        val ran = if (s.playing) SystemClock.elapsedRealtime() - remoteAt else 0
+        val at = (s.position * 1000).toLong() + ran
+        return if (s.duration > 0) at.coerceAtMost((s.duration * 1000).toLong()) else at
+    }
 
     fun togglePlay() {
+        if (remoteId != null) return command("toggle")
         val c = controller ?: return
         if (c.isPlaying) c.pause() else c.play()
     }
 
-    fun next() = controller?.seekToNext()
+    fun next() {
+        if (remoteId != null) command("next") else controller?.seekToNext()
+    }
 
-    fun previous() = controller?.seekToPrevious()
+    fun previous() {
+        if (remoteId != null) command("prev") else controller?.seekToPrevious()
+    }
+
+    // jump plays a web player's queue from one of its tracks.
+    fun jump(index: Int) = command("jump") { put("i", index) }
 
     // seeks counts the jumps, so a paused rail reads the new position.
     var seeks by mutableStateOf(0)
         private set
 
     fun seekTo(ms: Long) {
+        if (remoteId != null) return command("seek") { put("at", ms / 1000.0) }
         controller?.seekTo(ms) ?: return
         seeks++
     }
 
     fun toggleShuffle() {
+        if (remoteId != null) return command("shuffle") { put("on", !shuffle) }
         val c = controller ?: return
         c.shuffleModeEnabled = !c.shuffleModeEnabled
     }
 
     // cycleRepeat goes from off to the whole queue to the one track.
     fun cycleRepeat() {
+        if (remoteId != null) {
+            val next = mapOf("off" to "all", "all" to "one").getOrDefault(remoteState?.repeat ?: "off", "off")
+            return command("repeat") { put("mode", next) }
+        }
         val c = controller ?: return
         c.repeatMode = when (c.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
@@ -401,6 +523,13 @@ class Model(app: Application) : AndroidViewModel(app) {
     // playStreams plays YouTube tracks through the server's proxy, under
     // the same network rules as streaming the library.
     fun playStreams(tracks: List<YTTrack>, index: Int) {
+        if (remoteId != null) {
+            val list = JSONArray()
+            for (t in tracks) {
+                list.put(JSONObject().put("videoId", t.videoId).put("title", t.title).put("artist", t.artist).put("thumb", t.thumb))
+            }
+            return command("streams") { put("tracks", list).put("index", index) }
+        }
         if (!streamingAllowed()) {
             notice("Mobile data — streaming is off in settings")
             return
@@ -431,6 +560,20 @@ class Model(app: Application) : AndroidViewModel(app) {
         if (items.isEmpty()) return
         val order = if (shuffle) items.indices.shuffled() else items.indices.toList()
         val first = if (shuffle) 0 else index
+        if (remoteId != null) {
+            // The web player plays them from the server, saved or not.
+            val list = JSONArray()
+            for (i in order) {
+                val o = items[i]
+                list.put(
+                    JSONObject().put("path", o.track.path).put("name", o.track.name).put("size", o.track.size)
+                        .put("artist", o.artist).put("album", o.album),
+                )
+            }
+            command("owned") { put("tracks", list).put("index", first) }
+            if (remember) rememberAlbum(items[order[first]].artist, items[order[first]].album)
+            return
+        }
         viewModelScope.launch {
             // Which tracks are saved is a disk read each, so it is done
             // off the main thread, a whole artist at a time.

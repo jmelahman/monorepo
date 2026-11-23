@@ -91,6 +91,30 @@ data class BuyResult(
     val alreadyOwned: Boolean,
 )
 
+// A web page playing somewhere, which the phone can drive: what it
+// calls itself and what it is on, if anything.
+data class RemotePlayer(val id: String, val name: String, val state: RemoteState?)
+
+// A web player's state as it last put it. Times are in seconds, as the
+// page keeps them; repeat is off, all or one.
+data class RemoteState(
+    val key: String,
+    val title: String,
+    val subtitle: String,
+    val art: String,
+    val playing: Boolean,
+    val position: Double,
+    val duration: Double,
+    val shuffle: Boolean,
+    val repeat: String,
+    val hasNext: Boolean,
+    val blocked: Boolean,
+    val upNext: List<RemoteTrack>,
+)
+
+// One track coming up on a web player, and where it is in its queue.
+data class RemoteTrack(val index: Int, val title: String, val subtitle: String, val art: String)
+
 // An answer other than 2xx, with what the server said about it.
 class Move(val from: String, val to: String, val album: Boolean)
 
@@ -303,6 +327,70 @@ object Api {
             o.getString("artist"),
             o.optInt("duration"),
             o.optString("thumb"),
+        )
+    }
+
+    // ------------------------------------------------------------- remote
+
+    // remoteEvents opens the server's event stream as a watcher; read it
+    // with readRemote. The server pings it every 20 seconds, so a read
+    // that waits much longer than that is on a dead connection.
+    fun remoteEvents(): HttpURLConnection = open("$baseUrl/api/remote/events").apply {
+        readTimeout = 45_000
+        setRequestProperty("Accept", "text/event-stream")
+    }
+
+    // readRemote hands on each list of players the stream sends, until it
+    // ends or fails.
+    fun readRemote(conn: HttpURLConnection, players: (List<RemotePlayer>) -> Unit) {
+        if (conn.responseCode !in 200..299) throw HttpException(conn.responseCode, "the server answered ${conn.responseCode}")
+        var event = ""
+        val data = StringBuilder()
+        conn.inputStream.bufferedReader().useLines { lines ->
+            for (line in lines) {
+                when {
+                    line.isEmpty() -> {
+                        if (event == "players") players(list(JSONArray(data.toString()), ::parseRemote))
+                        event = ""
+                        data.clear()
+                    }
+                    line.startsWith("event:") -> event = line.removePrefix("event:").trim()
+                    line.startsWith("data:") -> data.append(line.removePrefix("data:").trimStart())
+                }
+            }
+        }
+    }
+
+    // remote sends a web player a command: do is what (toggle, play,
+    // pause, next, prev, seek, jump, shuffle, repeat, owned, streams),
+    // and the rest is what it takes.
+    fun remote(id: String, command: JSONObject) {
+        request("/api/remote/players/${enc(id)}/command", "POST", command)
+    }
+
+    private fun parseRemote(o: JSONObject): RemotePlayer {
+        val s = o.optJSONObject("state")
+        return RemotePlayer(
+            o.getString("id"),
+            o.optString("name"),
+            s?.let {
+                RemoteState(
+                    it.optString("key"),
+                    it.optString("title"),
+                    it.optString("sub"),
+                    it.optString("art"),
+                    it.optBoolean("playing"),
+                    it.optDouble("position", 0.0),
+                    it.optDouble("duration", 0.0),
+                    it.optBoolean("shuffle"),
+                    it.optString("repeat", "off"),
+                    it.optBoolean("hasNext"),
+                    it.optBoolean("blocked"),
+                    it.optJSONArray("upNext")?.let { a ->
+                        list(a) { t -> RemoteTrack(t.optInt("i"), t.optString("name"), t.optString("sub"), t.optString("art")) }
+                    }.orEmpty(),
+                )
+            },
         )
     }
 

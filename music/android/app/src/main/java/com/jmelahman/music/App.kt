@@ -210,6 +210,7 @@ private fun TopBar(model: Model, openSettings: () -> Unit) {
             IconButton(onClick = { model.go(Screen.Search) }) {
                 Icon(Glyph.Search, "Search", Modifier.size(22.dp))
             }
+            DevicesButton(model)
             if (model.buysReady) PurchasesButton(model)
             IconButton(onClick = openSettings) { Icon(Glyph.Tune, "Settings", Modifier.size(22.dp)) }
         } else {
@@ -282,7 +283,14 @@ private fun MiniPlayer(model: Model) {
                     .padding(horizontal = 12.dp),
             ) {
                 Text(now.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(now.subtitle, color = Palette.Dim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val on = model.remote?.name
+                Text(
+                    if (on != null) "On $on" else now.subtitle,
+                    color = if (on != null) Palette.Accent else Palette.Dim,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             PlayButton(model, 40)
             IconButton(onClick = { model.next() }, enabled = model.hasNext) {
@@ -342,16 +350,23 @@ private fun PlayerSheet(model: Model) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { model.expanded = false }) { Icon(Glyph.Down, "Close the player") }
+                // Up next takes a second button on the right; a gap here
+                // keeps the title centred.
+                if (model.remote?.state != null) Spacer(Modifier.width(48.dp))
                 Text(
-                    "NOW PLAYING",
+                    model.remote?.name?.let { "PLAYING ON ${it.uppercase()}" } ?: "NOW PLAYING",
                     Modifier.weight(1f),
                     color = Palette.Dim,
                     fontSize = 11.sp,
                     letterSpacing = 1.8.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.width(48.dp))
+                UpNextButton(model)
+                DevicesButton(model)
+                if (model.remotePlayers.isEmpty() && model.remoteId == null) Spacer(Modifier.width(48.dp))
             }
             Spacer(Modifier.weight(1f))
             Cover(
