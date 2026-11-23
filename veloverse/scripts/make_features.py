@@ -2826,6 +2826,121 @@ def pch_coast(out, g, bio, road, rng, taken):
     )
 
 
+def road_markings(out, g, bio, road):
+    """Paints thermoplastic cycle-path bike stencils, 'SLOW' warnings ahead of sharp bends,
+    horizontal white stop/crosswalk bars at bridge/junction intersections, and 1 km roadside
+    distance marker posts along Harbour Isle's Lakefront Trail and Coast road."""
+    out.group("RoadMarkings", cull=38000, shadows=False)
+    has_bike = _copy_harbour_kit(out, "road_mark_bike", None)
+    has_slow = _copy_harbour_kit(out, "road_mark_slow", None)
+    has_stop = _copy_harbour_kit(out, "road_mark_stop_bar", None)
+    has_mile = _copy_harbour_kit(out, "road_mark_mile", None)
+    if not (has_bike or has_slow or has_stop or has_mile):
+        return
+    line = road.hub if road.hub is not None else road.line
+    n = len(line)
+    hx, hy = bio.world["landmarks"]["harbour"]
+    bikes, slows, stops, miles = 0, 0, 0, 0
+    slow_spots = []
+    stop_spots = []
+
+    def tangent_pitch(k):
+        k0, k1 = max(0, k - 3), min(n - 1, k + 3)
+        tx = float(line[k1, 0] - line[k0, 0])
+        ty = float(line[k1, 1] - line[k0, 1])
+        tz = float(line[k1, 2] - line[k0, 2])
+        ds = math.hypot(tx, ty) or 1.0
+        yaw = math.degrees(math.atan2(ty, tx))
+        pitch = math.degrees(math.atan2(tz, ds))
+        return tx / ds, ty / ds, yaw, pitch
+
+    # 1. Lakefront Trail bike-lane stencils every 160 m + 1 km mileposts around the coast
+    for k in range(60, n - 60, 10):
+        px, py, pz = float(line[k, 0]), float(line[k, 1]), float(line[k, 2])
+        ux, uy, yaw, pitch = tangent_pitch(k)
+        nx, ny = -uy, ux
+        dist_h = math.hypot(px - hx, py - hy)
+        if has_bike and dist_h < 1500.0 and k % 160 == 60:
+            # Right bike lane (+1.35 m) and oncoming lane (-1.35 m)
+            out.add(
+                "RoadMarkings",
+                "road_mark_bike",
+                px + nx * 1.35,
+                py + ny * 1.35,
+                pz + 0.04,
+                yaw,
+                1.0,
+                pitch,
+                0.0,
+            )
+            bikes += 1
+        if has_mile and k % 1000 == 0:
+            mx, my = px + nx * 4.3, py + ny * 4.3
+            mz = float(g.z(mx, my))
+            if mz > 0.8 and float(road.dist(mx, my)) > 3.6:
+                out.add("Waymarkers", "road_mark_mile", mx, my, mz - 0.05, yaw)
+                miles += 1
+        # 2. 'SLOW' pavement stencil ahead of sharp coastal curves
+        if has_slow and k >= 30 and k < n - 30:
+            _, _, yaw_prev, _ = tangent_pitch(k - 18)
+            _, _, yaw_next, _ = tangent_pitch(k + 18)
+            d_yaw = abs((yaw_next - yaw_prev + 180.0) % 360.0 - 180.0)
+            if d_yaw > 26.0 and not any(
+                math.hypot(px - sx, py - sy) < 420.0 for sx, sy in slow_spots
+            ):
+                out.add(
+                    "RoadMarkings",
+                    "road_mark_slow",
+                    px,
+                    py,
+                    pz + 0.04,
+                    yaw,
+                    1.0,
+                    pitch,
+                    0.0,
+                )
+                slow_spots.append((px, py))
+                slows += 1
+
+    # 3. Horizontal white intersection stop/crosswalk bars at bridge approaches & route junctions
+    if has_stop:
+        for a, b in road.bridges:
+            for idx in (max(0, a - 14), min(len(road.line) - 1, b + 14)):
+                px, py, pz = (
+                    float(road.line[idx, 0]),
+                    float(road.line[idx, 1]),
+                    float(road.line[idx, 2]),
+                )
+                if any(math.hypot(px - sx, py - sy) < 40.0 for sx, sy in stop_spots):
+                    continue
+                j0, j1 = max(0, idx - 3), min(len(road.line) - 1, idx + 3)
+                tx = float(road.line[j1, 0] - road.line[j0, 0])
+                ty = float(road.line[j1, 1] - road.line[j0, 1])
+                tz = float(road.line[j1, 2] - road.line[j0, 2])
+                ds = math.hypot(tx, ty) or 1.0
+                yaw = math.degrees(math.atan2(ty, tx))
+                pitch = math.degrees(math.atan2(tz, ds))
+                out.add(
+                    "RoadMarkings",
+                    "road_mark_stop_bar",
+                    px,
+                    py,
+                    pz + 0.04,
+                    yaw,
+                    1.0,
+                    pitch,
+                    0.0,
+                )
+                stop_spots.append((px, py))
+                stops += 1
+
+    print(
+        f"road_markings: {bikes} bike stencils, {slows} SLOW markings, "
+        f"{stops} intersection stop bars, {miles} km posts",
+        flush=True,
+    )
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -2839,6 +2954,7 @@ def main():
     harbour(out, g, bio, road, rng, taken)
     city_skyline(out, g, bio, road, np.random.default_rng(SEED + 17), taken)
     pch_coast(out, g, bio, road, np.random.default_rng(SEED + 18), taken)
+    road_markings(out, g, bio, road)
     farm = turbines(out, g, bio, road, rng, taken)
     # No pylons or power lines since 13 Nov (the AAA review: "out of register with a fantasy
     # world"); power_line() stays for a later setting that wants them.

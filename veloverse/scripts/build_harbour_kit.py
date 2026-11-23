@@ -1840,6 +1840,83 @@ def build_lsd_highway_seg():
     return b
 
 
+def build_road_mark_bike():
+    """Crisp white thermoplastic cycle-path bicycle symbol + forward directional arrow painted
+    flush on the bike lane (+X is forward along travel)."""
+    b = KitBuilder("road_mark_bike")
+    z, t = 0.02, 0.015
+    # Rear & front wheels (octagonal white rings)
+    for wx in (-0.65, 0.65):
+        for i in range(10):
+            a0 = 2.0 * math.pi * i / 10.0
+            a1 = 2.0 * math.pi * (i + 1) / 10.0
+            r = 0.34
+            p0 = (wx + r * math.cos(a0), r * math.sin(a0), z)
+            p1 = (wx + r * math.cos(a1), r * math.sin(a1), z)
+            mx, my = (p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5
+            seg_l = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.03
+            ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
+            b.box("white", (mx, my, z), (seg_l, 0.08, t), rot=(0.0, 0.0, ang))
+    # Diamond bike frame + handlebars + saddle
+    b.box("white", (-0.15, 0.0, z), (1.0, 0.08, t))
+    b.box("white", (0.25, 0.28, z), (0.72, 0.08, t), rot=(0.0, 0.0, 52.0))
+    b.box("white", (-0.32, 0.25, z), (0.62, 0.08, t), rot=(0.0, 0.0, -52.0))
+    b.box("white", (0.55, 0.34, z), (0.08, 0.36, t))
+    b.box("white", (-0.42, 0.52, z), (0.28, 0.09, t))
+    # Forward directional chevron arrow ahead of the bike (+X)
+    b.box("white", (1.65, 0.0, z), (0.70, 0.14, t))
+    b.box("white", (2.05, 0.22, z), (0.55, 0.12, t), rot=(0.0, 0.0, -38.0))
+    b.box("white", (2.05, -0.22, z), (0.55, 0.12, t), rot=(0.0, 0.0, 38.0))
+    return b
+
+
+def build_road_mark_slow():
+    """Bold white thermoplastic 'SLOW' road stencil painted across the lane ahead of bends."""
+    b = KitBuilder("road_mark_slow")
+    z, t = 0.02, 0.015
+    # Four bold block letters arranged across Y (facing oncoming rider along -X), elongated in X
+    # S (y = -0.95)
+    for ox in (-0.65, 0.0, 0.65):
+        b.box("white", (ox, -0.95, z), (0.14, 0.44, t))
+    b.box("white", (0.32, -1.14, z), (0.68, 0.12, t))
+    b.box("white", (-0.32, -0.76, z), (0.68, 0.12, t))
+    # L (y = -0.32)
+    b.box("white", (0.0, -0.50, z), (1.42, 0.12, t))
+    b.box("white", (-0.65, -0.32, z), (0.14, 0.44, t))
+    # O (y = +0.32)
+    for ox in (-0.65, 0.65):
+        b.box("white", (ox, 0.32, z), (0.14, 0.44, t))
+    for oy in (0.14, 0.50):
+        b.box("white", (0.0, oy, z), (1.42, 0.12, t))
+    # W (y = +0.98)
+    for oy in (0.76, 1.20):
+        b.box("white", (0.0, oy, z), (1.42, 0.11, t))
+    b.box("white", (-0.65, 0.98, z), (0.14, 0.50, t))
+    b.box("white", (-0.20, 0.98, z), (0.85, 0.10, t))
+    return b
+
+
+def build_road_mark_stop_bar():
+    """Crisp horizontal white intersection stop/yield bar + zebra crosswalk stripes."""
+    b = KitBuilder("road_mark_stop_bar")
+    z, t = 0.02, 0.016
+    # Solid horizontal stop line across half-lane (+Y) and yield dashes across (-Y)
+    b.box("white", (0.0, 0.0, z), (0.45, 5.8, t))
+    for iy in (-2.4, -1.44, -0.48, 0.48, 1.44, 2.4):
+        b.box("white", (1.35, iy, z), (1.50, 0.44, t))
+    return b
+
+
+def build_road_mark_mile():
+    """Clean green-and-white roadside km/mile distance marker post for cycle paths & coast road."""
+    b = KitBuilder("road_mark_mile")
+    b.box("steel", (0.0, 0.0, 0.45), (0.07, 0.07, 1.45))
+    b.box("green", (0.0, 0.0, 1.02), (0.10, 0.24, 0.52), bevel=0.01)
+    b.box("white", (0.0, 0.0, 1.12), (0.11, 0.18, 0.14))
+    b.box("white", (0.0, 0.0, 0.92), (0.11, 0.14, 0.12))
+    return b
+
+
 BUILDERS = {
     "harbour_house_a": build_harbour_house_a,
     "harbour_house_b": build_harbour_house_b,
@@ -1854,6 +1931,10 @@ BUILDERS = {
     "chicago_townhouse": build_chicago_townhouse,
     "lakefront_overlook": build_lakefront_overlook,
     "lsd_highway_seg": build_lsd_highway_seg,
+    "road_mark_bike": build_road_mark_bike,
+    "road_mark_slow": build_road_mark_slow,
+    "road_mark_stop_bar": build_road_mark_stop_bar,
+    "road_mark_mile": build_road_mark_mile,
     "pch_guardrail": build_pch_guardrail,
     "pch_turnout_wall": build_pch_turnout_wall,
     "pch_route_sign": build_pch_route_sign,

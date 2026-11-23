@@ -323,15 +323,30 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		P.Icon(Icons::Sun, Tx - 50.f - Lw, 62.f, 24.f, Muted);
 	}
 
-	// The list.
-	float Y = 140.f;
-	for (int32 I = 0; I < Pawn->Routes.Num() && Y + 88.f <= 1040.f; ++I)
+	// The list, sorted from shortest to longest so quick rides sit at the top.
+	TArray<int32> Order;
+	Order.Reserve(Pawn->Routes.Num());
+	for (int32 I = 0; I < Pawn->Routes.Num(); ++I)
 	{
-		const FRouteSurvey* S = SurveyOf(Pawn->Routes[I]);
-		if (!S)
+		if (SurveyOf(Pawn->Routes[I]))
 		{
-			continue;
+			Order.Add(I);
 		}
+	}
+	Order.Sort([this, Pawn](int32 A, int32 B)
+	           {
+		           const FRouteSurvey* SA = SurveyOf(Pawn->Routes[A]);
+		           const FRouteSurvey* SB = SurveyOf(Pawn->Routes[B]);
+		           return (SA ? SA->Km : 0.f) < (SB ? SB->Km : 0.f);
+	           });
+	float Y = 140.f;
+	for (const int32 I : Order)
+	{
+		if (Y + 88.f > 1040.f)
+		{
+			break;
+		}
+		const FRouteSurvey* S = SurveyOf(Pawn->Routes[I]);
 		const FString Key = FString::Printf(TEXT("route%d"), I);
 		const bool bOn = I == Chosen;
 		const float L = C.Lift(Key);
@@ -352,10 +367,28 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 				Lo = FMath::Min(Lo, H);
 				Hi = FMath::Max(Hi, H);
 			}
-			const TArray<FVector2f> Line =
-				Plot(S->Heights, S->Heights.Num(), 470.f, Y + 22.f, 170.f, 44.f, Lo, FMath::Max(Hi, Lo + 20.f));
-			P.Area(Line, Y + 66.f, bOn ? WithAlpha(C.Accent, 0.22f) : InkA(0.08f));
-			P.Lines(Line, bOn ? C.Accent : InkA(0.5f), 1.6f);
+			const float HiPlot = FMath::Max(Hi, Lo + 20.f);
+			const int32 N = S->Heights.Num();
+			// Color-code the mini elevation plot by region/biome!
+			if (S->Islands.Num() > 0)
+			{
+				for (int32 K = 0; K < S->Islands.Num(); ++K)
+				{
+					const float From = S->Islands[K].Key;
+					const float To = K + 1 < S->Islands.Num() ? S->Islands[K + 1].Key : 1.f;
+					const FLinearColor Col = IslandColour(S->Islands[K].Value);
+					const TArray<FVector2f> Span = Plot(S->Heights, N, 470.f, Y + 22.f, 170.f, 44.f, Lo, HiPlot,
+					                                    FMath::FloorToInt32(From * (N - 1)), FMath::CeilToInt32(To * (N - 1)));
+					P.Area(Span, Y + 66.f, WithAlpha(Col, bOn ? 0.42f : 0.28f));
+					P.Lines(Span, WithAlpha(Col, bOn ? 1.f : 0.85f), 1.8f);
+				}
+			}
+			else
+			{
+				const TArray<FVector2f> Line = Plot(S->Heights, N, 470.f, Y + 22.f, 170.f, 44.f, Lo, HiPlot);
+				P.Area(Line, Y + 66.f, bOn ? WithAlpha(C.Accent, 0.22f) : InkA(0.08f));
+				P.Lines(Line, bOn ? C.Accent : InkA(0.5f), 1.6f);
+			}
 		}
 		C.Ring(Key, 64.f, Y, 600.f, 88.f, 14.f);
 		C.Hit(Key, 64.f, Y, 600.f, 88.f).OnClick = [M, I]
@@ -391,8 +424,8 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			Shares.Emplace(Name, End - S->Islands[I].Key);
 		}
 	}
-	// Every route starts on Harbour Isle, the coast's island; then the islands it crosses.
-	TArray<FString> Crossed = {TEXT("Harbour Isle")};
+	// Only list the islands this route actually visits (regional loops stay in their own region).
+	TArray<FString> Crossed;
 	for (const TPair<FString, float>& Share : Shares)
 	{
 		if (Share.Key != TEXT("The Coast"))

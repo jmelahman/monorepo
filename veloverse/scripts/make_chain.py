@@ -120,16 +120,11 @@ CORNER = 50.0  # m: a junction's turn rounded over this either side
 # The routes, the first the level's default: key, title, blurb, the petals they visit.
 ROUTES = [
     (
-        "tour",
-        "The Grand Tour",
-        "Every island: out from the harbour to Greenwood, Vael, The Moor and Red Sands in turn.",
-        ("Greenwood", "Vael", "The Moor", "Red Sands"),
+        "harbour",
+        "Harbour Isle",
+        "Chicago Lakefront Trail and Big Sur coastal cliffs round the central island.",
+        (),
     ),
-    ("harbour", "Harbour Isle", "Once round the hub island's coast road, through the harbour.", ()),
-    ("greenwood", "Greenwood Loop", "Over to the forest island and back.", ("Greenwood",)),
-    ("vael", "Vael Loop", "Up the mountain island's saddle under the summit and back.", ("Vael",)),
-    ("moor", "Moor Loop", "The high moor's tors and wind farm.", ("The Moor",)),
-    ("sands", "Red Sands Loop", "Among the desert island's mesas.", ("Red Sands",)),
     (
         "woods_peaks",
         "Woods and Peaks",
@@ -138,32 +133,38 @@ ROUTES = [
     ),
     ("highlands", "The Highlands", "The mountain, then the moor.", ("Vael", "The Moor")),
     ("east", "Heath and Sand", "The moor, then the desert.", ("The Moor", "Red Sands")),
+    (
+        "tour",
+        "The Grand Tour",
+        "Every island: out from the harbour to Greenwood, Vael, The Moor and Red Sands in turn.",
+        ("Greenwood", "Vael", "The Moor", "Red Sands"),
+    ),
 ]
-# Rides that stay on one island, in its biome all the way: its long road round the far side, home
-# by the back road (Spur.back) on the side facing the harbour. Neither bridge.
+# Regional loops that stay 100% inside their own island and start right in their region (no detour
+# round Harbour Isle).
 ISLAND_ROUTES = [
     (
         "greenwood_woods",
-        "Greenwood Woods",
-        "Round the forest island under the trees, never leaving it.",
+        "Greenwood Loop",
+        "Round the forest island under the trees, starting and staying in Greenwood.",
         "Greenwood",
     ),
     (
         "vael_high",
-        "High Vael",
-        "Over the saddle under the summit and round, all on the mountain.",
+        "Vael Loop",
+        "Over the alpine saddle under the summit, starting and staying on Vael.",
         "Vael",
     ),
     (
         "moor_round",
-        "Round the Moor",
-        "The tors and the wind farm, all on the open moor.",
+        "Moor Loop",
+        "The highland tors and wind farm, starting and staying on The Moor.",
         "The Moor",
     ),
     (
         "sands_round",
-        "Round the Sands",
-        "Among the mesas and home through the desert, never leaving it.",
+        "Red Sands Loop",
+        "Among the desert mesas and canyons, starting and staying in Red Sands.",
         "Red Sands",
     ),
 ]
