@@ -16,8 +16,6 @@ namespace
 const FLinearColor Ink = Hex(0xF4F1EA);
 const FLinearColor Dim = Hex(0xF4F1EA, 0.72f);
 const FLinearColor BadgeText = Hex(0x121212);
-const FLinearColor Sky = Hex(0x7CD0FF);
-const FLinearColor SkyText = Hex(0xBDE6FF);
 
 const uint32 ZoneHex[7] = {0xA7B0BA, 0x4FA3F7, 0x3CCB7F, 0xF7D046, 0xFF9A3C, 0xF0503C, 0xB86CF5};
 const TCHAR* ZoneNames[7] = {TEXT("Recovery"),  TEXT("Endurance"), TEXT("Tempo"), TEXT("Threshold"),
@@ -41,22 +39,6 @@ const TCHAR* GradeWord(float Grade)
 	return Grade < 0.03f ? TEXT("Gentle") : Grade < 0.05f ? TEXT("Moderate") : TEXT("Steep");
 }
 
-enum class ESky : uint8
-{
-	Clear,
-	Cloudy,
-	Rain,
-};
-
-ESky SkyOf(const FRideWeather& W)
-{
-	if (W.Rain > 0.3f)
-	{
-		return ESky::Rain;
-	}
-	return W.Lux < 40000.f || W.Fog > 0.02f ? ESky::Cloudy : ESky::Clear;
-}
-
 FString Clock(float Seconds)
 {
 	const int32 S = FMath::FloorToInt32(Seconds);
@@ -72,12 +54,6 @@ FString Km(float Metres)
 	}
 	const double Close = FMath::Max(50.0, FMath::RoundToDouble(Veloverse::Units::Height(Metres) / 50.0) * 50.0);
 	return Veloverse::Units::Number(Close, 0) + TEXT(" ") + Veloverse::Units::HeightUnit();
-}
-
-// The weather's icon in a 22 px square at X, Y.
-void Icon(const FPainter& P, float X, float Y, ESky Weather)
-{
-	P.Icon(Weather == ESky::Clear ? VeloverseMenu::Icons::Sun : Weather == ESky::Rain ? VeloverseMenu::Icons::CloudRain : VeloverseMenu::Icons::Cloud, X, Y, 22.f, Sky);
 }
 } // namespace
 
@@ -262,8 +238,6 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	}
 
 	// The panels, unless the rider has put them away (H).
-	Pawn->TimePill = {};
-	Pawn->WeatherPill = {};
 	if (Pawn->Profile.bHud)
 	{
 		// ---- Top left: power ------------------------------------------------------------------------
@@ -291,10 +265,8 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		// ---- Top right: the road ahead or this climb, and the loop ---------------------------------
 		// The power panel's size, mirrored: its label and badge row, the profile where the watts are,
 		// and the stretch bar level with the zone bar.
-		float WeatherTop;
-		constexpr float MapPanelWide = 268.f;
 		{
-			const float Wide = MapPanelWide, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
+			const float Wide = 220.f, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
 			const float X0 = X + 16.f, Inner = Wide - 32.f, Right = X0 + Inner;
 			bool bOn = false;
 			float Start = 0.f, Peak = 0.f;
@@ -444,46 +416,6 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			// Where you are along it, a tick through the bar.
 			const float Done = Usable * FMath::Clamp(Here / FMath::Max(LengthM, 1.f), 0.f, 1.f) + Gap * FMath::Max(In, 0);
 			P.Rect(X0 + Done - 1.f, Foot - 12.f, 2.f, 12.f, FLinearColor::White);
-			WeatherTop = Top + Tall + 8.f;
-		}
-
-		// ---- Daytime & Weather switchers under the minimap (fixed equal widths = minimap width) ----
-		{
-			const int32 Fixed = ARidePawn::Automated() ? 0 : Pawn->Profile.Weather;
-			auto SkyAt = [&Track, Fixed](float M) {
-				return Fixed > 0 ? static_cast<ESky>(FMath::Clamp(Fixed - 1, 0, 2)) : SkyOf(Track.WeatherAt(M));
-			};
-			const ESky Now = SkyAt(Here);
-			const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
-			const TCHAR* WeatherNames[] = {TEXT("Auto"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
-			const int32 TimeIdx = FMath::Clamp(Pawn->Profile.TimeOfDay, 0, 3);
-			const int32 WeatherIdx = FMath::Clamp(Fixed, 0, 3);
-			const FSlateFontInfo Big = P.Font("Bold", 13.f);
-			const float Gap = 8.f;
-			const float PillW = (MapPanelWide - Gap) * 0.5f; // 130 + 8 + 130 = 268 (static!)
-			const float Y = WeatherTop;
-			const float TimeX = W - 20.f - MapPanelWide;
-			const float WeatherX = TimeX + PillW + Gap;
-
-			// Left pill: Daytime switcher
-			P.Panel(TimeX, Y, PillW, 36.f, 12.f);
-			Pawn->TimePill = {TimeX, Y, PillW, 36.f};
-			if (Pawn->bTimeHover)
-			{
-				P.Round(TimeX, Y, PillW, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
-			}
-			P.Icon(VeloverseMenu::Icons::Sun, TimeX + 10.f, Y + 8.f, 20.f, Hex(0xF2C864));
-			P.Text(TimeX + 38.f, Y + 22.5f, TimeNames[TimeIdx], Big, SkyText);
-
-			// Right pill: Weather switcher
-			P.Panel(WeatherX, Y, PillW, 36.f, 12.f);
-			Pawn->WeatherPill = {WeatherX, Y, PillW, 36.f};
-			if (Pawn->bWeatherHover)
-			{
-				P.Round(WeatherX, Y, PillW, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
-			}
-			Icon(P, WeatherX + 10.f, Y + 7.f, Now);
-			P.Text(WeatherX + 38.f, Y + 22.5f, WeatherNames[WeatherIdx], Big, SkyText);
 		}
 
 		// ---- Bottom left: how to pause, while the dock's away ----------------------------------------
@@ -864,7 +796,12 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 	const TArray<ERideView> Views = Pawn->Views();
 	const TCHAR* ViewNames[] = {TEXT("Eyes"), TEXT("Over the bars"), TEXT("Behind"), TEXT("Dolly")};
 	const TCHAR* MotionNames[] = {TEXT("Off"), TEXT("Low"), TEXT("Medium"), TEXT("High")};
+	const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
+	const TCHAR* WeatherNames[] = {TEXT("Auto"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
 	const int32 MotionLvl = Pawn->Profile.MotionLevel();
+	const int32 TimeIdx = FMath::Clamp(Pawn->Profile.TimeOfDay, 0, 3);
+	const int32 WeatherIdx = FMath::Clamp(ARidePawn::Automated() ? 0 : Pawn->Profile.Weather, 0, 3);
+	const bool bRain = WeatherIdx == 3 || (WeatherIdx == 0 && Pawn->CurrentRain > 0.3f);
 	struct FButton
 	{
 		const TCHAR* Icon;
@@ -877,6 +814,8 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 		{Icons::Bike, FString::Printf(TEXT("Motion: %s"), MotionNames[MotionLvl]), TEXT("M"), MotionLvl > 0, false},
 		{Icons::Pulse, TEXT("Graphs"), TEXT("G"), Pawn->Profile.bGraphs, false},
 		{Icons::Hud, TEXT("HUD"), TEXT("H"), Pawn->Profile.bHud, false},
+		{Icons::Sun, FString::Printf(TEXT("Daytime: %s"), TimeNames[TimeIdx]), TEXT("T"), TimeIdx > 0, false},
+		{bRain ? Icons::CloudRain : Icons::Cloud, FString::Printf(TEXT("Weather: %s"), WeatherNames[WeatherIdx]), TEXT("C"), WeatherIdx > 0, false},
 		{Icons::Route, TEXT("Change route"), TEXT("R"), false, false},
 		{Icons::Move, TEXT("Free look"), TEXT("Tab"), Pawn->bFreeLook, false},
 		{Icons::Pause, TEXT("Pause"), TEXT("Esc"), false, false},

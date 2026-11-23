@@ -13,9 +13,11 @@ enum class EDock : int
 {
 	View,   // V: through the rider's eyes, over the bars, or behind (the ones the bike's assets allow)
 	Motion, // M: camera & bike motion level (Off, Low, Medium, High)
-	Graphs, // G: power and heart rate across the foot of the screen
-	Hud,    // H: the panels on or off
-	Route,  // R: ride on along another route
+	Graphs,  // G: power and heart rate across the foot of the screen
+	Hud,     // H: the panels on or off
+	Time,    // T: daytime (Auto, Morning, Midday, Evening)
+	Weather, // C: weather (Auto, Clear, Overcast, Rain)
+	Route,   // R: ride on along another route
 	Look,   // Tab: the mouse turns the head freely, the cursor and dock away; Tab again for them
 	Pause,  // Esc
 	Count,

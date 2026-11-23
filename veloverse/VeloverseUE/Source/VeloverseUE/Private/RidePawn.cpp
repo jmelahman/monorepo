@@ -2197,6 +2197,8 @@ void ARidePawn::PressDock(Veloverse::EDock Button)
 		Profile.bHud = !Profile.bHud;
 		Profile.Save();
 		break;
+	case EDock::Time: NextTimeOfDay(); break;
+	case EDock::Weather: NextWeather(); break;
 	case EDock::Route:
 		if (Rides)
 		{
@@ -2240,7 +2242,7 @@ void ARidePawn::Docking(APlayerController& Player)
 		return;
 	}
 	const TPair<FKey, EDock> Keys[] = {{EKeys::V, EDock::View}, {EKeys::M, EDock::Motion}, {EKeys::G, EDock::Graphs},
-		{EKeys::H, EDock::Hud}, {EKeys::R, EDock::Route}};
+		{EKeys::H, EDock::Hud}, {EKeys::T, EDock::Time}, {EKeys::C, EDock::Weather}, {EKeys::R, EDock::Route}};
 	for (const TPair<FKey, EDock>& Key : Keys)
 	{
 		if (Player.WasInputKeyJustPressed(Key.Key))
@@ -2274,26 +2276,13 @@ void ARidePawn::Docking(APlayerController& Player)
 	const Veloverse::FDockLayout L =
 		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Dock.Shown);
 	DockHover = bOnScreen ? L.Hit(Now.X, Now.Y) : -1;
-	bTimeHover = bOnScreen && DockHover < 0 && Profile.bHud && TimePill.Contains(Now.X, Now.Y);
-	bWeatherHover = bOnScreen && DockHover < 0 && !bTimeHover && Profile.bHud && WeatherPill.Contains(Now.X, Now.Y);
 	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
 	if (Player.WasInputKeyJustPressed(EKeys::LeftMouseButton) || Player.WasInputKeyJustPressed(EKeys::RightMouseButton))
 	{
-		bPressOnDock = DockHover >= 0 || bTimeHover || bWeatherHover;
+		bPressOnDock = DockHover >= 0;
 		if (bPressOnDock && Player.WasInputKeyJustPressed(EKeys::LeftMouseButton))
 		{
-			if (DockHover >= 0)
-			{
-				PressDock(static_cast<EDock>(DockHover));
-			}
-			else if (bTimeHover)
-			{
-				NextTimeOfDay();
-			}
-			else
-			{
-				NextWeather();
-			}
+			PressDock(static_cast<EDock>(DockHover));
 		}
 	}
 	else if (!bHeld)

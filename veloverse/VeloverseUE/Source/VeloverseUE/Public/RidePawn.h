@@ -138,12 +138,7 @@ public:
 	// turns the head on its own, with no cursor or dock, until Tab brings them back.
 	Veloverse::FDockReveal Dock;
 	int32 DockHover = -1; // the button under the pointer, or -1
-	// The HUD's daytime & weather pills, where the overlay last drew them in its 720-tall frame.
-	mutable Veloverse::FDockBox TimePill;
-	bool bTimeHover = false;
 	void NextTimeOfDay();
-	mutable Veloverse::FDockBox WeatherPill;
-	bool bWeatherHover = false;
 	void NextWeather();
 	bool bFreeLook = false;
 	void SetFreeLook(bool bOn);
