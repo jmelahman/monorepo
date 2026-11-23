@@ -386,6 +386,9 @@ class Instances:
             component = unreal.SubobjectDataBlueprintFunctionLibrary.get_object(data)
             component.set_static_mesh(mesh)
             component.set_editor_property("cast_shadow", shadows)
+            if not shadows:
+                component.set_editor_property("affect_dynamic_indirect_lighting", False)
+                component.set_editor_property("affect_distance_field_lighting", False)
             if cull:
                 component.set_editor_property("instance_end_cull_distance", int(cull))
             try:

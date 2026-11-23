@@ -179,7 +179,7 @@ def tint_master(rough_map, mask_map):
     shade_map = sampler("S", mask_map)
     use_m2 = g.param("UseM2", 0.0)
 
-    channels = [(m1, c) for c in "rgb"] + [(m2, c) for c in "rgb"]
+    channels = [(m1, c) for c in "rgb"] + [(m2, c) for c in "rgba"]
     weights = []
     for i, (tex, c) in enumerate(channels):
         w = g.mask(tex, c)
@@ -216,13 +216,15 @@ def tint_master(rough_map, mask_map):
 
 
 def kit_defaults():
-    """The export's own colour for each tint channel, from its stats.json: {stem: [rgb x 6]}."""
+    """The export's own colour for each tint channel, from its stats.json: {stem: [rgb x 7]}."""
     with open(f"{SRC}/stats.json") as f:
         masks = json.load(f)["masks"]
     out = {}
     for stem, maps in CHANNELS.items():
         colours = [tuple(masks[tex][name]) for tex, names in maps for name in names]
-        out[stem] = colours + [(0.0, 0.0, 0.0)] * (6 - len(colours))
+        if stem == "Body":
+            colours.append((0.018, 0.020, 0.024))  # C7: charcoal fingerless gloves default
+        out[stem] = colours + [(0.0, 0.0, 0.0)] * (7 - len(colours))
     return out
 
 

@@ -645,7 +645,7 @@ def main():
     mask2 = _load_rgba(os.path.join(src, "T_Body_Mask2.png"))
     size = base.shape[0]
 
-    rsize = 512
+    rsize = 1024
     p_small, cov_small = _rasterize_body_xyz(mesh_ob, rsize)
     pimg, cov = _bilinear_upsample(p_small, cov_small, size // rsize)
 
@@ -758,26 +758,25 @@ def main():
         g_end = h_len + 0.004
         in_g = (
             near_hand
-            * _smoothstep(g_start - 0.0012, g_start + 0.0012, t_h)
-            * (1.0 - _smoothstep(g_end - 0.0012, g_end + 0.0012, t_h))
+            * _smoothstep(g_start - 0.0005, g_start + 0.0005, t_h)
+            * (1.0 - _smoothstep(g_end - 0.0005, g_end + 0.0005, t_h))
         )
         cuff_band = (
             near_hand
-            * _smoothstep(g_start - 0.0012, g_start + 0.0012, t_h)
-            * (1.0 - _smoothstep(g_start + 0.0055, g_start + 0.0075, t_h))
+            * _smoothstep(g_start - 0.0005, g_start + 0.0005, t_h)
+            * (1.0 - _smoothstep(g_start + 0.0055, g_start + 0.0065, t_h))
         )
-        cuff_seam = near_hand * np.exp(-(((t_h - (g_start + 0.007)) / 0.0014) ** 2))
-        end_seam = near_hand * np.exp(-(((t_h - (g_end - 0.0015)) / 0.0014) ** 2))
+        cuff_seam = near_hand * np.exp(-(((t_h - (g_start + 0.006)) / 0.0010) ** 2))
+        end_seam = near_hand * np.exp(-(((t_h - (g_end - 0.0010)) / 0.0010) ** 2))
         glove_body = np.maximum(glove_body, in_g)
         glove_cuff_accent = np.maximum(glove_cuff_accent, cuff_band)
         glove_seams = np.maximum(glove_seams, np.clip(cuff_seam + end_seam, 0.0, 1.0))
 
-    # Paint fingerless gloves into tint masks: dark shorts channel + accent cuff stripe
+    # Paint fingerless gloves into dedicated C7 channel (T_Body_Mask2.A) so gloves have an
+    # independent colour + Bare toggle in Settings > Kit separate from Bib shorts.
     g_mask = glove_body > 0.5
-    c_mask = glove_cuff_accent > 0.5
     mask2[..., 2] = np.where(g_mask, 0.0, mask2[..., 2])  # clear skin under glove
-    mask1[..., 2] = np.where(g_mask & ~c_mask, 1.0, mask1[..., 2])  # charcoal glove body
-    mask1[..., 1] = np.where(c_mask, 1.0, mask1[..., 1])  # kit accent wrist trim
+    mask2[..., 3] = np.where(g_mask, 1.0, 0.0)  # C7: dedicated independent glove channel
 
     # Rich dark charcoal fabric base/shade on the glove + subtle technical weave
     mesh_pat = 0.5 + 0.5 * np.sin((x + y) * 1200.0) * np.sin((y - z) * 1200.0)

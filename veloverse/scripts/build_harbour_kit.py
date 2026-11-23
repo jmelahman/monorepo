@@ -1841,39 +1841,41 @@ def build_lsd_highway_seg():
 
 
 def build_road_mark_bike():
-    """Crisp white thermoplastic cycle-path bicycle symbol + forward directional arrow painted
-    flush on the bike lane (+X is forward along travel)."""
+    """Crisp white thermoplastic cycle-path bicycle stencil perpendicular across the lane (+Y)
+    with a bold forward directional arrow pointing along travel (+X), flush to tarmac."""
     b = KitBuilder("road_mark_bike")
-    z, t = 0.02, 0.015
-    # Rear & front wheels (octagonal white rings)
-    for wx in (-0.65, 0.65):
-        for i in range(10):
-            a0 = 2.0 * math.pi * i / 10.0
-            a1 = 2.0 * math.pi * (i + 1) / 10.0
-            r = 0.34
-            p0 = (wx + r * math.cos(a0), r * math.sin(a0), z)
-            p1 = (wx + r * math.cos(a1), r * math.sin(a1), z)
+    z, t = 0.002, 0.004
+    # Bicycle perpendicular to the lane (wheels across Y at -0.44 / +0.44, centered at x = -0.35)
+    bx = -0.35
+    for wy in (-0.44, 0.44):
+        for i in range(12):
+            a0 = 2.0 * math.pi * i / 12.0
+            a1 = 2.0 * math.pi * (i + 1) / 12.0
+            r = 0.25
+            p0 = (bx + r * math.sin(a0), wy + r * math.cos(a0), z)
+            p1 = (bx + r * math.sin(a1), wy + r * math.cos(a1), z)
             mx, my = (p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5
-            seg_l = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.03
+            seg_l = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.02
             ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
-            b.box("white", (mx, my, z), (seg_l, 0.08, t), rot=(0.0, 0.0, ang))
-    # Diamond bike frame + handlebars + saddle
-    b.box("white", (-0.15, 0.0, z), (1.0, 0.08, t))
-    b.box("white", (0.25, 0.28, z), (0.72, 0.08, t), rot=(0.0, 0.0, 52.0))
-    b.box("white", (-0.32, 0.25, z), (0.62, 0.08, t), rot=(0.0, 0.0, -52.0))
-    b.box("white", (0.55, 0.34, z), (0.08, 0.36, t))
-    b.box("white", (-0.42, 0.52, z), (0.28, 0.09, t))
-    # Forward directional chevron arrow ahead of the bike (+X)
-    b.box("white", (1.65, 0.0, z), (0.70, 0.14, t))
-    b.box("white", (2.05, 0.22, z), (0.55, 0.12, t), rot=(0.0, 0.0, -38.0))
-    b.box("white", (2.05, -0.22, z), (0.55, 0.12, t), rot=(0.0, 0.0, 38.0))
+            b.box("white", (mx, my, z), (seg_l, 0.065, t), rot=(0.0, 0.0, ang))
+    # Diamond bicycle frame across Y (top tube, seat tube, down tube, fork, handlebars & saddle)
+    b.box("white", (bx + 0.06, 0.0, z), (0.065, 0.72, t))
+    b.box("white", (bx + 0.28, -0.04, z), (0.065, 0.54, t))
+    b.box("white", (bx + 0.17, 0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, -34.0))
+    b.box("white", (bx + 0.17, -0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, 34.0))
+    b.box("white", (bx + 0.40, 0.36, z), (0.24, 0.065, t))  # handlebars
+    b.box("white", (bx + 0.36, -0.32, z), (0.075, 0.22, t))  # saddle
+    # Bold forward directional arrow ahead of the bicycle (+X along travel)
+    b.box("white", (0.85, 0.0, z), (0.85, 0.16, t))
+    b.box("white", (1.32, 0.22, z), (0.58, 0.14, t), rot=(0.0, 0.0, -40.0))
+    b.box("white", (1.32, -0.22, z), (0.58, 0.14, t), rot=(0.0, 0.0, 40.0))
     return b
 
 
 def build_road_mark_slow():
-    """Bold white thermoplastic 'SLOW' road stencil painted across the lane ahead of bends."""
+    """Bold white thermoplastic 'SLOW' road stencil painted flush across the lane ahead of bends."""
     b = KitBuilder("road_mark_slow")
-    z, t = 0.02, 0.015
+    z, t = 0.002, 0.004
     # Four bold block letters arranged across Y (facing oncoming rider along -X), elongated in X
     # S (y = -0.95)
     for ox in (-0.65, 0.0, 0.65):
@@ -1899,7 +1901,7 @@ def build_road_mark_slow():
 def build_road_mark_stop_bar():
     """Crisp horizontal white intersection stop/yield bar + zebra crosswalk stripes."""
     b = KitBuilder("road_mark_stop_bar")
-    z, t = 0.02, 0.016
+    z, t = 0.002, 0.004
     # Solid horizontal stop line across half-lane (+Y) and yield dashes across (-Y)
     b.box("white", (0.0, 0.0, z), (0.45, 5.8, t))
     for iy in (-2.4, -1.44, -0.48, 0.48, 1.44, 2.4):

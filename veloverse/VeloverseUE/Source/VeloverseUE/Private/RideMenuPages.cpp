@@ -1191,9 +1191,9 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		}
 		P.Border(Left, CardTop, CardW, CardH, 16.f, InkA(0.1f));
 		const float RowLeft = Left + CardW + 48.f;
-		const float SwatchesW = 8 * 48.f;
-		constexpr float RowH = 78.f;
-		float RowY = 240.f;
+		const float SwatchesW = 8 * 44.f;
+		constexpr float RowH = 70.f;
+		float RowY = 232.f;
 		for (int32 Part = 0; Part < K::Parts; ++Part)
 		{
 			const K::FPart& Kp = K::Part(Part);
@@ -1207,26 +1207,26 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 				}
 			}
 			const float Cy = RowY + RowH * 0.5f;
-			const FSlateFontInfo HintFont = P.Font("Medium", 14.f);
-			P.Text(RowLeft, Cy - 4.f, Kp.Name, P.Font("Bold", 18.f), Ink);
-			P.Text(RowLeft, Cy + 18.f, P.Fit(FString::Printf(TEXT("%s: %s"), *Named, Kp.Hint), HintFont, Right - SwatchesW - 24.f - RowLeft),
+			const FSlateFontInfo HintFont = P.Font("Medium", 13.5f);
+			P.Text(RowLeft, Cy - 4.f, Kp.Name, P.Font("Bold", 17.f), Ink);
+			P.Text(RowLeft, Cy + 16.f, P.Fit(FString::Printf(TEXT("%s: %s"), *Named, Kp.Hint), HintFont, Right - SwatchesW - 24.f - RowLeft),
 			       HintFont, Muted);
 			P.Rect(RowLeft, RowY + RowH, Right - RowLeft, 1.f, InkA(0.08f));
 			RowY += RowH;
-			float X = Right - Kp.Swatches.Num() * 48.f + 8.f;
+			float X = Right - Kp.Swatches.Num() * 44.f + 8.f;
 			for (int32 I = 0; I < Kp.Swatches.Num(); ++I)
 			{
 				const FString Key = FString::Printf(TEXT("kit%s%d"), Kp.Key, I);
 				if (I == Worn)
 				{
-					P.Border(X - 4.f, Cy - 23.f, 46.f, 46.f, 23.f, Ink, 2.f);
+					P.Border(X - 4.f, Cy - 21.f, 42.f, 42.f, 21.f, Ink, 2.f);
 				}
-				P.Disc(X + 19.f, Cy, 17.f, Kp.Swatches[I].Colour); // linear, as the painter takes it
-				P.Border(X + 2.f, Cy - 17.f, 34.f, 34.f, 17.f, InkA(0.18f), 1.f);
-				C.Ring(Key, X - 2.f, Cy - 21.f, 42.f, 42.f, 21.f);
-				C.Hit(Key, X - 2.f, Cy - 21.f, 42.f, 42.f).OnClick = [Edit, Part, I]
+				P.Disc(X + 17.f, Cy, 15.f, Kp.Swatches[I].Colour); // linear, as the painter takes it
+				P.Border(X + 2.f, Cy - 15.f, 30.f, 30.f, 15.f, InkA(0.18f), 1.f);
+				C.Ring(Key, X - 2.f, Cy - 19.f, 38.f, 38.f, 19.f);
+				C.Hit(Key, X - 2.f, Cy - 19.f, 38.f, 38.f).OnClick = [Edit, Part, I]
 				{ Edit([Part, I](FRideProfile& Pr) { Pr.Kit[Part] = I; }); };
-				X += 48.f;
+				X += 44.f;
 			}
 		}
 		// Optional out-front GPS bike computer toggle right under the Kit swatches

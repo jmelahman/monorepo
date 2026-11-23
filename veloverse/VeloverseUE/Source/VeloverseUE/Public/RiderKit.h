@@ -18,6 +18,7 @@ enum EPart : int32
 	Socks,
 	Helmet,
 	Shoes,
+	Gloves,
 	Parts,
 };
 
@@ -77,6 +78,13 @@ inline const FSwatch ShoeSwatches[] = {
 	{TEXT("White"), {0.80f, 0.80f, 0.78f}}, {TEXT("Black"), {0.012f, 0.012f, 0.013f}},
 	{TEXT("Grey"), {0.25f, 0.25f, 0.26f}},  {TEXT("Red"), {0.45f, 0.02f, 0.02f}},
 };
+// Index 0 = Bare hands (RidePawn maps Bare to the rider's current Skin tone).
+inline const FSwatch GloveSwatches[] = {
+	{TEXT("Bare"), {0.52f, 0.36f, 0.28f}},     {TEXT("Charcoal"), {0.018f, 0.020f, 0.024f}},
+	{TEXT("Midnight"), {0.010f, 0.024f, 0.075f}}, {TEXT("White"), {0.80f, 0.80f, 0.78f}},
+	{TEXT("Crimson"), {0.45f, 0.02f, 0.02f}},  {TEXT("Forest"), {0.01f, 0.10f, 0.04f}},
+	{TEXT("Amber"), {0.80f, 0.22f, 0.05f}},    {TEXT("Teal"), {0.02f, 0.40f, 0.35f}},
+};
 
 inline const FPart& Part(int32 I)
 {
@@ -89,6 +97,7 @@ inline const FPart& Part(int32 I)
 		{TEXT("socks"), TEXT("Socks"), TEXT("Mid-calf"), SockSwatches, 0},
 		{TEXT("helmet"), TEXT("Helmet"), TEXT("The shell; the rim and vents stay black"), Helmets, 0},
 		{TEXT("shoes"), TEXT("Shoes"), TEXT("The uppers; the soles stay black"), ShoeSwatches, 0},
+		{TEXT("gloves"), TEXT("Gloves"), TEXT("Fingerless road mitts (Bare to remove)"), GloveSwatches, 1},
 	};
 	return All[FMath::Clamp(I, 0, Parts - 1)];
 }

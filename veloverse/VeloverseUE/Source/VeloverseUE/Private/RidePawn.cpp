@@ -625,9 +625,11 @@ void ARidePawn::ApplyKit()
 		{TEXT("MI_Rider_Skin"), TEXT("C1"), Jersey}, {TEXT("MI_Rider_Skin"), TEXT("C2"), Accent},
 		{TEXT("MI_Rider_Skin"), TEXT("C3"), Shorts}, {TEXT("MI_Rider_Skin"), TEXT("C4"), Socks},
 		{TEXT("MI_Rider_Skin"), TEXT("C5"), Hair},   {TEXT("MI_Rider_Skin"), TEXT("C6"), Skin},
+		{TEXT("MI_Rider_Skin"), TEXT("C7"), Gloves},
 		{TEXT("MI_Rider_Kit"), TEXT("C1"), Jersey},  {TEXT("MI_Rider_Kit"), TEXT("C2"), Accent},
 		{TEXT("MI_Rider_Kit"), TEXT("C3"), Shorts},  {TEXT("MI_Rider_Kit"), TEXT("C4"), Socks},
 		{TEXT("MI_Rider_Kit"), TEXT("C5"), Hair},    {TEXT("MI_Rider_Kit"), TEXT("C6"), Skin},
+		{TEXT("MI_Rider_Kit"), TEXT("C7"), Gloves},
 		{TEXT("MI_Rider_Helmet"), TEXT("C1"), Helmet}, {TEXT("MI_Rider_Shoe"), TEXT("C1"), Shoes},
 		{TEXT("MI_Rider_Hair"), TEXT("Colour"), Hair},
 	};
@@ -656,9 +658,13 @@ void ARidePawn::ApplyKit()
 					C->SetMaterial(I, Own[I].MaterialInterface);
 					Mid = C->CreateAndSetMaterialInstanceDynamic(I);
 				}
-				if (Mid && Profile.Kit[S.Part] >= 0)
+				if (Mid && (Profile.Kit[S.Part] >= 0 || S.Part == Gloves))
 				{
-					Mid->SetVectorParameterValue(S.Parameter, Pick(S.Part, Profile.Kit[S.Part]).Colour);
+					const int32 PickIdx = Profile.Kit[S.Part] >= 0 ? Profile.Kit[S.Part] : Part(S.Part).Default;
+					const FLinearColor Col = (S.Part == Gloves && PickIdx == 0)
+					                             ? Pick(Skin, Profile.Kit[Skin]).Colour
+					                             : Pick(S.Part, PickIdx).Colour;
+					Mid->SetVectorParameterValue(S.Parameter, Col);
 					++Set;
 				}
 			}
@@ -2488,5 +2494,12 @@ void ARidePawn::ApplyWeather()
 		Post->Settings.bOverride_AutoExposureMaxBrightness = true;
 		Post->Settings.AutoExposureMinBrightness = Ev - 3.8f;
 		Post->Settings.AutoExposureMaxBrightness = Ev + 0.5f;
+	}
+	if (BikeScreen)
+	{
+		// Scale unlit GPS screen radiance with physical scene lux so it stays bright and legible
+		// in 72k lux sunlight as well as overcast and rain.
+		const float Gain = FMath::Max(120.f, (W.Lux + 8000.f * W.Sky) * 0.22f);
+		BikeScreen->SetTintColorAndOpacity(FLinearColor(Gain, Gain, Gain, 1.f));
 	}
 }
