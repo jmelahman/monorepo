@@ -140,6 +140,16 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
 - **Diagnose before rebuilding.** Use a `probe`, a `look` or an offline check in `out/qa` to
   confirm a cause first.
 - **Fix the tooling** when a step fails or repeats, and note the fix in the engine notes.
+- **Every long command has a time limit, and a hang is noticed, not waited out.** A background
+  job's notification only fires when it exits, so a hung job looks like a slow one (the C++
+  compile once sat 46 minutes on a 10-second job).
+  - Give each command its limit: `timeout N` in shell, `--timeout` for `oc.py`, `OC_TIMEOUT` for
+    `ride_test.sh`. Set it to about twice the expected time, never open-ended.
+  - Compile the C++ with `scripts/build_editor.sh` (15-minute limit, build accelerator off).
+    Don't call `Build.sh` directly.
+  - When you start a background job, say how long it should take. Once it's past that, read its
+    log's tail: if it's not progressing, stop it (it's your own confirmed-hung run), fix the
+    cause in the tooling, and rerun.
 
 New Fab downloads: `docs/engine-notes.md`, "Importing Fab assets".
 

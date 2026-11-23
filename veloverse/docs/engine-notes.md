@@ -108,6 +108,10 @@ Megascans with FBX meshes go in three steps, chained in one background run:
 - `rebuild-ground --rebuild-grass` builds the 1M-triangle prop meshes one at a time (all at
   once crashed Vulkan). Give it `--timeout 2400`.
 - `oc.py wait JOB` prints a failed job's traceback. The log loses it after a restart.
+- **C++:** compile with `scripts/build_editor.sh`, which runs `Build.sh` as ue4 with `-NoUBA`
+  under a hard limit. On 23 Nov, Unreal Build Accelerator's local executor segfaulted every
+  clang (in `opendir`), then looped symbolizing the crashes for 46 minutes into a 270 MB log
+  and never failed. Without it, an overlay change compiles in about 10 s.
 - Chains: `set -o pipefail`, and `&&` between every step, including any step that reads the
   stills. Piping a step into `| tail` or joining with `;` has let a chain go on after a failure.
 - **The landscape:** 4065² at 7 m builds its grid in minutes. 8129² lost the GPU.
