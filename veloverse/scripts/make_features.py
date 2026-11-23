@@ -974,7 +974,6 @@ def harbour(out, g, bio, road, rng, taken):
     has_houses = all(
         _copy_harbour_kit(out, f"harbour_house_{k}", None) for k in ("a", "b", "c", "d")
     )
-    has_warehouse = _copy_harbour_kit(out, "harbour_warehouse", None)
     has_cargo = _copy_harbour_kit(out, "harbour_cargo", None)
     has_stall = _copy_harbour_kit(out, "harbour_market_stall", None)
     has_planter = _copy_harbour_kit(out, "harbour_planter", None)
@@ -1254,15 +1253,13 @@ def harbour(out, g, bio, road, rng, taken):
                         wyaw + rng.uniform(-18, 18),
                     )
                     quay_cargo += 1
-        # Waterfront row of modern marina boathouses, lakefront pavilions, and warehouses standing
-        # 18-34 m inland behind the quay (Chicago Lakefront marina vibe).
+        # Waterfront row of modern marina boathouses and lakefront pavilions standing
+        # 18-34 m inland behind the quay (100% modern Chicago Lakefront marina vibe).
         quay_specs = []
         if has_boathouse:
             quay_specs.extend([("modern_boathouse", 15.4, 9.0), ("modern_boathouse", 15.4, 9.0)])
         if has_lake_pav:
             quay_specs.append(("lakefront_pavilion", 8.0, 4.8))
-        if has_warehouse:
-            quay_specs.append(("harbour_warehouse", 14.4, 9.0))
         if not quay_specs:
             quay_specs.extend(house_specs)
         for i in range(0, len(quay), 10):
@@ -2585,6 +2582,104 @@ def city_skyline(out, g, bio, road, rng, taken):
     print(f"city_skyline: {len(placed)} towers placed around ({cx0:.0f}, {cy0:.0f})", flush=True)
 
 
+def pch_coast(out, g, bio, road, rng, taken):
+    """Dresses Harbour Isle's outer coastal road (outside the Chicago Lakefront section) like
+    California State Route 1 / Big Sur: continuous cliffside guardrails along seaward bluffs,
+    stone turnout overlook walls at high headlands, and Highway 1 scenic route shield signs."""
+    out.group("PCHCoast", cull=45000)
+    has_rail = _copy_harbour_kit(out, "pch_guardrail", None)
+    has_turnout = _copy_harbour_kit(out, "pch_turnout_wall", None)
+    has_sign = _copy_harbour_kit(out, "pch_route_sign", None)
+    if not (has_rail or has_turnout or has_sign):
+        return
+    line = road.hub if road.hub is not None else road.line
+    n = len(line)
+    hx, hy = bio.world["landmarks"]["harbour"]
+    rails, turnouts, signs = 0, 0, 0
+    turnout_spots = []
+    sign_spots = []
+    pch_view_added = False
+    for k in range(30, n - 30, 6):
+        px, py, pz = float(line[k, 0]), float(line[k, 1]), float(line[k, 2])
+        # Stay outside the Chicago Lakefront bay/trail zone
+        if math.hypot(px - hx, py - hy) < 1550.0:
+            continue
+        if pz < 5.5 or float(g.at(g.inland, px, py)) > 85.0:
+            continue
+        tx = float(line[min(k + 3, n - 1), 0] - line[max(k - 3, 0), 0])
+        ty = float(line[min(k + 3, n - 1), 1] - line[max(k - 3, 0), 1])
+        norm_t = math.hypot(tx, ty) or 1.0
+        nx, ny = -ty / norm_t, tx / norm_t
+        yaw = math.degrees(math.atan2(ty, tx))
+        # Determine which side faces the ocean (lower inland distance)
+        in_pos = float(g.at(g.inland, px + nx * 16.0, py + ny * 16.0))
+        in_neg = float(g.at(g.inland, px - nx * 16.0, py - ny * 16.0))
+        sea_side = 1.0 if in_pos < in_neg else -1.0
+        gx, gy = px + nx * sea_side * 3.9, py + ny * sea_side * 3.9
+        gz = float(g.z(gx, gy))
+        if gz < 4.0 or float(road.dist(gx, gy)) < 3.1:
+            continue
+        # High headland scenic turnout parapet wall every ~650 m
+        if (
+            has_turnout
+            and pz > 12.0
+            and len(turnout_spots) < 8
+            and not any(math.hypot(px - ox, py - oy) < 650.0 for ox, oy in turnout_spots)
+        ):
+            tx2, ty2 = px + nx * sea_side * 5.2, py + ny * sea_side * 5.2
+            tz2 = float(g.z(tx2, ty2))
+            if tz2 > 10.0 and float(road.dist(tx2, ty2)) > 4.2:
+                out.add(
+                    "PCHCoast",
+                    "pch_turnout_wall",
+                    tx2,
+                    ty2,
+                    tz2 - 0.10,
+                    yaw + (0.0 if sea_side < 0 else 180.0),
+                    mark=(210, 195, 165),
+                )
+                turnout_spots.append((px, py))
+                taken.append((tx2, ty2, 5.5))
+                turnouts += 1
+                if not pch_view_added:
+                    eye_k = max(0, k - 26)
+                    ex, ey, ez = line[eye_k]
+                    out.views.append(
+                        [
+                            "feat_pch_coast",
+                            [float(ex), float(ey), float(ez) + 1.8],
+                            [px + nx * sea_side * 12.0, py + ny * sea_side * 12.0, pz + 0.5],
+                        ]
+                    )
+                    pch_view_added = True
+                continue
+        # Continuous PCH cliffside guardrail along seaward bluff edge
+        if has_rail and not any(math.hypot(px - ox, py - oy) < 12.0 for ox, oy in turnout_spots):
+            out.add(
+                "PCHCoast",
+                "pch_guardrail",
+                gx,
+                gy,
+                gz - 0.05,
+                yaw + (0.0 if sea_side > 0 else 180.0),
+                mark=(200, 210, 220),
+            )
+            rails += 1
+        # California State Route 1 scenic highway shield sign on the inland shoulder
+        if (
+            has_sign
+            and len(sign_spots) < 12
+            and not any(math.hypot(px - sx, py - sy) < 950.0 for sx, sy in sign_spots)
+        ):
+            sx, sy = px - nx * sea_side * 4.6, py - ny * sea_side * 4.6
+            sz = float(g.z(sx, sy))
+            if sz > 5.0 and float(road.dist(sx, sy)) > 3.8:
+                out.add("PCHCoast", "pch_route_sign", sx, sy, sz - 0.05, yaw)
+                sign_spots.append((px, py))
+                signs += 1
+    print(f"pch_coast: {rails} guardrails, {turnouts} turnouts, {signs} route signs", flush=True)
+
+
 def main():
     rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
@@ -2597,6 +2692,7 @@ def main():
     taken = []  # (x, y, radius m) of what stands, so nothing is placed through it
     harbour(out, g, bio, road, rng, taken)
     city_skyline(out, g, bio, road, np.random.default_rng(SEED + 17), taken)
+    pch_coast(out, g, bio, road, np.random.default_rng(SEED + 18), taken)
     farm = turbines(out, g, bio, road, rng, taken)
     # No pylons or power lines since 13 Nov (the AAA review: "out of register with a fantasy
     # world"); power_line() stays for a later setting that wants them.

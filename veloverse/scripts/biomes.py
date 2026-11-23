@@ -281,16 +281,16 @@ PRESETS["world"] = {
             ("mountain", "tundra_boulder", 0.05, 12000, 15000),
         ),
         "Sand": (
-            ("coast", "marram_grass", 3.0, 3000, 5000, (1.0, 1.8)),
-            ("coast", "nordic_beach_rocks", 0.05, 12000, 15000),
+            # California coastal headlands & clean sandy beaches (no yellow marram straw).
+            ("coast", "nordic_beach_rocks", 0.06, 12000, 15000),
             ("coast", "eroded_pine_log", 0.02, 9000, 12000),
-            # 12 Nov Fab wave 2: the shore's flowers, rocks and driftwood.
-            ("shared", "sea_campion", 0.5, 2500, 4000),
-            ("shared", "three_cornered_garlic", 0.3, 2500, 4000),
-            ("coast", "scattered_beach_rocks", 0.1, 9000, 12000),
+            ("shared", "sea_campion", 0.55, 2500, 4000),
+            ("mountain", "crowberry", 0.45, 3000, 4500),
+            ("shared", "three_cornered_garlic", 0.25, 2500, 4000),
+            ("coast", "scattered_beach_rocks", 0.12, 9000, 12000),
             ("coast", "driftwood_branch_02", 0.03, 9000, 12000),
             ("coast", "coast_african_debris_driftwood_01", 0.02, 9000, 12000),
-            ("coast", "rauk_formation_rock_small_09", 0.01, 12000, 15000),
+            ("coast", "rauk_formation_rock_small_09", 0.015, 12000, 15000),
         ),
     },
 }

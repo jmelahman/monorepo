@@ -1273,6 +1273,104 @@ def build_lakefront_overlook():
     return b
 
 
+def build_pch_guardrail():
+    """6.0 m California Highway 1 coastal cliffside guardrail along X: 3 weathered timber
+    posts, galvanized steel W-beam rail, and a center white/ochre delineator paddle."""
+    b = KitBuilder("pch_guardrail")
+    length = 6.05
+
+    # 3 heavy weathered timber posts (buried z = -0.9 .. +0.82 m) + spacer blocks
+    for px in (-2.0, 0.0, 2.0):
+        b.box("boards", (px, 0.0, -0.04), (0.18, 0.18, 1.72), bevel=0.015)
+        b.box("wood", (px, 0.13, 0.605), (0.16, 0.10, 0.34), bevel=0.01)
+
+    # Galvanized steel W-beam guardrail on roadward (+Y) face (z = 0.45 .. 0.76 m)
+    beam_y = 0.20
+    b.box("steel", (0.0, beam_y, 0.605), (length, 0.03, 0.31), bevel=0.005)
+    # Upper & lower projecting ribs + center valley rib for crisp W-beam profile
+    b.box("steel", (0.0, beam_y + 0.025, 0.715), (length, 0.045, 0.08), bevel=0.008)
+    b.box("steel", (0.0, beam_y + 0.025, 0.495), (length, 0.045, 0.08), bevel=0.008)
+    b.box("steel", (0.0, beam_y - 0.015, 0.605), (length, 0.035, 0.07), bevel=0.006)
+    # Post splice plates & bolt bosses
+    for px in (-2.0, 0.0, 2.0):
+        b.box("steel", (px, beam_y + 0.038, 0.605), (0.12, 0.03, 0.28), bevel=0.005)
+
+    # Slender white reflective highway delineator paddle at center post (z = 0.82 .. 1.08 m)
+    b.box("white", (0.0, 0.0, 0.95), (0.09, 0.026, 0.26), bevel=0.005)
+    b.box("ochre", (0.0, 0.0, 1.01), (0.078, 0.032, 0.065), bevel=0.003)
+    b.box("warm_glass", (0.0, 0.0, 0.93), (0.065, 0.032, 0.045))
+    return b
+
+
+def build_pch_turnout_wall():
+    """10.0 m Big Sur / Highway 1 scenic turnout stone-and-concrete cliffside parapet wall
+    along X with end stone piers, concrete coping cap, and roadward (+Y) timber bench."""
+    b = KitBuilder("pch_turnout_wall")
+
+    # Buried concrete foundation footing (z = -1.5 .. 0.0 m)
+    b.box("concrete", (0.0, 0.0, -0.75), (10.30, 0.86, 1.50), bevel=0.03)
+
+    # Battered low stone parapet wall (z = 0.0 .. 0.85 m)
+    b.box("stone", (0.0, 0.0, 0.20), (9.20, 0.62, 0.42), bevel=0.03)
+    b.box("stone", (0.0, 0.0, 0.62), (9.12, 0.55, 0.46), bevel=0.03)
+
+    # Overhanging concrete coping cap (z = 0.85 .. 0.96 m)
+    b.box("concrete", (0.0, 0.0, 0.905), (9.28, 0.64, 0.11), bevel=0.02)
+
+    # Twin end stone piers (z = 0.0 .. 1.18 m) with stepped concrete pier caps
+    for sx in (-4.72, 4.72):
+        b.box("stone", (sx, 0.0, 0.59), (0.80, 0.78, 1.18), bevel=0.035)
+        b.box("concrete", (sx, 0.0, 1.24), (0.90, 0.88, 0.12), bevel=0.025)
+
+    # Weathered timber coastal overlook bench tucked on the roadward (+Y) side
+    by = 0.72
+    for lx in (-1.25, 0.0, 1.25):
+        b.box("boards", (lx, by, 0.14), (0.14, 0.44, 0.56), bevel=0.015)
+        b.box("steel", (lx, by - 0.16, 0.58), (0.05, 0.06, 0.36))
+    for sy_off in (-0.12, 0.0, 0.12):
+        b.box("wood", (0.0, by + sy_off, 0.45), (3.10, 0.105, 0.055), bevel=0.01)
+    b.box("wood", (0.0, by - 0.17, 0.74), (3.10, 0.055, 0.16), rot=(-10.0, 0.0, 0.0), bevel=0.01)
+    return b
+
+
+def build_pch_route_sign():
+    """Classic California State Route 1 / Pacific Coast Highway roadside sign (~2.6 m tall)
+    facing -X toward oncoming riders, with green/white main plate and SCENIC sub-plate."""
+    b = KitBuilder("pch_route_sign")
+
+    # Concrete collar footing & buried timber post (z = -0.60 .. 2.55 m)
+    b.cyl("concrete", (0.0, 0.0, -0.60), (0.0, 0.0, 0.08), 0.24, 0.20, seg=8, smooth=False)
+    b.box("boards", (0.0, 0.0, 0.975), (0.14, 0.14, 3.15), bevel=0.012)
+
+    # Main green highway sign plate (0.72 x 0.78 m) facing -X
+    px = -0.09
+    pz = 2.08
+    pw, ph = 0.72, 0.78
+    b.box("green", (px, 0.0, pz), (0.032, pw, ph), bevel=0.005)
+    # Crisp white perimeter border strips on -X face
+    bx = px - 0.018
+    for sz in (-1.0, 1.0):
+        b.box("white", (bx, 0.0, pz + sz * (ph * 0.5 - 0.025)), (0.012, pw - 0.02, 0.042))
+    for sy in (-1.0, 1.0):
+        b.box("white", (bx, sy * (pw * 0.5 - 0.025), pz), (0.012, 0.042, ph - 0.02))
+    # California route shield emblem silhouette on -X face
+    b.box("white", (bx - 0.005, 0.0, pz + 0.02), (0.012, 0.42, 0.44), bevel=0.015)
+    b.box("green", (bx - 0.009, 0.0, pz + 0.16), (0.010, 0.34, 0.08))
+    b.box("green", (bx - 0.009, 0.0, pz - 0.04), (0.010, 0.34, 0.24))
+    b.box("white", (bx - 0.013, 0.0, pz - 0.04), (0.008, 0.07, 0.18))
+
+    # Smaller white/ochre "SCENIC" sub-plate underneath
+    sub_z = 1.48
+    b.box("white", (px, 0.0, sub_z), (0.030, 0.66, 0.26), bevel=0.005)
+    b.box("ochre", (bx, 0.0, sub_z + 0.055), (0.012, 0.58, 0.075))
+    b.box("green", (bx, 0.0, sub_z - 0.045), (0.012, 0.50, 0.065))
+
+    # Steel mounting bracket straps on post
+    for mz in (1.48, 1.88, 2.28):
+        b.box("steel", (-0.01, 0.0, mz), (0.16, 0.16, 0.035))
+    return b
+
+
 # ---------------------------------------------------------------------------------------------
 # Hero Boats (curved hulls, cabins, rigging, deck gear)
 # ---------------------------------------------------------------------------------------------
@@ -1723,6 +1821,9 @@ BUILDERS = {
     "modern_boathouse": build_modern_boathouse,
     "chicago_townhouse": build_chicago_townhouse,
     "lakefront_overlook": build_lakefront_overlook,
+    "pch_guardrail": build_pch_guardrail,
+    "pch_turnout_wall": build_pch_turnout_wall,
+    "pch_route_sign": build_pch_route_sign,
     "harbour_crane": build_harbour_crane,
     "stone_arch": build_stone_arch,
     "boat_trawler": build_boat_trawler,
