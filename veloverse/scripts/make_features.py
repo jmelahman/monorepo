@@ -1144,6 +1144,7 @@ def harbour(out, g, bio, road, rng, taken):
     # buildings & 34-tower skyline.
     town_houses = []
     overlooks = []
+    bench_spots = []
     lsd_segs = 0
     park_shrubs = [
         f"{MS}/coast/bigleaf_hydrangea/SM_bigleaf_hydrangea_VarA",
@@ -1221,9 +1222,14 @@ def harbour(out, g, bio, road, rng, taken):
                             out.clear.append([round(ox, 1), round(oy, 1), 8.0])
                     continue
 
-                # Inland side band 1 (4.8 m): promenade bench or planter
+                # Inland side band 1 (4.8 m): spaced promenade bench or planter (~95 m+ apart)
                 bx, by = px + nx * side * 4.8, py + ny * side * 4.8
-                if road.dist(bx, by) > 3.6 and g.z(bx, by) > 1.0 and rng.random() < 0.55:
+                if (
+                    road.dist(bx, by) > 3.6
+                    and g.z(bx, by) > 1.0
+                    and not any(math.hypot(px - bx0, py - by0) < 95.0 for bx0, by0 in bench_spots)
+                    and rng.random() < 0.55
+                ):
                     prop = bench if rng.random() < 0.65 else planter
                     out.add(
                         "HarbourProps",
@@ -1233,6 +1239,7 @@ def harbour(out, g, bio, road, rng, taken):
                         float(g.z(bx, by)) - 0.04,
                         yaw0 + (0.0 if side < 0 else 180.0),
                     )
+                    bench_spots.append((px, py))
 
                 # Inland side band 2 (38 m): 4-lane divided Lake Shore Drive highway!
                 if has_lsd:
