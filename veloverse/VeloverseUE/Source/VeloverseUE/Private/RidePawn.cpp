@@ -224,6 +224,7 @@ ARidePawn::ARidePawn()
 	Rain->SetUsingAbsoluteLocation(true); // PlaceRain sets it, round the camera
 	Rain->SetUsingAbsoluteScale(true);
 	Rain->SetCastShadow(false);
+	Rain->bDisallowNanite = true; // M_Rain is BLEND_Additive, which Nanite does not support
 	Rain->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Rain->SetMobility(EComponentMobility::Movable);
 
