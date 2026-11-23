@@ -66,7 +66,7 @@ private:
 	float TireLp = 0.f, TireBp = 0.f;
 	float SurfLpL = 0.f, SurfLpR = 0.f;
 	float FoamBpL = 0.f, FoamBpR = 0.f;
-	float GravelBp = 0.f;
+	float GravelBp = 0.f, GravelBed = 0.f, GravelEnv = 0.f;
 	float RainLpL = 0.f, RainBpL = 0.f;
 	float RainLpR = 0.f, RainBpR = 0.f;
 	float DropL = 0.f, DropR = 0.f;

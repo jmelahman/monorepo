@@ -1559,24 +1559,24 @@ public:
 		P.Rect(10.f, 34.f, W - 20.f, 1.f, FLinearColor(1.f, 1.f, 1.f, 0.10f));
 
 		// Primary Power block + 7-segment zone bar
-		P.Text(12.f, 52.f, TEXT("POWER"), P.Font("Bold", 11.f, 0.14f), Muted);
-		P.Text(W - 12.f, 52.f, FString::Printf(TEXT("Z%d"), ZoneIdx + 1), P.Font("Bold", 12.f), ZoneCol,
+		P.Text(12.f, 50.f, TEXT("POWER"), P.Font("Bold", 12.f, 0.14f), Muted);
+		P.Text(W - 12.f, 50.f, FString::Printf(TEXT("Z%d"), ZoneIdx + 1), P.Font("Bold", 13.f), ZoneCol,
 		       EAlign::Right);
-		P.Text(W * 0.5f, 108.f, FString::Printf(TEXT("%d W"), FMath::RoundToInt(R->Reading.Watts)), P.Font("Bold", 44.f), Ink,
+		P.Text(W * 0.5f, 108.f, FString::Printf(TEXT("%d W"), FMath::RoundToInt(R->Reading.Watts)), P.Font("Bold", 48.f), Ink,
 		       EAlign::Centre);
 		const float BarW = (W - 24.f - 6.f * 4.f) / 7.f;
 		for (int32 I = 0; I < 7; ++I)
 		{
 			const FLinearColor C = I == ZoneIdx ? ZoneCol : FLinearColor(0.18f, 0.21f, 0.26f, 1.f);
-			P.Round(12.f + I * (BarW + 4.f), 120.f, BarW, 7.f, 3.f, C);
+			P.Round(12.f + I * (BarW + 4.f), 120.f, BarW, 8.f, 3.f, C);
 		}
 
 		// 2x2 telemetry grid: Speed, Cadence, Grade, Distance
 		auto Cell = [&](float X, float Y, const TCHAR* Label, const FString& Val, const FLinearColor& ValCol)
 		{
 			P.Round(X, Y, 86.f, 64.f, 8.f, Card);
-			P.Text(X + 8.f, Y + 18.f, Label, P.Font("Bold", 10.f, 0.12f), Muted);
-			P.Text(X + 8.f, Y + 50.f, Val, P.Font("Bold", 21.f), ValCol);
+			P.Text(X + 8.f, Y + 18.f, Label, P.Font("Bold", 11.f, 0.12f), Muted);
+			P.Text(X + 8.f, Y + 52.f, Val, P.Font("Bold", 24.f), ValCol);
 		};
 		const float Spd = static_cast<float>(U::Speed(R->Speed));
 		const float Dist = static_cast<float>(U::Long(R->Ridden() / 100.0));
@@ -1679,14 +1679,14 @@ void ARidePawn::MakeBikeParts()
 		BikeParts.Add(C);
 	}
 	Bike->SetStaticMesh(nullptr);
-	// Mount the constructor-created BikeScreen flush onto SM_Bike_Computer (GPS_SCREEN in bike-frame cm).
+	// Mount the constructor-created BikeScreen flush onto SM_Bike_Computer (v90 28-deg GPS_SCREEN in cm).
 	if (BikeScreen && BikeParts.IsValidIndex(BikeComputer) && BikeParts[BikeComputer])
 	{
 		BikeScreen->AttachToComponent(BikeParts[BikeComputer], FAttachmentTransformRules::KeepRelativeTransform);
-		BikeScreen->SetRelativeLocation(FVector(55.90f, 0.f, 90.12f));
+		BikeScreen->SetRelativeLocation(FVector(55.806f, 0.f, 90.589f));
 		BikeScreen->SetRelativeRotation(
-			FRotationMatrix::MakeFromXZ(FVector(-0.32557f, 0.f, 0.94552f), FVector(0.94552f, 0.f, 0.32557f)).Rotator());
-		BikeScreen->SetRelativeScale3D(FVector(0.0195f));
+			FRotationMatrix::MakeFromXZ(FVector(-0.54464f, 0.f, 0.83867f), FVector(0.83867f, 0.f, 0.54464f)).Rotator());
+		BikeScreen->SetRelativeScale3D(FVector(0.0255f));
 		BikeScreen->SetSlateWidget(SNew(SBikeComputerWidget).Pawn(this));
 		BikeScreen->RequestRedraw();
 	}

@@ -1558,18 +1558,19 @@ def build_computer():
         part.add(tube(arm_pts, lambda si, i: superellipse(4.5, 5.5, 2.4), PLASTIC, 14, hint=m_up))
     # Quarter-turn mount puck
     part.add(cylinder(m_tip - 7.0 * m_up, m_tip - 1.5 * m_up, 15.0, PLASTIC, n=32))
-    # Beveled GPS computer body tilted ~14 deg toward the rider for clean over-the-bars sightline
-    tilt = math.radians(14.0)
+    # Large-screen beveled GPS computer body (Garmin Edge 1050 / Karoo 3 size: 64 x 92 mm),
+    # tilted 28 deg toward the rider's eyes for effortless at-a-glance legibility.
+    tilt = math.radians(28.0)
     c_up = np.cos(tilt) * m_up - np.sin(tilt) * m_fwd
     c_fwd = np.sin(tilt) * m_up + np.cos(tilt) * m_fwd
-    c_ctr = m_tip + 3.5 * m_up + 6.0 * m_fwd
-    c_pts = [c_ctr - 37.0 * c_fwd, c_ctr - 30.0 * c_fwd, c_ctr + 30.0 * c_fwd, c_ctr + 37.0 * c_fwd]
+    c_ctr = m_tip + 7.5 * m_up + 8.0 * m_fwd
+    c_pts = [c_ctr - 46.0 * c_fwd, c_ctr - 38.0 * c_fwd, c_ctr + 38.0 * c_fwd, c_ctr + 46.0 * c_fwd]
     part.add(
         tube(
             c_pts,
             lambda si, i: superellipse(
-                10.5 * (0.72 + 0.28 * np.sin(np.pi * si) ** 0.35),
-                50.0 * (0.80 + 0.20 * np.sin(np.pi * si) ** 0.35),
+                12.0 * (0.72 + 0.28 * np.sin(np.pi * si) ** 0.35),
+                64.0 * (0.82 + 0.18 * np.sin(np.pi * si) ** 0.35),
                 4.0,
             ),
             PLASTIC,
@@ -1578,12 +1579,12 @@ def build_computer():
         )
     )
     # Recessed dark screen backing + subtle orange accent top bezel bar on the GPS unit
-    scr_pts = [c_ctr - 29.0 * c_fwd + 4.4 * c_up, c_ctr + 29.0 * c_fwd + 4.4 * c_up]
-    part.add(tube(scr_pts, lambda si, i: superellipse(2.0, 41.0, 6.0), PLASTIC, 8, hint=c_up))
-    bez_pts = [c_ctr + 28.0 * c_fwd + 5.0 * c_up, c_ctr + 31.5 * c_fwd + 5.0 * c_up]
-    part.add(tube(bez_pts, lambda si, i: superellipse(1.5, 38.0, 4.0), DECAL, 6, hint=c_up))
+    scr_pts = [c_ctr - 37.0 * c_fwd + 5.0 * c_up, c_ctr + 37.0 * c_fwd + 5.0 * c_up]
+    part.add(tube(scr_pts, lambda si, i: superellipse(2.2, 54.0, 6.0), PLASTIC, 8, hint=c_up))
+    bez_pts = [c_ctr + 36.0 * c_fwd + 5.8 * c_up, c_ctr + 40.0 * c_fwd + 5.8 * c_up]
+    part.add(tube(bez_pts, lambda si, i: superellipse(1.6, 50.0, 4.0), DECAL, 6, hint=c_up))
     # Log screen face centre & basis in bike-frame cm (Blender mm * 0.1, +X fwd, +Y right, +Z up)
-    scr_cm = (c_ctr + 5.8 * c_up) * 0.1
+    scr_cm = (c_ctr + 7.4 * c_up) * 0.1
     print(
         f"GPS_SCREEN cm=({scr_cm[0]:.3f}, {scr_cm[1]:.3f}, {scr_cm[2]:.3f}) "
         f"up=({c_up[0]:.5f}, {c_up[1]:.5f}, {c_up[2]:.5f}) "

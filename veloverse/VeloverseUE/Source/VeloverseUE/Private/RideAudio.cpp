@@ -158,9 +158,18 @@ void URideAudio::SynthesizeChunk(int32 NumFrames, TArray<int16>& OutPcm)
 		float GravelSample = 0.f;
 		if (SmoothOffRoad > 0.01f && SmoothSpeed > 0.5f)
 		{
-			const float Imp = (NextRand() > (0.9965f - 0.002f * FMath::Min(SpeedNorm, 1.f))) ? NextRand() : 0.f;
-			GravelBp = 0.82f * GravelBp + 0.18f * (Imp * 2.2f + 0.15f * PL);
-			GravelSample = GravelBp * 0.22f * SmoothOffRoad * FMath::Clamp(SmoothSpeed / 7.f, 0.f, 1.2f);
+			// Warm earthy packed-dirt rolling rumble (~250 Hz low-passed pink noise) + sparse
+			// organic pebble crunches (~14-28/s) instead of harsh high-rate white-noise static.
+			GravelBed = 0.962f * GravelBed + 0.038f * TireIn;
+			if (NextRand() > (0.99968f - 0.00032f * FMath::Min(SpeedNorm, 1.2f)))
+			{
+				GravelEnv = FMath::Max(GravelEnv, 0.45f + 0.55f * FMath::Abs(NextRand()));
+			}
+			GravelBp = 0.91f * GravelBp + 0.09f * (PL * GravelEnv);
+			GravelEnv *= 0.986f; // ~3.2 ms muffled pebble thud
+			const float CadMod = 0.86f + 0.14f * FMath::Sin(static_cast<float>(TimeSec * 4.5));
+			const float DirtMix = (GravelBed * 0.55f + GravelBp * 0.75f) * CadMod;
+			GravelSample = DirtMix * 0.20f * SmoothOffRoad * FMath::Clamp(SmoothSpeed / 7.f, 0.f, 1.2f);
 		}
 
 		// 3. High-Engagement Road Freehub Ratchet (36 clicks per 2.11 m wheel rev when coasting)
