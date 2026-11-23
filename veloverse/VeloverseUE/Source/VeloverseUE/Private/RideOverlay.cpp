@@ -456,7 +456,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			const ESky Now = SkyAt(Here);
 			const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening"), TEXT("Sunset")};
 			const TCHAR* WeatherNames[] = {TEXT("Auto"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
-			const int32 TimeIdx = FMath::Clamp(ARidePawn::Automated() ? 0 : Pawn->Profile.TimeOfDay, 0, 4);
+			const int32 TimeIdx = FMath::Clamp(Pawn->Profile.TimeOfDay, 0, 4);
 			const int32 WeatherIdx = FMath::Clamp(Fixed, 0, 3);
 			const FSlateFontInfo Big = P.Font("Bold", 13.f);
 			const float Gap = 8.f;

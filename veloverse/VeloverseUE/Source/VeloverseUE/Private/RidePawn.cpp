@@ -102,27 +102,27 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	if (TimeOfDay >= 1 && TimeOfDay <= 4)
 	{
 		// Morning Mist, Midday, Golden Hour (Evening), Pink/Violet Sunset Twilight.
-		static constexpr float Heights[4] = {12.f, 40.f, 14.f, 2.0f};
+		static constexpr float Heights[4] = {12.f, 40.f, 14.f, 1.2f};
 		static constexpr float Turns[4] = {-70.f, 0.f, 70.f, 88.f}; // degrees round from the route's own sun
 		W.Elevation = Heights[TimeOfDay - 1];
 		Azimuth += Turns[TimeOfDay - 1];
 		// When Weather is Auto (0) and Sunset is chosen, apply sunset clear-sky lux/sky/fog unless raining.
-		if (TimeOfDay == 4 && Weather == 0 && W.Rain < 0.05f && W.Lux > 25000.f)
+		if (TimeOfDay == 4 && Weather == 0 && W.Rain < 0.05f && W.Lux > 10000.f)
 		{
-			W.Lux = 22000.f;
-			W.Sky = 1.65f;
-			W.Fog = 0.011f;
+			W.Lux = 4500.f;
+			W.Sky = 1.35f;
+			W.Fog = 0.009f;
 		}
 	}
 	if (Weather == 1)
 	{
 		// Keep Midday (40 deg elevation) rich and contrasty rather than blown-out at 90k lux,
-		// and Sunset (2 deg) soft with lifted twilight sky bounce for silhouette contrast.
+		// and Sunset (1.2 deg) low-lux with cool twilight sky bounce so grass stays natural green.
 		if (W.Elevation <= 5.f)
 		{
-			W.Lux = 22000.f;
-			W.Sky = 1.65f;
-			W.Fog = 0.011f;
+			W.Lux = 4500.f;
+			W.Sky = 1.35f;
+			W.Fog = 0.009f;
 		}
 		else
 		{
@@ -2288,15 +2288,15 @@ void ARidePawn::ApplyWeather()
 	// The shells cost a translucent pass over the whole screen: draw them only while it rains.
 	Rain->SetVisibility(W.Rain > 0.001f);
 	const bool bSunset = W.Elevation <= 5.f;
-	const float ClearLux = bSunset ? 22000.f : (W.Elevation <= 18.f ? 70000.f : 58000.f);
+	const float ClearLux = bSunset ? 4500.f : (W.Elevation <= 18.f ? 70000.f : 58000.f);
 	const float Cloud = FMath::Clamp(1.f - W.Lux / ClearLux, 0.f, 1.f);
 	const float Thick = FMath::Pow(Cloud, 1.5f);
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
-		Sun->SetVolumetricScatteringIntensity(bSunset ? 3.2f : (W.Elevation < 18.f ? 2.0f : 1.2f));
+		Sun->SetVolumetricScatteringIntensity(bSunset ? 2.4f : (W.Elevation < 18.f ? 2.0f : 1.2f));
 		Sun->SetUseTemperature(true);
-		Sun->SetTemperature(bSunset ? 3300.f : (W.Elevation <= 16.f ? 5100.f : 6200.f));
+		Sun->SetTemperature(bSunset ? 4300.f : (W.Elevation <= 16.f ? 5100.f : 6200.f));
 		// Cloud hides the sun's disc and spreads its light: widen the source as the light falls
 		// below a clear day's, so a rain sky's shadows go soft and faint instead of sharp.
 		if (SunAngle < 0.f)
@@ -2320,13 +2320,14 @@ void ARidePawn::ApplyWeather()
 	}
 	// An overcast sky is grey-white to the zenith, not blue: thin Rayleigh scattering and thicken haze
 	// under cloud, while deepening clear/golden-hour sky luminance so it never washes pale white.
-	// At Sunset (<= 5 deg), boosted ozone absorption + warm Mie haze produce a pink/violet afterglow.
+	// At Sunset (<= 5 deg), boosted ozone absorption + warm Mie haze paint a pink/violet sky while
+	// cool-neutral SkyLight keeps grass natural dark green and asphalt clean dusky grey.
 	if (Atmosphere.IsValid())
 	{
 		// Only on a change: this runs five times a second and each set re-sends the atmosphere.
-		const float ClearR = Rayleigh * (bSunset ? 1.15f : 1.f);
-		const float ClearM = Mie * (bSunset ? 1.85f : 1.f);
-		const float ClearA = Absorption * (bSunset ? 2.85f : 1.f);
+		const float ClearR = Rayleigh * (bSunset ? 1.10f : 1.f);
+		const float ClearM = Mie * (bSunset ? 1.50f : 1.f);
+		const float ClearA = Absorption * (bSunset ? 2.15f : 1.f);
 		const float R = FMath::Lerp(ClearR, Rayleigh * 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
 		const float M = FMath::Lerp(ClearM, Mie * 2.5f, Thick);
 		const float A = FMath::Lerp(ClearA, Absorption * 0.05f, Thick);
@@ -2338,7 +2339,7 @@ void ARidePawn::ApplyWeather()
 			Atmosphere->SetMieScatteringScale(M);
 			Atmosphere->SetOtherAbsorptionScale(A);
 		}
-		const FLinearColor ClearLum = bSunset ? FLinearColor(1.06f, 0.72f, 0.88f, 1.f)
+		const FLinearColor ClearLum = bSunset ? FLinearColor(1.02f, 0.84f, 0.94f, 1.f)
 		                                      : FLinearColor(0.72f, 0.72f, 0.75f, 1.f);
 		const FLinearColor SkyLum = FMath::Lerp(ClearLum, FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
 		if (!Atmosphere->SkyLuminanceFactor.Equals(SkyLum, 1e-4f))
@@ -2349,7 +2350,7 @@ void ARidePawn::ApplyWeather()
 	if (SkyLight.IsValid())
 	{
 		SkyLight->SetIntensity(W.Sky);
-		const FLinearColor SkyCol = bSunset ? FLinearColor(1.0f, 0.76f, 0.88f)
+		const FLinearColor SkyCol = bSunset ? FLinearColor(0.86f, 0.88f, 0.96f)
 		                                    : (W.Elevation <= 16.f ? FLinearColor(1.0f, 0.95f, 0.90f)
 		                                                           : FLinearColor(0.94f, 0.97f, 1.0f));
 		SkyLight->SetLightColor(SkyCol);
