@@ -1908,29 +1908,8 @@ void ARidePawn::MakeKitPreview()
 		Anim->Effort = 1.f; // Pedal, the default
 	}
 	StudioCapture->ShowOnlyComponent(StudioRider);
-	// The floor: a dark disc of the engine's plane under a pool of light, for the shadow to land on.
-	if (UStaticMesh* Plane = MeshAt(TEXT("/Engine/BasicShapes/Plane.Plane")))
-	{
-		UStaticMeshComponent* Floor = NewObject<UStaticMeshComponent>(this, TEXT("StudioFloor"));
-		InStudio(Floor);
-		Floor->SetStaticMesh(Plane);
-		Floor->SetupAttachment(Studio);
-		Floor->SetRelativeScale3D(FVector(14.f, 14.f, 1.f));
-		Floor->RegisterComponent();
-		if (UMaterialInterface* FloorMat = Cast<UMaterialInterface>(
-			    FSoftObjectPath(TEXT("/Game/Rider/Body/MI_Rider_Hair.MI_Rider_Hair")).TryLoad()))
-		{
-			Floor->SetMaterial(0, FloorMat);
-		}
-		if (UMaterialInstanceDynamic* Mid = Floor->CreateAndSetMaterialInstanceDynamic(0))
-		{
-			Mid->SetVectorParameterValue(TEXT("Colour"), FLinearColor(0.006f, 0.006f, 0.008f));
-			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.006f, 0.006f, 0.008f));
-		}
-		StudioCapture->ShowOnlyComponent(Floor);
-	}
 	// Three-point light, on channel 1 only: a warm key high on the camera's left, a cool rim from
-	// behind for the outline, a soft fill from the right; and a pool from overhead for the floor.
+	// behind for the outline, and soft fills from the front/right over a pure-black studio backdrop.
 	// Candelas, for the capture's fixed exposure (StudioCapture's look, below).
 	auto Light = [this](ULocalLightComponent* L, const FVector& At, float Candelas, const FLinearColor& Colour, bool bShadow)
 	{
@@ -1958,7 +1937,6 @@ void ARidePawn::MakeKitPreview()
 	};
 	Light(Spot(TEXT("StudioKey"), 20.f, 40.f), FVector(-260.f, -300.f, 330.f), 45.f, FLinearColor(1.f, 0.95f, 0.88f), true);
 	Light(Spot(TEXT("StudioRim"), 20.f, 40.f), FVector(240.f, 300.f, 270.f), 70.f, FLinearColor(0.82f, 0.9f, 1.f), false);
-	Light(Spot(TEXT("StudioPool"), 18.f, 46.f), FVector(0.f, 0.f, 430.f), 14.f, FLinearColor(1.f, 0.97f, 0.93f), true);
 	UPointLightComponent* Fill = NewObject<UPointLightComponent>(this, TEXT("StudioFill"));
 	Fill->SetSourceRadius(60.f);
 	Light(Fill, FVector(300.f, -360.f, 110.f), 26.f, FLinearColor(0.95f, 0.96f, 1.f), false);
