@@ -307,7 +307,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 
 	// Top right: the time of day to ride in, the same setting as Settings' (the user, 15 Nov).
 	{
-		const TArray<FString> Times = {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
+		const TArray<FString> Times = {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening"), TEXT("Sunset")};
 		const float Tw = C.SegmentedWidth(Times, 15.f, 96.f);
 		const float Tx = C.W - 64.f - Tw;
 		C.Segmented(TEXT("routetime"), Tx, 48.f, Times, Pawn->Profile.TimeOfDay,
@@ -1028,7 +1028,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		       {TEXT("Route's own"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")}, Weather,
 		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.Weather = I; }); });
 		Choice(TEXT("time"), Row(TEXT("Time of day"), TEXT("Where the sun sits while you ride")),
-		       {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")}, Pawn->Profile.TimeOfDay,
+		       {TEXT("Route's own"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening"), TEXT("Sunset")}, Pawn->Profile.TimeOfDay,
 		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.TimeOfDay = I; }); });
 	}
 	else if (Tab == ERideSettingsTab::Ride && Pawn)

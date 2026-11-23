@@ -25,7 +25,7 @@ struct FRideProfile
 	float Difficulty = 100.f;  // the share of the road's gradient the trainer gives, %
 	bool bErg = true;          // a workout's targets go to the trainer
 	int32 Weather = 0;         // 0 the route's own, 1 clear, 2 overcast, 3 rain
-	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening
+	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening, 4 sunset
 	float Grass = 100.f;       // how far the grass reaches, % of GrassStandard (RidePawn.cpp)
 	float LookSpeed = 100.f;   // how fast the mouse turns the view, % of 0.12 degrees per count
 	float HeadSway = 65.f;     // how much the head moves with the pedalling and the road, %
