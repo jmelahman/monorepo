@@ -330,6 +330,7 @@ private:
 	void ApplyKit(); // the profile's skin tone, hair and kit colours on both copies of the rider
 	void UseGrassReach(); // grass.CullDistanceScale from the Grass setting, net of r.ViewDistanceScale
 	float GrassViewScale = -1.f; // the r.ViewDistanceScale it was set against
+	int32 GrassWarmupFrames = 0;
 
 public:
 	// The Kit page's turntable: the bike and a third copy of the rider in the profile's kit, pedalling

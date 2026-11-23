@@ -464,6 +464,14 @@ float ARidePawn::TrackLength() const { return Track ? Track->Length() : 0.f; }
 void ARidePawn::Tick(float Dt)
 {
 	Super::Tick(Dt);
+	if (GrassWarmupFrames < 2)
+	{
+		++GrassWarmupFrames;
+		if (GrassWarmupFrames == 2)
+		{
+			UseGrassReach();
+		}
+	}
 	TurnKitPreview(Dt);
 	ReadKeys();
 	static IConsoleVariable* ViewScale = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ViewDistanceScale"));
@@ -667,11 +675,19 @@ void ARidePawn::UseSettings()
 		const float AppliedFov = CurrentView == ERideView::Steady ? BaseFov : FMath::Clamp(BaseFov + FovBoost, 30.f, 120.f);
 		Camera->SetFieldOfView(AppliedFov);
 	}
+	if (GrassWarmupFrames < 2)
+	{
+		return; // hold frame-0 grass.CullDistanceScale=0.01 until camera registers in LastFrameCameras
+	}
 	UseGrassReach();
 }
 
 void ARidePawn::UseGrassReach()
 {
+	if (GrassWarmupFrames < 2)
+	{
+		return; // keep frame-0 grass.CullDistanceScale=0.01 until camera registers in LastFrameCameras
+	}
 	// The lower view-distance qualities (r.ViewDistanceScale 0.4 on Low) pull every instance's cull
 	// in, grass too, but the grass material's fade still shrinks it towards its full reach: so on Low
 	// it vanished at full size, a hard edge close to the bike. Undo that scale for the grass, so its
@@ -687,7 +703,7 @@ void ARidePawn::UseGrassReach()
 	// reaches further there.
 	const float Share = Profile.Grass / 100.f * GrassStandard * (View() == ERideView::Chase ? ChaseGrassReach : 1.f);
 	GrassViewScale = FMath::Max(ViewScale->GetFloat(), 0.1f);
-	Reach->Set(Share / GrassViewScale, ECVF_SetByCode);
+	Reach->Set(FMath::Min(Share / GrassViewScale, 2.2f), ECVF_SetByCode);
 	// The blades shrink away over the last stretch before their cull, and the ground takes their
 	// colour from there (MPC_Grass "Reach", oc_climb.py): both move with the cull. Before 14 Nov
 	// the fade was fixed, so a reach over 100% only culled blades that had already shrunk away.
