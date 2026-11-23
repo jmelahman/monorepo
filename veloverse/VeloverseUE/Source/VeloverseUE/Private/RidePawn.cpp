@@ -235,6 +235,21 @@ ARidePawn::ARidePawn()
 	Bike->SetUsingAbsoluteRotation(true);
 	Bike->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Bike->SetMobility(EComponentMobility::Movable);
+
+	// Create BikeScreen as a default subobject so UE5's cooker always packages UWidgetComponent's
+	// Widget3DPassThrough_Opaque material into standalone builds.
+	BikeScreen = CreateDefaultSubobject<UWidgetComponent>(TEXT("BikeScreen"));
+	BikeScreen->SetupAttachment(Bike);
+	BikeScreen->SetWidgetSpace(EWidgetSpace::World);
+	BikeScreen->SetDrawSize(FVector2D(200.f, 280.f));
+	BikeScreen->SetBlendMode(EWidgetBlendMode::Opaque);
+	BikeScreen->SetTwoSided(true);
+	BikeScreen->SetTickMode(ETickMode::Enabled);
+	BikeScreen->SetManuallyRedraw(false);
+	BikeScreen->SetRedrawTime(0.1f);
+	BikeScreen->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	BikeScreen->SetCastShadow(false);
+	BikeScreen->SetVisibility(false);
 	Bike->SetVisibility(false);
 	// The bars sit under and ahead of the eyes, turning with the head.
 	Cockpit = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Cockpit"));
@@ -1654,26 +1669,14 @@ void ARidePawn::MakeBikeParts()
 		BikeParts.Add(C);
 	}
 	Bike->SetStaticMesh(nullptr);
-	// World-space live GPS telemetry screen mounted flush on SM_Bike_Computer (GPS_SCREEN in bike-frame cm).
-	if (BikeParts.IsValidIndex(BikeComputer) && BikeParts[BikeComputer])
+	// Mount the constructor-created BikeScreen flush onto SM_Bike_Computer (GPS_SCREEN in bike-frame cm).
+	if (BikeScreen && BikeParts.IsValidIndex(BikeComputer) && BikeParts[BikeComputer])
 	{
-		BikeScreen = NewObject<UWidgetComponent>(this, TEXT("BikeScreen"));
-		BikeScreen->SetupAttachment(BikeParts[BikeComputer]);
-		BikeScreen->SetWidgetSpace(EWidgetSpace::World);
-		BikeScreen->SetDrawSize(FVector2D(200.f, 280.f));
+		BikeScreen->AttachToComponent(BikeParts[BikeComputer], FAttachmentTransformRules::KeepRelativeTransform);
 		BikeScreen->SetRelativeLocation(FVector(55.90f, 0.f, 90.12f));
 		BikeScreen->SetRelativeRotation(
 			FRotationMatrix::MakeFromXZ(FVector(-0.32557f, 0.f, 0.94552f), FVector(0.94552f, 0.f, 0.32557f)).Rotator());
 		BikeScreen->SetRelativeScale3D(FVector(0.0195f));
-		BikeScreen->SetBlendMode(EWidgetBlendMode::Opaque);
-		BikeScreen->SetTwoSided(true);
-		BikeScreen->SetTickMode(ETickMode::Enabled);
-		BikeScreen->SetManuallyRedraw(false);
-		BikeScreen->SetRedrawTime(0.1f);
-		BikeScreen->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		BikeScreen->SetCastShadow(false);
-		BikeScreen->SetVisibility(false);
-		BikeScreen->RegisterComponent();
 		BikeScreen->SetSlateWidget(SNew(SBikeComputerWidget).Pawn(this));
 		BikeScreen->RequestRedraw();
 	}
