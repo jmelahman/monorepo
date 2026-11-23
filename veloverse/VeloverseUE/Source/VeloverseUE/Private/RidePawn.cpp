@@ -1913,7 +1913,7 @@ void ARidePawn::MakeKitPreview()
 		Floor->RegisterComponent();
 		if (UMaterialInstanceDynamic* Mid = Floor->CreateAndSetMaterialInstanceDynamic(0))
 		{
-			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.09f, 0.09f, 0.095f));
+			Mid->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.004f, 0.004f, 0.005f));
 		}
 		StudioCapture->ShowOnlyComponent(Floor);
 	}
@@ -1946,7 +1946,7 @@ void ARidePawn::MakeKitPreview()
 	};
 	Light(Spot(TEXT("StudioKey"), 20.f, 40.f), FVector(-260.f, -300.f, 330.f), 45.f, FLinearColor(1.f, 0.95f, 0.88f), true);
 	Light(Spot(TEXT("StudioRim"), 20.f, 40.f), FVector(240.f, 300.f, 270.f), 70.f, FLinearColor(0.82f, 0.9f, 1.f), false);
-	Light(Spot(TEXT("StudioPool"), 18.f, 46.f), FVector(0.f, 0.f, 430.f), 40.f, FLinearColor(1.f, 0.97f, 0.93f), true);
+	Light(Spot(TEXT("StudioPool"), 18.f, 46.f), FVector(0.f, 0.f, 430.f), 14.f, FLinearColor(1.f, 0.97f, 0.93f), true);
 	UPointLightComponent* Fill = NewObject<UPointLightComponent>(this, TEXT("StudioFill"));
 	Fill->SetSourceRadius(60.f);
 	Light(Fill, FVector(300.f, -360.f, 110.f), 26.f, FLinearColor(0.95f, 0.96f, 1.f), false);

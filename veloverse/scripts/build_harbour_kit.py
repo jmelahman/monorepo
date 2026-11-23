@@ -1863,12 +1863,12 @@ def build_road_mark_bike():
     b.box("white", (bx + 0.28, -0.04, z), (0.065, 0.54, t))
     b.box("white", (bx + 0.17, 0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, -34.0))
     b.box("white", (bx + 0.17, -0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, 34.0))
-    b.box("white", (bx + 0.40, 0.36, z), (0.24, 0.065, t))  # handlebars
+    b.box("white", (bx + 0.42, 0.34, z), (0.065, 0.22, t))  # handlebars
     b.box("white", (bx + 0.36, -0.32, z), (0.075, 0.22, t))  # saddle
     # Bold forward directional arrow ahead of the bicycle (+X along travel)
-    b.box("white", (0.85, 0.0, z), (0.85, 0.16, t))
-    b.box("white", (1.32, 0.22, z), (0.58, 0.14, t), rot=(0.0, 0.0, -40.0))
-    b.box("white", (1.32, -0.22, z), (0.58, 0.14, t), rot=(0.0, 0.0, 40.0))
+    b.box("white", (0.88, 0.0, z), (0.86, 0.16, t))
+    b.box("white", (1.28, 0.19, z), (0.56, 0.14, t), rot=(0.0, 0.0, -42.0))
+    b.box("white", (1.28, -0.19, z), (0.56, 0.14, t), rot=(0.0, 0.0, 42.0))
     return b
 
 
