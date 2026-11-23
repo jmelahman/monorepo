@@ -421,7 +421,8 @@ main > .view-title {
   box-shadow: none;
 }
 
-.tile.made:hover .mix-art {
+.tile.made:hover .mix-art,
+.tile-box:hover .tile.made .mix-art {
   transform: translateY(-2px);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 10px 24px rgb(0 0 0 / 0.4);
 }
