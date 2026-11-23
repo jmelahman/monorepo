@@ -1986,29 +1986,18 @@ void ARidePawn::StudioLook(int32 Variant)
 	Show.SetCloud(false);
 	Show.SetMotionBlur(false);
 	Show.SetBloom(false);
-	// Fixed manual studio exposure (immune to the world's PostProcessVolume and pure-black
-	// backdrop histogram drift) with bloom disabled so the rider never glows.
-	static const float Lifts[] = {0.8f, 0.0f, 0.4f, 1.2f};
+	Show.SetEyeAdaptation(false);
+	// Fixed studio exposure with Eye Adaptation and Bloom disabled so neither the pure-black
+	// backdrop nor the world's PostProcessVolume can shift brightness or make the rider glow.
+	static const float Lifts[] = {1.8f, 1.0f, 1.4f, 2.2f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
 	Look.VignetteIntensity = 0.f;
 	Look.bOverride_BloomIntensity = true;
 	Look.BloomIntensity = 0.f;
-	Look.bOverride_AutoExposureMethod = true;
-	Look.AutoExposureMethod = AEM_Histogram;
-	Look.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
-	Look.AutoExposureApplyPhysicalCameraExposure = false;
-	Look.bOverride_AutoExposureMinBrightness = true;
-	Look.bOverride_AutoExposureMaxBrightness = true;
-	Look.AutoExposureMinBrightness = 0.0f;
-	Look.AutoExposureMaxBrightness = 0.0f;
 	Look.bOverride_AutoExposureBias = true;
 	Look.AutoExposureBias = Lifts[FMath::Clamp(Variant, 0, 3)];
-	Look.bOverride_AutoExposureSpeedUp = true;
-	Look.AutoExposureSpeedUp = 20.f;
-	Look.bOverride_AutoExposureSpeedDown = true;
-	Look.AutoExposureSpeedDown = 20.f;
 }
 
 void ARidePawn::TurnKitPreview(float Dt)
