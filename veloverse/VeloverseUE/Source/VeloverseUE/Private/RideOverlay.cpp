@@ -769,6 +769,21 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	{
 		PaintDock(P, Dock, Accent);
 	}
+	// ---- Route-switch streaming curtain: hides grass/Nanite pop-in while the new route settles ----
+	if (Pawn->RouteLoadTimer > 0.f)
+	{
+		const float Alpha = FMath::Clamp(Pawn->RouteLoadTimer / 0.65f, 0.f, 1.f);
+		const float Progress = 1.f - FMath::Clamp(Pawn->RouteLoadTimer / ARidePawn::RouteLoadDuration, 0.f, 1.f);
+		P.Rect(0.f, 0.f, W, H, Hex(0x0B0E0D, 0.96f * Alpha));
+		const FString Title = Pawn->RouteLoadTitle.IsEmpty() ? FString(TEXT("Loading route")) : Pawn->RouteLoadTitle;
+		P.Text(W * 0.5f, H * 0.45f, Title, P.Serif(38.f), WithAlpha(Ink, Alpha), EAlign::Centre);
+		P.Text(W * 0.5f, H * 0.45f + 34.f, TEXT("Streaming terrain & foliage..."), P.Font("Medium", 15.f),
+		       WithAlpha(Dim, Alpha), EAlign::Centre);
+		const float BarW = 280.f, BarH = 5.f;
+		const float BarX = (W - BarW) * 0.5f, BarY = H * 0.45f + 58.f;
+		P.Round(BarX, BarY, BarW, BarH, 3.f, Hex(0xF4F1EA, 0.14f * Alpha));
+		P.Round(BarX, BarY, BarW * FMath::Clamp(Progress, 0.06f, 1.f), BarH, 3.f, WithAlpha(Accent, Alpha));
+	}
 	return P.Layer;
 }
 
@@ -864,6 +879,8 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 	P.Border(L.Panel.X, L.Panel.Y, L.Panel.W, L.Panel.H, 16.f, Hex(0xF4F1EA, 0.12f * A));
 	const TArray<ERideView> Views = Pawn->Views();
 	const TCHAR* ViewNames[] = {TEXT("Eyes"), TEXT("Over the bars"), TEXT("Behind"), TEXT("Dolly")};
+	const TCHAR* MotionNames[] = {TEXT("Off"), TEXT("Low"), TEXT("Medium"), TEXT("High")};
+	const int32 MotionLvl = Pawn->Profile.MotionLevel();
 	struct FButton
 	{
 		const TCHAR* Icon;
@@ -873,6 +890,7 @@ void URideOverlay::PaintDock(const FPainter& P, const Veloverse::FDockLayout& L,
 	};
 	const FButton Buttons[Veloverse::DockCount] = {
 		{Icons::Eye, FString::Printf(TEXT("View: %s"), ViewNames[static_cast<int32>(Pawn->View())]), TEXT("V"), false, Views.Num() < 2},
+		{Icons::Bike, FString::Printf(TEXT("Motion: %s"), MotionNames[MotionLvl]), TEXT("M"), MotionLvl > 0, false},
 		{Icons::Pulse, TEXT("Graphs"), TEXT("G"), Pawn->Profile.bGraphs, false},
 		{Icons::Hud, TEXT("HUD"), TEXT("H"), Pawn->Profile.bHud, false},
 		{Icons::Route, TEXT("Change route"), TEXT("R"), false, false},

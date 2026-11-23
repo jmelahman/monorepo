@@ -155,6 +155,12 @@ public:
 	bool bPaused = false;
 	bool bFinished = false;
 	bool bStarted = false; // off the start screen
+	// Brief streaming curtain after switching routes so grass and Nanite meshes settle cleanly.
+	float RouteLoadTimer = 0.f;
+	static constexpr float RouteLoadDuration = 2.4f;
+	FString RouteLoadTitle;
+	float CurrentRain = 0.f;
+	float CurrentWet = 0.f;
 	// The start screen's view: a spot in Greenwood's woods, whatever the route. False if no route
 	// reaches Greenwood, and the rider's own start serves.
 	bool Backdrop(const URideTrack*& On, double& At) const;
@@ -256,6 +262,7 @@ private:
 	// but Steady; tests and stills ride steady unless they start with -RideSway.
 	bool bSway = false;
 	float Crank = 0.f;
+	float SmoothCadence = 0.f; // eased RPM driving both leg/crank animation and freehub/drivetrain audio
 	float Sway = 0.f;
 	float RockAmp = 0.f; // torque- and grade-driven pedal rock amplitude, degrees, eased
 	float Lean = 0.f; // physical bike cornering lean, degrees, eased

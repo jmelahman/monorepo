@@ -215,6 +215,18 @@ FRideProfile FRideProfile::Load()
 		O->TryGetBoolField(TEXT("hud"), Profile.bHud);
 		O->TryGetBoolField(TEXT("graphs"), Profile.bGraphs);
 		O->TryGetBoolField(TEXT("fps"), Profile.bFps);
+		if (O->TryGetNumberField(TEXT("master_vol"), Value))
+		{
+			Profile.MasterVolume = FMath::Clamp(static_cast<float>(Value), 0.f, 100.f);
+		}
+		if (O->TryGetNumberField(TEXT("bike_vol"), Value))
+		{
+			Profile.BikeVolume = FMath::Clamp(static_cast<float>(Value), 0.f, 100.f);
+		}
+		if (O->TryGetNumberField(TEXT("ambience_vol"), Value))
+		{
+			Profile.AmbienceVolume = FMath::Clamp(static_cast<float>(Value), 0.f, 100.f);
+		}
 		const TSharedPtr<FJsonObject>* Kit = nullptr;
 		if (O->TryGetObjectField(TEXT("kit"), Kit) && Kit)
 		{
@@ -254,6 +266,9 @@ void FRideProfile::Save() const
 	O->SetBoolField(TEXT("hud"), bHud);
 	O->SetBoolField(TEXT("graphs"), bGraphs);
 	O->SetBoolField(TEXT("fps"), bFps);
+	O->SetNumberField(TEXT("master_vol"), MasterVolume);
+	O->SetNumberField(TEXT("bike_vol"), BikeVolume);
+	O->SetNumberField(TEXT("ambience_vol"), AmbienceVolume);
 	TSharedRef<FJsonObject> KitO = MakeShared<FJsonObject>();
 	for (int32 I = 0; I < Veloverse::Kit::Parts; ++I)
 	{

@@ -12,6 +12,7 @@ namespace Veloverse
 enum class EDock : int
 {
 	View,   // V: through the rider's eyes, over the bars, or behind (the ones the bike's assets allow)
+	Motion, // M: camera & bike motion level (Off, Low, Medium, High)
 	Graphs, // G: power and heart rate across the foot of the screen
 	Hud,    // H: the panels on or off
 	Route,  // R: ride on along another route

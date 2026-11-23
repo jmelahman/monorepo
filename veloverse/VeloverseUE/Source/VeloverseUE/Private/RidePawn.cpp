@@ -398,6 +398,11 @@ void ARidePawn::UseRoute(int32 Index)
 	}
 	Track = Routes[Index];
 	ChosenRoute = Track->Title;
+	if (!Automated())
+	{
+		RouteLoadTimer = RouteLoadDuration;
+		RouteLoadTitle = Track->Title;
+	}
 	if (bStarted || !bStartGiven)
 	{
 		StartMetres = DefaultStart();
@@ -1120,10 +1125,31 @@ void ARidePawn::Place()
 	float SteerWeave = 0.f;
 	if (Dt > 0.f)
 	{
-		// Pedalling: the head rises and falls twice a turn of the crank, rocks once, and turns a
-		// little. Stopped (paused, or at the start) it settles to nothing.
+		// Pedalling: match actual trainer cadence smoothly (tau = 0.25s), coasting legs to a stop
+		// when watts/cadence drop to zero; on keyboard/sim without a cadence sensor, estimate a
+		// realistic cadence from watts and grade rather than a fixed 85 RPM.
 		const bool bMoving = bMoves && !bPaused && !bFinished && Speed > 0.3f;
-		const float Rpm = Reading.CadenceRpm > 20.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f;
+		float TargetRpm = 0.f;
+		if (bMoving)
+		{
+			if (Reading.CadenceRpm > 1.0)
+			{
+				TargetRpm = FMath::Clamp(static_cast<float>(Reading.CadenceRpm), 0.f, 140.f);
+			}
+			else if (Reading.Watts >= 10.0)
+			{
+				const float EffortRpm = FMath::GetMappedRangeValueClamped(
+				    FVector2f(80.f, 360.f), FVector2f(72.f, 96.f), static_cast<float>(Reading.Watts));
+				const float ClimbDrop = FMath::GetMappedRangeValueClamped(FVector2f(0.03f, 0.11f), FVector2f(0.f, 14.f), Grade);
+				TargetRpm = FMath::Clamp(EffortRpm - ClimbDrop, 55.f, 105.f);
+			}
+		}
+		SmoothCadence = FMath::Lerp(SmoothCadence, TargetRpm, 1.f - FMath::Exp(-Dt / 0.25f));
+		if (SmoothCadence < 1.f && TargetRpm == 0.f)
+		{
+			SmoothCadence = 0.f;
+		}
+		const float Rpm = SmoothCadence;
 		if (!Audio)
 		{
 			Audio = NewObject<URideAudio>(this);
@@ -1147,9 +1173,7 @@ void ARidePawn::Place()
 			FRideAudioState AState;
 			AState.Speed = Speed;
 			AState.Watts = static_cast<float>(Reading.Watts);
-			// Coasting when watts drop near 0 or trainer cadence reports < 10 RPM
-			AState.Cadence = (Reading.Watts < 10.0) ? 0.f
-			                 : (Reading.CadenceRpm > 1.0 ? static_cast<float>(Reading.CadenceRpm) : 85.f);
+			AState.Cadence = SmoothCadence;
 			AState.AltitudeM = GetActorLocation().Z / 100.f;
 			AState.bOffRoad = StretchName.Contains(TEXT("Vael")) || StretchName.Contains(TEXT("Moor")) ||
 			                  StretchName.Contains(TEXT("Sands"));
@@ -1158,9 +1182,18 @@ void ARidePawn::Place()
 			AState.bParkOrForest = StretchName.Contains(TEXT("Greenwood")) || StretchName.Contains(TEXT("Harbour")) ||
 			                       StretchName.Contains(TEXT("Coast"));
 			AState.bActive = bStarted && !bPaused && !bFinished;
+			AState.MasterGain = Profile.MasterVolume / 100.f;
+			AState.BikeGain = Profile.BikeVolume / 100.f;
+			AState.AmbienceGain = Profile.AmbienceVolume / 100.f;
+			AState.Rain = CurrentRain;
+			AState.Wet = CurrentWet;
 			Audio->Update(Dt, AState);
 		}
-		if (bMoving)
+		if (RouteLoadTimer > 0.f)
+		{
+			RouteLoadTimer = FMath::Max(0.f, RouteLoadTimer - Dt);
+		}
+		if (bMoving && Rpm > 1.f)
 		{
 			Crank = FMath::Fmod(Crank + 2.f * PI * Rpm / 60.f * Dt, 2.f * PI * 100.f);
 		}
@@ -1959,6 +1992,10 @@ void ARidePawn::PressDock(Veloverse::EDock Button)
 	switch (Button)
 	{
 	case EDock::View: CycleView(); break;
+	case EDock::Motion:
+		Profile.SetMotionLevel((Profile.MotionLevel() + 1) % 4);
+		Profile.Save();
+		break;
 	case EDock::Graphs:
 		Profile.bGraphs = !Profile.bGraphs;
 		Profile.Save();
@@ -2002,8 +2039,8 @@ void ARidePawn::Docking(APlayerController& Player)
 		SetFreeLook(!bFreeLook);
 		return;
 	}
-	const TPair<FKey, EDock> Keys[] = {{EKeys::V, EDock::View}, {EKeys::G, EDock::Graphs}, {EKeys::H, EDock::Hud},
-		{EKeys::R, EDock::Route}};
+	const TPair<FKey, EDock> Keys[] = {{EKeys::V, EDock::View}, {EKeys::M, EDock::Motion}, {EKeys::G, EDock::Graphs},
+		{EKeys::H, EDock::Hud}, {EKeys::R, EDock::Route}};
 	for (const TPair<FKey, EDock>& Key : Keys)
 	{
 		if (Player.WasInputKeyJustPressed(Key.Key))
@@ -2179,6 +2216,8 @@ void ARidePawn::ApplyWeather()
 			Values->SetScalarParameterValue(TEXT("Wet"), W.Wet);
 		}
 	}
+	CurrentRain = W.Rain;
+	CurrentWet = W.Wet;
 	// The shells cost a translucent pass over the whole screen: draw them only while it rains.
 	Rain->SetVisibility(W.Rain > 0.001f);
 	const float Cloud = FMath::Clamp(1.f - W.Lux / 70000.f, 0.f, 1.f);

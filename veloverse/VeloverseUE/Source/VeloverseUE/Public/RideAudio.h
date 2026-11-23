@@ -19,6 +19,11 @@ struct FRideAudioState
 	bool bCoastal = false;
 	bool bParkOrForest = false;
 	bool bActive = false;   // false while paused or on start menu
+	float MasterGain = 0.85f;
+	float BikeGain = 1.f;
+	float AmbienceGain = 1.f;
+	float Rain = 0.f;       // 0..1 active rainfall intensity
+	float Wet = 0.f;        // 0..1 wet road surface (tire spray hiss)
 };
 
 UCLASS()
@@ -47,19 +52,24 @@ private:
 	float SmoothSurf = 0.f;
 	float SmoothBirds = 0.f;
 	float SmoothOffRoad = 0.f;
+	float SmoothRain = 0.f;
+	float SmoothWet = 0.f;
 
 	// Deterministic fast PRNG & stereo pink-noise filter states
 	uint32 Rng = 0x5A17C391u;
 	float PinkL[7] = {};
 	float PinkR[7] = {};
 
-	// 2-pole SVF states (wind L/R, tire, surf L/R, gravel)
+	// 2-pole SVF states (wind L/R, tire, surf L/R, gravel, rain L/R)
 	float WindLpL = 0.f, WindBpL = 0.f;
 	float WindLpR = 0.f, WindBpR = 0.f;
 	float TireLp = 0.f, TireBp = 0.f;
 	float SurfLpL = 0.f, SurfLpR = 0.f;
 	float FoamBpL = 0.f, FoamBpR = 0.f;
 	float GravelBp = 0.f;
+	float RainLpL = 0.f, RainBpL = 0.f;
+	float RainLpR = 0.f, RainBpR = 0.f;
+	float DropL = 0.f, DropR = 0.f;
 
 	// Freehub ratchet, drivetrain, surf swells, and birdsong oscillators
 	double TimeSec = 0.0;

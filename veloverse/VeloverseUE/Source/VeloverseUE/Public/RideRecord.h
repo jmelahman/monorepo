@@ -28,12 +28,31 @@ struct FRideProfile
 	int32 TimeOfDay = 0;       // 0 the route's own, 1 morning, 2 midday, 3 evening
 	float Grass = 100.f;       // how far the grass reaches, % of GrassStandard (RidePawn.cpp)
 	float LookSpeed = 100.f;   // how fast the mouse turns the view, % of 0.12 degrees per count
-	float HeadSway = 100.f;    // how much the head moves with the pedalling and the road, %
-	float BikeSway = 100.f;    // how much the bike rolls with the pedalling and into bends, % (100: 80% of before 15 Nov)
+	float HeadSway = 65.f;     // how much the head moves with the pedalling and the road, %
+	float BikeSway = 100.f;    // how much the bike rolls with the pedalling and into bends, %
+	// 4-step curated motion level: 0 Off, 1 Low, 2 Medium (default), 3 High.
+	int32 MotionLevel() const
+	{
+		if (BikeSway < 5.f && HeadSway < 5.f) return 0;
+		if (BikeSway < 75.f) return 1;
+		if (BikeSway < 125.f) return 2;
+		return 3;
+	}
+	void SetMotionLevel(int32 Level)
+	{
+		static constexpr float BikeVals[4] = {0.f, 45.f, 100.f, 150.f};
+		static constexpr float HeadVals[4] = {0.f, 25.f, 65.f, 110.f};
+		const int32 I = FMath::Clamp(Level, 0, 3);
+		BikeSway = BikeVals[I];
+		HeadSway = HeadVals[I];
+	}
 	int32 View = 0;            // ERideView: the eyes, over the bars, behind, or steady
 	bool bHud = true;          // the ride's panels shown (the dock's H)
 	bool bGraphs = false;      // power and heart rate across the foot of the screen (G)
 	bool bFps = false;         // the frame rate in the ride's bottom-right corner (Graphics)
+	float MasterVolume = 85.f;   // 0..100% overall audio volume
+	float BikeVolume = 100.f;    // 0..100% wind, tires, freehub & drivetrain
+	float AmbienceVolume = 100.f;// 0..100% coastal surf & park/forest birdsong
 	// The rider's look (RiderKit.h): a swatch per part, -1 for the rider's own colour (Settings > Kit).
 	int32 Kit[Veloverse::Kit::Parts] = {-1, -1, -1, -1, -1, -1, -1, -1};
 

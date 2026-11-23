@@ -790,8 +790,8 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 	// The tabs.
 	C.Panel(64.f, 150.f, 320.f, 866.f);
 	constexpr int32 Tabs = static_cast<int32>(ERideSettingsTab::Count);
-	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Rider"), TEXT("Kit")};
-	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Sliders, Icons::Globe, Icons::Bike, Icons::Rider, Icons::Kit};
+	const TCHAR* Names[Tabs] = {TEXT("Graphics"), TEXT("Detail"), TEXT("World"), TEXT("Ride"), TEXT("Sounds"), TEXT("Rider"), TEXT("Kit")};
+	const TCHAR* TabIcons[Tabs] = {Icons::Screen, Icons::Sliders, Icons::Globe, Icons::Bike, Icons::Signal, Icons::Rider, Icons::Kit};
 	const FLinearColor TabInk = FMath::Lerp(C.Accent, FLinearColor::White, 0.45f);
 	for (int32 I = 0; I < Tabs; ++I)
 	{
@@ -990,6 +990,17 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		Slide(TEXT("look"), Row(TEXT("Look speed"), TEXT("How fast the mouse turns your head")),
 		      &FRideProfile::LookSpeed, 25.f, 400.f, 25.f, TEXT("%"));
 	}
+	else if (Tab == ERideSettingsTab::Sounds && Pawn)
+	{
+		Slide(TEXT("mastervol"), Row(TEXT("Master volume"), TEXT("Overall sound level for the ride")),
+		      &FRideProfile::MasterVolume, 0.f, 100.f, 5.f, TEXT("%"));
+		Slide(TEXT("bikevol"),
+		      Row(TEXT("Bike & wind"), TEXT("Wind rush, tire hum, freehub coasting ratchet and chain")),
+		      &FRideProfile::BikeVolume, 0.f, 100.f, 5.f, TEXT("%"));
+		Slide(TEXT("ambvol"),
+		      Row(TEXT("Nature ambience"), TEXT("Rain, coastal ocean surf and park or forest birdsong")),
+		      &FRideProfile::AmbienceVolume, 0.f, 100.f, 5.f, TEXT("%"));
+	}
 	else if (Tab == ERideSettingsTab::Rider && Pawn)
 	{
 		if (bWelcome || !FRideProfile::Saved())
@@ -1011,7 +1022,7 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			const TCHAR* Unit;
 			bool bMass; // kilograms, shown and stepped in pounds under imperial
 		};
-		static const FSlide Slides[6] = {
+		static const FSlide Slides[] = {
 			{TEXT("ftp"), TEXT("FTP"), TEXT("The power you can hold for an hour"), 100.f, 450.f, 5.f, &FRideProfile::Ftp,
 			 false, TEXT("W"), false},
 			{TEXT("weight"), TEXT("Weight"), TEXT("Yours: it sets how hard the climbs are"), 40.f, 150.f, 0.5f,
@@ -1020,10 +1031,6 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			 true, TEXT("kg"), true},
 			{TEXT("maxhr"), TEXT("Max heart rate"), TEXT("Sets the heart-rate zones"), 150.f, 215.f, 1.f, nullptr,
 			 false, TEXT("bpm"), false},
-			{TEXT("sway"), TEXT("Head sway"), TEXT("How much your head moves as you pedal and over the road"), 0.f, 200.f,
-			 10.f, &FRideProfile::HeadSway, false, TEXT("%"), false},
-			{TEXT("bikesway"), TEXT("Bike sway"), TEXT("How much the bike rocks and leans, seen from behind"), 0.f,
-			 200.f, 10.f, &FRideProfile::BikeSway, false, TEXT("%"), false},
 		};
 		for (const FSlide& S : Slides)
 		{
@@ -1057,6 +1064,9 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 			         [Write, Sp, Value, bPounds](int32 By)
 			         { Write(bPounds ? static_cast<float>(U::Kilos(U::Mass(Value) + By)) : Value + By * Sp->Step); });
 		}
+		Choice(TEXT("motion"), Row(TEXT("Motion"), TEXT("How much the bike and camera move as you pedal and lean")),
+		       {TEXT("Off"), TEXT("Low"), TEXT("Medium"), TEXT("High")}, Pawn->Profile.MotionLevel(),
+		       [Edit](int32 I) { Edit([I](FRideProfile& Pr) { Pr.SetMotionLevel(I); }); });
 		// The HUD's colour: any of them, from the start.
 		const float Cy = Row(TEXT("HUD colour"), TEXT("The accent across the HUD and menus"));
 		const auto& Themes = Veloverse::Themes();

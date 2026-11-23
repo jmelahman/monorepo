@@ -107,8 +107,10 @@ void URideAudio::SynthesizeChunk(int32 NumFrames, TArray<int16>& OutPcm)
 	const float TargetSurf = (Cur.bActive && Cur.bCoastal)
 	                             ? FMath::Clamp(1.f - Cur.AltitudeM / 55.f, 0.15f, 1.f)
 	                             : 0.f;
-	const float TargetBirds = (Cur.bActive && Cur.bParkOrForest)
-	                              ? FMath::Clamp(1.f - (TargetSpeed - 6.f) / 10.f, 0.15f, 1.f)
+	const float TargetRain = Cur.bActive ? FMath::Clamp(Cur.Rain, 0.f, 1.f) : 0.f;
+	const float TargetWet = Cur.bActive ? FMath::Clamp(Cur.Wet, 0.f, 1.f) : 0.f;
+	const float TargetBirds = (Cur.bActive && Cur.bParkOrForest && TargetRain < 0.25f)
+	                              ? FMath::Clamp(1.f - (TargetSpeed - 6.f) / 10.f, 0.15f, 1.f) * (1.f - TargetRain * 3.f)
 	                              : 0.f;
 	const float TargetOffRoad = Cur.bOffRoad ? 1.f : 0.f;
 
@@ -124,6 +126,8 @@ void URideAudio::SynthesizeChunk(int32 NumFrames, TArray<int16>& OutPcm)
 		SmoothSurf += (TargetSurf - SmoothSurf) * SlowSlew;
 		SmoothBirds += (TargetBirds - SmoothBirds) * SlowSlew;
 		SmoothOffRoad += (TargetOffRoad - SmoothOffRoad) * SlowSlew;
+		SmoothRain += (TargetRain - SmoothRain) * SlowSlew;
+		SmoothWet += (TargetWet - SmoothWet) * SlowSlew;
 		SmoothWind += (TargetActive - SmoothWind) * SlowSlew;
 
 		const float PL = NextPink(PinkL[0], PinkL[1], PinkL[2], PinkL[3], PinkL[4], PinkL[5], PinkL[6]);
@@ -244,11 +248,44 @@ void URideAudio::SynthesizeChunk(int32 NumFrames, TArray<int16>& OutPcm)
 			}
 		}
 
-		// Master stereo mix with gentle soft-clip saturation
-		const float MixL = WindBpL * WindGain + TireLp * TireGain + GravelSample + FreehubSample +
-		                   ChainSample + SurfL + BirdL;
-		const float MixR = WindBpR * WindGain + TireLp * TireGain + GravelSample + FreehubSample +
-		                   ChainSample + SurfR + BirdR;
+		// 7. Stereo Rain Wash + Raindrop Patters + Wet-Road Tire Spray
+		float RainL = 0.f, RainR = 0.f;
+		float SpraySample = 0.f;
+		if (SmoothRain > 0.005f || SmoothWet > 0.01f)
+		{
+			const float Wl = NextRand();
+			const float Wr = NextRand();
+			const float RainF = 0.24f; // ~1.7 kHz soft rainfall hiss band
+			RainBpL += RainF * (Wl - RainLpL - 0.75f * RainBpL);
+			RainLpL += RainF * RainBpL;
+			RainBpR += RainF * (Wr - RainLpR - 0.75f * RainBpR);
+			RainLpR += RainF * RainBpR;
+			if (SmoothRain > 0.005f)
+			{
+				const float DropProb = 0.9988f - 0.0022f * SmoothRain;
+				if (NextRand() > DropProb) DropL = 0.6f + 0.4f * NextRand();
+				if (NextRand() > DropProb) DropR = 0.6f + 0.4f * NextRand();
+				DropL *= 0.94f;
+				DropR *= 0.94f;
+				RainL = (RainBpL * 0.14f + DropL * 0.11f * Wl) * SmoothRain;
+				RainR = (RainBpR * 0.14f + DropR * 0.11f * Wr) * SmoothRain;
+			}
+			if (SmoothWet > 0.01f && SmoothSpeed > 1.5f)
+			{
+				SpraySample = 0.5f * (RainBpL + RainBpR) * 0.12f * SmoothWet * FMath::Clamp(SmoothSpeed / 10.f, 0.f, 1.3f);
+			}
+		}
+
+		// Master stereo mix with per-category volume gains and gentle soft-clip saturation
+		const float Master = FMath::Clamp(Cur.MasterGain, 0.f, 1.5f);
+		const float BikeMix = FMath::Clamp(Cur.BikeGain, 0.f, 1.5f);
+		const float AmbMix = FMath::Clamp(Cur.AmbienceGain, 0.f, 1.5f);
+		const float MixL = Master * (BikeMix * (WindBpL * WindGain + TireLp * TireGain + GravelSample +
+		                                        SpraySample + FreehubSample + ChainSample) +
+		                             AmbMix * (SurfL + BirdL + RainL));
+		const float MixR = Master * (BikeMix * (WindBpR * WindGain + TireLp * TireGain + GravelSample +
+		                                        SpraySample + FreehubSample + ChainSample) +
+		                             AmbMix * (SurfR + BirdR + RainR));
 		const float OutL = FMath::Tanh(MixL * 1.15f);
 		const float OutR = FMath::Tanh(MixR * 1.15f);
 

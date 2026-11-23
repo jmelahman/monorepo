@@ -38,6 +38,7 @@ enum class ERideSettingsTab : uint8
 	Detail,
 	World,
 	Ride,
+	Sounds,
 	Rider,
 	Kit,
 	Count,
