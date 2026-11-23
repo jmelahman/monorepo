@@ -3172,5 +3172,6 @@ if ('EventSource' in window) {
 }
 
 restoreSession();
+syncPlaying();
 render();
 refreshBuys();
