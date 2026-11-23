@@ -674,6 +674,7 @@ void ARidePawn::ReadCommandLine()
 	if (float Yaw = 0.f; FParse::Value(Line, TEXT("RideLookYaw="), Yaw))
 	{
 		LookYaw = FMath::Clamp(Yaw, -110.f, 110.f);
+		LookYawTarget = LookYaw;
 	}
 	// For stills of the arms over the bars: how far RiderArms tips back (degrees); below 0, no arms.
 	if (FParse::Value(Line, TEXT("RideEffort="), PinnedEffort))
@@ -952,22 +953,39 @@ void ARidePawn::MouseLook(APlayerController& Player)
 	if (!bPaused && bLooks)
 	{
 		Player.GetInputMouseDelta(Dx, Dy);
+		// Clamp synthetic SDL2/Wayland cursor-warp spikes so Free Look never jerks or snaps.
+		Dx = FMath::Clamp(Dx, -40.f, 40.f);
+		Dy = FMath::Clamp(Dy, -40.f, 40.f);
 	}
 	if (!FMath::IsNearlyZero(Dx) || !FMath::IsNearlyZero(Dy))
 	{
 		const float Turn = LookSpeed * Profile.LookSpeed / 100.f;
-		LookYaw = FMath::Clamp(LookYaw + Dx * Turn, -110.f, 110.f);
-		LookPitch = FMath::Clamp(LookPitch + Dy * Turn, -45.f, 35.f);
+		LookYawTarget = FMath::Clamp(LookYawTarget + Dx * Turn, -110.f, 110.f);
+		LookPitchTarget = FMath::Clamp(LookPitchTarget + Dy * Turn, -45.f, 35.f);
 		LookRest = 0.f;
-		return;
 	}
-	LookRest += Dt;
-	const bool bAway = FMath::Abs(LookYaw) > 45.f || FMath::Abs(LookPitch) > 25.f;
-	if (!bFreeLook && LookRest > 2.f && Dt > 0.f && !bAway)
+	else
 	{
-		const float Ease = 1.f - FMath::Exp(-Dt / 0.6f);
-		LookYaw = FMath::Lerp(LookYaw, 0.f, Ease);
-		LookPitch = FMath::Lerp(LookPitch, 0.f, Ease);
+		LookRest += Dt;
+		const bool bAway = FMath::Abs(LookYawTarget) > 45.f || FMath::Abs(LookPitchTarget) > 25.f;
+		if (!bFreeLook && LookRest > 2.f && Dt > 0.f && !bAway)
+		{
+			const float Ease = 1.f - FMath::Exp(-Dt / 0.6f);
+			LookYawTarget = FMath::Lerp(LookYawTarget, 0.f, Ease);
+			LookPitchTarget = FMath::Lerp(LookPitchTarget, 0.f, Ease);
+		}
+	}
+	// Smooth mouse look with crisp 45 ms time constant to eliminate quantized mouse-tick jitter.
+	if (Dt > 0.f)
+	{
+		const float Smooth = 1.f - FMath::Exp(-Dt / 0.045f);
+		LookYaw = FMath::Lerp(LookYaw, LookYawTarget, Smooth);
+		LookPitch = FMath::Lerp(LookPitch, LookPitchTarget, Smooth);
+	}
+	else
+	{
+		LookYaw = LookYawTarget;
+		LookPitch = LookPitchTarget;
 	}
 }
 

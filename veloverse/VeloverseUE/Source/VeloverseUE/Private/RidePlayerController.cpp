@@ -1,4 +1,5 @@
 #include "RidePlayerController.h"
+#include "Framework/Application/SlateApplication.h"
 
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -226,7 +227,13 @@ void ARidePlayerController::RideInput()
 	if (!Pawn || !Pawn->bStarted || Pawn->bFreeLook || ARidePawn::Automated())
 	{
 		SetShowMouseCursor(false);
-		SetInputMode(FInputModeGameOnly());
+		FInputModeGameOnly Mode;
+		Mode.SetConsumeCaptureMouseDown(false);
+		SetInputMode(Mode);
+		if (FSlateApplication::IsInitialized())
+		{
+			FSlateApplication::Get().SetAllUserFocusToGameViewport();
+		}
 		return;
 	}
 	// The cursor stays for the dock, and the game still reads the keys and a held button's drag.

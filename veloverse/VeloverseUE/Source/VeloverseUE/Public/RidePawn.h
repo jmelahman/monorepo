@@ -293,6 +293,8 @@ private:
 	// The mouse's look round, degrees on top of the road's view, and how long it has rested.
 	float LookYaw = 0.f;
 	float LookPitch = 0.f;
+	float LookYawTarget = 0.f;
+	float LookPitchTarget = 0.f;
 	float LookRest = 0.f;
 	static constexpr float LookSpeed = 0.12f; // degrees per mouse count, at the profile's 100%
 	void MouseLook(APlayerController& Player);
