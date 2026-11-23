@@ -1986,9 +1986,11 @@ void ARidePawn::StudioLook(int32 Variant)
 	Show.SetCloud(false);
 	Show.SetMotionBlur(false);
 	Show.SetBloom(false);
-	// Fixed histogram exposure (Min=Max=1.0 EV100, Bias=1.8) with Bloom disabled so the rider
-	// renders with crisp studio shading, zero glow, and zero white blow-out.
-	static const float Lifts[] = {1.8f, 1.2f, 1.5f, 2.2f};
+	Show.SetSkyLighting(false);
+	Show.SetGlobalIllumination(false);
+	// Fixed histogram exposure (Min=Max=1.0 EV100, Bias=2.2) with SkyLighting, GI, and Bloom
+	// disabled so the 72k-lux outdoor sky can never blow out the Kit studio preview.
+	static const float Lifts[] = {2.2f, 1.4f, 1.8f, 2.6f};
 	FPostProcessSettings& Look = StudioCapture->PostProcessSettings;
 	Look = FPostProcessSettings();
 	Look.bOverride_VignetteIntensity = true;
