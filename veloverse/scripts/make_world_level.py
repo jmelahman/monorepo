@@ -462,6 +462,10 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     # the road where it comes nearer the sea.
     beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(150, 60, inland)
     beach = np.maximum(beach, h < 0.5)
+    # Chicago Lakefront / Lincoln Park: keep the waterfront parkway lush green grass on both sides
+    # of the Lakefront Trail, leaving only a thin shoreline edge (< 12 m from water) as sand.
+    lakefront_park = w["town"] * mi.smoothstep(8.0, 16.0, inland) * (h > 0.6)
+    beach = beach * (1.0 - lakefront_park)
     desert = w["desert"]
     # The verge is only the road's own shoulder: the plants' shaders drop whatever stands on the
     # tarmac (road_distance). Until 12 Nov it reached a whole sample past the road, to keep the
@@ -475,6 +479,7 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     copse = mi.smoothstep(0.6, 0.68, n(240, 5))
     wooded = (w["forest"] + w["mountain"]) * (1 - clearing) + w["meadow"] * copse
     wooded = wooded + w["heath"] * mi.smoothstep(0.66, 0.72, n(200, 6))
+    wooded = wooded + lakefront_park * mi.smoothstep(0.54, 0.68, n(180, 9))
     wooded = np.clip(wooded, 0, 1) * (1 - alpine)
     soft = (1 - rock) * (1 - snow) * (1 - shoulder) * (1 - face)
     out = {

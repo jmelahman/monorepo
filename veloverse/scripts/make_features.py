@@ -991,6 +991,7 @@ def harbour(out, g, bio, road, rng, taken):
     has_boathouse = _copy_harbour_kit(out, "modern_boathouse", None)
     has_townhouse = _copy_harbour_kit(out, "chicago_townhouse", None)
     has_overlook = _copy_harbour_kit(out, "lakefront_overlook", None)
+    has_lsd = _copy_harbour_kit(out, "lsd_highway_seg", None)
     has_crane = _copy_harbour_kit(out, "harbour_crane", None)
     has_arch = _copy_harbour_kit(out, "stone_arch", None)
     # The bay's shore: land points within 1.6 km whose water side is the bay.
@@ -1138,11 +1139,21 @@ def harbour(out, g, bio, road, rng, taken):
                             rng.uniform(0.8, 1.2),
                         )
 
-    # Chicago Lakefront Trail & Harbourfront: keep the lake side open water, beach, and modern
-    # boardwalk overlooks; line the inland/city side with modern Chicago greystone townhouses,
-    # lakefront pavilions, benches & planters beneath the 34-tower skyline.
+    # Chicago Lakefront Trail (Lincoln Park / Lake Shore Drive cross-section):
+    # Water -> green park grass + trees/shrubs + overlooks -> Bike Path -> green park grass +
+    # trees/shrubs + benches -> 4-lane divided Lake Shore Drive highway -> Chicago greystone
+    # buildings & 34-tower skyline.
     town_houses = []
     overlooks = []
+    lsd_segs = 0
+    park_shrubs = [
+        f"{MS}/coast/bigleaf_hydrangea/SM_bigleaf_hydrangea_VarA",
+        f"{MS}/coast/bigleaf_hydrangea/SM_bigleaf_hydrangea_VarC",
+        f"{MS}/coast/bigleaf_hydrangea/SM_bigleaf_hydrangea_VarD",
+        f"{MS}/coast/boxwood_wfypfa3ha/SM_boxwood_wfypfa3ha_VarC",
+        f"{MS}/coast/boxwood_wfypfa3ha/SM_boxwood_wfypfa3ha_VarD",
+        f"{MS}/coast/boxwood_wfypfa3ha/SM_boxwood_wfypfa3ha_VarE",
+    ]
     if has_houses or has_townhouse:
         house_specs = []
         if has_townhouse:
@@ -1161,14 +1172,12 @@ def harbour(out, g, bio, road, rng, taken):
         planter = "harbour_planter" if has_planter else bench
         stone_wall = ms("coast", "mossy_stone_wall")
         # Walk along the harbour road (both out from start and wrapping near end)
-        indices = list(range(25, min(1150, len(line)), 22)) + list(
-            range(max(len(line) - 650, 1200), len(line) - 25, 26)
+        indices = list(range(25, min(1150, len(line)), 18)) + list(
+            range(max(len(line) - 650, 1200), len(line) - 25, 18)
         )
         for k in indices:
-            if len(town_houses) >= 22:
-                break
             px, py = float(line[k, 0]), float(line[k, 1])
-            if math.hypot(px - hx, py - hy) > 1300:
+            if math.hypot(px - hx, py - hy) > 1350:
                 continue
             tx = float(line[min(k + 4, len(line) - 1), 0] - line[max(k - 4, 0), 0])
             ty = float(line[min(k + 4, len(line) - 1), 1] - line[max(k - 4, 0), 1])
@@ -1179,26 +1188,76 @@ def harbour(out, g, bio, road, rng, taken):
             for side in (-1.0, 1.0):
                 probe_x, probe_y = px + nx * side * 14.0, py + ny * side * 14.0
                 is_lake_side = float(g.at(g.inland, probe_x, probe_y)) < road_in
+                # Lush Lincoln Park shrubs on BOTH sides of the bike path
+                for _ in range(2):
+                    soff = rng.uniform(5.5, 18.0 if not is_lake_side else 11.5)
+                    sx = px + nx * side * soff + rng.uniform(-5.0, 5.0)
+                    sy = py + ny * side * soff + rng.uniform(-5.0, 5.0)
+                    sz = float(g.z(sx, sy))
+                    if sz > 0.8 and float(road.dist(sx, sy)) > 4.2:
+                        out.add(
+                            "HarbourProps",
+                            park_shrubs[int(rng.integers(len(park_shrubs)))],
+                            sx,
+                            sy,
+                            sz - 0.05,
+                            rng.uniform(0, 360),
+                            float(rng.uniform(0.9, 1.45)),
+                        )
                 if is_lake_side:
-                    # Keep the lake side wide open! Only place spaced boardwalk overlooks & benches.
+                    # Keep the lake side open park grass + shrubs + spaced boardwalk overlooks
                     if (
                         has_overlook
                         and len(overlooks) < 6
                         and not any(math.hypot(px - ox, py - oy) < 180.0 for ox, oy in overlooks)
                     ):
-                        ox, oy = px + nx * side * 9.5, py + ny * side * 9.5
+                        ox, oy = px + nx * side * 11.5, py + ny * side * 11.5
                         oz = float(g.z(ox, oy))
-                        if oz > 0.6 and float(road.dist(ox, oy)) > 5.5:
+                        if oz > 0.6 and float(road.dist(ox, oy)) > 6.0:
                             oyaw = yaw0 + (0.0 if side < 0 else 180.0)
                             out.add("HarbourTown", "lakefront_overlook", ox, oy, oz - 0.1, oyaw)
                             overlooks.append((px, py))
                             taken.append((ox, oy, 7.0))
                             out.clear.append([round(ox, 1), round(oy, 1), 8.0])
                     continue
+
+                # Inland side band 1 (4.8 m): promenade bench or planter
+                bx, by = px + nx * side * 4.8, py + ny * side * 4.8
+                if road.dist(bx, by) > 3.6 and g.z(bx, by) > 1.0 and rng.random() < 0.55:
+                    prop = bench if rng.random() < 0.65 else planter
+                    out.add(
+                        "HarbourProps",
+                        prop,
+                        bx,
+                        by,
+                        float(g.z(bx, by)) - 0.04,
+                        yaw0 + (0.0 if side < 0 else 180.0),
+                    )
+
+                # Inland side band 2 (38 m): 4-lane divided Lake Shore Drive highway!
+                if has_lsd:
+                    lx, ly = px + nx * side * 38.0, py + ny * side * 38.0
+                    lz = float(g.z(lx, ly))
+                    if lz > 0.9 and float(road.dist(lx, ly)) > 26.0:
+                        out.add(
+                            "HarbourTown",
+                            "lsd_highway_seg",
+                            lx,
+                            ly,
+                            lz + 0.05,
+                            yaw0,
+                            mark=(70, 75, 85),
+                        )
+                        out.clear.append([round(lx, 1), round(ly, 1), 11.5])
+                        taken.append((lx, ly, 9.5))
+                        lsd_segs += 1
+
+                # Inland side band 3 (58-82 m, across Lake Shore Drive): Chicago buildings!
+                if len(town_houses) >= 28:
+                    continue
                 hname, hw, hd = house_specs[int(rng.integers(len(house_specs)))]
-                off = rng.uniform(14.0, 26.0)
+                off = rng.uniform(58.0, 82.0)
                 cx, cy = px + nx * side * off, py + ny * side * off
-                # House front is -Y in Blender -> +Y in UE; rotate so front faces the road
                 yaw = yaw0 + (0.0 if side < 0 else 180.0) + rng.uniform(-5.0, 5.0)
                 c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
                 corners = [
@@ -1207,9 +1266,9 @@ def harbour(out, g, bio, road, rng, taken):
                     for dy in (-hd * 0.5, hd * 0.5)
                 ]
                 zs = [float(g.z(qx, qy)) for qx, qy in corners]
-                if min(zs) < 1.2 or max(zs) - min(zs) > 2.4:
+                if min(zs) < 1.2 or max(zs) - min(zs) > 2.8:
                     continue
-                if min(float(road.dist(qx, qy)) for qx, qy in corners) < 7.5:
+                if min(float(road.dist(qx, qy)) for qx, qy in corners) < 46.0:
                     continue
                 reach = math.hypot(hw, hd) * 0.5
                 if any(
@@ -1223,19 +1282,10 @@ def harbour(out, g, bio, road, rng, taken):
                 town_houses.append((cx, cy, reach))
                 taken.append((cx, cy, reach))
                 out.clear.append([round(cx, 1), round(cy, 1), round(reach + 4.5, 1)])
-                # Promenade bench or planter between building and trail
-                bx, by = px + nx * side * 4.8, py + ny * side * 4.8
-                if road.dist(bx, by) > 3.6 and g.z(bx, by) > 1.0:
-                    prop = bench if rng.random() < 0.6 else planter
-                    out.add(
-                        "HarbourProps",
-                        prop,
-                        bx,
-                        by,
-                        float(g.z(bx, by)) - 0.04,
-                        yaw0 + (0.0 if side < 0 else 180.0),
-                        rng.uniform(0.95, 1.1),
-                    )
+        print(
+            f"lakefront: {lsd_segs} Lake Shore Drive segments, {len(town_houses)} buildings",
+            flush=True,
+        )
         # Also place stone seawall/harbour walls, waterfront warehouses, coastal houses & cargo
         # stacks along the inland quay edge behind the piers so the harbourfront reads as a port.
         quay_buildings = 0

@@ -1808,6 +1808,38 @@ def build_lighthouse():
 # ---------------------------------------------------------------------------------------------
 
 
+def build_lsd_highway_seg():
+    """Four-lane divided coastal boulevard/interstate segment (Lake Shore Drive, 20 m long x 16 m
+    wide): dark asphalt carriageways, crisp white lane markings, concrete Jersey median barrier,
+    curbs, deep slope skirt, and a central dual-arm cobra-head highway streetlight."""
+    b = KitBuilder("lsd_highway_seg")
+    length, width = 20.4, 16.0  # slight X overlap so curved segments join seamlessly
+    # Concrete roadbed & deep slope skirt so edges never float on coastal grade
+    b.box("concrete", (0.0, 0.0, -1.10), (length, width + 0.6, 2.30))
+    # Dark asphalt 4-lane roadway deck
+    b.box("slate", (0.0, 0.0, 0.09), (length + 0.02, width - 0.4, 0.14))
+    # Outer concrete curbs
+    for sy in (-1.0, 1.0):
+        b.box("concrete", (0.0, sy * (width * 0.5 + 0.05), 0.18), (length, 0.42, 0.24))
+    # Central concrete Jersey median barrier
+    b.box("concrete", (0.0, 0.0, 0.34), (length, 0.88, 0.42))
+    b.box("concrete", (0.0, 0.0, 0.72), (length, 0.46, 0.48))
+    # White solid edge lines & inner median lines
+    for ly in (-7.45, -0.88, 0.88, 7.45):
+        b.box("white", (0.0, ly, 0.165), (length, 0.14, 0.02))
+    # Dashed lane dividers separating fast/slow lanes on each carriageway
+    for ly in (-4.16, 4.16):
+        for lx in (-5.0, 5.0):
+            b.box("white", (lx, ly, 0.165), (4.2, 0.14, 0.02))
+    # Tall central dual-arm highway cobra-head streetlight pole
+    b.cyl("steel", (0.0, 0.0, 0.90), (0.0, 0.0, 9.4), 0.14, 0.08, seg=10)
+    for sy in (-1.0, 1.0):
+        b.cyl("steel", (0.0, 0.0, 9.1), (0.0, sy * 2.6, 9.55), 0.06, 0.045, seg=8)
+        b.box("steel", (0.0, sy * 2.75, 9.55), (0.36, 0.72, 0.14))
+        b.box("warm_glass", (0.0, sy * 2.75, 9.46), (0.28, 0.56, 0.06))
+    return b
+
+
 BUILDERS = {
     "harbour_house_a": build_harbour_house_a,
     "harbour_house_b": build_harbour_house_b,
@@ -1821,6 +1853,7 @@ BUILDERS = {
     "modern_boathouse": build_modern_boathouse,
     "chicago_townhouse": build_chicago_townhouse,
     "lakefront_overlook": build_lakefront_overlook,
+    "lsd_highway_seg": build_lsd_highway_seg,
     "pch_guardrail": build_pch_guardrail,
     "pch_turnout_wall": build_pch_turnout_wall,
     "pch_route_sign": build_pch_route_sign,
