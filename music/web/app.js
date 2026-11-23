@@ -659,21 +659,46 @@ function madeShelf() {
     el(
       'ul',
       { className: 'grid row-scroll' },
-      made.map((m) =>
-        el(
-          'li',
-          {},
-          el(
-            'a',
-            { className: 'tile made', href: href('mix', 'made', m.id) },
-            mixArt(m.covers.map(([artist, album]) => [album, coverUrl(artist, album)])),
-            el('span', { className: 'tile-title', textContent: m.title }),
-            el('span', { className: 'tile-sub', textContent: m.blurb })
-          )
-        )
-      )
+      made.map((m) => el('li', {}, madeTile(m)))
     )
   );
+}
+
+// madeTile links to a made mix, its cover's button playing it straight
+// away, as an album tile's does.
+function madeTile(m) {
+  const play = el(
+    'button',
+    {
+      type: 'button',
+      onclick: async () => {
+        if (playingHere(box)) return togglePlay();
+        if (!Array.isArray(madeTracks.get(m.id)?.tracks)) await loadMadeMix(m.id);
+        const got = madeTracks.get(m.id);
+        if (typeof got !== 'object' || got.tracks.length === 0) return;
+        box.paths = new Set(got.tracks.map((t) => t.path));
+        playQueue(libItems(got.tracks), 0);
+      },
+    },
+    icon('play')
+  );
+  const box = el(
+    'div',
+    { className: 'tile-box' },
+    el(
+      'a',
+      { className: 'tile made', href: href('mix', 'made', m.id) },
+      mixArt(m.covers.map(([artist, album]) => [album, coverUrl(artist, album)])),
+      el('span', { className: 'tile-title', textContent: m.title }),
+      el('span', { className: 'tile-sub', textContent: m.blurb })
+    ),
+    el('div', { className: 'art-play' }, play)
+  );
+  const got = madeTracks.get(m.id);
+  box.paths = new Set(typeof got === 'object' ? got.tracks.map((t) => t.path) : []);
+  box.label = m.title;
+  syncTile(box);
+  return box;
 }
 
 async function loadMade() {

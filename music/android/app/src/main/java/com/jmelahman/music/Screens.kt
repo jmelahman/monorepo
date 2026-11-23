@@ -344,7 +344,21 @@ private fun MadeRow(model: Model, made: List<MadeMix>) {
                     .clickable { model.openMade(m) }
                     .padding(4.dp),
             ) {
-                MixArt(m.covers.map { (artist, album) -> album to Api.coverUrl(artist, album) }, 140.dp) { Disc(140) }
+                Box {
+                    MixArt(m.covers.map { (artist, album) -> album to Api.coverUrl(artist, album) }, 140.dp) { Disc(140) }
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .clickable { model.playMade(m) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Glyph.Play, "Play ${m.title}", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
                 Text(
                     m.title,
                     Modifier.padding(top = 8.dp),

@@ -698,6 +698,14 @@ class Model(app: Application) : AndroidViewModel(app) {
         loadMade(m.id)
     }
 
+    // playMade plays a mix made for you without opening it.
+    fun playMade(m: MadeMix) {
+        viewModelScope.launch {
+            val got = runCatching { withContext(Dispatchers.IO) { Api.madeMix(m.id, mixSize) } }.getOrNull()
+            if (got.isNullOrEmpty()) notice("The mix could not be read.") else play(got, 0)
+        }
+    }
+
     private fun loadMade(id: String) {
         viewModelScope.launch {
             val got = runCatching { withContext(Dispatchers.IO) { Api.madeMix(id, mixSize) } }.getOrNull()
