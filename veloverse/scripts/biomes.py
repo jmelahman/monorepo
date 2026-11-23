@@ -282,6 +282,8 @@ PRESETS["world"] = {
         ),
         "Sand": (
             # California coastal headlands & clean sandy beaches (no yellow marram straw).
+            ("coast", "bigleaf_hydrangea", 0.35, 3500, 5500, (0.7, 1.15)),
+            ("coast", "boxwood_wfypfa3ha", 0.45, 3500, 5500, (0.7, 1.2)),
             ("coast", "nordic_beach_rocks", 0.06, 12000, 15000),
             ("coast", "eroded_pine_log", 0.02, 9000, 12000),
             ("shared", "sea_campion", 0.55, 2500, 4000),

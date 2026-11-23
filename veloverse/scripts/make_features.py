@@ -94,6 +94,8 @@ ROCKS = {
     ],
     "coast": [  # every island's shore
         (ms("coast", "nordic_beach_rock_formation"), 7.1, (0.7, 1.5), 25, 2.0, 0, 0),
+        (ms("coast", "nordic_beach_boulder_venjcjyqx"), 5.15, (0.9, 2.0), 14, 3.0, 0, 0),
+        (ms("coast", "volcanic_dolerite_cliff"), 6.9, (0.9, 1.8), 22, 1.6, 1, 0),
         (ms("coast", "nordic_beach_rocks"), 3.6, (0.8, 1.8), 12, 3.0, 0, 0),
     ],
 }
@@ -612,14 +614,22 @@ CLIFF_REACH = 1800.0  # m from the road: past it, no one sees a face's detail
 # STACK_TOP[1] m; most of them; and rocks heaped at the cliff's foot.
 # (mesh, size m, height m, scale range): heights from the FBX bounds (out/qa/probe/fbx_bounds.py),
 # as v45 sank each by a share of its length and buried the flat beach slabs it stood (13 Nov).
-STACKS = [(ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9, (2.5, 4.0))]
+STACKS = [
+    (ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9, (2.5, 4.0)),
+    (ms("coast", "granite_cliff_rivav"), 29.6, 16.7, (0.9, 1.8)),
+]
 STACK_FOOT = [
     (ms("coast", "nordic_beach_rock_formation"), 7.1, 3.0, (1.0, 2.0)),
+    (ms("coast", "nordic_beach_boulder_venjcjyqx"), 5.15, 1.9, (1.2, 2.6)),
     (ms("coast", "large_nordic_coastal_cliff"), 6.5, 2.2, (1.5, 3.0)),
 ]
-# Rock on the sea cliffs' faces: the coastal cliff scaled to the face's height, base in the
-# water, facing the sea, packed along the shore; the most of them.
-SEA_FACE = (ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9)
+# Rock on the sea cliffs' faces: coastal cliffs scaled to the face's height, base in the
+# water, facing the sea, packed along the shore; mixed granite, dolerite & coastal basalt.
+SEA_FACES = [
+    (ms("coast", "granite_cliff_rivav"), 29.6, 16.7),
+    (ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9),
+    (ms("coast", "volcanic_dolerite_cliff"), 6.9, 4.33),
+]
 SEA_FACES_MOST = 1500
 STACK_OUT = (30.0, 250.0)
 STACK_TOP = (12.0, 150.0)
@@ -773,7 +783,6 @@ def sea_faces(out, g, bio, road, rng, taken):
     over 10 m, a coastal cliff scaled to that height, its base below the waterline, facing the
     sea, each overlapping the last so they read as one wall."""
     s = 2
-    mesh, size, tall = SEA_FACE
     h = g.h[::s, ::s]
     top = ndimage.maximum_filter(h, int(2 * 40 / (g.spacing * s)) + 1)
     gy, gx = np.gradient(g.h, g.spacing)
@@ -793,7 +802,8 @@ def sea_faces(out, g, bio, road, rng, taken):
     for k in rng.permutation(len(x)):
         if len(placed) >= SEA_FACES_MOST:
             break
-        scale = float(np.clip(top[k] / tall * rng.uniform(1.0, 1.25), 1.5, 5.0))
+        mesh, size, tall = SEA_FACES[int(rng.integers(len(SEA_FACES)))]
+        scale = float(np.clip(top[k] / tall * rng.uniform(1.0, 1.25), 0.9, 4.5))
         r = size * scale * 0.5
         if road.dist(x[k : k + 1], y[k : k + 1])[0] < r + 6:
             continue
@@ -2584,22 +2594,28 @@ def city_skyline(out, g, bio, road, rng, taken):
 
 def pch_coast(out, g, bio, road, rng, taken):
     """Dresses Harbour Isle's outer coastal road (outside the Chicago Lakefront section) like
-    California State Route 1 / Big Sur: continuous cliffside guardrails along seaward bluffs,
-    stone turnout overlook walls at high headlands, and Highway 1 scenic route shield signs."""
+    California State Route 1 / Big Sur: seamless photoscanned 4K Megascans W-beam guardrails
+    along seaward bluffs, dark volcanic/granite rock-cut cliffs & coastal boulders along the
+    inland bluff face, stone turnout overlook walls at high headlands, and Highway 1 signs."""
     out.group("PCHCoast", cull=45000)
-    has_rail = _copy_harbour_kit(out, "pch_guardrail", None)
+    ms_rails = (
+        f"{MS}/coast/modular_metal_guardrail_kit/xb1icckdw_LOD0_TIER1_000",
+        f"{MS}/coast/modular_metal_guardrail_kit/xb1icckdw_LOD0_TIER1_002",
+    )
+    ms_dolerite = ms("coast", "volcanic_dolerite_cliff")
+    ms_granite = ms("coast", "granite_cliff_rivav")
+    ms_boulder = ms("coast", "nordic_beach_boulder_venjcjyqx")
     has_turnout = _copy_harbour_kit(out, "pch_turnout_wall", None)
     has_sign = _copy_harbour_kit(out, "pch_route_sign", None)
-    if not (has_rail or has_turnout or has_sign):
-        return
     line = road.hub if road.hub is not None else road.line
     n = len(line)
     hx, hy = bio.world["landmarks"]["harbour"]
-    rails, turnouts, signs = 0, 0, 0
+    rails, turnouts, signs, cuts, boulders = 0, 0, 0, 0, 0
     turnout_spots = []
     sign_spots = []
+    cut_spots = []
     pch_view_added = False
-    for k in range(30, n - 30, 6):
+    for k in range(30, n - 30, 3):
         px, py, pz = float(line[k, 0]), float(line[k, 1]), float(line[k, 2])
         # Stay outside the Chicago Lakefront bay/trail zone
         if math.hypot(px - hx, py - hy) < 1550.0:
@@ -2653,18 +2669,76 @@ def pch_coast(out, g, bio, road, rng, taken):
                     )
                     pch_view_added = True
                 continue
-        # Continuous PCH cliffside guardrail along seaward bluff edge
-        if has_rail and not any(math.hypot(px - ox, py - oy) < 12.0 for ox, oy in turnout_spots):
+        # Seamless 4K Megascans W-beam guardrail every 3 m (3.45 m panels overlap cleanly)
+        if not any(math.hypot(px - ox, py - oy) < 12.0 for ox, oy in turnout_spots):
             out.add(
                 "PCHCoast",
-                "pch_guardrail",
+                ms_rails[rails % len(ms_rails)],
                 gx,
                 gy,
-                gz - 0.05,
+                gz - 0.04,
                 yaw + (0.0 if sea_side > 0 else 180.0),
                 mark=(200, 210, 220),
             )
             rails += 1
+        # Inland Big Sur rock-cut cliffs (dark volcanic dolerite & granite slabs) rising beside road
+        if k % 15 == 0 and not any(math.hypot(px - cx, py - cy) < 18.0 for cx, cy in cut_spots):
+            ix, iy = px - nx * sea_side * 11.5, py - ny * sea_side * 11.5
+            iz = float(g.z(ix, iy))
+            if iz > pz + 0.8 and float(road.dist(ix, iy)) > 8.5:
+                if rng.random() < 0.32 and iz > pz + 2.5 and float(road.dist(ix, iy)) > 11.0:
+                    # Massive cracked granite Big Sur rock cut
+                    sc = float(rng.uniform(0.65, 1.05))
+                    out.add(
+                        "Cliffs",
+                        ms_granite,
+                        ix - nx * sea_side * 5.0,
+                        iy - ny * sea_side * 5.0,
+                        iz - 2.2,
+                        yaw + (90.0 if sea_side > 0 else -90.0) + rng.uniform(-18, 18),
+                        sc,
+                        rng.uniform(-4, 4),
+                        rng.uniform(-4, 4),
+                        mark=(120, 115, 110),
+                    )
+                else:
+                    # Dark volcanic dolerite cliff slab hugging the roadside cut
+                    sc = float(rng.uniform(1.4, 2.3))
+                    out.add(
+                        "Cliffs",
+                        ms_dolerite,
+                        ix,
+                        iy,
+                        iz - 1.2,
+                        yaw + (0.0 if sea_side > 0 else 180.0) + rng.uniform(-14, 14),
+                        sc,
+                        rng.uniform(-5, 5),
+                        rng.uniform(-5, 5),
+                        mark=(95, 92, 90),
+                    )
+                cut_spots.append((px, py))
+                cuts += 1
+        # Dark angular coastal boulders tucked along the inland ditch & seaward shoulder
+        if k % 21 == 0:
+            bx, by = (
+                px - nx * sea_side * rng.uniform(5.8, 9.0),
+                py - ny * sea_side * rng.uniform(5.8, 9.0),
+            )
+            bz = float(g.z(bx, by))
+            if bz > 4.0 and float(road.dist(bx, by)) > 5.0:
+                out.add(
+                    "PCHCoast",
+                    ms_boulder,
+                    bx,
+                    by,
+                    bz - 0.35,
+                    rng.uniform(0, 360),
+                    float(rng.uniform(0.55, 1.25)),
+                    rng.uniform(-6, 6),
+                    rng.uniform(-6, 6),
+                    mark=(110, 110, 115),
+                )
+                boulders += 1
         # California State Route 1 scenic highway shield sign on the inland shoulder
         if (
             has_sign
@@ -2677,7 +2751,11 @@ def pch_coast(out, g, bio, road, rng, taken):
                 out.add("PCHCoast", "pch_route_sign", sx, sy, sz - 0.05, yaw)
                 sign_spots.append((px, py))
                 signs += 1
-    print(f"pch_coast: {rails} guardrails, {turnouts} turnouts, {signs} route signs", flush=True)
+    print(
+        f"pch_coast: {rails} guardrails, {turnouts} turnouts, {signs} route signs, "
+        f"{cuts} rock-cut cliffs, {boulders} coastal boulders",
+        flush=True,
+    )
 
 
 def main():
