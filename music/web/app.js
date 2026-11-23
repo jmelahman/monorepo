@@ -1992,7 +1992,8 @@ function playQueue(items, index, { restore = false, at = 0 } = {}) {
     arrange(index);
   }
   playingIndex = index;
-  counted = false;
+  // A track restored past half a minute was counted before the reload.
+  counted = restore && at >= 30;
   const t = items[index];
   // The page preloads nothing, but a restored track wants its length and
   // its place in it before anyone presses play.
