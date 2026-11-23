@@ -262,6 +262,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 	}
 
 	// The panels, unless the rider has put them away (H).
+	Pawn->TimePill = {};
 	Pawn->WeatherPill = {};
 	if (Pawn->Profile.bHud)
 	{
@@ -291,8 +292,9 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 		// The power panel's size, mirrored: its label and badge row, the profile where the watts are,
 		// and the stretch bar level with the zone bar.
 		float WeatherTop;
+		constexpr float MapPanelWide = 268.f;
 		{
-			const float Wide = 220.f, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
+			const float Wide = MapPanelWide, Tall = 130.f, X = W - 20.f - Wide, Top = 20.f;
 			const float X0 = X + 16.f, Inner = Wide - 32.f, Right = X0 + Inner;
 			bool bOn = false;
 			float Start = 0.f, Peak = 0.f;
@@ -445,59 +447,43 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			WeatherTop = Top + Tall + 8.f;
 		}
 
-		// ---- The weather, under the panel -----------------------------------------------------------
+		// ---- Daytime & Weather switchers under the minimap (fixed equal widths = minimap width) ----
 		{
-			// Weather picked in the settings holds for the whole ride (RidePawn's Overrule): say that,
-			// with no change ahead, rather than the route's own weather.
 			const int32 Fixed = ARidePawn::Automated() ? 0 : Pawn->Profile.Weather;
 			auto SkyAt = [&Track, Fixed](float M) {
 				return Fixed > 0 ? static_cast<ESky>(FMath::Clamp(Fixed - 1, 0, 2)) : SkyOf(Track.WeatherAt(M));
 			};
 			const ESky Now = SkyAt(Here);
-			FString Change;
-			const bool bRoutes = Fixed == 0 && !ARidePawn::Automated();
-			for (float Ahead = SampleM; Ahead <= 6000.f; Ahead += SampleM)
+			const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
+			const TCHAR* WeatherNames[] = {TEXT("Auto"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
+			const int32 TimeIdx = FMath::Clamp(ARidePawn::Automated() ? 0 : Pawn->Profile.TimeOfDay, 0, 3);
+			const int32 WeatherIdx = FMath::Clamp(Fixed, 0, 3);
+			const FSlateFontInfo Big = P.Font("Bold", 13.f);
+			const float Gap = 8.f;
+			const float PillW = (MapPanelWide - Gap) * 0.5f; // 130 + 8 + 130 = 268 (static!)
+			const float Y = WeatherTop;
+			const float TimeX = W - 20.f - MapPanelWide;
+			const float WeatherX = TimeX + PillW + Gap;
+
+			// Left pill: Daytime switcher
+			P.Panel(TimeX, Y, PillW, 36.f, 12.f);
+			Pawn->TimePill = {TimeX, Y, PillW, 36.f};
+			if (Pawn->bTimeHover)
 			{
-				float M = Here + Ahead;
-				if (M > LengthM)
-				{
-					if (!bClosed)
-					{
-						break;
-					}
-					M -= LengthM;
-				}
-				const ESky Then = SkyAt(M);
-				if (Then != Now)
-				{
-					const TCHAR* What = Then == ESky::Rain ? TEXT("rain") : Now == ESky::Rain ? TEXT("clears") : Then == ESky::Clear ? TEXT("clearing") : TEXT("cloud");
-					Change = FString::Printf(TEXT("%s in %s"), What, *Km(Ahead));
-					break;
-				}
+				P.Round(TimeX, Y, PillW, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
 			}
-			if (Change.IsEmpty() && bRoutes)
-			{
-				Change = TEXT("as the route"); // so a click's next step, a fixed sky, reads as one
-			}
-			const TCHAR* Names[] = {TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
-			const FSlateFontInfo Big = P.Font("Bold", 14.f);
-			const FSlateFontInfo Small = P.Font("Regular", 12.f);
-			const float Wide = 10.f + 22.f + 8.f + P.Width(Names[static_cast<int32>(Now)], Big) +
-			                   (Change.IsEmpty() ? 0.f : 8.f + P.Width(Change, Small)) + 14.f;
-			const float X = W - 20.f - Wide, Y = WeatherTop;
-			P.Panel(X, Y, Wide, 36.f, 12.f);
-			// A click steps the weather on (ARidePawn::NextWeather); lit like a dock button under the pointer.
-			Pawn->WeatherPill = {X, Y, Wide, 36.f};
+			P.Icon(VeloverseMenu::Icons::Sun, TimeX + 10.f, Y + 8.f, 20.f, Hex(0xF2C864));
+			P.Text(TimeX + 38.f, Y + 22.5f, TimeNames[TimeIdx], Big, SkyText);
+
+			// Right pill: Weather switcher
+			P.Panel(WeatherX, Y, PillW, 36.f, 12.f);
+			Pawn->WeatherPill = {WeatherX, Y, PillW, 36.f};
 			if (Pawn->bWeatherHover)
 			{
-				P.Round(X, Y, Wide, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
+				P.Round(WeatherX, Y, PillW, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
 			}
-			Icon(P, X + 10.f, Y + 7.f, Now);
-			const float NameW = P.Text(X + 40.f, Y + 23.f, Names[static_cast<int32>(Now)], Big, SkyText);
-			if (!Change.IsEmpty())
-			{
-				P.Text(X + 48.f + NameW, Y + 23.f, Change, Small, Dim);
-			}
+			Icon(P, WeatherX + 10.f, Y + 7.f, Now);
+			P.Text(WeatherX + 38.f, Y + 22.5f, WeatherNames[WeatherIdx], Big, SkyText);
 		}
 
 		// ---- Bottom left: how to pause, while the dock's away ----------------------------------------

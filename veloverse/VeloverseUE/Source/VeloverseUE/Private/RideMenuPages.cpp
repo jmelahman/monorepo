@@ -298,7 +298,8 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	{
 		return;
 	}
-	const int32 Chosen = Pawn->RouteIndex();
+	const int32 Chosen =
+	    (PendingRoute != INDEX_NONE && Pawn->Routes.IsValidIndex(PendingRoute)) ? PendingRoute : Pawn->RouteIndex();
 
 	// Top right: the time of day to ride in, the same setting as Settings' (the user, 15 Nov).
 	{
@@ -361,7 +362,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		{
 			if (ARidePawn* R = M->Rider(); R && !R->bFinished)
 			{
-				R->UseRoute(I); // mid-ride, the ride carries on along it
+				M->PendingRoute = I; // stage preview; only switches when pressing Confirm
 			}
 		};
 		Y += 96.f;
@@ -567,8 +568,16 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		C.Hit(TEXT("startprev"), Dx, 640.f, 56.f, 56.f).OnClick = [Step] { Step(-1); };
 	}
 	const bool bRiding = Pawn->bStarted;
-	C.Button(TEXT("start"), Dx, 718.f, Dw, 72.f, bRiding ? TEXT("Ride on") : TEXT("Start ride"), EButton::Primary,
-	         [M, bRiding] { bRiding ? M->Controller()->Resume() : M->Controller()->Ride(); }, nullptr, 28.f, true, 14.f);
+	C.Button(TEXT("start"), Dx, 718.f, Dw, 72.f, bRiding ? TEXT("Confirm") : TEXT("Start ride"), EButton::Primary,
+	         [M, bRiding, Chosen]
+	         {
+		         if (ARidePawn* R = M->Rider(); R && !R->bFinished && Chosen != R->RouteIndex())
+		         {
+			         R->UseRoute(Chosen);
+		         }
+		         bRiding ? M->Controller()->Resume() : M->Controller()->Ride();
+	         },
+	         nullptr, 28.f, true, 14.f);
 	C.Button(TEXT("check"), Dx, 802.f, Dw, 44.f, TEXT("Check trainer"), EButton::Quiet,
 	         [M] { M->Show(ERideMenuPage::Sensors); }, Icons::Signal, 16.f);
 

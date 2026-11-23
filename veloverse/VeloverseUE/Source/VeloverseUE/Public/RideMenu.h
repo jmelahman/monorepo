@@ -195,6 +195,7 @@ private:
 	ERideMenuPage Current = ERideMenuPage::Start;
 	ERideMenuPage Back = ERideMenuPage::Start; // where the sub-pages return to
 	ERideSettingsTab Tab = ERideSettingsTab::Graphics;
+	int32 PendingRoute = INDEX_NONE; // staged route selection in Routes page; applied only on Confirm
 	TArray<Veloverse::FWorkout> Workouts; // the library, for the start page's workout choice
 	float WorkoutsFtp = -1.f;             // the FTP the library was read with (files in watts need it)
 	float RefreshClock = 0.f;

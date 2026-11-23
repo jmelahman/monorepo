@@ -108,9 +108,10 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 	}
 	if (Weather == 1)
 	{
-		W.Lux = W.Elevation <= 16.f ? 72000.f : 90000.f;
-		W.Sky = W.Elevation <= 16.f ? 0.95f : 1.f;
-		W.Fog = W.Elevation <= 16.f ? 0.008f : 0.012f; // a light haze that layers the far hills; 0.006 left them flat and sharp
+		// Keep Midday (40 deg elevation) rich and contrasty rather than blown-out at 90k lux.
+		W.Lux = W.Elevation <= 18.f ? 72000.f : 58000.f;
+		W.Sky = W.Elevation <= 18.f ? 0.90f : 0.78f;
+		W.Fog = W.Elevation <= 18.f ? 0.008f : 0.006f;
 		W.Rain = W.Wet = 0.f;
 	}
 	else if (Weather == 2)
@@ -2021,6 +2022,13 @@ void ARidePawn::PressDock(Veloverse::EDock Button)
 	}
 }
 
+void ARidePawn::NextTimeOfDay()
+{
+	Profile.TimeOfDay = (Profile.TimeOfDay + 1) % 4;
+	Profile.Save();
+	ApplyWeather();
+}
+
 void ARidePawn::NextWeather()
 {
 	// The HUD's weather pill steps through Settings > World's choices (the user, 15 Nov): the
@@ -2074,16 +2082,21 @@ void ARidePawn::Docking(APlayerController& Player)
 	const Veloverse::FDockLayout L =
 		Veloverse::LayoutDock(static_cast<float>(Size.X) * K, 720.f, Dock.Shown);
 	DockHover = bOnScreen ? L.Hit(Now.X, Now.Y) : -1;
-	bWeatherHover = bOnScreen && DockHover < 0 && Profile.bHud && WeatherPill.Contains(Now.X, Now.Y);
+	bTimeHover = bOnScreen && DockHover < 0 && Profile.bHud && TimePill.Contains(Now.X, Now.Y);
+	bWeatherHover = bOnScreen && DockHover < 0 && !bTimeHover && Profile.bHud && WeatherPill.Contains(Now.X, Now.Y);
 	const bool bHeld = Player.IsInputKeyDown(EKeys::LeftMouseButton) || Player.IsInputKeyDown(EKeys::RightMouseButton);
 	if (Player.WasInputKeyJustPressed(EKeys::LeftMouseButton) || Player.WasInputKeyJustPressed(EKeys::RightMouseButton))
 	{
-		bPressOnDock = DockHover >= 0 || bWeatherHover;
+		bPressOnDock = DockHover >= 0 || bTimeHover || bWeatherHover;
 		if (bPressOnDock && Player.WasInputKeyJustPressed(EKeys::LeftMouseButton))
 		{
 			if (DockHover >= 0)
 			{
 				PressDock(static_cast<EDock>(DockHover));
+			}
+			else if (bTimeHover)
+			{
+				NextTimeOfDay();
 			}
 			else
 			{

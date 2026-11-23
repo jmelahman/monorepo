@@ -556,31 +556,41 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (zz > 1.6)
     )
     px, py, zz = px[keep], py[keep], zz[keep]
-    # Root every trunk solidly into steep cut banks and 7 m landscape quad diagonals so no tree
-    # ever floats: take the lowest ground around the trunk base plus a slope-proportional sink.
+    kinds = species(rng, px, py, zz, 0.04)
+    stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
+    rolls = rng.random(len(zz))
+    sizes = (
+        np.where(
+            rolls < 0.08,
+            rng.uniform(1.25, 1.5, len(zz)),
+            np.where(
+                rolls < 0.35,
+                rng.uniform(0.55, 0.8, len(zz)),
+                rng.uniform(0.85, 1.2, len(zz)),
+            ),
+        )
+        * stunt
+    )
+    # Root every trunk solidly into steep slopes and 7 m landscape quads, scaling footprint &
+    # sink depth with tree size so even 1.5x giant trunks never float on cut banks.
+    rad = 2.0 + 1.4 * sizes
     z_foot = np.minimum.reduce(
         [
             zz,
-            at_stem(whole[0], px + 2.0, py),
-            at_stem(whole[0], px - 2.0, py),
-            at_stem(whole[0], px, py + 2.0),
-            at_stem(whole[0], px, py - 2.0),
+            at_stem(whole[0], px + rad, py),
+            at_stem(whole[0], px - rad, py),
+            at_stem(whole[0], px, py + rad),
+            at_stem(whole[0], px, py - rad),
+            at_stem(whole[0], px + rad * 0.7, py + rad * 0.7),
+            at_stem(whole[0], px - rad * 0.7, py - rad * 0.7),
+            at_stem(whole[0], px + rad * 0.7, py - rad * 0.7),
+            at_stem(whole[0], px - rad * 0.7, py + rad * 0.7),
         ]
     )
-    sink = 0.65 + 1.0 * slope[rows, cols][keep]
+    sink = (0.75 + 1.35 * slope[rows, cols][keep]) * np.maximum(sizes, 0.85)
     zz = z_foot - sink
-    kinds = species(rng, px, py, zz, 0.04)
-    stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     out = []
-    for xm, ym, zm, kind, small in zip(px, py, zz, kinds, stunt, strict=True):
-        roll = rng.random()
-        size = (
-            rng.uniform(1.25, 1.5)
-            if roll < 0.08
-            else rng.uniform(0.55, 0.8)
-            if roll < 0.35
-            else rng.uniform(0.85, 1.2)
-        )
+    for xm, ym, zm, kind, sc in zip(px, py, zz, kinds, sizes, strict=True):
         out.append(
             [
                 str(kind),
@@ -588,7 +598,7 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
                 round(float(ym) * 100, 1),
                 round(float(zm) * 100, 1),
                 round(float(rng.uniform(0, 360)), 1),
-                round(float(size * small), 3),
+                round(float(sc), 3),
             ]
         )
     return out
@@ -615,11 +625,12 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (rng.random(len(rows)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
         & (zz > 6)
     )
-    px, py, zz = px[keep], py[keep], zz[keep] - (0.75 + 1.0 * slope[rows, cols][keep])
+    px, py, zz = px[keep], py[keep], zz[keep]
     kinds = species(rng, px, py, zz, 0.02)
     size = rng.uniform(0.9, 1.35, len(zz)) * (
         1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     )
+    zz = zz - (0.85 + 1.35 * slope[rows, cols][keep]) * np.maximum(size, 0.9)
     yaw = rng.uniform(0, 360, len(zz))
     return [
         [

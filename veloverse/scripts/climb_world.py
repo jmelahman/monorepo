@@ -568,31 +568,32 @@ def sea_material():
         # Shallow turquoise near beaches/coves transitioning smoothly to deep Atlantic blue
         shallow_col = g.const((0.032, 0.145, 0.155))
         colour = g.lerp(shallow_col, deep_col, g.saturate(g.mul(depth, 1.4)))
-        # Animated lacy white breaking surf hugging the shoreline (0..10 m offshore)
+        # Calm rolling white breaking surf hugging the shoreline (MaterialExpressionSine has
+        # period=1.0, so keep time & spatial frequency low to avoid strobe/TSR flashing).
         foam_noise = g.world_noise(0.008, 0.0, 1.0, 3)
         fine_noise = g.world_noise(0.035, 0.0, 1.0, 2)
-        wave_phase = g.add(g.mul(shore_d, 22.0), g.mul(time, -1.6))
+        wave_phase = g.add(g.mul(shore_d, 3.5), g.mul(time, -0.14))
         wave_crest = g.saturate(
-            g.add(g.link(wave_phase, g.node(unreal.MaterialExpressionSine)), 0.35)
+            g.add(g.mul(g.link(wave_phase, g.node(unreal.MaterialExpressionSine)), 0.5), 0.5)
         )
-        # Direct shoreline edge band + pulsing surf lines broken by organic foam noise
-        edge_band = g.saturate(g.mul(g.add(g.const(0.16), g.mul(shore_d, -1.0)), 9.0))
+        # Direct shoreline edge band + gentle rolling surf lines broken by organic foam noise
+        edge_band = g.saturate(g.mul(g.add(g.const(0.14), g.mul(shore_d, -1.0)), 7.0))
         surf_band = g.mul(
-            g.saturate(g.mul(g.add(g.const(0.32), g.mul(shore_d, -1.0)), 4.5)),
-            wave_crest,
+            g.saturate(g.mul(g.add(g.const(0.30), g.mul(shore_d, -1.0)), 3.8)),
+            g.mul(wave_crest, wave_crest),
         )
-        foam_raw = g.op(unreal.MaterialExpressionMax, edge_band, g.mul(surf_band, 0.85))
+        foam_raw = g.op(unreal.MaterialExpressionMax, edge_band, g.mul(surf_band, 0.65))
         foam = g.saturate(
             g.mul(
                 g.add(
-                    g.mul(foam_raw, g.add(g.mul(foam_noise, 0.8), 0.45)), g.mul(fine_noise, -0.32)
+                    g.mul(foam_raw, g.add(g.mul(foam_noise, 0.7), 0.45)), g.mul(fine_noise, -0.25)
                 ),
-                2.2,
+                1.45,
             )
         )
-        foam_col = g.const((0.76, 0.80, 0.82))
+        foam_col = g.const((0.72, 0.77, 0.80))
         colour = g.lerp(colour, foam_col, foam)
-        rough = g.lerp(rough, g.const(0.72), foam)
+        rough = g.lerp(rough, g.const(0.78), foam)
 
     g.output(colour, normal=normal, rough=rough, specular=0.5)
     return g.finish()
