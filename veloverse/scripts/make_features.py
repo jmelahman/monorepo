@@ -92,10 +92,9 @@ ROCKS = {
     "meadow": [
         (ms("forest", "mossy_rocks"), 3.0, (0.8, 1.6), 15, 1.0, 0, 0),
     ],
-    "coast": [  # every island's shore
+    "coast": [  # every island's shore (closed 360-degree boulders only; no 1-sided slabs)
         (ms("coast", "nordic_beach_rock_formation"), 7.1, (0.7, 1.5), 25, 2.0, 0, 0),
-        (ms("coast", "nordic_beach_boulder_venjcjyqx"), 5.15, (0.9, 2.0), 14, 3.0, 0, 0),
-        (ms("coast", "volcanic_dolerite_cliff"), 6.9, (0.9, 1.8), 22, 1.6, 1, 0),
+        (ms("coast", "nordic_beach_boulder_venjcjyqx"), 5.15, (0.9, 2.0), 14, 3.5, 0, 0),
         (ms("coast", "nordic_beach_rocks"), 3.6, (0.8, 1.8), 12, 3.0, 0, 0),
     ],
 }
@@ -614,9 +613,9 @@ CLIFF_REACH = 1800.0  # m from the road: past it, no one sees a face's detail
 # STACK_TOP[1] m; most of them; and rocks heaped at the cliff's foot.
 # (mesh, size m, height m, scale range): heights from the FBX bounds (out/qa/probe/fbx_bounds.py),
 # as v45 sank each by a share of its length and buried the flat beach slabs it stood (13 Nov).
+# Freestanding sea stacks need closed 360-degree monoliths (1-sided cliff slabs show open backs).
 STACKS = [
     (ms("coast", "huge_nordic_coastal_cliff"), 13.7, 8.9, (2.5, 4.0)),
-    (ms("coast", "granite_cliff_rivav"), 29.6, 16.7, (0.9, 1.8)),
 ]
 STACK_FOOT = [
     (ms("coast", "nordic_beach_rock_formation"), 7.1, 3.0, (1.0, 2.0)),
@@ -2732,39 +2731,41 @@ def pch_coast(out, g, bio, road, rng, taken):
                 mark=(200, 210, 220),
             )
             rails += 1
-        # Inland Big Sur rock-cut cliffs (dark volcanic dolerite & granite slabs) rising beside road
+        # Inland Big Sur rock-cut cliffs: only embed 1-sided cliff slabs into genuinely steep
+        # high banks (slope > 0.35, rise > 3.5 m) so their backs are 100% buried in the earth.
         if k % 15 == 0 and not any(math.hypot(px - cx, py - cy) < 18.0 for cx, cy in cut_spots):
-            ix, iy = px - nx * sea_side * 11.5, py - ny * sea_side * 11.5
+            ix, iy = px - nx * sea_side * 13.0, py - ny * sea_side * 13.0
             iz = float(g.z(ix, iy))
-            if iz > pz + 0.8 and float(road.dist(ix, iy)) > 8.5:
-                if rng.random() < 0.32 and iz > pz + 2.5 and float(road.dist(ix, iy)) > 11.0:
-                    # Massive cracked granite Big Sur rock cut
-                    sc = float(rng.uniform(0.65, 1.05))
+            islope = float(g.at(g.slope, ix, iy))
+            if iz > pz + 3.5 and islope > 0.35 and float(road.dist(ix, iy)) > 9.5:
+                if rng.random() < 0.32 and iz > pz + 5.5 and float(road.dist(ix, iy)) > 12.0:
+                    # Massive cracked granite Big Sur rock cut buried deep into the steep wall
+                    sc = float(rng.uniform(0.65, 1.0))
                     out.add(
                         "Cliffs",
                         ms_granite,
-                        ix - nx * sea_side * 5.0,
-                        iy - ny * sea_side * 5.0,
-                        iz - 2.2,
-                        yaw + (90.0 if sea_side > 0 else -90.0) + rng.uniform(-18, 18),
+                        ix - nx * sea_side * 6.5,
+                        iy - ny * sea_side * 6.5,
+                        iz - 3.0,
+                        yaw + (90.0 if sea_side > 0 else -90.0) + rng.uniform(-12, 12),
                         sc,
-                        rng.uniform(-4, 4),
-                        rng.uniform(-4, 4),
+                        rng.uniform(-3, 3),
+                        rng.uniform(-3, 3),
                         mark=(120, 115, 110),
                     )
                 else:
-                    # Dark volcanic dolerite cliff slab hugging the roadside cut
-                    sc = float(rng.uniform(1.4, 2.3))
+                    # Dark volcanic dolerite cliff slab buried into steep roadside cut
+                    sc = float(rng.uniform(1.3, 2.0))
                     out.add(
                         "Cliffs",
                         ms_dolerite,
-                        ix,
-                        iy,
-                        iz - 1.2,
-                        yaw + (0.0 if sea_side > 0 else 180.0) + rng.uniform(-14, 14),
+                        ix - nx * sea_side * 2.0,
+                        iy - ny * sea_side * 2.0,
+                        iz - 1.8,
+                        yaw + (0.0 if sea_side > 0 else 180.0) + rng.uniform(-10, 10),
                         sc,
-                        rng.uniform(-5, 5),
-                        rng.uniform(-5, 5),
+                        rng.uniform(-4, 4),
+                        rng.uniform(-4, 4),
                         mark=(95, 92, 90),
                     )
                 cut_spots.append((px, py))

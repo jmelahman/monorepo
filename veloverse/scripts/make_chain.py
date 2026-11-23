@@ -102,18 +102,15 @@ TOWN_REACH = 2200.0
 PEAK = 1150.0  # m: Vael's summit, seen from the other islands (13 Nov, the AAA review)
 BRIDGE_CLEAR = 9.0  # m: a bridge's deck over the sea, at least
 LANDFALL = 260.0  # m inland of a petal's shore where its bridge's road meets the island's
-COAST_IN = 55.0  # m: the hub's coast road in from the shore (brought closer to water)
-# The hub's cliffed shore (13 Nov, the AAA review: "the coast has no coast"): about half its
-# seaward edge, away from the harbour and facing open sea (not a strait), rises in SEA_CLIFF m to
-# a 15-40 m top that then climbs CLIFF_TILT inland, so the edge is the lowest of the top and the
-# sea is in frame from the coast road CLIFF_IN m back. v45's top was the old hills raised, and
-# crests between road and edge hid the sea (13 Nov stills).
-SEA_CLIFF = (20.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
+COAST_IN = 24.0  # m: the hub's coast road in from the shore (hugging the water closely)
+# The hub's cliffed shore (Big Sur / California State Route 1): most of Harbour Isle's outer coast
+# away from the harbour rises sharply in SEA_CLIFF m to a 15-40 m bluff top that tilts inland,
+# keeping the road perched just CLIFF_IN m from the sheer drop-off with the ocean right below.
+SEA_CLIFF = (18.0, 15.0, 40.0)  # m: the face's run inland, the top's lowest and highest
 CLIFF_TILT = 0.03  # the top's rise inland, from the edge
-# m to another island's shore: no cliffs to 400, full past 800 (1200..2000 left no hub cliff
-# by the road: only 14% of its shore is that open, 13 Nov), and always cliffs past 1400.
-CLIFF_OPEN = (400.0, 800.0, 1400.0)
-CLIFF_IN = (20.0, 30.0)  # m: the coast road from a cliff's edge, least and most
+# m to another island's shore: start cliffs early so most of the outer coast is dramatic Big Sur.
+CLIFF_OPEN = (220.0, 480.0, 750.0)
+CLIFF_IN = (10.0, 16.0)  # m: the coast road from a cliff's edge, least and most
 # m: how far either side of the line from the hub to a petal its two bridges may run; each takes
 # the narrowest crossing in that range.
 BRIDGE_APART = (600.0, 2800.0)
@@ -378,8 +375,8 @@ def terrain():
     # 400 m inland and eased back into the hills by 900.
     (bx, by), _ = HARBOUR_BAY
     run, low, high = SEA_CLIFF
-    patchy = mi.smoothstep(0.46, 0.54, mi.fbm(x, y, 2600, 2, SEED + 63))
-    away = mi.smoothstep(TOWN_REACH * 0.9, TOWN_REACH * 1.4, np.hypot(x - bx, y - by))
+    patchy = mi.smoothstep(0.28, 0.38, mi.fbm(x, y, 2600, 2, SEED + 63))
+    away = mi.smoothstep(TOWN_REACH * 0.75, TOWN_REACH * 1.15, np.hypot(x - bx, y - by))
     others = land & (which != HUB)
     gap = ndimage.distance_transform_edt(~others) * SPACING
     open_sea = mi.smoothstep(*CLIFF_OPEN[:2], gap)

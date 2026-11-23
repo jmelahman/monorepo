@@ -197,7 +197,8 @@ void ARidePlayerController::Open(ERideMenuPage Page)
 	Menu->Show(Page);
 	if (ARidePawn* Pawn = Rider())
 	{
-		Pawn->bPaused = true;
+		// Keep the ride running in the background while browsing "Change route".
+		Pawn->bPaused = (Page != ERideMenuPage::Routes);
 	}
 	SetShowMouseCursor(true);
 	FInputModeUIOnly Mode;

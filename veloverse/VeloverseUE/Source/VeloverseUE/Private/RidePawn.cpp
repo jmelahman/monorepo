@@ -957,7 +957,7 @@ void ARidePawn::MouseLook(APlayerController& Player)
 	}
 	LookRest += Dt;
 	const bool bAway = FMath::Abs(LookYaw) > 45.f || FMath::Abs(LookPitch) > 25.f;
-	if (LookRest > 2.f && Dt > 0.f && !bAway)
+	if (!bFreeLook && LookRest > 2.f && Dt > 0.f && !bAway)
 	{
 		const float Ease = 1.f - FMath::Exp(-Dt / 0.6f);
 		LookYaw = FMath::Lerp(LookYaw, 0.f, Ease);
@@ -1320,8 +1320,14 @@ void ARidePawn::Place()
 	if (Seen != ERideView::Chase)
 	{
 		const FQuat BikeQuat = FRotator(Head.Pitch + BikeJudder, Head.Yaw, BikeRoll).Quaternion();
-		const float ViewGaze = Seen == ERideView::Cockpit ? GazeLead : 0.f;
-		const FQuat HeadQuat = FRotator(Head.Pitch + HeadSurgePitch + HeadJudder, Head.Yaw + ViewGaze + HeadTurn, HeadRoll).Quaternion();
+		// Suppress high-frequency head judder, gaze lead, turn, and roll during Free Look so
+		// mouse panning stays silky smooth and never fights the user's aim.
+		const float FreeScale = bFreeLook ? 0.f : 1.f;
+		const float ViewGaze = (Seen == ERideView::Cockpit && !bFreeLook) ? GazeLead : 0.f;
+		const FQuat HeadQuat =
+		    FRotator(Head.Pitch + FreeScale * (HeadSurgePitch + HeadJudder),
+		             Head.Yaw + ViewGaze + FreeScale * HeadTurn, FreeScale * HeadRoll)
+		        .Quaternion();
 		const FQuat CamQuat = HeadQuat * FRotator(LookPitch + CockpitTilt, LookYaw, 0.f).Quaternion();
 		if (Seen == ERideView::Cockpit && bParts)
 		{
@@ -1358,8 +1364,10 @@ void ARidePawn::Place()
 	const float Tip = FMath::RadiansToDegrees(FMath::Atan2(On->Height(On->Wrap(S + 100.f)) - On->Height(On->Wrap(S - 100.f)), 200.f));
 	Bike->SetWorldLocationAndRotation(RoadPos, FRotator(Tip + BikeJudder, Head.Yaw, BikeRoll));
 	PoseBike();
-	const FRotator ChaseLook(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, ChaseYaw + LookYaw, 0.f);
-	const FVector Aim = RoadPos + FVector(0.f, 0.f, ChaseAim) + RightRoad * FMath::Clamp(BikeLean * 1.5f, -25.f, 25.f);
+	const float ChaseBaseYaw = bFreeLook ? Head.Yaw : ChaseYaw;
+	const FRotator ChaseLook(Head.Pitch * ChaseGrade + LookPitch + ChaseTilt, ChaseBaseYaw + LookYaw, 0.f);
+	const FVector Aim = RoadPos + FVector(0.f, 0.f, ChaseAim) +
+	                    RightRoad * (bFreeLook ? 0.f : FMath::Clamp(BikeLean * 1.5f, -25.f, 25.f));
 	const FVector Back = Aim - ChaseLook.Vector() * ChaseBack + ForwardRoad * ChaseSurgeOffset;
 	SetActorLocationAndRotation(Back, ChaseLook);
 }

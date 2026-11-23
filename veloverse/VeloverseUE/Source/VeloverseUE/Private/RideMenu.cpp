@@ -145,6 +145,10 @@ void URideMenu::Show(ERideMenuPage Page)
 	{
 		SurveyRoutes();
 	}
+	if (Pawn && Pawn->bStarted)
+	{
+		Pawn->bPaused = (Page != ERideMenuPage::Routes);
+	}
 	Current = Page;
 	Hover.Reset();
 	Dragging.Reset();

@@ -462,11 +462,12 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     # the road where it comes nearer the sea.
     beach = mi.smoothstep(beach_top + 1.5, beach_top - 1.0, h) * mi.smoothstep(150, 60, inland)
     beach = np.maximum(beach, h < 0.5)
-    # Chicago Lakefront / Lincoln Park: keep the waterfront parkway lush green grass on both sides
-    # of the Lakefront Trail, leaving only a thin shoreline edge (< 12 m from water) as sand.
-    lakefront_park = w["town"] * mi.smoothstep(8.0, 16.0, inland) * (h > 0.6)
+    # Harbour Isle (Chicago Lakefront & Big Sur Coast route): keep the entire coastal route lush
+    # green grass/bluffs with zero desert or wide sand flats (only a thin shoreline edge < 10 m).
+    harbour_coast = np.clip(w["town"] + w["meadow"], 0.0, 1.0)
+    lakefront_park = harbour_coast * mi.smoothstep(6.0, 12.0, inland) * (h > 0.6)
     beach = beach * (1.0 - lakefront_park)
-    desert = w["desert"]
+    desert = w["desert"] * (1.0 - harbour_coast)
     # The verge is only the road's own shoulder: the plants' shaders drop whatever stands on the
     # tarmac (road_distance). Until 12 Nov it reached a whole sample past the road, to keep the
     # blades off the tarmac, and left 14..21 m of bare turf beside it. Dirt in the green
@@ -554,7 +555,20 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (rng.random(len(dd)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
         & (zz > 1.6)
     )
-    px, py, zz = px[keep], py[keep], zz[keep] - 0.4
+    px, py, zz = px[keep], py[keep], zz[keep]
+    # Root every trunk solidly into steep cut banks and 7 m landscape quad diagonals so no tree
+    # ever floats: take the lowest ground around the trunk base plus a slope-proportional sink.
+    z_foot = np.minimum.reduce(
+        [
+            zz,
+            at_stem(whole[0], px + 2.0, py),
+            at_stem(whole[0], px - 2.0, py),
+            at_stem(whole[0], px, py + 2.0),
+            at_stem(whole[0], px, py - 2.0),
+        ]
+    )
+    sink = 0.65 + 1.0 * slope[rows, cols][keep]
+    zz = z_foot - sink
     kinds = species(rng, px, py, zz, 0.04)
     stunt = 1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
     out = []
@@ -601,7 +615,7 @@ def far_trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (rng.random(len(rows)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
         & (zz > 6)
     )
-    px, py, zz = px[keep], py[keep], zz[keep] - 0.6
+    px, py, zz = px[keep], py[keep], zz[keep] - (0.75 + 1.0 * slope[rows, cols][keep])
     kinds = species(rng, px, py, zz, 0.02)
     size = rng.uniform(0.9, 1.35, len(zz)) * (
         1 - 0.5 * mi.smoothstep(TREELINE - 150, TREELINE + 20, zz)
