@@ -184,7 +184,7 @@ FRideProfile FRideProfile::Load()
 		}
 		if (O->TryGetNumberField(TEXT("time_of_day"), Value))
 		{
-			Profile.TimeOfDay = FMath::Clamp(static_cast<int32>(Value), 0, 4);
+			Profile.TimeOfDay = FMath::Clamp(static_cast<int32>(Value), 0, 3);
 		}
 		// "grass_reach" is % of the standard reach (1.25 of the grass's own distance, 15 Nov);
 		// "grass" before it was % of the grass's own distance, so 125 there is 100 here.

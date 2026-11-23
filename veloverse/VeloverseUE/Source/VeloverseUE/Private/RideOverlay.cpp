@@ -454,9 +454,9 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 				return Fixed > 0 ? static_cast<ESky>(FMath::Clamp(Fixed - 1, 0, 2)) : SkyOf(Track.WeatherAt(M));
 			};
 			const ESky Now = SkyAt(Here);
-			const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening"), TEXT("Sunset")};
+			const TCHAR* TimeNames[] = {TEXT("Auto"), TEXT("Morning"), TEXT("Midday"), TEXT("Evening")};
 			const TCHAR* WeatherNames[] = {TEXT("Auto"), TEXT("Clear"), TEXT("Overcast"), TEXT("Rain")};
-			const int32 TimeIdx = FMath::Clamp(Pawn->Profile.TimeOfDay, 0, 4);
+			const int32 TimeIdx = FMath::Clamp(Pawn->Profile.TimeOfDay, 0, 3);
 			const int32 WeatherIdx = FMath::Clamp(Fixed, 0, 3);
 			const FSlateFontInfo Big = P.Font("Bold", 13.f);
 			const float Gap = 8.f;
@@ -472,8 +472,7 @@ int32 URideOverlay::NativePaint(const FPaintArgs& Args, const FGeometry& Geometr
 			{
 				P.Round(TimeX, Y, PillW, 36.f, 12.f, Hex(0xF4F1EA, 0.12f));
 			}
-			const FLinearColor TimeIconCol = TimeIdx == 4 ? Hex(0xF28482) : Hex(0xF2C864);
-			P.Icon(VeloverseMenu::Icons::Sun, TimeX + 10.f, Y + 8.f, 20.f, TimeIconCol);
+			P.Icon(VeloverseMenu::Icons::Sun, TimeX + 10.f, Y + 8.f, 20.f, Hex(0xF2C864));
 			P.Text(TimeX + 38.f, Y + 22.5f, TimeNames[TimeIdx], Big, SkyText);
 
 			// Right pill: Weather switcher

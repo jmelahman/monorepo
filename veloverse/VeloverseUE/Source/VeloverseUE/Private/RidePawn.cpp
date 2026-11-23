@@ -102,37 +102,20 @@ UStaticMesh* MeshAt(const TCHAR* Path)
 // clear sun, the overcast before its shower, and the shower itself.
 void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 {
-	if (TimeOfDay >= 1 && TimeOfDay <= 4)
+	if (TimeOfDay >= 1 && TimeOfDay <= 3)
 	{
-		// Morning Mist, Midday, Golden Hour (Evening), Twilight Sunset.
-		static constexpr float Heights[4] = {12.f, 40.f, 14.f, 3.0f};
-		static constexpr float Turns[4] = {-70.f, 0.f, 70.f, 88.f}; // degrees round from the route's own sun
+		// Morning Mist, Midday, Golden Hour (Evening).
+		static constexpr float Heights[3] = {12.f, 40.f, 14.f};
+		static constexpr float Turns[3] = {-70.f, 0.f, 70.f}; // degrees round from the route's own sun
 		W.Elevation = Heights[TimeOfDay - 1];
 		Azimuth += Turns[TimeOfDay - 1];
-		// When Weather is Auto (0) and Sunset is chosen, apply sunset clear-sky lux/sky/fog unless raining.
-		if (TimeOfDay == 4 && Weather == 0 && W.Rain < 0.05f && W.Lux > 16000.f)
-		{
-			W.Lux = 14000.f;
-			W.Sky = 0.55f;
-			W.Fog = 0.008f;
-		}
 	}
 	if (Weather == 1)
 	{
-		// Keep Midday (40 deg elevation) rich and contrasty rather than blown-out at 90k lux,
-		// and Sunset (3 deg) moody with cool low sky bounce so occluded valleys stay dark and natural.
-		if (W.Elevation <= 5.f)
-		{
-			W.Lux = 14000.f;
-			W.Sky = 0.55f;
-			W.Fog = 0.008f;
-		}
-		else
-		{
-			W.Lux = W.Elevation <= 18.f ? 72000.f : 58000.f;
-			W.Sky = W.Elevation <= 18.f ? 0.90f : 0.78f;
-			W.Fog = W.Elevation <= 18.f ? 0.008f : 0.006f;
-		}
+		// Keep Midday (40 deg elevation) rich and contrasty rather than blown-out at 90k lux.
+		W.Lux = W.Elevation <= 18.f ? 72000.f : 58000.f;
+		W.Sky = W.Elevation <= 18.f ? 0.90f : 0.78f;
+		W.Fog = W.Elevation <= 18.f ? 0.008f : 0.006f;
 		W.Rain = W.Wet = 0.f;
 	}
 	else if (Weather == 2)
@@ -1516,6 +1499,7 @@ public:
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& Args) { PawnPtr = Args._Pawn; }
+	virtual FVector2D ComputeDesiredSize(float) const override { return FVector2D(200.f, 280.f); }
 
 	virtual int32 OnPaint(const FPaintArgs&, const FGeometry& Geo, const FSlateRect&, FSlateWindowElementList& Out,
 	                      int32 Layer, const FWidgetStyle&, bool) const override
@@ -1676,16 +1660,21 @@ void ARidePawn::MakeBikeParts()
 		BikeScreen->SetupAttachment(BikeParts[BikeComputer]);
 		BikeScreen->SetWidgetSpace(EWidgetSpace::World);
 		BikeScreen->SetDrawSize(FVector2D(200.f, 280.f));
-		BikeScreen->SetRelativeLocation(FVector(55.965f, 0.f, 89.933f));
+		BikeScreen->SetRelativeLocation(FVector(55.90f, 0.f, 90.12f));
 		BikeScreen->SetRelativeRotation(
 			FRotationMatrix::MakeFromXZ(FVector(-0.32557f, 0.f, 0.94552f), FVector(0.94552f, 0.f, 0.32557f)).Rotator());
 		BikeScreen->SetRelativeScale3D(FVector(0.0195f));
 		BikeScreen->SetBlendMode(EWidgetBlendMode::Opaque);
+		BikeScreen->SetTwoSided(true);
+		BikeScreen->SetTickMode(ETickMode::Enabled);
+		BikeScreen->SetManuallyRedraw(false);
+		BikeScreen->SetRedrawTime(0.1f);
 		BikeScreen->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		BikeScreen->SetCastShadow(false);
 		BikeScreen->SetVisibility(false);
-		BikeScreen->SetSlateWidget(SNew(SBikeComputerWidget).Pawn(this));
 		BikeScreen->RegisterComponent();
+		BikeScreen->SetSlateWidget(SNew(SBikeComputerWidget).Pawn(this));
+		BikeScreen->RequestRedraw();
 	}
 	UE_LOG(LogTemp, Display, TEXT("RIDE bike: %d parts"), BikeParts.Num());
 }
@@ -2213,7 +2202,7 @@ void ARidePawn::PressDock(Veloverse::EDock Button)
 
 void ARidePawn::NextTimeOfDay()
 {
-	Profile.TimeOfDay = (Profile.TimeOfDay + 1) % 5;
+	Profile.TimeOfDay = (Profile.TimeOfDay + 1) % 4;
 	Profile.Save();
 	ApplyWeather();
 }
@@ -2422,18 +2411,15 @@ void ARidePawn::ApplyWeather()
 	CurrentWet = W.Wet;
 	// The shells cost a translucent pass over the whole screen: draw them only while it rains.
 	Rain->SetVisibility(W.Rain > 0.001f);
-	const bool bSunset = W.Elevation <= 5.f;
-	const float ClearLux = bSunset ? 14000.f : (W.Elevation <= 18.f ? 70000.f : 58000.f);
+	const float ClearLux = W.Elevation <= 18.f ? 70000.f : 58000.f;
 	const float Cloud = FMath::Clamp(1.f - W.Lux / ClearLux, 0.f, 1.f);
 	const float Thick = FMath::Pow(Cloud, 1.5f);
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
-		Sun->SetVolumetricScatteringIntensity(bSunset ? 1.8f : (W.Elevation < 18.f ? 2.0f : 1.2f));
+		Sun->SetVolumetricScatteringIntensity(W.Elevation < 18.f ? 2.0f : 1.2f);
 		Sun->SetUseTemperature(true);
-		// Let UE5's physical SkyAtmosphere transmittance color the 3 deg sun naturally (5600K)
-		// instead of double-tinting it orange-red.
-		Sun->SetTemperature(bSunset ? 5600.f : (W.Elevation <= 16.f ? 5100.f : 6200.f));
+		Sun->SetTemperature(W.Elevation <= 16.f ? 5100.f : 6200.f);
 		// Cloud hides the sun's disc and spreads its light: widen the source as the light falls
 		// below a clear day's, so a rain sky's shadows go soft and faint instead of sharp.
 		if (SunAngle < 0.f)
@@ -2457,28 +2443,17 @@ void ARidePawn::ApplyWeather()
 	}
 	// An overcast sky is grey-white to the zenith, not blue: thin Rayleigh scattering and thicken haze
 	// under cloud, while deepening clear/golden-hour sky luminance so it never washes pale white.
-	// At Sunset (<= 5 deg), moderate ozone absorption + cool lavender sky luminance paint a pink/violet
-	// sky while cool-blue SkyLight cancels the horizon red cast in shadowed valleys.
 	if (Atmosphere.IsValid())
 	{
 		// Only on a change: this runs five times a second and each set re-sends the atmosphere.
-		const float ClearR = Rayleigh * (bSunset ? 1.05f : 1.f);
-		const float ClearM = Mie * (bSunset ? 1.15f : 1.f);
-		const float ClearA = Absorption * (bSunset ? 1.55f : 1.f);
-		const float R = FMath::Lerp(ClearR, Rayleigh * 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
-		const float M = FMath::Lerp(ClearM, Mie * 2.5f, Thick);
-		const float A = FMath::Lerp(ClearA, Absorption * 0.05f, Thick);
-		if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f) ||
-		    !FMath::IsNearlyEqual(M, Atmosphere->MieScatteringScale, 1e-5f) ||
-		    !FMath::IsNearlyEqual(A, Atmosphere->OtherAbsorptionScale, 1e-5f))
+		const float R = Rayleigh * FMath::Lerp(1.f, 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
+		if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f))
 		{
 			Atmosphere->SetRayleighScatteringScale(R);
-			Atmosphere->SetMieScatteringScale(M);
-			Atmosphere->SetOtherAbsorptionScale(A);
+			Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
+			Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.05f, Thick));
 		}
-		const FLinearColor ClearLum = bSunset ? FLinearColor(0.76f, 0.78f, 0.90f, 1.f)
-		                                      : FLinearColor(0.72f, 0.72f, 0.75f, 1.f);
-		const FLinearColor SkyLum = FMath::Lerp(ClearLum, FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
+		const FLinearColor SkyLum = FMath::Lerp(FLinearColor(0.72f, 0.72f, 0.75f, 1.f), FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
 		if (!Atmosphere->SkyLuminanceFactor.Equals(SkyLum, 1e-4f))
 		{
 			Atmosphere->SetSkyLuminanceFactor(SkyLum);
@@ -2487,12 +2462,7 @@ void ARidePawn::ApplyWeather()
 	if (SkyLight.IsValid())
 	{
 		SkyLight->SetIntensity(W.Sky);
-		// Cool blue-cyan tint on Sunset SkyLight counteracts the warm orange-red captured horizon
-		// so occluded valleys (Vael) and shaded grass stay cool dusk-green/slate instead of red.
-		const FLinearColor SkyCol = bSunset ? FLinearColor(0.58f, 0.74f, 1.0f)
-		                                    : (W.Elevation <= 16.f ? FLinearColor(1.0f, 0.95f, 0.90f)
-		                                                           : FLinearColor(0.94f, 0.97f, 1.0f));
-		SkyLight->SetLightColor(SkyCol);
+		SkyLight->SetLightColor(W.Elevation <= 16.f ? FLinearColor(1.0f, 0.95f, 0.90f) : FLinearColor(0.94f, 0.97f, 1.0f));
 	}
 	if (Fog.IsValid())
 	{
@@ -2504,13 +2474,11 @@ void ARidePawn::ApplyWeather()
 	if (Post.IsValid())
 	{
 		// Exposure stays within a few stops of what the light calls for, with tighter min brightness
-		// so shaded forests keep deep contrast instead of lifting to flat grey. At Sunset, hold the
-		// exposure floor higher so auto-exposure exposes for the glowing sky rather than boosting
-		// occluded valleys into bright daylight.
+		// so shaded forests keep deep contrast instead of lifting to flat grey.
 		const float Ev = FMath::Log2((W.Lux + 8000.f * W.Sky) / 2.5f);
 		Post->Settings.bOverride_AutoExposureMinBrightness = true;
 		Post->Settings.bOverride_AutoExposureMaxBrightness = true;
-		Post->Settings.AutoExposureMinBrightness = bSunset ? (Ev - 1.6f) : (Ev - 3.8f);
+		Post->Settings.AutoExposureMinBrightness = Ev - 3.8f;
 		Post->Settings.AutoExposureMaxBrightness = Ev + 0.5f;
 	}
 }
