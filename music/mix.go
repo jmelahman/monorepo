@@ -74,6 +74,7 @@ type mixer struct {
 
 func routeMixes(mux *http.ServeMux, m *mixer) {
 	routeYTAccount(mux, m)
+	routeMade(mux, m)
 	mux.HandleFunc("GET /api/mix/library", func(w http.ResponseWriter, r *http.Request) {
 		artists, err := walkLibrary(m.music)
 		if err != nil {
@@ -118,6 +119,13 @@ func (m *mixer) library(all []libTrack, now time.Time, size, remix int) []libTra
 	if remix != 0 {
 		name += "/" + strconv.Itoa(remix)
 	}
+	return m.draw(name, all, now, size, max(mixPerArtist, mixPerArtist*size/mixLength))
+}
+
+// draw picks a mix of size from the tracks given, the same all day for
+// the name: played tracks weigh more, the last two days' less, and no
+// artist has more than perArtist.
+func (m *mixer) draw(name string, all []libTrack, now time.Time, size, perArtist int) []libTrack {
 	rng := dailyRand(name, now)
 	type scored struct {
 		t libTrack
@@ -140,7 +148,6 @@ func (m *mixer) library(all []libTrack, now time.Time, size, remix int) []libTra
 	}
 	slices.SortFunc(picks, func(a, b scored) int { return -cmpFloat(a.k, b.k) })
 	per := map[string]int{}
-	perArtist := max(mixPerArtist, mixPerArtist*size/mixLength)
 	out := []libTrack{}
 	for _, p := range picks {
 		if len(out) == size {

@@ -243,3 +243,52 @@ func TestMCP(t *testing.T) {
 		t.Error("a playlist of a track not in the library was saved")
 	}
 }
+
+func TestMadeMixes(t *testing.T) {
+	paths := make([]string, 0, 60)
+	for _, a := range []string{"Aa", "Bb", "Cc", "Dd", "Ee"} {
+		for n := range 12 {
+			paths = append(paths, a+"/Album/"+strings.Repeat("x", n+1)+".mp3")
+		}
+	}
+	root := library(t, paths...)
+	s, err := newShelf(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range []string{"Aa", "Bb", "Cc"} {
+		if err := s.setLabel(a, "", labels{Genres: []string{"phonk"}, Moods: []string{"dark"}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	artists, err := walkLibrary(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	all := flatten(artists)
+	s.enrich(root, all)
+	m := &mixer{music: root, shelf: s}
+	now := time.Now()
+	first := m.made(all, now)
+	ids := make([]string, 0, len(first))
+	for _, mm := range first {
+		ids = append(ids, mm.ID)
+	}
+	slices.Sort(ids)
+	if want := []string{"genre:phonk", "mood:dark", "mood:dark+genre:phonk"}; !slices.Equal(ids, want) {
+		t.Fatalf("mixes %q, want %q", ids, want)
+	}
+	for range 5 {
+		if again := m.made(all, now); !slices.EqualFunc(again, first, func(a, b madeMix) bool { return a.ID == b.ID }) {
+			t.Fatal("the day's mixes changed between asks")
+		}
+	}
+	mood, genre, ok := madeID("mood:dark+genre:phonk")
+	if !ok || mood != "dark" || genre != "phonk" || madeTitle(mood, genre) != "Dark Phonk Mix" {
+		t.Errorf("madeID: %q %q %v", mood, genre, ok)
+	}
+	pool := m.madeTracks(all, "dark", "")
+	if got := m.draw("x", pool, now, 50, madePerArtist(pool, 50)); len(got) != 36 || slices.ContainsFunc(got, func(t libTrack) bool { return t.Artist == "Dd" || t.Artist == "Ee" }) {
+		t.Errorf("dark mix: %d tracks", len(got))
+	}
+}

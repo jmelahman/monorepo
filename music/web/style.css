@@ -406,6 +406,26 @@ main > .view-title {
   height: 2.5rem;
 }
 
+/* A made mix's tile: its covers in a square, as an album tile's one. */
+.tile.made .mix-art {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  margin-bottom: 0.625rem;
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+
+.tile.made .mix-art .art {
+  margin-bottom: 0;
+  transform: none;
+  box-shadow: none;
+}
+
+.tile.made:hover .mix-art {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 10px 24px rgb(0 0 0 / 0.4);
+}
+
 .hero.spinning .mix-art > svg {
   animation: spin 2.4s linear infinite;
 }

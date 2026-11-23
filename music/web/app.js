@@ -23,6 +23,8 @@ let mix = null; // the supermix last built, kept for its page
 let mixSource = ''; // account (YouTube Music's own) or radio (seeded from the library)
 let libMix = null; // the library mix: null until asked for, then 'loading', a list or 'failed'
 let libRemix = 0; // which of the day's library mixes: 0 is the day's own, others Remix's
+let made = null; // the mixes made for you today, from api/mixes: null, 'loading', a list or 'failed'
+const madeTracks = new Map(); // a made mix's id → 'loading', 'failed' or { title, tracks }
 let playlists = null; // from api/playlists, without their tracks
 const playlistTracks = new Map(); // id → the playlist with its tracks, as last read
 let excluded = new Set(); // what is kept out of the mixes: paths, and yt:<id> for streams
@@ -241,7 +243,8 @@ function keep(key, value) {
 // --------------------------------------------------------------- routes
 
 // route reads the hash: #/, #/library[/albums|/playlists], #/artist/A,
-// #/album/A/B, #/playlist/ID, #/mix/supermix|library, #/buys or #/search/Q.
+// #/album/A/B, #/playlist/ID, #/mix/supermix|library, #/mix/made/ID,
+// #/buys or #/search/Q.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   switch (parts[0]) {
@@ -254,6 +257,7 @@ function route() {
     case 'album':
       return { kind: 'album', artist: parts[1] || '', album: parts.slice(2).join('/') };
     case 'mix':
+      if (parts[1] === 'made') return { kind: 'mix', which: 'made', id: parts.slice(2).join('/') };
       return { kind: 'mix', which: parts[1] === 'library' ? 'library' : 'supermix' };
     case 'search':
       return { kind: 'search', q: parts.slice(1).join('/') };
@@ -300,6 +304,7 @@ function render() {
       break;
     case 'mix':
       if (r.which === 'library') renderLibraryMix();
+      else if (r.which === 'made') renderMadeMix(r.id);
       else renderSupermix();
       break;
     case 'search':
@@ -388,6 +393,7 @@ function renderHome() {
       ),
     el('div', { className: 'mixes' }, supermixReady ? supermixHero() : connectHero(), libraryMixHero()),
     libraryPending(),
+    madeShelf(),
     recent.length > 0 && shelf('Jump back in', null, albumRow(recent)),
     all.length > 0 && shelf('From your library', '#/library/albums', albumRow(shuffled(all).slice(0, 18)))
   );
@@ -635,8 +641,88 @@ function mixSizePicker() {
     mixSize = n;
     keep('music-mix-size', n);
     libMix = null;
+    madeTracks.clear();
     render();
   });
+}
+
+// ------------------------------------------------------ mixed for you
+
+// The mixes made for you: a genre's or a mood's, from the library's
+// labels, a few each day.
+function madeShelf() {
+  if (made === null) loadMade();
+  if (!Array.isArray(made) || made.length === 0) return null;
+  return shelf(
+    'Mixed for you',
+    null,
+    el(
+      'ul',
+      { className: 'grid row-scroll' },
+      made.map((m) =>
+        el(
+          'li',
+          {},
+          el(
+            'a',
+            { className: 'tile made', href: href('mix', 'made', m.id) },
+            mixArt(m.covers.map(([artist, album]) => [album, coverUrl(artist, album)])),
+            el('span', { className: 'tile-title', textContent: m.title }),
+            el('span', { className: 'tile-sub', textContent: m.blurb })
+          )
+        )
+      )
+    )
+  );
+}
+
+async function loadMade() {
+  made = 'loading';
+  try {
+    const r = await fetch('api/mixes');
+    if (!r.ok) throw new Error(r.status);
+    made = await r.json();
+  } catch {
+    made = 'failed';
+  }
+  if (route().kind === 'home') render();
+}
+
+async function loadMadeMix(id) {
+  madeTracks.set(id, 'loading');
+  try {
+    const r = await fetch(`api/mixes/${encodeURIComponent(id)}?size=${mixSize}`);
+    if (!r.ok) throw new Error(r.status);
+    madeTracks.set(id, await r.json());
+  } catch {
+    madeTracks.set(id, 'failed');
+  }
+  const r = route();
+  if (r.kind === 'mix' && r.id === id) render();
+}
+
+function renderMadeMix(id) {
+  if (!madeTracks.has(id)) loadMadeMix(id);
+  const got = madeTracks.get(id);
+  const listed = Array.isArray(made) ? made.find((m) => m.id === id) : null;
+  const ready = typeof got === 'object' && got.tracks.length > 0;
+  const items = ready ? libItems(got.tracks) : [];
+  show(
+    mixHead(
+      ready ? got.tracks.map((t) => [t.album, coverUrl(t.artist, t.album)]) : [],
+      'Mixed for you',
+      (typeof got === 'object' && got.title) || listed?.title || 'Mix',
+      ready && `${plural(items.length, 'track')} · a new one each day`,
+      ready && button('btn chrome', () => playQueue(items, 0), icon('play'), 'Play'),
+      ready && button('btn', () => playQueue(shuffled(items), 0), icon('shuffle'), 'Shuffle'),
+      mixSizePicker()
+    ),
+    got === 'failed'
+      ? el('p', { className: 'empty', textContent: 'The mix could not be read.' })
+      : ready
+        ? ownedList(items)
+        : el('p', { className: 'empty', textContent: 'Mixing…' })
+  );
 }
 
 // sizePicker chooses how many tracks a mix holds, from what the server
@@ -2218,7 +2304,10 @@ window.addEventListener('hashchange', () => toggleUpNext(false));
 // is playing.
 function backdropFor(r) {
   if (r.kind === 'album') return coverUrl(r.artist, r.album);
-  if (r.kind === 'mix') {
+  if (r.kind === 'mix' && r.which === 'made') {
+    const first = madeTracks.get(r.id)?.tracks?.[0];
+    if (first) return coverUrl(first.artist, first.album);
+  } else if (r.kind === 'mix') {
     const first = r.which === 'library' ? Array.isArray(libMix) && libMix[0] : Array.isArray(mix) && mix[0];
     if (first) return r.which === 'library' ? coverUrl(first.artist, first.album) : first.thumb;
   }
