@@ -119,6 +119,14 @@ LEAD = 60.0  # m of road from the coast road to a bridge's deck
 CORNER = 50.0  # m: a junction's turn rounded over this either side
 # The routes, the first the level's default: key, title, blurb, the petals they visit.
 ROUTES = [
+    # Must stay first so the default route carries all 8 bridges for make_features.py; the in-game
+    # Choose a route menu sorts routes shortest -> longest automatically.
+    (
+        "tour",
+        "The Grand Tour",
+        "Every island: out from the harbour to Greenwood, Vael, The Moor and Red Sands in turn.",
+        ("Greenwood", "Vael", "The Moor", "Red Sands"),
+    ),
     (
         "harbour",
         "Harbour Isle",
@@ -133,12 +141,6 @@ ROUTES = [
     ),
     ("highlands", "The Highlands", "The mountain, then the moor.", ("Vael", "The Moor")),
     ("east", "Heath and Sand", "The moor, then the desert.", ("The Moor", "Red Sands")),
-    (
-        "tour",
-        "The Grand Tour",
-        "Every island: out from the harbour to Greenwood, Vael, The Moor and Red Sands in turn.",
-        ("Greenwood", "Vael", "The Moor", "Red Sands"),
-    ),
 ]
 # Regional loops that stay 100% inside their own island and start right in their region (no detour
 # round Harbour Isle).
