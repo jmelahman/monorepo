@@ -2861,16 +2861,15 @@ def road_markings(out, g, bio, road):
         nx, ny = -uy, ux
         dist_h = math.hypot(px - hx, py - hy)
         if has_bike and dist_h < 1500.0 and k % 160 == 60:
-            # Centered in the right-hand pavement lane (+0.78 m, 0.76x scale so it stays clear of
-            # both the yellow centreline and the dark shoulder)
+            # Mesh carries -0.57 m Y offset & 0.76x scale so +1.35 m centers at +0.78 m in the lane
             out.add(
                 "RoadMarkings",
                 "road_mark_bike",
-                px + nx * 0.78,
-                py + ny * 0.78,
+                px + nx * 1.35,
+                py + ny * 1.35,
                 pz + 0.006,
                 yaw,
-                0.76,
+                1.0,
                 pitch,
                 0.0,
             )
@@ -2896,11 +2895,11 @@ def road_markings(out, g, bio, road):
                 out.add(
                     "RoadMarkings",
                     "road_mark_slow",
-                    lx + lnx * 0.78,
-                    ly + lny * 0.78,
+                    lx + lnx * 1.45,
+                    ly + lny * 1.45,
                     lz + 0.006,
                     lyaw,
-                    0.52,
+                    0.72,
                     lpitch,
                     0.0,
                 )

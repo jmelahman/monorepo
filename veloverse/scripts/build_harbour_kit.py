@@ -1842,9 +1842,12 @@ def build_lsd_highway_seg():
 
 def build_road_mark_bike():
     """Crisp white thermoplastic cycle-path bicycle stencil perpendicular across the lane (+Y)
-    with a bold forward directional arrow pointing along travel (+X), flush to tarmac."""
+    with a bold forward directional arrow pointing along travel (+X), flush to tarmac.
+    Scaled 0.76x and shifted -0.57 m in Y so placements at +1.35 m sit centered at +0.78 m
+    inside the right grey pavement lane, clear of both the yellow centreline and dark shoulder."""
     b = KitBuilder("road_mark_bike")
     z, t = 0.002, 0.004
+    s, oy = 0.76, -0.57
     # Bicycle perpendicular to the lane (wheels across Y at -0.44 / +0.44, centered at x = -0.35)
     bx = -0.35
     for wy in (-0.44, 0.44):
@@ -1857,44 +1860,61 @@ def build_road_mark_bike():
             mx, my = (p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5
             seg_l = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + 0.02
             ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
-            b.box("white", (mx, my, z), (seg_l, 0.065, t), rot=(0.0, 0.0, ang))
+            b.box("white", (mx * s, my * s + oy, z), (seg_l * s, 0.065 * s, t), rot=(0.0, 0.0, ang))
     # Diamond bicycle frame across Y (top tube, seat tube, down tube, fork, handlebars & saddle)
-    b.box("white", (bx + 0.06, 0.0, z), (0.065, 0.72, t))
-    b.box("white", (bx + 0.28, -0.04, z), (0.065, 0.54, t))
-    b.box("white", (bx + 0.17, 0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, -34.0))
-    b.box("white", (bx + 0.17, -0.24, z), (0.44, 0.065, t), rot=(0.0, 0.0, 34.0))
-    b.box("white", (bx + 0.42, 0.34, z), (0.065, 0.22, t))  # handlebars
-    b.box("white", (bx + 0.36, -0.32, z), (0.075, 0.22, t))  # saddle
+    b.box("white", ((bx + 0.06) * s, oy, z), (0.065 * s, 0.72 * s, t))
+    b.box("white", ((bx + 0.28) * s, -0.04 * s + oy, z), (0.065 * s, 0.54 * s, t))
+    b.box(
+        "white",
+        ((bx + 0.17) * s, 0.24 * s + oy, z),
+        (0.44 * s, 0.065 * s, t),
+        rot=(0.0, 0.0, -34.0),
+    )
+    b.box(
+        "white",
+        ((bx + 0.17) * s, -0.24 * s + oy, z),
+        (0.44 * s, 0.065 * s, t),
+        rot=(0.0, 0.0, 34.0),
+    )
+    b.box("white", ((bx + 0.42) * s, 0.34 * s + oy, z), (0.065 * s, 0.22 * s, t))  # handlebars
+    b.box("white", ((bx + 0.36) * s, -0.32 * s + oy, z), (0.075 * s, 0.22 * s, t))  # saddle
     # Bold forward directional arrow ahead of the bicycle (+X along travel)
-    b.box("white", (0.88, 0.0, z), (0.86, 0.16, t))
-    b.box("white", (1.28, 0.19, z), (0.56, 0.14, t), rot=(0.0, 0.0, -42.0))
-    b.box("white", (1.28, -0.19, z), (0.56, 0.14, t), rot=(0.0, 0.0, 42.0))
+    b.box("white", (0.88 * s, oy, z), (0.86 * s, 0.16 * s, t))
+    b.box("white", (1.28 * s, 0.19 * s + oy, z), (0.56 * s, 0.14 * s, t), rot=(0.0, 0.0, -42.0))
+    b.box("white", (1.28 * s, -0.19 * s + oy, z), (0.56 * s, 0.14 * s, t), rot=(0.0, 0.0, 42.0))
     return b
 
 
 def build_road_mark_slow():
-    """Bold white thermoplastic 'SLOW' road stencil painted flush across the lane ahead of bends."""
+    """Bold white thermoplastic 'SLOW' road stencil painted flush across the lane ahead of bends.
+    Scaled 0.72x and shifted -0.93 m in Y so 0.72x placements at +1.45 m sit centered at +0.78 m
+    inside the right grey pavement lane, clear of both the yellow centreline and dark shoulder."""
     b = KitBuilder("road_mark_slow")
     z, t = 0.002, 0.004
+    s, oy = 0.72, -0.93
+
+    def p(cx, cy, sx, sy):
+        b.box("white", (cx * s, cy * s + oy, z), (sx * s, sy * s, t))
+
     # Four bold block letters arranged across Y (facing oncoming rider along -X), elongated in X
     # S (y = -0.95)
     for ox in (-0.65, 0.0, 0.65):
-        b.box("white", (ox, -0.95, z), (0.14, 0.44, t))
-    b.box("white", (0.32, -1.14, z), (0.68, 0.12, t))
-    b.box("white", (-0.32, -0.76, z), (0.68, 0.12, t))
+        p(ox, -0.95, 0.14, 0.44)
+    p(0.32, -1.14, 0.68, 0.12)
+    p(-0.32, -0.76, 0.68, 0.12)
     # L (y = -0.32)
-    b.box("white", (0.0, -0.50, z), (1.42, 0.12, t))
-    b.box("white", (-0.65, -0.32, z), (0.14, 0.44, t))
+    p(0.0, -0.50, 1.42, 0.12)
+    p(-0.65, -0.32, 0.14, 0.44)
     # O (y = +0.32)
     for ox in (-0.65, 0.65):
-        b.box("white", (ox, 0.32, z), (0.14, 0.44, t))
-    for oy in (0.14, 0.50):
-        b.box("white", (0.0, oy, z), (1.42, 0.12, t))
+        p(ox, 0.32, 0.14, 0.44)
+    for ly in (0.14, 0.50):
+        p(0.0, ly, 1.42, 0.12)
     # W (y = +0.98)
-    for oy in (0.76, 1.20):
-        b.box("white", (0.0, oy, z), (1.42, 0.11, t))
-    b.box("white", (-0.65, 0.98, z), (0.14, 0.50, t))
-    b.box("white", (-0.20, 0.98, z), (0.85, 0.10, t))
+    for ly in (0.76, 1.20):
+        p(0.0, ly, 1.42, 0.11)
+    p(-0.65, 0.98, 0.14, 0.50)
+    p(-0.20, 0.98, 0.85, 0.10)
     return b
 
 
