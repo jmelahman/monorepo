@@ -1172,8 +1172,9 @@ def harbour(out, g, bio, road, rng, taken):
         planter = "harbour_planter" if has_planter else bench
         stone_wall = ms("coast", "mossy_stone_wall")
         # Walk along the harbour road (both out from start and wrapping near end)
-        indices = list(range(25, min(1150, len(line)), 18)) + list(
-            range(max(len(line) - 650, 1200), len(line) - 25, 18)
+        # 14 m step ensures 20.4 m Lake Shore Drive segments overlap seamlessly on every curve.
+        indices = list(range(25, min(1150, len(line)), 14)) + list(
+            range(max(len(line) - 650, 1200), len(line) - 25, 14)
         )
         for k in indices:
             px, py = float(line[k, 0]), float(line[k, 1])

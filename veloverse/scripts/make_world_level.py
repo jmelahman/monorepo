@@ -552,7 +552,7 @@ def trees_band(rng, x, y, h, slope, d, forest, desert, whole):
         & (slope[rows, cols] < 1.3)
         & (rng.random(len(dd)) < wood * 0.9 * far)
         & (rng.random(len(dd)) < mi.smoothstep(TREELINE + 45, TREELINE - 20, zz))
-        & (zz > 6)
+        & (zz > 1.6)
     )
     px, py, zz = px[keep], py[keep], zz[keep] - 0.4
     kinds = species(rng, px, py, zz, 0.04)
@@ -943,20 +943,9 @@ def trail_dressing(line, trail, bridges):
     left = np.stack([ahead[:, 1], -ahead[:, 0]], 1)  # road_mesh's left of travel
     half = mi.ROAD_HALF
     posts, spans, lamps = [], [], []
-    # A break in the run (a bridge, or the two ends of the trail): no span across it.
-    gap = np.r_[False, np.diff(order) % n != 1]
-    every = np.round(np.arange(0, len(order), TRAIL_POST_EVERY)).astype(int)
-    every = every[every < len(order)]
-    for sign in (1.0, -1.0):
-        prev = None
-        for i in every:
-            x, y = line[order[i], :2] + sign * left[i] * (half + TRAIL_RAIL_OUT)
-            here = [float(x * 100), float(y * 100), float(line[order[i], 2] * 100)]
-            yaw = math.degrees(math.atan2(ahead[i, 1], ahead[i, 0]))
-            posts.append([*here, yaw])
-            if prev is not None and not gap[prev[1] + 1 : i + 1].any():
-                spans.append([*prev[0], *here])
-            prev = (here, i)
+    # Open Chicago Lakefront Trail: no continuous Bloomingdale-style railings boxing in the
+    # lakeside park path (save railings for elevated urban/interior trails where buildings abut);
+    # keep only the graceful swan-neck lamps lighting the bikeway.
     for i in range(TRAIL_LAMP_EVERY // 2, len(order), TRAIL_LAMP_EVERY):
         x, y = line[order[i], :2] + left[i] * (half + TRAIL_LAMP_OUT)
         # The arm reaches over the trail: toward its middle, to the right of the lamp.
