@@ -1847,7 +1847,9 @@ def build_road_mark_bike():
     inside the right grey pavement lane, clear of both the yellow centreline and dark shoulder."""
     b = KitBuilder("road_mark_bike")
     z, t = 0.002, 0.004
-    s, oy = 0.76, -0.57
+    # UE5 glTF import negates Blender Y (y_ue = -y_bl), so +0.57 m in Blender shifts -57 cm
+    # inward in UE5 (+1.35 m -> +0.78 m, centered in the right grey pavement lane).
+    s, oy = 0.76, 0.57
     # Bicycle perpendicular to the lane (wheels across Y at -0.44 / +0.44, centered at x = -0.35)
     bx = -0.35
     for wy in (-0.44, 0.44):
@@ -1891,10 +1893,14 @@ def build_road_mark_slow():
     inside the right grey pavement lane, clear of both the yellow centreline and dark shoulder."""
     b = KitBuilder("road_mark_slow")
     z, t = 0.002, 0.004
-    s, oy = 0.72, -0.93
+    # UE5 glTF import negates Blender Y (y_ue = -y_bl), so +0.93 m in Blender at 0.72x scale
+    # shifts -67 cm inward in UE5 (+1.45 m -> +0.78 m, centered in the right grey pavement lane).
+    s, oy = 0.72, 0.93
 
     def p(cx, cy, sx, sy):
-        b.box("white", (cx * s, cy * s + oy, z), (sx * s, sy * s, t))
+        # Negate cy because UE5 glTF import flips Blender Y (y_ue = -y_bl), so S-L-O-W reads
+        # left-to-right for the oncoming rider.
+        b.box("white", (cx * s, -cy * s + oy, z), (sx * s, sy * s, t))
 
     # Four bold block letters arranged across Y (facing oncoming rider along -X), elongated in X
     # S (y = -0.95)
