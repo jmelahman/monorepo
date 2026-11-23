@@ -2904,7 +2904,7 @@ def road_markings(out, g, bio, road):
 
     # 3. Horizontal white intersection stop/crosswalk bars at bridge approaches & route junctions
     if has_stop:
-        for a, b in road.bridges:
+        for a, b in road.spans:
             for idx in (max(0, a - 14), min(len(road.line) - 1, b + 14)):
                 px, py, pz = (
                     float(road.line[idx, 0]),
