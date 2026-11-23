@@ -67,6 +67,7 @@ inline const TCHAR* Workout = TEXT("\uE1E0"); // timer
 inline const TCHAR* Signal = TEXT("\uE146"); // radio
 inline const TCHAR* Gear = TEXT("\uE158"); // settings
 inline const TCHAR* Leave = TEXT("\uE144"); // power
+inline const TCHAR* Exit = TEXT("\uE112"); // log-out (door with exit arrow)
 inline const TCHAR* Bluetooth = TEXT("\uE060"); // bluetooth
 inline const TCHAR* Trainer = TEXT("\uE4E6"); // circle-gauge
 inline const TCHAR* HeartIcon = TEXT("\uE0F5"); // heart

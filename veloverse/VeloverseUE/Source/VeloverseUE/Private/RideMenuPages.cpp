@@ -1598,13 +1598,12 @@ void URideMenu::PaintPause(FPaintContext& C) const
 	else
 	{
 		Add(TEXT("resume"), TEXT("Resume"), EButton::Primary, [M] { M->Controller()->Resume(); }, nullptr);
-		Add(TEXT("end"), TEXT("End and save the ride"), EButton::Outline, [M] { M->Controller()->EndRide(); },
-		    Icons::Stats);
+		Add(TEXT("end"), TEXT("End and save"), EButton::Outline, [M] { M->Controller()->EndRide(); }, Icons::Stats);
 	}
 	Add(TEXT("settings"), TEXT("Settings"), EButton::Outline, [M] { M->Show(ERideMenuPage::Settings); }, Icons::Gear);
 	// Restarting reloads the level, so an unfinished ride is dropped: say so.
 	Add(TEXT("home"), bFinished ? TEXT("Back to the start") : TEXT("Leave without saving"), EButton::Outline,
-	    [M] { M->Controller()->Restart(); }, nullptr);
+	    [M] { M->Controller()->Restart(); }, Icons::Exit);
 	Add(TEXT("quit"), bFinished ? TEXT("Quit") : TEXT("Quit without saving"), EButton::Quiet,
 	    [M] { M->Controller()->Quit(); }, Icons::Leave);
 }
