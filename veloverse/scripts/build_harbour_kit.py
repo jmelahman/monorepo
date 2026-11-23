@@ -1009,14 +1009,14 @@ def build_modern_boathouse():
 
     # Glazed marina lobby entrance on ground right (+X side, waterfront -Y)
     b.box("steel", (5.35, -d * 0.5 - 0.04, 1.72), (3.10, 0.16, 3.04), bevel=0.015)
-    b.box("warm_glass", (5.35, -d * 0.5 - 0.06, 1.72), (2.88, 0.08, 2.84))
+    b.box("glass", (5.35, -d * 0.5 - 0.06, 1.72), (2.88, 0.08, 2.84))
     for mx in (4.35, 5.35, 6.35):
         b.box("steel", (mx, -d * 0.5 - 0.10, 1.72), (0.07, 0.10, 2.88))
 
     # Rear (+Y trailside) glazed lobby window bays
     for wx in (-4.2, 0.0, 4.2):
         b.box("steel", (wx, d * 0.5 + 0.03, 1.85), (2.90, 0.14, 1.80))
-        b.box("warm_glass", (wx, d * 0.5 + 0.05, 1.85), (2.72, 0.08, 1.64))
+        b.box("glass", (wx, d * 0.5 + 0.05, 1.85), (2.72, 0.08, 1.64))
         b.box("steel", (wx, d * 0.5 + 0.08, 1.85), (0.06, 0.08, 1.68))
 
     # Cantilevered upper floor deck slab projecting 1.25 m toward the water (-Y)
@@ -1033,14 +1033,14 @@ def build_modern_boathouse():
     b.box("siding", (-1.40, uy + (ud - 0.70) * 0.5 + 0.06, 5.34), (11.6, 0.14, 2.86), bevel=0.015)
     # Upper rear trail-facing panoramic ribbon window
     b.box("steel", (-1.40, uy + (ud - 0.70) * 0.5 + 0.12, 5.42), (8.6, 0.12, 1.75))
-    b.box("warm_glass", (-1.40, uy + (ud - 0.70) * 0.5 + 0.14, 5.42), (8.36, 0.08, 1.56))
+    b.box("glass", (-1.40, uy + (ud - 0.70) * 0.5 + 0.14, 5.42), (8.36, 0.08, 1.56))
     for mx in (-4.2, -1.4, 1.4):
         b.box("steel", (mx, uy + (ud - 0.70) * 0.5 + 0.17, 5.42), (0.08, 0.08, 1.60))
 
     # Panoramic waterfront curtain wall on upper cantilevered front (-Y) & east (+X)
     front_y = uy - (ud - 0.70) * 0.5 + 0.35
     b.box("steel", (-1.40, front_y, 5.34), (11.5, 0.16, 2.88))
-    b.box("warm_glass", (-1.40, front_y - 0.02, 5.34), (11.2, 0.10, 2.66))
+    b.box("glass", (-1.40, front_y - 0.02, 5.34), (11.2, 0.10, 2.66))
     for mx in (-6.8, -4.6, -2.4, -0.2, 2.0, 4.15):
         b.box("steel", (mx, front_y - 0.06, 5.34), (0.09, 0.14, 2.74))
     b.box("steel", (-1.40, front_y - 0.06, 5.88), (11.4, 0.12, 0.08))

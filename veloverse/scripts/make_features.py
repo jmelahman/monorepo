@@ -569,11 +569,12 @@ def rocks(out, g, bio, road, rng):
 # slope they need, how many at most, the faces (key, size m, scale range) and the scree.
 CLIFFS = {
     "mountain": (
-        0.45,
-        2600,
+        0.36,
+        3200,
         [
             (ms("mountain", "sharp_cliff"), 18.9, (0.9, 1.8)),
             (ms("mountain", "huge_icelandic_volcanic_cliff"), 15.6, (1.0, 2.2)),
+            (ms("coast", "granite_cliff_rivav"), 29.6, (0.7, 1.3)),
             (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.6, 1.2)),
         ],
         [
@@ -592,10 +593,11 @@ CLIFFS = {
         [(ms("desert", "desert_western_cluster_rock_medium_05"), 3.0, (1.2, 2.5))],
     ),
     "heath": (
-        0.42,
-        700,
+        0.35,
+        1200,
         [
             (ms("mountain", "icelandic_rock_plates"), 6.4, (1.5, 3.0)),
+            (ms("coast", "granite_cliff_rivav"), 29.6, (0.5, 1.0)),
             (ms("mountain", "massive_tundra_rock_formation"), 26.4, (0.28, 0.55)),
         ],
         [(ms("mountain", "tundra_boulder"), 2.9, (0.8, 1.8))],
