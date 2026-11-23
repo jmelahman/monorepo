@@ -53,6 +53,8 @@ struct FRideProfile
 	float MasterVolume = 85.f;   // 0..100% overall audio volume
 	float BikeVolume = 100.f;    // 0..100% wind, tires, freehub & drivetrain
 	float AmbienceVolume = 100.f;// 0..100% coastal surf & park/forest birdsong
+	int32 GraphicsQuality = 2;   // 0 Low, 1 Medium, 2 High (default), 3 Epic; -1 custom
+	int32 Upscaling = 1;         // 0 Off (100%), 1 Quality (75%), 2 Balanced (67%), 3 Performance (50%)
 	// The rider's look (RiderKit.h): a swatch per part, -1 for the rider's own colour (Settings > Kit).
 	int32 Kit[Veloverse::Kit::Parts] = {-1, -1, -1, -1, -1, -1, -1, -1};
 

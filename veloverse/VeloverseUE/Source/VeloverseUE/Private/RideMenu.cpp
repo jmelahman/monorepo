@@ -145,6 +145,7 @@ void URideMenu::Show(ERideMenuPage Page)
 	{
 		SurveyRoutes();
 		PendingRoute = Pawn ? Pawn->RouteIndex() : INDEX_NONE;
+		PendingStart = Pawn ? Pawn->StartIndex() : 0;
 	}
 	if (Pawn && Pawn->bStarted)
 	{

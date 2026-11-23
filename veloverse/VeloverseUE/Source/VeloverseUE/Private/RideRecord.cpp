@@ -227,6 +227,14 @@ FRideProfile FRideProfile::Load()
 		{
 			Profile.AmbienceVolume = FMath::Clamp(static_cast<float>(Value), 0.f, 100.f);
 		}
+		if (O->TryGetNumberField(TEXT("graphics_quality"), Value))
+		{
+			Profile.GraphicsQuality = FMath::Clamp(static_cast<int32>(Value), -1, 3);
+		}
+		if (O->TryGetNumberField(TEXT("upscaling"), Value))
+		{
+			Profile.Upscaling = FMath::Clamp(static_cast<int32>(Value), 0, 3);
+		}
 		const TSharedPtr<FJsonObject>* Kit = nullptr;
 		if (O->TryGetObjectField(TEXT("kit"), Kit) && Kit)
 		{
@@ -269,6 +277,8 @@ void FRideProfile::Save() const
 	O->SetNumberField(TEXT("master_vol"), MasterVolume);
 	O->SetNumberField(TEXT("bike_vol"), BikeVolume);
 	O->SetNumberField(TEXT("ambience_vol"), AmbienceVolume);
+	O->SetNumberField(TEXT("graphics_quality"), GraphicsQuality);
+	O->SetNumberField(TEXT("upscaling"), Upscaling);
 	TSharedRef<FJsonObject> KitO = MakeShared<FJsonObject>();
 	for (int32 I = 0; I < Veloverse::Kit::Parts; ++I)
 	{

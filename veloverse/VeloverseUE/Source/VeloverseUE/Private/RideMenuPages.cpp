@@ -122,7 +122,11 @@ TArray<FString> Qualities()
 }
 
 UGameUserSettings* Video() { return UGameUserSettings::GetGameUserSettings(); }
-void Apply() { Video()->ApplySettings(false); }
+void Apply()
+{
+	Video()->ApplySettings(false);
+	Video()->SaveSettings();
+}
 } // namespace
 
 // ---- Shared --------------------------------------------------------------------------------------
@@ -396,6 +400,7 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 			if (ARidePawn* R = M->Rider(); R && !R->bFinished)
 			{
 				M->PendingRoute = I; // stage preview; only switches when pressing Confirm
+				M->PendingStart = 0;
 			}
 		};
 		Y += 96.f;
@@ -570,8 +575,9 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		       Muted);
 	}
 
-	const TArray<ARidePawn::FStart> Starts = Pawn->Starts();
-	const int32 StartAt = Pawn->StartIndex();
+	const URideTrack* PreviewTrack = Pawn->Routes.IsValidIndex(Chosen) ? Pawn->Routes[Chosen].Get() : Pawn->Track.Get();
+	const TArray<ARidePawn::FStart> Starts = Pawn->StartsFor(PreviewTrack);
+	const int32 StartAt = Starts.Num() > 0 ? FMath::Clamp(PendingStart, 0, Starts.Num() - 1) : 0;
 	if (Starts.Num() > 0)
 	{
 		Label(P, Dx, 628.f, TEXT("Start at"));
@@ -579,18 +585,17 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 		P.Round(Dx, 640.f, Dw, 56.f, 12.f, InkA(0.06f + 0.04f * C.Lift(Key)));
 		P.Icon(Icons::ChevronLeft, Dx + 14.f, 656.f, 24.f, Ink);
 		P.Icon(Icons::Chevron, Dx + Dw - 38.f, 656.f, 24.f, Ink);
-		const ARidePawn::FStart& Start = Starts[FMath::Clamp(StartAt, 0, Starts.Num() - 1)];
+		const ARidePawn::FStart& Start = Starts[StartAt];
 		P.Text(Dx + Dw * 0.5f, Mid(668.f, 18.f),
 		       P.Fit(FString::Printf(TEXT("%s · %s"), *Start.Name, *U::Distance(Start.Metres)), P.Font("Bold", 18.f),
 		             Dw - 100.f),
 		       P.Font("Bold", 18.f), Ink, EAlign::Centre);
-		auto Step = [M](int32 By)
+		const int32 NumStarts = Starts.Num();
+		auto Step = [M, NumStarts](int32 By)
 		{
-			ARidePawn* R = M->Rider();
-			if (R && !R->bFinished && R->Starts().Num() > 0)
+			if (NumStarts > 0)
 			{
-				const int32 N = R->Starts().Num();
-				R->UseStart(((R->StartIndex() + By) % N + N) % N);
+				M->PendingStart = ((M->PendingStart + By) % NumStarts + NumStarts) % NumStarts;
 			}
 		};
 		C.Ring(Key, Dx, 640.f, Dw, 56.f, 12.f);
@@ -602,11 +607,19 @@ void URideMenu::PaintRoutes(FPaintContext& C) const
 	}
 	const bool bRiding = Pawn->bStarted;
 	C.Button(TEXT("start"), Dx, 718.f, Dw, 72.f, bRiding ? TEXT("Confirm") : TEXT("Start ride"), EButton::Primary,
-	         [M, bRiding, Chosen]
+	         [M, bRiding, Chosen, StartAt]
 	         {
-		         if (ARidePawn* R = M->Rider(); R && !R->bFinished && Chosen != R->RouteIndex())
+		         if (ARidePawn* R = M->Rider(); R && !R->bFinished)
 		         {
-			         R->UseRoute(Chosen);
+			         const bool bChanged = Chosen != R->RouteIndex();
+			         if (bChanged)
+			         {
+				         R->UseRoute(Chosen);
+			         }
+			         if (bChanged || StartAt != R->StartIndex())
+			         {
+				         R->UseStart(StartAt);
+			         }
 		         }
 		         bRiding ? M->Controller()->Resume() : M->Controller()->Ride();
 	         },
@@ -904,10 +917,11 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		const int32 Overall = V->GetOverallScalabilityLevel();
 		Choice(TEXT("overall"), Row(TEXT("Quality"), Overall < 0 ? TEXT("Custom: set in Detail") : TEXT("Every detail at once")),
 		       Qualities(), Overall,
-		       [](int32 I)
+		       [Edit](int32 I)
 		       {
 			       Video()->SetOverallScalabilityLevel(I);
 			       Apply();
+			       Edit([I](FRideProfile& Pr) { Pr.GraphicsQuality = I; });
 		       });
 		// TSR's presets: the share of the screen's pixels it renders before sharpening them back up.
 		static const int32 Scales[4] = {100, 75, 67, 50};
@@ -924,10 +938,11 @@ void URideMenu::PaintSettings(FPaintContext& C) const
 		                        : FString::Printf(TEXT("Renders %d%% of the pixels and TSR sharpens them back up"),
 		                                          Scales[ScaleAt])),
 		       {TEXT("Off"), TEXT("Quality"), TEXT("Balanced"), TEXT("Performance")}, ScaleAt,
-		       [](int32 I)
+		       [Edit](int32 I)
 		       {
 			       Video()->SetResolutionScaleValueEx(Scales[I]);
 			       Apply();
+			       Edit([I](FRideProfile& Pr) { Pr.Upscaling = I; });
 		       });
 		static const float Caps[5] = {30.f, 60.f, 90.f, 120.f, 0.f};
 		const float Cap = V->GetFrameRateLimit();

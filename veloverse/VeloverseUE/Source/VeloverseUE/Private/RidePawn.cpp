@@ -1,5 +1,6 @@
 #include "RidePawn.h"
 #include "RideAudio.h"
+#include "GameFramework/GameUserSettings.h"
 
 #include "BleTrainer.h"
 #include "BlueZLink.h"
@@ -322,19 +323,24 @@ float ARidePawn::ChosenStart = -1.f;
 
 TArray<ARidePawn::FStart> ARidePawn::Starts() const
 {
+	return StartsFor(Track);
+}
+
+TArray<ARidePawn::FStart> ARidePawn::StartsFor(const URideTrack* On) const
+{
 	TArray<FStart> Out;
-	if (!Track)
+	if (!On)
 	{
 		return Out;
 	}
-	const TArray<FRideStretch>& Stretches = Track->Stretches;
+	const TArray<FRideStretch>& Stretches = On->Stretches;
 	if (Stretches.IsEmpty() || Stretches[0].Metres > 0.f)
 	{
 		Out.Add({TEXT("Start"), 0.f});
 	}
 	for (const FRideStretch& Stretch : Stretches)
 	{
-		if (Stretch.Metres * 100.f < Track->Length())
+		if (Stretch.Metres * 100.f < On->Length())
 		{
 			Out.Add({Stretch.Name, Stretch.Metres});
 		}
@@ -705,6 +711,19 @@ void ARidePawn::ReadCommandLine()
 	Profile = FRideProfile::Load();
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
+	if (!Automated())
+	{
+		if (UGameUserSettings* V = UGameUserSettings::GetGameUserSettings())
+		{
+			if (Profile.GraphicsQuality >= 0)
+			{
+				V->SetOverallScalabilityLevel(FMath::Clamp(Profile.GraphicsQuality, 0, 3));
+			}
+			static constexpr float Scales[4] = {100.f, 75.f, 67.f, 50.f};
+			V->SetResolutionScaleValueEx(Scales[FMath::Clamp(Profile.Upscaling, 0, 3)]);
+			V->ApplySettings(false);
+		}
+	}
 	UseSettings();
 	ApplyKit(); // the rider was dressed before the profile was read, in the export's own colours
 	FParse::Value(Line, TEXT("RideFtp="), Ftp);

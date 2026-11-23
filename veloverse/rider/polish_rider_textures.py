@@ -327,6 +327,32 @@ def _smooth_glutes(mesh_ob, weight_iters=12, taubin_iters=6):
     new_co[idx_l] += (0.013 * lift_w[idx_l, None]) * lift_dir
     _taubin_smooth(new_co, neighbors, idx_c, cleft_w, 4, 0.40, -0.36)
 
+    # 4) Bridge the visible rear intergluteal cleft (facing the Chase camera at x < -0.03,
+    # z in 0.87..1.04, |y| < 0.06) so tight Lycra bib shorts stretch smoothly across the seat
+    # pad instead of tucking into a deep anatomical wedgie crease.
+    x3, y3, z3 = new_co[:, 0], new_co[:, 1], new_co[:, 2]
+    ay3 = np.abs(y3)
+    rear_w = (
+        (1.0 - _smoothstep(0.012, 0.062, ay3))
+        * _smoothstep(0.865, 0.905, z3)
+        * (1.0 - _smoothstep(1.005, 1.045, z3))
+        * (1.0 - _smoothstep(-0.045, -0.010, x3))
+    )
+    idx_r = np.where(is_body & (rear_w > 0.01))[0]
+    cheek_mask = is_body & (ay3 >= 0.052) & (ay3 <= 0.088) & (x3 < -0.04)
+    cheek_z = z3[cheek_mask]
+    cheek_x = x3[cheek_mask]
+    if len(cheek_z) > 10 and len(idx_r) > 0:
+        for vi in idx_r:
+            near_z = np.abs(cheek_z - z3[vi]) < 0.018
+            if np.any(near_z):
+                # Rear surface has negative X; pulling toward cheek min X bridges the cleft.
+                target_x = float(np.percentile(cheek_x[near_z], 25))
+                if new_co[vi, 0] > target_x:
+                    w_pull = 0.82 * float(rear_w[vi])
+                    new_co[vi, 0] = (1.0 - w_pull) * new_co[vi, 0] + w_pull * target_x
+        _taubin_smooth(new_co, neighbors, idx_r, rear_w, 12, 0.45, -0.38)
+
     me.vertices.foreach_set("co", new_co.ravel())
     me.update()
     return len(idx_w), len(idx_g), len(idx_l)

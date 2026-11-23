@@ -119,6 +119,7 @@ public:
 		float Metres = 0.f;
 	};
 	TArray<FStart> Starts() const;
+	TArray<FStart> StartsFor(const URideTrack* On) const;
 	int32 StartIndex() const;
 	// Moves the rider to Starts()[Index]; mid-ride, the ride carries on from there.
 	void UseStart(int32 Index);
