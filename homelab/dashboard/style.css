@@ -27,11 +27,6 @@ h1 {
   letter-spacing: 0.1em;
 }
 
-#host {
-  color: var(--dim);
-  font: 400 0.75rem/1 var(--mono);
-}
-
 main {
   max-width: 60rem;
   margin: 0 auto;

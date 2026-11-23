@@ -298,6 +298,5 @@ window.addEventListener('beforeunload', (e) => {
 
 // ---------------------------------------------------------------- init
 
-$('host').textContent = location.hostname;
 $('app-icon').append(...Object.keys(ICONS).map((name) => el('option', { value: name, textContent: name })));
 load();
