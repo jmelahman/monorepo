@@ -706,8 +706,11 @@ def cliffs(out, g, bio, road, rng, taken):
             rng.uniform(-6, 6),
             mark=(170, 160, 150),
         )
-        # Scree: two to four heaps down the fall line from the face's foot.
+        # Scree: two to four heaps down the fall line from the face's foot, laid on the slope:
+        # facing downhill (within 20 degrees) and pitched down it. Laid level and sunk by 15%,
+        # a 4 m slab on a 45 degree slope stood out of it as a shelf (Vael, v91-v95, G8).
         fall = np.array([-gx[k], -gy[k]]) / max(math.hypot(gx[k], gy[k]), 1e-6)
+        lie = math.degrees(math.atan(math.hypot(gx[k], gy[k])))
         for _ in range(rng.integers(2, 5)):
             smesh, ssize, (t0, t1) = scree[rng.integers(len(scree))]
             d = r * rng.uniform(0.7, 1.6)
@@ -717,14 +720,18 @@ def cliffs(out, g, bio, road, rng, taken):
             if road.dist(sx, sy) < 10:
                 continue
             ss = rng.uniform(t0, t1)
+            # One draw, as the old random yaw was, so the rest of the dressing is unchanged.
+            turn = rng.uniform(-20, 20)
             out.add(
                 "Cliffs",
                 smesh,
                 sx,
                 sy,
-                g.z(sx, sy) - ssize * ss * 0.15,
-                rng.uniform(0, 360),
+                g.z(sx, sy) - ssize * ss * 0.25,
+                down + turn,
                 ss,
+                -lie * math.cos(math.radians(turn)),
+                0.0,
                 mark=(120, 115, 110),
             )
     print(f"cliffs: {counts}", flush=True)
