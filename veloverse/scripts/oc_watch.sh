@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Watches the build queue and prints one line per event, for a Monitor in the agent's session:
 #   STEP   a step started or ended (with how long it took)
-#   JOB    an oc.py job inside a step ended (DONE, FAILED, CRASHED, TIMEOUT, NO EDITOR)
+#   JOB    an oc.py job inside a step ended (DONE, FAILED, CRASHED, TIMEOUT, NO EDITOR); a
+#          restart or stop that went fine isn't news
 #   BEAT   every BEAT seconds: the step, its age, its last log line and the stills so far
 #   STALL  nothing has moved for STALL seconds: no step log, editor log or new still
 # A hang is noticed in minutes, and the STEP and JOB times show where iteration slowed.
@@ -23,7 +24,8 @@ while true; do
 	if [ "$name" != "$step" ]; then
 		[ -n "$step" ] && echo "STEP ended $step after $(((now - started) / 60)) min"
 		[ -n "$name" ] && echo "STEP started $name at $(date +%H:%M)"
-		step=$name started=$now seen=0 changed=$now
+		# From the step's own start (its .active file), so a watch armed mid-step times it right.
+		step=$name started=$(mtime "$active") seen=0 changed=$now
 		# Armed mid-step: only the jobs that end from now on.
 		[ "$first" = 1 ] && seen=$(grep -cE '^(DONE|FAILED|CRASHED|TIMEOUT|NO EDITOR)' "$Q/$step.log" 2>/dev/null || true)
 	fi
@@ -34,6 +36,7 @@ while true; do
 		total=${total:-0}
 		if [ "$total" -gt "$seen" ]; then
 			grep -E '^(DONE|FAILED|CRASHED|TIMEOUT|NO EDITOR)' "$log" | tail -n $((total - seen)) |
+				grep -vE '_(restart|stop)$|back on the empty map|have stopped' |
 				sed "s/^/JOB $(date +%H:%M) /"
 			seen=$total
 		fi
