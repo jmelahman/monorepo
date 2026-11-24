@@ -1045,7 +1045,7 @@ def path_material():
 TRAIL_CONCRETE = (0.13, 0.127, 0.12)  # 0.34 and 0.24 read as white under the hub sun
 # 0.05 rendered mid grey (v51); (0.014, 0.02, 0.032) a flat near-black navy band beside the
 # grass (v95, both reviews): a lifted, more neutral charcoal with a coarser grain.
-TRAIL_RUBBER = (0.026, 0.029, 0.036)
+TRAIL_RUBBER = (0.045, 0.047, 0.052)  # 0.026-0.036 read as black tape beside the concrete (v97)
 TRAIL_SHOULDER = 0.45  # m, each side
 TRAIL_YELLOW = (0.62, 0.4, 0.03)
 TRAIL_SLAB = 3.0  # m between saw-cut joints
@@ -1090,6 +1090,8 @@ def trail_material():
     edge = g.saturate(g.mul(g.add(across, -(half - TRAIL_SHOULDER)), 60.0))
     rubber = g.mul(g.const(TRAIL_RUBBER), g.world_noise(0.3, 0.85, 1.15, 1))
     rubber = g.mul(rubber, g.world_noise(0.6, 0.85, 1.15, 1))
+    # Worn, dusty patches a few metres long: one flat tone read as tape (v97).
+    rubber = g.mul(rubber, g.world_noise(0.05, 0.75, 1.3, 2))
     colour = g.lerp(colour, rubber, edge)
     rough = g.lerp(g.const(0.82), g.const(0.95), edge)
     # The yellow dashed line down the middle, 10 cm wide.
