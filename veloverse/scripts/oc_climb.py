@@ -212,7 +212,9 @@ CANOPY_NEAR = {}
 # density, and every grass and plant row reaches GRASS_REACH times as far, so the meadow reaches
 # 70-100 m for about the instances it drew before (0.5 x 1.4^2). The sparse flowers and herbs keep
 # their density, so the meadow keeps its colour, and the props (culled at 90 m or more) their reach.
-GRASS_THIN = 0.5
+# 23 Nov (g1j, out/qa/g1/density): back to full density; at 0.5 the deep floor showed between
+# the near blades, and x2 read as one carpet to the path.
+GRASS_THIN = 1.0
 GRASS_REACH = 1.4
 # The rider's grass reach (RidePawn::UseGrassReach): 1 in the editor and the stills. It scales the
 # blades' fade (_distance_fade) and the canopy colour with grass.CullDistanceScale.
