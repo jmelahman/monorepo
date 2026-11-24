@@ -422,7 +422,8 @@ def cmd_look(ns):
 
 
 def parse_variants(texts):
-    """NAME:PARAM=F|R,G,B[;PARAM=...]: ground parameters per variant, in order."""
+    """NAME:PARAM=F|R,G,B[;PARAM=...]: parameters per variant, in order. A PARAM is the
+    ground's, or "blade.", "plant." or "post." then a name (`--post` keys for post)."""
     out = {}
     for text in texts:
         name, sep, rest = text.partition(":")
@@ -592,8 +593,9 @@ def main(argv=None):
         "--variant",
         action="append",
         metavar="NAME:PARAM=F|R,G,B[;...]",
-        help="after the stills, set these ground parameters and shoot the same views into "
-        "OC_STILLS/NAME, in the same editor; repeat for an A/B/C in one look",
+        help="after the stills, set these parameters (the ground's, or blade./plant./post. "
+        "then a name) and shoot the same views into OC_STILLS/NAME, in the same editor; repeat "
+        "for an A/B/C or a grid in one look",
     )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")

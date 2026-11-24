@@ -2412,23 +2412,41 @@ def op_look(
         yield from _ensure_level()
         result["files"] = yield from _stills(shots, out or STILLS)
     if variants:
-        files = yield from _ground_variants(variants, shots, out)
+        files = yield from _ground_variants(variants, shots, out, blade_params, plant_params)
         result["files"] = result.get("files", []) + files
-        notes.append(f"ground variants {list(variants)}")
+        notes.append(f"variants {list(variants)}")
     return result
 
 
-def _ground_variants(variants, shots, out):
-    """{name: ground params}: each set on the ground instance in turn and shot into
-    <stills>/<name>, in the one editor, then the instance put back as it was. A 3-way A/B costs
-    one restart and one look's setup, not three (23 Nov: a look was ~6 min, 4 of them setup)."""
+VARIANT_KINDS = ("ground", "blade", "plant", "post")
+
+
+def _variant_split(params):
+    """{"blade.Road lean": [1.4], "Grass canopy start": [40]}: by kind, the name without its
+    prefix; a name without one is the ground's."""
+    out = {k: {} for k in VARIANT_KINDS}
+    for key, value in params.items():
+        kind, dot, name = key.partition(".")
+        if not dot or kind not in VARIANT_KINDS:
+            kind, name = "ground", key
+        out[kind][name] = value
+    return out
+
+
+def _ground_variants(variants, shots, out, blade_params=None, plant_params=None):
+    """{name: params}: each set in turn and shot into <stills>/<name>, in the one editor, then put
+    back as the look had them. A param is the ground instance's, or "blade.", "plant." or "post."
+    then a name for MI_Blade, every plant's MI or the post volume (`--post` keys). A 3-way A/B
+    costs one restart and one look's setup, not three (23 Nov: a look was ~6 min, 4 of them
+    setup); Gemini's grid sweeps (23 Nov) are a variant per cell. The post isn't put back: the
+    look ends there, and every step restarts the editor."""
     yield from _ensure_level()
     mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     edit = unreal.MaterialEditingLibrary
     # A colour is a list of 3 or 4, as `look` parses it; anything else a scalar.
     before = {}
     for params in variants.values():
-        for k, v in params.items():
+        for k, v in _variant_split(params)["ground"].items():
             if isinstance(v, (list, tuple)) and len(v) > 1:
                 before[k] = list(_rgba(edit.get_material_instance_vector_parameter_value(mi, k)))
             else:
@@ -2436,13 +2454,22 @@ def _ground_variants(variants, shots, out):
     files = []
     try:
         for name, params in variants.items():
-            _set_params(mi, params)
+            parts = _variant_split(params)
+            _set_params(mi, {**before, **parts["ground"]})
+            _blade_instances(params={**(blade_params or {}), **parts["blade"]})
+            _plant_params({**_road_look("plant"), **PLANT_LOOK, **(plant_params or {})})
+            if parts["plant"]:
+                _plant_params(parts["plant"])
+            if parts["post"]:
+                post = parts["post"].items()
+                _post({k: v[0] if isinstance(v, (list, tuple)) else v for k, v in post})
             # The ground's virtual texture redraws from the new parameters.
             unreal.SystemLibrary.execute_console_command(None, "r.VT.Flush")
             yield 60
             log(f"variant {name}: {params}")
             files += yield from _stills(shots, f"{out or STILLS}/{name}")
     finally:
+        _blade_instances(params=blade_params)
         _set_params(mi, before)
         unreal.SystemLibrary.execute_console_command(None, "r.VT.Flush")
     return files
