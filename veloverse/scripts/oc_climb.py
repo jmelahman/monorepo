@@ -1868,6 +1868,21 @@ def _level_actors(cls):
     return [a for a in unreal.EditorActorSubsystem().get_all_level_actors() if isinstance(a, cls)]
 
 
+def _post_reset():
+    """Removes the grade volume (POST_LABEL), so the level is back on the template's grade.
+    `_post` saves into the level, and a dress-only build keeps it: g2a2's one `--post
+    exposure=-0.5` darkened every v96 still by ~0.8 EV (24 Nov). Each look starts here, so a
+    `--post` lasts one look. The sun, sky and fog keys still persist: pass them every time."""
+    gone = 0
+    for a in _level_actors(unreal.PostProcessVolume):
+        if a.get_actor_label() == POST_LABEL:
+            unreal.EditorActorSubsystem().destroy_actor(a)
+            gone += 1
+    if gone:
+        unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
+        log(f"post reset: removed {gone} {POST_LABEL}")
+
+
 def _post(post):
     """The light and grade of the open level: an unbound post-process volume (made once, labelled
     POST_LABEL), the height fog's start and volumetric fog, and the sky light's and sun's
@@ -2039,12 +2054,18 @@ def _tune(tints, greys=None):
 
 def _views():
     """info.json's views ([name, eye, target] in m), if the generator chose them: the world's
-    ride has one per stretch."""
+    ride has one per stretch. features.json's landmark views too, as the build's stills have
+    them: without them v96's look had no feat_* shots (24 Nov)."""
     try:
         with open(f"{SRC}/info.json") as f:
             views = json.load(f).get("views")
     except OSError:
         return None
+    try:
+        with open(f"{SRC}/features.json") as f:
+            views = list(views or []) + list(json.load(f).get("views", []))
+    except OSError:
+        pass
     if not views:
         return None
     return [(n, tuple(v * 100 for v in p), tuple(v * 100 for v in a)) for n, p, a in views]
@@ -2416,6 +2437,9 @@ def op_look(
     notes += [f"prop params {prop_params}"] if prop_params else []
     notes += [f"blade params {blade_params}"] if blade_params else []
     notes += [f"grass {grass}"] if grass else []
+    if stills or post or variants:
+        yield from _ensure_level()
+        _post_reset()
     if fog is not None:
         yield from _ensure_level()
         _fog(fog)
@@ -2431,7 +2455,7 @@ def op_look(
         yield from _ensure_level()
         result["files"] = yield from _stills(shots, out or STILLS)
     if variants:
-        files = yield from _ground_variants(variants, shots, out, blade_params, plant_params)
+        files = yield from _ground_variants(variants, shots, out, blade_params, plant_params, post)
         result["files"] = result.get("files", []) + files
         notes.append(f"variants {list(variants)}")
     return result
@@ -2452,13 +2476,13 @@ def _variant_split(params):
     return out
 
 
-def _ground_variants(variants, shots, out, blade_params=None, plant_params=None):
+def _ground_variants(variants, shots, out, blade_params=None, plant_params=None, post=None):
     """{name: params}: each set in turn and shot into <stills>/<name>, in the one editor, then put
     back as the look had them. A param is the ground instance's, or "blade.", "plant." or "post."
     then a name for MI_Blade, every plant's MI or the post volume (`--post` keys). A 3-way A/B
     costs one restart and one look's setup, not three (23 Nov: a look was ~6 min, 4 of them
-    setup); Gemini's grid sweeps (23 Nov) are a variant per cell. The post isn't put back: the
-    look ends there, and every step restarts the editor."""
+    setup); Gemini's grid sweeps (23 Nov) are a variant per cell. Each variant's post goes on
+    the look's own; the next look resets it (`_post_reset`)."""
     yield from _ensure_level()
     mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
     edit = unreal.MaterialEditingLibrary
@@ -2479,9 +2503,14 @@ def _ground_variants(variants, shots, out, blade_params=None, plant_params=None)
             _plant_params({**_road_look("plant"), **PLANT_LOOK, **(plant_params or {})})
             if parts["plant"]:
                 _plant_params(parts["plant"])
+            # Each variant's post on the look's own, not on the variant before it (g2c's
+            # exposure sweep stacked on a saved -0.5, 24 Nov).
+            _post_reset()
+            if post:
+                _post(post)
             if parts["post"]:
-                post = parts["post"].items()
-                _post({k: v[0] if isinstance(v, (list, tuple)) else v for k, v in post})
+                own = parts["post"].items()
+                _post({k: v[0] if isinstance(v, (list, tuple)) else v for k, v in own})
             # The ground's virtual texture redraws from the new parameters.
             unreal.SystemLibrary.execute_console_command(None, "r.VT.Flush")
             yield 60
