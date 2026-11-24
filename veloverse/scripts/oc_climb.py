@@ -877,7 +877,26 @@ def _road_fold(g, kind, offset=None):
         heading = g.link(
             g.add(flat, g.const((0.0001, 0.0, 0.0))), g.node(unreal.MaterialExpressionNormalize)
         )
-        tilt = g.mul(g.param("Road lean", 0.8), near_edge)
+        # Each clump its own share of the lean and a swing off square to the edge: a uniform lean
+        # read as grass combed flat (g2a_lean, 24 Nov, Gemini and our crops at 1.4).
+        rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
+        spread = g.param("Road lean spread", 0.7)
+        share = g.add(g.add(g.mul(spread, -1.0), 1.0), g.mul(g.mul(spread, 2.0), rnd))
+        tilt = g.mul(g.mul(g.param("Road lean", 0.6), near_edge), share)
+        swing = g.mul(
+            g.param("Road lean swing", 0.8),
+            g.add(g.link(g.mul(rnd, 13.7), g.node(unreal.MaterialExpressionFrac)), -0.5),
+        )
+        side = g.op(
+            unreal.MaterialExpressionAppendVector,
+            g.op(
+                unreal.MaterialExpressionAppendVector,
+                g.mul(g.mask(heading, "g"), -1.0),
+                g.mask(heading, "r"),
+            ),
+            g.const(0.0),
+        )
+        heading = g.add(heading, g.mul(side, swing))
         height = g.mul(g.mask(fold, "b"), -1.0)
         lean = g.mul(heading, g.mul(height, tilt))
         # The tip drops as it leans (about half the tilt squared), so blades keep their length.
