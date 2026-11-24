@@ -132,7 +132,8 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
   5. End a step with `scripts/step_review.sh OUT "what changed" "shots" v95=DIR v96=DIR`: the
      crop stacks, their clipped/crushed numbers and Gemini's review are on disk when it ends.
   - **Build only what changed:** `build-level --stage dress` when the heights didn't change
-    (skips the ~5 min landscape import), and `--no-stills` when a look follows. Sweep values as
+    (skips the ~5 min landscape import), with `--only roads|features|trees` when only those
+    changed, and `--no-stills` when a look follows. Sweep values as
     `look --variant NAME:PARAM=V` (ground, or `blade.`/`plant.`/`post.` then a name), all in one
     editor.
   - `oc_queue.sh list` shows waiting, done and failed steps; logs are in

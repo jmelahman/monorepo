@@ -472,11 +472,17 @@ def cmd_static_trees(ns):
 def cmd_build_level(ns):
     """The whole level from world_gen/climb (run make_climb.py first): each stage on a freshly
     restarted editor, since the ground stage deletes L_Hero and the dress stage loads it."""
+    if ns.only and ns.stage != "dress":
+        # The ground stage starts a fresh level: everything --only leaves out would be lost.
+        print("--only needs --stage dress", file=sys.stderr)
+        return 2
     for stage in [ns.stage] if ns.stage else ("ground", "dress"):
         restart_clean(ns)
         args = {"stage": stage}
         if stage == "dress":
             args["stills"] = not ns.no_stills
+            if ns.only:
+                args["only"] = [g.strip() for g in ns.only.split(",") if g.strip()]
         code = wait(submit("build-level", args), ns.timeout)
         if code != OK:
             return code
@@ -618,6 +624,11 @@ def main(argv=None):
     s.add_argument("--stage", choices=("ground", "dress"), help="only this stage (default both)")
     s.add_argument(
         "--no-stills", action="store_true", help="skip the stills: a look after it shoots them"
+    )
+    s.add_argument(
+        "--only",
+        help="with --stage dress: rebuild only these groups (roads, features, trees; comma "
+        "separated) and leave the rest standing",
     )
     add("static-trees", cmd_static_trees, help="static Nanite copies of the PVE trees")
     add("ride-track", cmd_ride_track, help="rewrite the level's DA_RideTrack only")

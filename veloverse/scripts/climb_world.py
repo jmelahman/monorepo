@@ -60,6 +60,9 @@ STAGE = os.environ.get("OC_STAGE") or "all"
 # oc.py build-level --no-stills: the dress stage ends without its stills, for a step whose look
 # shoots them again with the fog and post put back (build-level drops them).
 STILLS_TOO = True
+# A dress stage of only these groups (ONLY_GROUPS), or None for all of it: `oc.py build-level
+# --stage dress --only trees` rebuilds the trees and leaves the roads and features standing.
+ONLY = None
 STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 FOLDER = "/Game/Climb"
@@ -1758,6 +1761,15 @@ DRESSING = (
     "Sea",
     "Features",
 )  # outliner folders the dress stage owns
+ONLY_GROUPS = {
+    "roads": ("Road", "Rail", "Trail", "Roundabout", "Props", "Sea"),
+    "features": ("Features",),
+    "trees": ("Trees",),
+}
+
+
+def _want(group):
+    return ONLY is None or group in ONLY
 
 
 def drop_sky_dome():
@@ -1789,7 +1801,9 @@ def fresh_level(ground):
 
 
 def undress():
-    """Open the saved level with every actor loaded, and remove the dressing."""
+    """Open the saved level with every actor loaded, and remove the dressing (only ONLY's
+    groups', when set)."""
+    owned = DRESSING if ONLY is None else tuple(f for g in ONLY for f in ONLY_GROUPS[g])
     if not assets.does_asset_exist(LEVEL):
         raise RuntimeError(f"no {LEVEL} to dress: build it with OC_STAGE=all or ground first")
     world = unreal.EditorLoadingAndSavingUtils.load_map(LEVEL)
@@ -1804,7 +1818,8 @@ def undress():
     gone = 0
     for actor in actors.get_all_level_actors():
         folder = str(actor.get_folder_path())
-        if folder.split("/")[0] in DRESSING or actor.get_actor_label() == "Global Foliage":
+        foliage = actor.get_actor_label() == "Global Foliage" and _want("trees")
+        if folder.split("/")[0] in owned or foliage:
             actors.destroy_actor(actor)
             gone += 1
     log(f"undressed: {gone} actors")
@@ -1823,18 +1838,23 @@ def main():
     if STAGE == "stills":
         yield from stills(open_level())
         return
+    if ONLY is not None and (STAGE != "dress" or set(ONLY) - set(ONLY_GROUPS)):
+        raise RuntimeError(f"only {ONLY}: a dress stage of {sorted(ONLY_GROUPS)}")
     if STAGE == "dress":
         island.FOLDER = FOLDER
-        road = road_material()  # before the level loads: no compile with its meshes in view
-        path = path_material() if _has_paths() else None
-        if os.environ.get("OC_PATH") == "road":  # bisecting: the path pieces in the road's look
-            path = None
-        trail = trail_materials() if _has_trail() else None
-        rounds = roundabout_materials() if _has_roundabouts() else None
-        water = sea_material()
-        horizon = far_material()
-        dressing = dressing_materials()
-        paints = feature_materials()
+        road = path = trail = rounds = water = horizon = dressing = paints = None
+        if _want("roads"):  # the materials before the level loads: no compile with them in view
+            road = road_material()
+            path = path_material() if _has_paths() else None
+            if os.environ.get("OC_PATH") == "road":  # bisecting: the path pieces as road
+                path = None
+            trail = trail_materials() if _has_trail() else None
+            rounds = roundabout_materials() if _has_roundabouts() else None
+            water = sea_material()
+            horizon = far_material()
+            dressing = dressing_materials()
+        if _want("features"):
+            paints = feature_materials()
         yield
         world = undress()
     else:
@@ -1853,6 +1873,28 @@ def main():
     if STAGE == "ground":
         return
     yield
+    if _want("roads"):
+        yield from _dress_roads(road, path, trail, rounds, dressing, water, horizon)
+        save(world)
+        yield
+    if paints:
+        features(paints)
+        yield
+        save(world)
+        yield
+    # The trees last, saved on their own: thousands of actors on top of a fresh landscape
+    # got the editor killed for memory as it saved them all together.
+    if _want("trees"):
+        trees()
+        yield
+        save(world)
+    if STILLS_TOO:
+        yield from stills(world)
+
+
+def _dress_roads(road, path, trail, rounds, dressing, water, horizon):
+    """The roads group: the road pieces, rails, props, trail dressing, roundabouts, the ride
+    track, the sea and the far hills."""
     roads(road, path, trail[0] if trail else None)
     if _has_paths():  # the world: its ground writes the RVT the road edges read
         rvt_volume()
@@ -1870,20 +1912,6 @@ def main():
     if horizon is not None:
         far(horizon)
     yield
-    save(world)
-    yield
-    if paints:
-        features(paints)
-        yield
-        save(world)
-        yield
-    # The trees last, saved on their own: thousands of actors on top of a fresh landscape
-    # got the editor killed for memory as it saved them all together.
-    trees()
-    yield
-    save(world)
-    if STILLS_TOO:
-        yield from stills(world)
 
 
 def _views():

@@ -36,6 +36,20 @@ def test_job_status():
     assert oc.job_status(names, "9_z") is None
 
 
+def test_only_needs_the_dress_stage():
+    # A full build with --only would start a fresh level and dress only part of it.
+    for argv in (
+        ["build-level", "--only", "trees"],
+        ["build-level", "--stage", "ground", "--only", "x"],
+    ):
+        try:
+            oc.main(argv)
+        except SystemExit as e:
+            assert e.code == 2
+        else:
+            raise AssertionError(argv)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
