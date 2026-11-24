@@ -970,6 +970,8 @@ def road_material():
 PATH_TINT = (0.5, 0.48, 0.46)  # 0.6 read brighter than the rock beside it (wc_55000, v59)
 # Its edge, m from the middle: the mesh's own (make_world_level.PATH_HALF), about 2.4 m across.
 PATH_HALF = 1.2
+# The bank skirt past the path's edge, times the ground's colour there (see path_material).
+PATH_BANK_SHADE = 0.5
 # Its loose edge: the gravel, darker.
 PATH_EDGE = (0.54, 0.52, 0.49)
 
@@ -1019,6 +1021,13 @@ def path_material():
     # The outer 15-30 cm is the ground's own colour, from the world's ground RVT.
     rim = g.saturate(g.mul(g.add(g.add(inside, ragged), -0.22), -6.0))
     colour = g.lerp(colour, _rvt_colour(g), g.mul(rim, g.param("ground blend", 1.0)))
+    # Past the edge, the road mesh's bank skirt runs down to the coarse ground: the ground's
+    # colour with no blades on it, tilted to the sun, read as a bright lime lip on the Moor
+    # (v93). Shaded like the grass carpet's floor beside it, in its own hue.
+    out = g.add(g.add(across, g.mul(g.param("path half", PATH_HALF), -1.0)), -0.1)
+    bank = g.saturate(g.mul(out, 3.0))
+    colour = g.lerp(colour, g.mul(colour, g.param("bank shade", PATH_BANK_SHADE)), bank)
+    rough = g.lerp(rough, g.const(1.0), bank)
     colour, rough = _wet_road(g, colour, rough, wet_rough=0.3)
     g.output(colour, normal, rough, specular=0.25, ao=g.mask(masks, "r"))
     g.material.set_editor_property("used_with_nanite", True)
