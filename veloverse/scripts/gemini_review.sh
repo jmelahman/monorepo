@@ -39,6 +39,8 @@ For each image or labelled crop, answer briefly:
 - Is anything growing on the road or path?
 - Anything else that breaks the illusion of a real place.
 Then: which is best, and the single biggest remaining fault, located precisely in the frame.
+End with this table, one row per image, for the next trial to read:
+| image | pass/fail | primary fault, where in the frame | next change to try (a value or a direction) |
 Be concrete and terse. Do not edit or create any files."
 model=()
 [ -n "${GEMINI_MODEL:-}" ] && model=(--model "$GEMINI_MODEL")
