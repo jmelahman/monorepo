@@ -531,18 +531,38 @@ def road_view(out, g, road, target, reach, want, lifts=(1.7, 6.0, 15.0, 40.0)):
         keep = np.random.default_rng(len(pts)).choice(len(pts), 300, replace=False)
         pts, d = pts[keep], d[keep]
     tree, low, top = _stems()
-    cliffs = np.array(
-        [it[2:4] for it in out.items if it[0] in ("Cliffs", "Stacks")], dtype=float
-    ).reshape(-1, 2)
-    cliffs = cKDTree(cliffs / 100) if len(cliffs) else None
+    # Each rock as a column sized by its scale: a fixed 10 m and 30 m let scale-3 limestone
+    # walls fill feat_tower's frame (v97).
+    rock = np.array(
+        [
+            [it[2] / 100, it[3] / 100, it[4] / 100, it[6]]
+            for it in out.items
+            if it[0] in ("Cliffs", "Stacks", "Rocks")
+        ],
+        dtype=float,
+    ).reshape(-1, 4)
+    rock_r = 3 + 5 * rock[:, 3]
+    rock_top = rock[:, 2] + 6 + 12 * rock[:, 3]
+    cliffs = cKDTree(rock[:, :2]) if len(rock) else None
+    reach_r = float(rock_r.max()) if len(rock) else 0.0
     best = None
     for (ex, ey), dist in zip(pts, d, strict=True):
         # The last 12 m are the landmark's own ground, garden or stones.
-        t = np.linspace(0.04, max(0.05, 1 - 12 / dist), 40)
+        # From 2 m out, every ~5 m: at 40 samples from 4% the first was 24 m away, past the
+        # rock beside the eye.
+        t = np.linspace(
+            min(0.5, 2 / dist), max(0.05, 1 - 12 / dist), int(np.clip(dist / 5, 40, 200))
+        )
         sx, sy = ex + (tx - ex) * t, ey + (ty - ey) * t
         ground = g.z(sx, sy)
         near_trees = tree.query_ball_point(np.column_stack([sx, sy]), 4.0)
-        near_cliffs = cliffs.query_ball_point(np.column_stack([sx, sy]), 10.0) if cliffs else None
+        near_cliffs = None
+        if cliffs is not None:
+            near_cliffs = cliffs.query_ball_point(np.column_stack([sx, sy]), reach_r)
+            near_cliffs = [
+                [j for j in h if np.hypot(rock[j, 0] - sx[k], rock[j, 1] - sy[k]) < rock_r[j]]
+                for k, h in enumerate(near_cliffs)
+            ]
         for rung, lift in enumerate(lifts):
             ez = g.z(ex, ey) + lift
             sz = ez + (tz - ez) * t
@@ -550,8 +570,9 @@ def road_view(out, g, road, target, reach, want, lifts=(1.7, 6.0, 15.0, 40.0)):
             for k, near in enumerate(near_trees):
                 blocked += any(low[j] + 2 < sz[k] < top[j] for j in near)
             if near_cliffs is not None:
-                # A cliff face stands about 30 m: a line higher above the ground clears it.
-                blocked += sum(1 for k, h in enumerate(near_cliffs) if h and sz[k] - ground[k] < 30)
+                blocked += sum(
+                    1 for k, h in enumerate(near_cliffs) if any(sz[k] < rock_top[j] for j in h)
+                )
             score = (blocked, rung, abs(dist - want))
             if best is None or score < best[0]:
                 best = (score, [float(ex), float(ey), float(ez)])
