@@ -500,6 +500,9 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     wooded = wooded + w["heath"] * mi.smoothstep(0.66, 0.72, n(200, 6))
     wooded = wooded + lakefront_park * mi.smoothstep(0.54, 0.68, n(180, 9))
     wooded = np.clip(wooded, 0, 1) * (1 - alpine)
+    # A wood's path has a grassy margin where the light gets in: forest to the path left its dark
+    # bare floor in a band where the road fold clears the understory (Vael, v93).
+    wooded = wooded * (1 - shoulder)
     soft = (1 - rock) * (1 - snow) * (1 - face) * (1 - shoulder * dry)
     out = {
         "Sand": soft * beach,
