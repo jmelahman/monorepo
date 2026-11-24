@@ -398,14 +398,30 @@ DIST_NEAR = 16.0
 DIST_SIZE = 4096  # the texture, RES padded to a power of two; the padding is far
 
 
-def road_distance(lines):
-    """Writes OUT/road_dist.png from every route's centre line."""
-    pts = []
-    for line, _bridge in lines.values():
+def road_distance(lines, narrow=None):
+    """Writes OUT/road_dist.png from every route's centre line. `narrow`, a mask per route key,
+    marks the gravel path's points: their offsets are stretched by ROAD_HALF / PATH_HALF, so the
+    fold's one "Road clear" (the road's half width plus a reach) stops at the path's own edge.
+    Until 23 Nov it cleared 0.9 m of the ground beside each path, where only the road mesh's
+    earth bank showed, a smooth green lip (Vael, the Moor)."""
+    pts, scale = [], []
+    for key, (line, _bridge) in lines.items():
         p = line[:, :2]
         seg = np.roll(p, -1, axis=0) - p
         pts += [p + seg * t for t in (0.0, 0.25, 0.5, 0.75)]  # 0.25 m apart
-    tree = cKDTree(np.vstack(pts))
+        s = np.ones(len(p))
+        if narrow is not None and key in narrow:
+            s[narrow[key]] = mi.ROAD_HALF / PATH_HALF
+        scale += [s] * 4
+    pts, scale = np.vstack(pts), np.concatenate(scale)
+    # Where a path meets or runs on a wider road, the road's width wins: never a blade on tarmac.
+    wide = cKDTree(pts[scale == 1.0])
+    if wide.n:
+        gap, _ = wide.query(pts[scale > 1.0], distance_upper_bound=mi.ROAD_HALF + 2.0)
+        s = scale[scale > 1.0]
+        s[np.isfinite(gap)] = 1.0
+        scale[scale > 1.0] = s
+    tree = cKDTree(pts)
     out = np.zeros((DIST_SIZE, DIST_SIZE, 3), np.uint8)
     out[..., :2] = 128
     cols = coords(np.arange(RES))
@@ -417,7 +433,7 @@ def road_distance(lines):
         dist, idx = tree.query(here, distance_upper_bound=DIST_NEAR, workers=-1)
         hit = np.isfinite(dist)
         v = np.zeros_like(here)
-        v[hit] = tree.data[idx[hit]] - here[hit]
+        v[hit] = (tree.data[idx[hit]] - here[hit]) * scale[idx[hit], None]
         enc = np.clip(np.round((v / DIST_NEAR + 1) / 2 * 255), 0, 255).astype(np.uint8)
         enc[~hit] = 128
         block = out[r0:r1, :RES]
@@ -1346,7 +1362,6 @@ def main():
         clear_road(h, lines[key][0])
     for ring_line, _ in rings.values():
         clear_road(h, ring_line)
-    road_distance({**lines, **rings})
     stems, small = paint_and_trees(plan, h, dist, raw - h)
     del raw
     del dist
@@ -1355,6 +1370,18 @@ def main():
     del q
     Image.fromarray(small).save(f"{OUT}/layers.png")
     rides = [ride_of(r, stretches(plan, lines[r["key"]][0])) for r in routes]
+    narrow = {
+        r["key"]: np.concatenate(
+            [
+                np.full(b - a, kind == "path")
+                for kind, a, b in surfaces(
+                    r["stretches"], len(lines[r["key"]][0]), z=lines[r["key"]][0][:, 2]
+                )
+            ]
+        )
+        for r in rides
+    }
+    road_distance({**lines, **rings}, narrow)
     first = routes[0]["key"]
     line, bridge = lines[first]
     info = {
