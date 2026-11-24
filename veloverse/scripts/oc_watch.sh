@@ -23,9 +23,10 @@ while true; do
 	name=$(basename "${active:-}" .active)
 	if [ "$name" != "$step" ]; then
 		[ -n "$step" ] && echo "STEP ended $step after $(((now - started) / 60)) min"
-		[ -n "$name" ] && echo "STEP started $name at $(date +%H:%M)"
-		# From the step's own start (its .active file), so a watch armed mid-step times it right.
-		step=$name started=$(mtime "$active") seen=0 changed=$now
+		[ -n "$name" ] && echo "STEP started $name at $(date -d "@$(stat -c %W "$Q/$name.log" 2>/dev/null || date +%s)" +%H:%M)"
+		# From the step's own start, its log's birth (the runner moves the step file in, so the
+		# .active file keeps the time it was queued), so a watch armed mid-step times it right.
+		step=$name started=$(stat -c %W "$Q/$name.log" 2>/dev/null || echo "$now") seen=0 changed=$now
 		# Armed mid-step: only the jobs that end from now on.
 		[ "$first" = 1 ] && seen=$(grep -cE '^(DONE|FAILED|CRASHED|TIMEOUT|NO EDITOR)' "$Q/$step.log" 2>/dev/null || true)
 	fi
