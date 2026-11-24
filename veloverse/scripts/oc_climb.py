@@ -2329,8 +2329,9 @@ def op_look(
         {**LOOK_TINTS, **{k: tuple(v) for k, v in (tint or {}).items()}},
         {**LOOK_GREYS, **(grey or {})},
     )
-    if grass:
-        _grass(*grass)
+    # The grass too: `--grass` saves the grass types, so g1a's `--grass 0 0` (false colour, 23 Nov)
+    # left every later look and build with no grass (v92). Each look starts from GRASS as baked.
+    _grass(*(grass or (1.0, 1.0)))
     if plants:
         _plant_tint(plants)
     if plant_params:
