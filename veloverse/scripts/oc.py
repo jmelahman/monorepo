@@ -417,6 +417,9 @@ def cmd_look(ns):
         "stills": not ns.no_stills,
         "shots": shots(ns),
         "variants": parse_variants(ns.variant or []),
+        # Per look: the editor read OC_STILLS only at its restart, so a look with its own
+        # OC_STILLS after a restart without it shot into climb_stills (g2a_lean, 24 Nov).
+        "out": os.environ.get("OC_STILLS"),
     }
     return run("look", args, ns)
 
