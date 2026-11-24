@@ -858,6 +858,32 @@ def _road_fold(g, kind, offset=None):
     clear = g.param("Road clear", info["road_half"] + ROAD_REACH[kind])
     hide = g.saturate(g.mul(g.add(clear, g.mul(metres, -1.0)), 4.0))
     g.road_metres, g.road_sample, g.road_uv = metres, sample, uv  # for the "Road debug" colours
+    if kind == "blade":
+        # Blades rooted within "Road lean span" m of the clearing lean toward the road, up to
+        # "Road lean" (the tangent of the tilt) at its edge, so they hang over the road mesh's
+        # earth bank and the path's edge instead of stopping short of it on a smooth green lip
+        # (v95, both reviews). The tilt grows with the height above the root.
+        span = g.param("Road lean span", 1.2)
+        near_edge = g.saturate(
+            g.op(
+                unreal.MaterialExpressionDivide,
+                g.add(g.add(clear, span), g.mul(metres, -1.0)),
+                span,
+            )
+        )
+        # The nudge keeps a zero offset (on a centre line, or far from any road) from
+        # normalising to NaN, which the fold's lerp would carry into the position.
+        flat = g.op(unreal.MaterialExpressionAppendVector, v, g.const(0.0))
+        heading = g.link(
+            g.add(flat, g.const((0.0001, 0.0, 0.0))), g.node(unreal.MaterialExpressionNormalize)
+        )
+        tilt = g.mul(g.param("Road lean", 0.8), near_edge)
+        height = g.mul(g.mask(fold, "b"), -1.0)
+        lean = g.mul(heading, g.mul(height, tilt))
+        # The tip drops as it leans (about half the tilt squared), so blades keep their length.
+        drop = g.mul(g.const((0.0, 0.0, -0.5)), g.mul(height, g.mul(tilt, tilt)))
+        lean = g.add(lean, drop)
+        offset = lean if offset is None else g.add(offset, lean)
     if shrink is not None:
         hide = g.op(unreal.MaterialExpressionMax, hide, shrink)
     return g.mul(fold, hide) if offset is None else g.lerp(offset, fold, hide)
