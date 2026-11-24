@@ -1739,7 +1739,7 @@ def _old_build():
     return module
 
 
-def op_build_level(stage):
+def op_build_level(stage, stills=True):
     """One stage of the level build from world_gen/climb: "ground" (a fresh L_Hero with the
     landscape, deleting the old one) or "dress" (the path, fence, ride track and trees, then
     stills). Each only on a fresh editor: oc.py build-level restarts before each, because the
@@ -1752,8 +1752,10 @@ def op_build_level(stage):
     unreal._oc_opened_hero = True
     cw = _old_build()
     cw.STAGE = stage
+    cw.STILLS_TOO = stills
     yield from cw.main()
-    files = [f"{STILLS}/{name}.png" for name, _, _ in cw.cameras()] if stage == "dress" else []
+    shot = stage == "dress" and stills
+    files = [f"{STILLS}/{name}.png" for name, _, _ in cw.cameras()] if shot else []
     return {"notes": [f"built stage {stage}"], "files": files}
 
 

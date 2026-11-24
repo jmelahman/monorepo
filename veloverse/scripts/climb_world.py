@@ -57,6 +57,9 @@ assets, actors = lib.assets, lib.actors
 
 SRC = os.environ.get("OC_SRC", "/workspace/ue/world_gen/climb")
 STAGE = os.environ.get("OC_STAGE") or "all"
+# oc.py build-level --no-stills: the dress stage ends without its stills, for a step whose look
+# shoots them again with the fog and post put back (build-level drops them).
+STILLS_TOO = True
 STILLS = os.environ.get("OC_STILLS") or "/workspace/ue/out/climb_stills"
 SHOTS = (0.08, 0.3, 0.5, 0.72, 0.95)  # fractions of the way up, for the road-level stills
 FOLDER = "/Game/Climb"
@@ -1879,7 +1882,8 @@ def main():
     trees()
     yield
     save(world)
-    yield from stills(world)
+    if STILLS_TOO:
+        yield from stills(world)
 
 
 def _views():
