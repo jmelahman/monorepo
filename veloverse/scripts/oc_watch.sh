@@ -36,7 +36,7 @@ while true; do
 		total=${total:-0}
 		if [ "$total" -gt "$seen" ]; then
 			grep -E '^(DONE|FAILED|CRASHED|TIMEOUT|NO EDITOR)' "$log" | tail -n $((total - seen)) |
-				grep -vE '_(restart|stop)$|back on the empty map|have stopped' |
+				grep -vE '^DONE: .*(_restart|_stop|back on the empty map|have stopped)$' |
 				sed "s/^/JOB $(date +%H:%M) /"
 			seen=$total
 		fi
