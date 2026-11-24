@@ -416,8 +416,20 @@ def cmd_look(ns):
         "blade_params": dict(parse_param(t) for t in ns.blade_param or []),
         "stills": not ns.no_stills,
         "shots": shots(ns),
+        "variants": parse_variants(ns.variant or []),
     }
     return run("look", args, ns)
+
+
+def parse_variants(texts):
+    """NAME:PARAM=F|R,G,B[;PARAM=...]: ground parameters per variant, in order."""
+    out = {}
+    for text in texts:
+        name, sep, rest = text.partition(":")
+        if not sep or not name:
+            raise SystemExit(f"want NAME:PARAM=F[;PARAM=F], not {text!r}")
+        out[name] = dict(parse_param(p) for p in rest.split(";") if p)
+    return out
 
 
 def cmd_stills(ns):
@@ -572,6 +584,13 @@ def main(argv=None):
         action="append",
         metavar="SLUG:NAME=F|R,G,B",
         help="a parameter on one prop's MI (M_MS_Prop), e.g. tundra_boulder:Tint=1,0,0",
+    )
+    s.add_argument(
+        "--variant",
+        action="append",
+        metavar="NAME:PARAM=F|R,G,B[;...]",
+        help="after the stills, set these ground parameters and shoot the same views into "
+        "OC_STILLS/NAME, in the same editor; repeat for an A/B/C in one look",
     )
     s.add_argument("--no-stills", action="store_true")
     s.add_argument("--shots")

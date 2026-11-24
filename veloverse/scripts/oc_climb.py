@@ -2206,15 +2206,30 @@ def op_stills(shots=None, out=None):
 def _set_params(mi, params):
     """Sets {name: value} on a material instance: a number is a scalar, a list a colour."""
     edit = unreal.MaterialEditingLibrary
+    changed = False
+    # Only what differs: each look resets every plant, prop and blade instance to its baked
+    # values, and updating and saving them all regardless took 4 of a look's 6 minutes (23 Nov).
     for name, value in params.items():
         if isinstance(value, (list, tuple)) and len(value) > 1:
             colour = unreal.LinearColor(*value, *([1.0] * (4 - len(value))))
+            now = edit.get_material_instance_vector_parameter_value(mi, name)
+            if all(abs(a - b) < 1e-5 for a, b in zip(_rgba(now), _rgba(colour), strict=True)):
+                continue
             edit.set_material_instance_vector_parameter_value(mi, name, colour)
         else:
-            value = value[0] if isinstance(value, (list, tuple)) else value
-            edit.set_material_instance_scalar_parameter_value(mi, name, float(value))
-    edit.update_material_instance(mi)
-    assets.save_loaded_asset(mi, False)
+            value = float(value[0] if isinstance(value, (list, tuple)) else value)
+            if abs(edit.get_material_instance_scalar_parameter_value(mi, name) - value) < 1e-5:
+                continue
+            edit.set_material_instance_scalar_parameter_value(mi, name, value)
+        changed = True
+    if changed:
+        edit.update_material_instance(mi)
+        assets.save_loaded_asset(mi, False)
+    return changed
+
+
+def _rgba(c):
+    return (c.r, c.g, c.b, c.a)
 
 
 # Bark per static tree: {kind: {material slot: params}}, set on child instances of the PVE sample
@@ -2318,6 +2333,7 @@ def op_look(
     stills=True,
     shots=None,
     out=None,
+    variants=None,
 ):
     """Recolour through the ground instance's parameters (tint: {"Dirt": [r, g, b]}, grey: {"Dirt":
     0.8}), grass ([density, cull] factors on GRASS), fog (density), then stills. Nothing
@@ -2365,4 +2381,38 @@ def op_look(
     if stills:
         yield from _ensure_level()
         result["files"] = yield from _stills(shots, out or STILLS)
+    if variants:
+        files = yield from _ground_variants(variants, shots, out)
+        result["files"] = result.get("files", []) + files
+        notes.append(f"ground variants {list(variants)}")
     return result
+
+
+def _ground_variants(variants, shots, out):
+    """{name: ground params}: each set on the ground instance in turn and shot into
+    <stills>/<name>, in the one editor, then the instance put back as it was. A 3-way A/B costs
+    one restart and one look's setup, not three (23 Nov: a look was ~6 min, 4 of them setup)."""
+    yield from _ensure_level()
+    mi = unreal.load_asset(f"{GROUND}/{INSTANCE}")
+    edit = unreal.MaterialEditingLibrary
+    # A colour is a list of 3 or 4, as `look` parses it; anything else a scalar.
+    before = {}
+    for params in variants.values():
+        for k, v in params.items():
+            if isinstance(v, (list, tuple)) and len(v) > 1:
+                before[k] = list(_rgba(edit.get_material_instance_vector_parameter_value(mi, k)))
+            else:
+                before[k] = edit.get_material_instance_scalar_parameter_value(mi, k)
+    files = []
+    try:
+        for name, params in variants.items():
+            _set_params(mi, params)
+            # The ground's virtual texture redraws from the new parameters.
+            unreal.SystemLibrary.execute_console_command(None, "r.VT.Flush")
+            yield 60
+            log(f"variant {name}: {params}")
+            files += yield from _stills(shots, f"{out or STILLS}/{name}")
+    finally:
+        _set_params(mi, before)
+        unreal.SystemLibrary.execute_console_command(None, "r.VT.Flush")
+    return files
