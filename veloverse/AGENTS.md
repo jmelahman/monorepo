@@ -145,6 +145,9 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
   compile once sat 46 minutes on a 10-second job).
   - Give each command its limit: `timeout N` in shell, `--timeout` for `oc.py`, `OC_TIMEOUT` for
     `ride_test.sh`. Set it to about twice the expected time, never open-ended.
+  - Watch the queue with `scripts/oc_watch.sh` as a Monitor (re-arm it when it expires): it
+    reports each step and job as it ends, a beat every 15 minutes, and a STALL after 8 minutes
+    with no progress. Diagnose a STALL at once; compare step times to spot slower iteration.
   - Compile the C++ with `scripts/build_editor.sh` (15-minute limit, build accelerator off).
     Don't call `Build.sh` directly.
   - When you start a background job, say how long it should take. Once it's past that, read its
