@@ -110,8 +110,10 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 {
 	if (TimeOfDay >= 1 && TimeOfDay <= 3)
 	{
-		// Morning Mist, Midday, Golden Hour (Evening).
-		static constexpr float Heights[3] = {12.f, 40.f, 14.f};
+		// Morning, Midday, Evening. Morning and evening differ in the air and colour too
+		// (DaylightFor); the evening's sun sits lower, for longer shadows. Below about 3 degrees the
+		// atmosphere turned it red (the Sunset preset, removed 23 Nov).
+		static constexpr float Heights[3] = {10.f, 40.f, 7.f};
 		static constexpr float Turns[3] = {-70.f, 0.f, 70.f}; // degrees round from the route's own sun
 		W.Elevation = Heights[TimeOfDay - 1];
 		Azimuth += Turns[TimeOfDay - 1];
@@ -145,6 +147,43 @@ void Overrule(FRideWeather& W, float& Azimuth, int32 Weather, int32 TimeOfDay)
 		W.Rain = W.Wet = 1.f;
 	}
 }
+
+// What sets a picked morning apart from an evening besides the sun's place (23 Nov, the user: make
+// them distinct). Until then both took the same light from the sun's height alone (12 and 14
+// degrees), so only the shadows' side told them apart. A morning is clean air over low mist, a paler
+// gold sun and cool blue shadows; an evening is a deep amber sun, warm bounce in the shadows and
+// haze through the whole sky with shafts through the trees.
+struct FDaylight
+{
+	float Temperature;    // the sun's colour, K
+	FLinearColor SkyTint; // the sky light's colour: the shadows' tint
+	float Shafts;         // the sun's volumetric scattering: shafts through the haze and trees
+	float Haze;           // the atmosphere's Mie (aerosol) scale, times the level's own
+	FColor FogTint;       // the volumetric fog's albedo: the haze's own colour
+	float Mist;           // density of a second fog lying low over the sea and the lowlands
+};
+
+FDaylight DaylightFor(int32 TimeOfDay, float Elevation)
+{
+	if (TimeOfDay == 1)
+	{
+		return {5600.f, FLinearColor(0.84f, 0.92f, 1.0f), 1.6f, 0.75f, FColor(232, 240, 255), 0.06f};
+	}
+	if (TimeOfDay == 3)
+	{
+		// 4300 K with a (1, 0.86, 0.72) sky turned everything one orange (out/qa/daytime, 23 Nov).
+		return {4700.f, FLinearColor(1.0f, 0.93f, 0.84f), 2.8f, 1.5f, FColor(255, 236, 214), 0.f};
+	}
+	// The route's own sky and midday: by the sun's height, as before.
+	const bool bLow = Elevation <= 16.f;
+	return {bLow ? 5100.f : 6200.f, bLow ? FLinearColor(1.0f, 0.95f, 0.90f) : FLinearColor(0.94f, 0.97f, 1.0f),
+		Elevation < 18.f ? 2.0f : 1.2f, 1.f, FColor::White, 0.f};
+}
+// The mist's base, world Z in cm: sea level. It thins by e every 1000 / MistFalloff cm (about 17 m),
+// so it lies on the water and the coast's flats and the island roads ride above it.
+constexpr float MistBase = 0.f;
+constexpr float MistFalloff = 0.6f;
+
 constexpr float SensorWidth = 23.76f;
 constexpr float FocalLength = 20.f; // mm: a 61° view; the stills' 16 mm (73°) made the ride look fast
 constexpr float PhysicsStep = 1.f / 120.f;
@@ -797,6 +836,9 @@ void ARidePawn::ReadCommandLine()
 	}
 	FParse::Value(Line, TEXT("RideProfileAt="), ProfileAt);
 	Profile = FRideProfile::Load();
+	// For test rides: the time of day (1 morning, 2 midday, 3 evening) without touching the profile.
+	FParse::Value(Line, TEXT("RideTimeOfDay="), Profile.TimeOfDay);
+	FParse::Value(Line, TEXT("RideWeather="), Profile.Weather);
 	Ftp = Profile.Ftp;
 	Rider.MassKg = Profile.WeightKg + Profile.BikeKg;
 	UseSettings();
@@ -2531,6 +2573,8 @@ void ARidePawn::ApplyWeather()
 	{
 		Overrule(W, Azimuth, Profile.Weather, Profile.TimeOfDay);
 	}
+	// Rain and overcast keep the plain light: no mist or amber under cloud.
+	const FDaylight D = DaylightFor(bOwn || Profile.Weather >= 2 ? 0 : Profile.TimeOfDay, W.Elevation);
 	if (Track->Collection)
 	{
 		if (UMaterialParameterCollectionInstance* Values = GetWorld()->GetParameterCollectionInstance(Track->Collection))
@@ -2549,9 +2593,9 @@ void ARidePawn::ApplyWeather()
 	if (Sun.IsValid())
 	{
 		Sun->SetIntensity(W.Lux);
-		Sun->SetVolumetricScatteringIntensity(W.Elevation < 18.f ? 2.0f : 1.2f);
+		Sun->SetVolumetricScatteringIntensity(D.Shafts);
 		Sun->SetUseTemperature(true);
-		Sun->SetTemperature(W.Elevation <= 16.f ? 5100.f : 6200.f);
+		Sun->SetTemperature(D.Temperature);
 		// Cloud hides the sun's disc and spreads its light: widen the source as the light falls
 		// below a clear day's, so a rain sky's shadows go soft and faint instead of sharp.
 		if (SunAngle < 0.f)
@@ -2579,10 +2623,12 @@ void ARidePawn::ApplyWeather()
 	{
 		// Only on a change: this runs five times a second and each set re-sends the atmosphere.
 		const float R = Rayleigh * FMath::Lerp(1.f, 0.05f, Thick); // 0.15 left a violet cast (out/qa/cloudy7)
-		if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f))
+		const float M = Mie * D.Haze * FMath::Lerp(1.f, 2.5f, Thick);
+		if (!FMath::IsNearlyEqual(R, Atmosphere->RayleighScatteringScale, 1e-5f)
+			|| !FMath::IsNearlyEqual(M, Atmosphere->MieScatteringScale, 1e-5f))
 		{
 			Atmosphere->SetRayleighScatteringScale(R);
-			Atmosphere->SetMieScatteringScale(Mie * FMath::Lerp(1.f, 2.5f, Thick));
+			Atmosphere->SetMieScatteringScale(M);
 			Atmosphere->SetOtherAbsorptionScale(Absorption * FMath::Lerp(1.f, 0.05f, Thick));
 		}
 		const FLinearColor SkyLum = FMath::Lerp(FLinearColor(0.72f, 0.72f, 0.75f, 1.f), FLinearColor(1.f, 1.f, 1.f, 1.f), Thick);
@@ -2594,7 +2640,7 @@ void ARidePawn::ApplyWeather()
 	if (SkyLight.IsValid())
 	{
 		SkyLight->SetIntensity(W.Sky);
-		SkyLight->SetLightColor(W.Elevation <= 16.f ? FLinearColor(1.0f, 0.95f, 0.90f) : FLinearColor(0.94f, 0.97f, 1.0f));
+		SkyLight->SetLightColor(D.SkyTint);
 	}
 	if (Fog.IsValid())
 	{
@@ -2602,6 +2648,20 @@ void ARidePawn::ApplyWeather()
 		Fog->SetVolumetricFog(true);
 		Fog->SetStartDistance(0.f);
 		Fog->SetFogHeightFalloff(0.02f);
+		Fog->SetVolumetricFogAlbedo(D.FogTint);
+		// The second fog's height is from the fog actor's.
+		const float MistOffset = MistBase - Fog->GetComponentLocation().Z;
+		if (!FMath::IsNearlyEqual(Fog->SecondFogData.FogDensity, D.Mist)
+			|| !FMath::IsNearlyEqual(Fog->SecondFogData.FogHeightOffset, MistOffset, 1.f))
+		{
+			FExponentialHeightFogData Mist;
+			Mist.FogDensity = D.Mist;
+			Mist.FogHeightFalloff = MistFalloff;
+			Mist.FogHeightOffset = MistOffset;
+			Fog->SetSecondFogData(Mist);
+			UE_LOG(LogTemp, Display, TEXT("WEATHER daylight %d: sun %.0f K, haze %.2f, mist %.3f (fog at Z %.0f cm)"),
+				Profile.TimeOfDay, D.Temperature, D.Haze, D.Mist, Fog->GetComponentLocation().Z);
+		}
 	}
 	if (Post.IsValid())
 	{
