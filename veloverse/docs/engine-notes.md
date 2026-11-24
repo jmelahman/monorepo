@@ -19,7 +19,12 @@ where the two differ. The old plans are in `docs/archive/`, for history only.
   - Fog and sky: fog_start, fog_inscatter, volumetric, aerial, clouds, cloud_bottom,
     cloud_wind.
   - Light: shafts, contact, bloom, flare, sun_pitch, sun_yaw.
-  - Post keys persist in the level, so put a test value back explicitly.
+  - The grade keys (ev, exposure, contrast, saturation, vignette, temp, bloom, flare) live
+    on the "OC Post" volume, which every look removes first (084c5288), so they last one
+    look. The others change the template's sun, sky and fog and persist in the level: put a
+    test value back explicitly. A dress-only build keeps all of it: g2a2's one
+    `exposure=-0.5` darkened every v96 still by ~0.8 EV before the reset existed.
+  - A post variant goes on the look's own `--post`, not on the variant before it.
 - **The daylight baseline:** `ev=-2.6 exposure=0.5 sky=1.5 temp=6500 sky_warm=0 sun_pitch=-50
   sun_yaw=43.7 contrast=1.1 saturation=1.05 vignette=0.3 fog_start=150 volumetric=0
   contact=0.05 clouds=-0.2 cloud_wind=0`, with fog `0.004 0.02`.
