@@ -502,6 +502,68 @@ class Road:
         return d.reshape(np.shape(x))
 
 
+_STEMS = None  # (cKDTree of trees.json's stems in m, their crown tops m), loaded once
+
+
+def _stems():
+    global _STEMS
+    if _STEMS is None:
+        with open(f"{SRC}/trees.json") as f:
+            t = np.array([row[1:6] for row in json.load(f)], dtype=float)
+        # A crown about 4 m round, from 2 m up to about 18 m times the stem's scale.
+        _STEMS = (cKDTree(t[:, :2] / 100), t[:, 2] / 100, t[:, 2] / 100 + 18 * t[:, 4])
+    return _STEMS
+
+
+def road_view(out, g, road, target, reach, want, lifts=(1.7, 6.0, 15.0, 40.0)):
+    """[eye, target] for a landmark's still, from the road point with a clear sight of `target`
+    (x, y, z m) between reach[0] and reach[1] m off, nearest `want` m, at the lowest eye height
+    in `lifts` that sees it. The nearest road point looked into a cliff (feat_tower,
+    feat_turbines) or a wood (feat_hamlet_vael) (G8): this one checks the ground, the trees and
+    the cliff faces along the line. A tower on a knoll 400 m above every road is seen from no
+    rider's eye, so the view rises like a drone's until it clears."""
+    tx, ty, tz = (float(v) for v in target)
+    ids = road.tree.query_ball_point([tx, ty], reach[1])
+    pts = road.tree.data[ids] if ids else np.zeros((0, 2))
+    d = np.hypot(pts[:, 0] - tx, pts[:, 1] - ty)
+    pts, d = pts[d >= reach[0]], d[d >= reach[0]]
+    if len(pts) > 300:  # its own generator, so the world's dressing draws stay as they were
+        keep = np.random.default_rng(len(pts)).choice(len(pts), 300, replace=False)
+        pts, d = pts[keep], d[keep]
+    tree, low, top = _stems()
+    cliffs = np.array(
+        [it[2:4] for it in out.items if it[0] in ("Cliffs", "Stacks")], dtype=float
+    ).reshape(-1, 2)
+    cliffs = cKDTree(cliffs / 100) if len(cliffs) else None
+    best = None
+    for (ex, ey), dist in zip(pts, d, strict=True):
+        # The last 12 m are the landmark's own ground, garden or stones.
+        t = np.linspace(0.04, max(0.05, 1 - 12 / dist), 40)
+        sx, sy = ex + (tx - ex) * t, ey + (ty - ey) * t
+        ground = g.z(sx, sy)
+        near_trees = tree.query_ball_point(np.column_stack([sx, sy]), 4.0)
+        near_cliffs = cliffs.query_ball_point(np.column_stack([sx, sy]), 10.0) if cliffs else None
+        for rung, lift in enumerate(lifts):
+            ez = g.z(ex, ey) + lift
+            sz = ez + (tz - ez) * t
+            blocked = int(np.sum(ground > sz - 0.6))
+            for k, near in enumerate(near_trees):
+                blocked += any(low[j] + 2 < sz[k] < top[j] for j in near)
+            if near_cliffs is not None:
+                # A cliff face stands about 30 m: a line higher above the ground clears it.
+                blocked += sum(1 for k, h in enumerate(near_cliffs) if h and sz[k] - ground[k] < 30)
+            score = (blocked, rung, abs(dist - want))
+            if best is None or score < best[0]:
+                best = (score, [float(ex), float(ey), float(ez)])
+            if not blocked:
+                break
+    if best is None:
+        return None
+    if best[0][0]:
+        print(f"view: no clear sight of ({tx:.0f}, {ty:.0f}), {best[0][0]} blocked", flush=True)
+    return [best[1], [tx, ty, tz]]
+
+
 def rocks(out, g, bio, road, rng):
     """Scatter each biome's rocks near the road: tried in proportion to its share of the road,
     kept where the ground suits them and nothing else stands."""
@@ -888,9 +950,9 @@ def turbines(out, g, bio, road, rng, taken):
     print(f"turbines: {len(spots)}", flush=True)
     if spots:  # from the road nearest a turbine, looking up at its hub
         x, y, _ = spots[0]
-        _, k = road.tree.query([x, y])
-        rx, ry, rz = road.line[k * 5]
-        out.views.append(["feat_turbines", [rx, ry, rz + 1.6], [x, y, float(g.z(x, y)) + 60]])
+        view = road_view(out, g, road, (x, y, float(g.z(x, y)) + 60), (80.0, 1500.0), 300.0)
+        if view:
+            out.views.append(["feat_turbines", *view])
     return [(x, y) for x, y, _ in spots]
 
 
@@ -2008,15 +2070,9 @@ def hamlets(out, g, bio, road, rng, taken):
             out.clear.append([round(x, 1), round(y, 1), round(math.hypot(w, d) / 2 + 4, 1)])
         mx = float(np.mean([p[0] for p in best]))
         my = float(np.mean([p[1] for p in best]))
-        _, k = road.tree.query([mx, my])
-        ex, ey = road.tree.data[k]
-        out.views.append(
-            [
-                f"feat_hamlet_{island.split()[-1].lower()}",
-                [float(ex), float(ey), g.z(ex, ey) + 1.7],
-                [mx, my, g.z(mx, my) + 3],
-            ]
-        )
+        view = road_view(out, g, road, (mx, my, g.z(mx, my) + 3), (30.0, 300.0), 90.0)
+        if view:
+            out.views.append([f"feat_hamlet_{island.split()[-1].lower()}", *view])
         print(f"hamlet {island}: {len(best)} houses round ({mx:.0f}, {my:.0f})", flush=True)
 
 
@@ -2064,9 +2120,11 @@ def tower(out, g, bio, road, rng, taken):
             rng.uniform(0, 360),
             (size, size * rng.uniform(0.8, 1.2), size * rng.uniform(0.5, 0.8)),
         )
-    _, k = road.tree.query([x, y])
-    ex, ey = road.tree.data[k]
-    out.views.append(["feat_tower", [float(ex), float(ey), g.z(ex, ey) + 1.7], [x, y, z + 8]])
+    view = road_view(
+        out, g, road, (x, y, z + 8), (40.0, 600.0), 200.0, lifts=(1.7, 6.0, 15.0, 40.0, 80.0, 150.0)
+    )
+    if view:
+        out.views.append(["feat_tower", *view])
     print(
         f"tower: on a {best[0]:.0f} m knoll at ({x:.0f}, {y:.0f}),"
         f" {float(road.dist(x, y)):.0f} m off the road",
