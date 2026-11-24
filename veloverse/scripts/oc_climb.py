@@ -863,6 +863,7 @@ def _road_fold(g, kind, offset=None):
         # "Road lean" (the tangent of the tilt) at its edge, so they hang over the road mesh's
         # earth bank and the path's edge instead of stopping short of it on a smooth green lip
         # (v95, both reviews). The tilt grows with the height above the root.
+        # 0.35 from the g3 sweep (Gemini): 0.6 and 0.45 combed the verge into one swept mass.
         span = g.param("Road lean span", 1.2)
         near_edge = g.saturate(
             g.op(
@@ -882,7 +883,7 @@ def _road_fold(g, kind, offset=None):
         rnd = g.node(unreal.MaterialExpressionPerInstanceRandom)
         spread = g.param("Road lean spread", 0.7)
         share = g.add(g.add(g.mul(spread, -1.0), 1.0), g.mul(g.mul(spread, 2.0), rnd))
-        tilt = g.mul(g.mul(g.param("Road lean", 0.6), near_edge), share)
+        tilt = g.mul(g.mul(g.param("Road lean", 0.35), near_edge), share)
         swing = g.mul(
             g.param("Road lean swing", 0.8),
             g.add(g.link(g.mul(rnd, 13.7), g.node(unreal.MaterialExpressionFrac)), -0.5),
