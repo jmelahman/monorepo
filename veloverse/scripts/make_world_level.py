@@ -695,8 +695,14 @@ def paint_and_trees(plan, h, dist, cut):
         top = np.argmax(np.stack([q8[k] for k in names]), axis=0)
         img = np.where((hb > 0)[..., None], colours[top], np.uint8([40, 80, 120]))
         small.append(img[::4, ::4])
-        stems += trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"], (h, dist))
-        far += far_trees_band(rng, x, y, hb, slope, db, layers["Forest"], w["desert"], (h, dist))
+        # Each band's near and far trees draw from their own stream: with one stream for the
+        # map, any change upstream moved every tree after it, which spoiled A/Bs between
+        # versions (v95's trail lost the tree that shaded it). Gemini's advice, 24 Nov.
+        near_rng = np.random.default_rng([SEED + 100, r0, 0])
+        far_rng = np.random.default_rng([SEED + 100, r0, 1])
+        band = (x, y, hb, slope, db, layers["Forest"], w["desert"], (h, dist))
+        stems += trees_band(near_rng, *band)
+        far += far_trees_band(far_rng, *band)
         print(f"band {r0 // BAND + 1}/{math.ceil(RES / BAND)}: {len(stems)} trees", flush=True)
     if len(far) > FAR_MAX:
         far = [far[i] for i in sorted(rng.choice(len(far), FAR_MAX, replace=False))]

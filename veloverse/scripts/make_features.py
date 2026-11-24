@@ -3011,7 +3011,6 @@ def road_markings(out, g, bio, road):
 
 
 def main():
-    rng = np.random.default_rng(SEED)
     for name in os.listdir(SRC):
         if name.startswith("feat_") and name.endswith(".gltf"):
             os.remove(f"{SRC}/{name}")
@@ -3020,16 +3019,18 @@ def main():
     out = Out()
     bridges(out, g, road)
     taken = []  # (x, y, radius m) of what stands, so nothing is placed through it
-    harbour(out, g, bio, road, rng, taken)
+    # Each kind its own stream (24 Nov), as the later ones already had: with one, a change to
+    # the harbour moved every turbine, rock and cliff after it and spoiled A/Bs.
+    harbour(out, g, bio, road, np.random.default_rng([SEED, 1]), taken)
     city_skyline(out, g, bio, road, np.random.default_rng(SEED + 17), taken)
     pch_coast(out, g, bio, road, np.random.default_rng(SEED + 18), taken)
     road_markings(out, g, bio, road)
-    farm = turbines(out, g, bio, road, rng, taken)
+    farm = turbines(out, g, bio, road, np.random.default_rng([SEED, 2]), taken)
     # No pylons or power lines since 13 Nov (the AAA review: "out of register with a fantasy
     # world"); power_line() stays for a later setting that wants them.
-    taken = taken + rocks(out, g, bio, road, rng)
-    cliffs(out, g, bio, road, rng, taken)
-    sea_stacks(out, g, bio, road, rng)
+    taken = taken + rocks(out, g, bio, road, np.random.default_rng([SEED, 3]))
+    cliffs(out, g, bio, road, np.random.default_rng([SEED, 4]), taken)
+    sea_stacks(out, g, bio, road, np.random.default_rng([SEED, 5]))
     # Their own stream, so adding them moved nothing placed before.
     cairns(out, g, bio, road, np.random.default_rng(SEED + 12), taken)
     hamlets(out, g, bio, road, np.random.default_rng(SEED + 13), taken)
