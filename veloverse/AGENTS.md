@@ -170,6 +170,10 @@ New Fab downloads: `docs/engine-notes.md`, "Importing Fab assets".
   - Is the cover patchy?
   - Is anything neon?
   - Is anything growing on the road?
+- **Gemini's second opinion** (the user, 23 Nov: `agy`, logged in to their account): after
+  each step, `scripts/gemini_review.sh out/qa/<trial>/gemini.md "<what the crops are>" <crops>`
+  asks these questions of the crop stacks, read-only, in about 40 s. Read it beside your own
+  review: it's a second pair of eyes, not the decision.
 - A Sonnet QA subagent's score is only a regression check, and only when the user asks for
   subagents. Sky banding seen through Read is a downscale artifact.
 
