@@ -232,8 +232,9 @@ PRESETS["world"] = {
     # Past the heather's cull the heath takes its colour (MI_Heath's olive and rust, a little
     # straw), as the meadow takes its blades'.
     # The meadow's canopy from 0 m in the blades' own deep green: the lime floor between near
-    # blades was the brightest thing on the Moor and the coast (v93; trial B in g1e won).
-    "CANOPY": {"Grass": (0.05, 0.09, 0.02), "Heath": (0.075, 0.066, 0.03)},
+    # blades was the brightest thing on the Moor and the coast (v93; trial B in g1e won). In full
+    # sun even (0.05, 0.09, 0.02) read lime: g1i's darkest green, a deep olive, won.
+    "CANOPY": {"Grass": (0.02, 0.04, 0.008), "Heath": (0.075, 0.066, 0.03)},
     "CANOPY_NEAR": {"Grass": (0.0, 800.0 / 1.4)},
     "CANOPY_SLOPE": {"Grass": 0.6, "Heath": 0.7},
     # Rock's steep faces darker and bedded (gap 7): Vael's and the Moor's cuts read as pale
