@@ -56,7 +56,13 @@ STILL_SETTLE = 480
 STILL_SETTLE_MIN = 240
 STILL_SETTLE_MAX = 1500
 GRASS_STEADY = 4
-STILL_CVARS = ("r.Streaming.PoolSize 3000", "r.Streaming.FullyLoadUsedTextures 1")
+# grass.CullDistanceScale: DefaultEngine.ini starts it at 0.01 (the frame-0 guard, f94131bf) and
+# only the ride's pawn lifts it, so from 23 Nov the editor's stills had almost no grass (v86).
+STILL_CVARS = (
+    "r.Streaming.PoolSize 3000",
+    "r.Streaming.FullyLoadUsedTextures 1",
+    "grass.CullDistanceScale 1",
+)
 FAR = 6.0  # far off, each surface is also sampled this many times larger, against tiling
 # And on steep faces too (Ground.surface): the world's (biomes.py), not the climb's.
 SIDE_FAR = False
