@@ -203,6 +203,10 @@ CANOPY_SLOPE = {}
 # "<layer> canopy start" cm over "<layer> canopy span": about M_Blade's root and tip colours,
 # averaged as a far meadow shows them. Try values with `look --ground-param`.
 CANOPY = {"Grass": (0.085, 0.16, 0.03)}
+# Where a layer's canopy fades in, (start, span) in cm before GRASS_REACH: by default past the
+# blades' reach. From 0 m the ground between near blades takes the canopy's colour too, so the
+# carpet's floor is the blades' green, not lime (v93, the g1e trials).
+CANOPY_NEAR = {}
 # 14 Nov, the user: "increase the view distance even more and reduce density". The dense cover
 # (GRASS rows at 10 or more per 100 m^2: blades, heath, clover, clumps) grows at GRASS_THIN of its
 # density, and every grass and plant row reaches GRASS_REACH times as far, so the meadow reaches
@@ -591,11 +595,12 @@ class Ground:
                 dim = g.lerp(g.const(1.0), dim, slope)
                 canopy = g.mul(canopy, dim)
             reach = _grass_reach(g)
-            start = g.mul(g.param(f"{name} canopy start", 4000.0 * GRASS_REACH), reach)
+            near_start, near_span = CANOPY_NEAR.get(name, (4000.0, 3000.0))
+            start = g.mul(g.param(f"{name} canopy start", near_start * GRASS_REACH), reach)
             fade = g.op(
                 unreal.MaterialExpressionDivide,
                 g.op(unreal.MaterialExpressionSubtract, self.distance, start),
-                g.mul(g.param(f"{name} canopy span", 3000.0 * GRASS_REACH), reach),
+                g.mul(g.param(f"{name} canopy span", near_span * GRASS_REACH), reach),
             )
             fade = g.mul(g.saturate(fade), g.param(f"{name} canopy share", 1.0))
             base["colour"] = g.lerp(base["colour"], canopy, fade)
