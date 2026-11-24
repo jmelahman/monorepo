@@ -468,11 +468,13 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     lakefront_park = harbour_coast * mi.smoothstep(6.0, 12.0, inland) * (h > 0.6)
     beach = beach * (1.0 - lakefront_park)
     desert = w["desert"] * (1.0 - harbour_coast)
-    # The verge is only the road's own shoulder: the plants' shaders drop whatever stands on the
-    # tarmac (road_distance). Until 12 Nov it reached a whole sample past the road, to keep the
-    # blades off the tarmac, and left 14..21 m of bare turf beside it. Dirt in the green
-    # stretches, Verge (bare sand) in the desert and on the beaches.
+    # The shoulder is bare sand (Verge) only in the desert and on the beaches. In the green
+    # stretches the meadow, heath or forest runs to the tarmac, and the plants' shaders drop
+    # whatever stands on it (road_distance). Until 23 Nov a Dirt verge sat there: weights are per
+    # 7 m sample, so it spread 3..7 m out, and its sparse short turf read as a mown strip beside
+    # every road, with thin clumps on bare ground past it (out/qa/g1 false colour).
     dry = np.clip(beach + desert, 0, 1)
+    rock, snow, face = rock * (1 - shoulder), snow * (1 - shoulder), face * (1 - shoulder)
     # Woods: the forest's and the mountain's below the treeline, copses in the meadows, with
     # clearings; open grass in the meadows, the town, the heath and above the trees.
     alpine = mi.smoothstep(TREELINE - 30, TREELINE + 15, h + 40 * (n(90, 3) - 0.5))
@@ -482,7 +484,7 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     wooded = wooded + w["heath"] * mi.smoothstep(0.66, 0.72, n(200, 6))
     wooded = wooded + lakefront_park * mi.smoothstep(0.54, 0.68, n(180, 9))
     wooded = np.clip(wooded, 0, 1) * (1 - alpine)
-    soft = (1 - rock) * (1 - snow) * (1 - shoulder) * (1 - face)
+    soft = (1 - rock) * (1 - snow) * (1 - face) * (1 - shoulder * dry)
     out = {
         "Sand": soft * beach,
         "Desert": soft * (1 - beach) * desert,
@@ -493,9 +495,9 @@ def paint_band(x, y, h, slope, d, w, inland, cut=None):
     heath = w["heath"] * (0.3 + 0.7 * mi.smoothstep(0.38, 0.58, n(130, 7)))
     out["Grass"] = green * (1 - wooded) * (1 - heath)
     out["Heath"] = green * (1 - wooded) * heath
-    out["Rock"] = rock * (1 - shoulder)
-    out["Snow"] = snow * (1 - shoulder)
-    out["Dirt"] = shoulder * (1 - dry) + face * (1 - rock) * (1 - shoulder)
+    out["Rock"] = rock
+    out["Snow"] = snow
+    out["Dirt"] = face * (1 - rock)
     out["Verge"] = shoulder * dry
     return {k: out[k].astype(np.float32) for k in LAYERS}
 

@@ -182,8 +182,8 @@ PRESETS = {
 # the alpine daylight (ev -2.6), so the sand is tinted darker than in the desert's own preset
 # (ev -0.4). Grass keeps the alpine rows bar the heath's and the cut banks'.
 PRESETS["world"] = {
-    # Dirt is the verge, the road's own shoulder: short turf, the Grass layer's look, rather than
-    # a 35 m strip of mud.
+    # Dirt is the cut banks' ground: short turf, the Grass layer's look. Until 23 Nov it was also
+    # the road's shoulder (make_world_level.paint_band).
     "SURFACES": {
         "Desert": ("desert", "bright_desert_sand", (1.0, 1.0, 1.0)),
         # v55: rippled sand, not trampled: its footprints, with the pebbles' near-white patches
