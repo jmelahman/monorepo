@@ -105,7 +105,8 @@ scripts/oc.py restart && scripts/oc.py rebuild-ground --rebuild-grass --timeout 
 | `fps`, `stills`, `static-trees`, `ride-track`, `road-look`, `restart`, `status`, `log`, `wait JOB` | See `oc.py -h` and `docs/engine-notes.md` | |
 
 - `oc_server.py` doesn't reload `oc_climb.py`: restart after you edit it.
-- Run `restart` before each `look`, because a second look on one editor has lost the GPU.
+- Looks can run back to back on one editor (`g2a2_two_looks`, 24 Nov: 64 s then 70 s, no GPU
+  loss); the old laptop needed a restart before each. Restart only after a build or a crash.
 - `build-level` drops fog and post settings, so re-run `look` after it.
 - Ride the level with `OC_MAP=/Game/World/L_World scripts/play.sh` (on screen) or
   `scripts/ride_test.sh WATTS SHOTS START_M` (offscreen, with screenshots).
