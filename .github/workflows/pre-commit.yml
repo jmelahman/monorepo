@@ -27,7 +27,7 @@ jobs:
       # Go hooks build with the Go on PATH and GOTOOLCHAIN=local, so the
       # runner's older Go can't build a hook that needs a newer one.
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version-file: go.work
           cache-dependency-path: go.work.sum
